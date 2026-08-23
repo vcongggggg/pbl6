@@ -1,0 +1,43 @@
+.git
+.gitignore
+.dockerignore
+README.md
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+.venv
+venv
+ENV
+env
+.pytest_cache
+.ruff_cache
+.mypy_cache
+.coverage
+htmlcov
+
+# Node
+node_modules
+.next
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Data & Databases
+data/raw
+data/processed
+data/artifacts
+*.db
+*.sqlite
+*.sqlite3
+
+# Docs & Tests
+docs
+tests

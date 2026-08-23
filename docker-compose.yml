@@ -1,0 +1,57 @@
+services:
+  # Target Web API: OWASP Juice Shop (Môi trường Web API bị tấn công trong Lab)
+  juice-shop:
+    image: bkimminich/juice-shop:v16.0.0
+    container_name: pbl6-juice-shop
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=unsafe
+    networks:
+      - pbl6-network
+
+  # FastAPI WAF Gateway / Reverse Proxy Layer
+  gateway:
+    build:
+      context: ./gateway
+      dockerfile: Dockerfile
+    container_name: pbl6-gateway
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - APP_ENV=development
+      - APP_HOST=0.0.0.0
+      - APP_PORT=8000
+      - LOG_LEVEL=INFO
+      - DATABASE_URL=sqlite:////app/data/waf_security.db
+      - TARGET_API_URL=http://juice-shop:3000
+      - WAF_MODE=MONITOR_ONLY
+      - ADMIN_API_KEY=dev-admin-secret-key-change-me
+    volumes:
+      - ./data:/app/data
+    depends_on:
+      - juice-shop
+    networks:
+      - pbl6-network
+
+  # Next.js Dashboard Frontend
+  dashboard:
+    build:
+      context: ./dashboard
+      dockerfile: Dockerfile
+    container_name: pbl6-dashboard
+    restart: unless-stopped
+    ports:
+      - "3001:3000"
+    environment:
+      - NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
+    depends_on:
+      - gateway
+    networks:
+      - pbl6-network
+
+networks:
+  pbl6-network:
+    driver: bridge
