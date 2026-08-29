@@ -17,6 +17,7 @@ class RequestLog(Base):
         DateTime, default=datetime.datetime.utcnow, index=True
     )
     client_ip: Mapped[str] = mapped_column(String(45), index=True)
+    user_agent: Mapped[str | None] = mapped_column(String(512), nullable=True)
     method: Mapped[str] = mapped_column(String(10))
     url: Mapped[str] = mapped_column(Text)
     path: Mapped[str] = mapped_column(String(255), index=True)
@@ -25,6 +26,7 @@ class RequestLog(Base):
     body_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
     response_status: Mapped[int | None] = mapped_column(Integer, nullable=True)
     response_time_ms: Mapped[float | None] = mapped_column(Float, nullable=True)
+    response_size: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
 
 class SecurityEvent(Base):

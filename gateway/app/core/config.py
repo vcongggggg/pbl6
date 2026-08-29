@@ -25,6 +25,15 @@ class Settings(BaseSettings):
     # Target Web API
     target_api_url: str = "http://juice-shop:3000"
 
+    # Proxy Timeouts (in seconds)
+    proxy_timeout_connect: float = 5.0
+    proxy_timeout_read: float = 30.0
+    proxy_timeout_write: float = 10.0
+    proxy_timeout_pool: float = 5.0
+
+    # Traffic Logging Limits
+    max_body_log_bytes: int = 4096
+
     # WAF Controls (Baseline flags for future phases)
     waf_mode: Literal["OFF", "MONITOR_ONLY", "ACTIVE_BLOCKING", "HYBRID"] = "MONITOR_ONLY"
     ml_enabled: bool = False
