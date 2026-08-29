@@ -10,7 +10,7 @@ Tài liệu theo dõi trạng thái thực hiện các giai đoạn phát triể
 | :---: | :--- | :--- | :---: | :--- |
 | **Phase 0** | **Project Bootstrap & Codebase Foundation** | Toàn đội / System Architect | **COMPLETED** | Thiết lập cấu trúc Monorepo, tooling, CI, database models, tests và Next.js. |
 | **Phase 1** | **Infrastructure Setup** | Backend / DevOps (Member A) | **COMPLETED** | Reverse Proxy bất đồng bộ, X-Request-ID, lọc Header, ghi log SQLite, bảo vệ Open Proxy / SSRF, Probe Target Health. |
-| **Phase 2** | **Rule Engine** | Security Engineer (Member A) | **NOT STARTED** | SQLi, XSS, Traversal, Command Injection, Brute Force, API Abuse. |
+| **Phase 2** | **Rule Engine / Signature-Based Detection** | Security Engineer (Member A) | **COMPLETED** | 16 rules tất định (SQLi, XSS, Path Traversal, Command Injection), Input Normalizer, Rule Risk Scoring (0-100), Security Event persistence & traceability. |
 | **Phase 3** | **Feature Engineering** | ML/Data Team (Member B) | **NOT STARTED** | *(RESERVED FOR ML TEAM)* 17 payload features, HTTP & Behavior features. |
 | **Phase 4** | **Dataset Generation & Lab Traffic** | ML/Data Team (Member B) | **NOT STARTED** | *(RESERVED FOR ML TEAM)* Synthetic dataset, Benign cases, Lab traffic collection. |
 | **Phase 5** | **Supervised ML — Random Forest** | ML/Data Team (Member B) | **NOT STARTED** | *(RESERVED FOR ML TEAM)* Training, Multiclass, Evaluation, Serialization (`.joblib`). |
@@ -27,67 +27,58 @@ Tài liệu theo dõi trạng thái thực hiện các giai đoạn phát triể
 ## Chi Tiết Triển Khai Từng Phase
 
 ### Phase 0 — Project Bootstrap & Codebase Foundation (COMPLETED)
-
-* **Mục tiêu (Objectives):**
-  * Thiết lập cấu trúc Monorepo chuẩn không lồng thư mục thừa.
-  * Xây dựng nền tảng Backend FastAPI, Database models (SQLAlchemy), Error handlers, Logging và Pydantic schemas.
-  * Xây dựng nền tảng Frontend Next.js + TypeScript + Tailwind CSS (không fake metrics).
-  * Xây dựng Docker Compose, Makefile, CI workflow (.github), .gitignore, .dockerignore và tài liệu kiến trúc.
-
-* **Sản phẩm bàn giao (Deliverables):**
-  * `docs/PLAN.md`, `docs/PROGRESS.md`, `docs/GAP_ANALYSIS.md`, `docs/ARCHITECTURE.md`, `docs/DEVELOPMENT.md`, `docs/ML_INTEGRATION.md`.
-  * `gateway/`: FastAPI app, `GET /health`, database models, pytest test suite (100% pass), ruff linting (0 errors).
-  * `dashboard/`: Next.js 14 standalone build thành công (`npm run build`).
-  * `docker-compose.yml`, `Makefile`, `.github/workflows/ci.yml`.
+* Monorepo layout, FastAPI backend structure, SQLite models, Next.js frontend, Docker Compose, Makefile, CI workflow.
 
 ---
 
 ### Phase 1 — Infrastructure Setup (COMPLETED)
+* Dynamic Reverse Proxy (`/api/proxy/{path:path}`), Request ID validation & generation, Hop-by-hop header filtering, SQLite traffic persistence with redaction, Open Proxy protection, Target health check (`/health/target`).
+
+---
+
+### Phase 2 — Rule Engine / Signature-Based Detection (COMPLETED)
 
 * **Mục tiêu (Objectives):**
-  * Xây dựng Reverse Proxy Gateway hoàn chỉnh nhận HTTP request, chuyển tiếp an toàn tới OWASP Juice Shop và phản hồi client.
-  * Xử lý định danh `X-Request-ID` xuyên suốt (validate hoặc sinh mới UUID4).
-  * Lọc Hop-by-hop headers (`Connection`, `Keep-Alive`, `Upgrade`, `Host`, `Content-Length`).
-  * Chống Open Proxy / SSRF: Địa chỉ đích luôn cố định theo cấu hình `TARGET_API_URL`.
-  * Ghi nhận lưu lượng và độ trễ vào bảng `requests` trong SQLite có khử thông tin nhạy cảm (`Authorization`, `Cookie`, `password`, `token`).
-  * Xử lý lỗi an toàn: Trả về HTTP 502/504 chuẩn hóa khi upstream mất kết nối hoặc timeout mà không lộ stack trace.
-  * Bổ sung endpoint `GET /health/target` kiểm tra độ thông mạng tới Target API.
+  * Xây dựng bộ luật phát hiện dấu hiệu tấn công tĩnh (Signature-Based Detection) cho 4 họ tấn công: SQL Injection, XSS, Path Traversal, Command Injection.
+  * Xây dựng quy trình chuẩn hóa chuỗi an toàn (`InputNormalizer`) với giới hạn độ sâu (`max_depth = 3`) và kích thước (`16 KB`).
+  * Xây dựng cơ chế chấm điểm rủi ro tất định từ 0 đến 100 (`RuleScorer`).
+  * Lưu vết và liên kết chặt chẽ sự kiện tấn công (`security_events`) với bản ghi lưu lượng (`requests`) thông qua `request_id`.
+  * Đảm bảo nguyên tắc **Detection Only / Non-Blocking**: Mọi request độc hại đều được ghi log nhưng vẫn được chuyển tiếp an toàn tới target API.
 
 * **Sản phẩm bàn giao (Deliverables):**
-  * `gateway/app/api/proxy.py`: Dynamic proxy router `/api/proxy/{path:path}` hỗ trợ GET, POST, PUT, PATCH, DELETE, OPTIONS, HEAD.
-  * `gateway/app/services/proxy.py`: ProxyService sử dụng `httpx.AsyncClient` có pool và timeouts cấu hình được.
-  * `gateway/app/services/traffic.py`: TrafficService xử lý khử dữ liệu nhạy cảm và persist vào SQLite.
-  * `gateway/app/core/request_id.py`: Utility xử lý xác thực và sinh mã Request ID an toàn.
-  * `gateway/app/api/health.py`: Bổ sung `GET /health/target`.
-  * `docs/API.md`, `docs/GATEWAY.md`: Tài liệu đặc tả API và kiến trúc Gateway.
-  * `tests/integration/test_gateway_live.py`: Test suite tích hợp end-to-end.
-
-* **Tập tin đã tạo & chỉnh sửa (Files Created & Modified):**
-  * Tạo mới: `gateway/app/api/proxy.py`, `gateway/app/services/__init__.py`, `gateway/app/services/proxy.py`, `gateway/app/services/traffic.py`, `gateway/app/core/request_id.py`
-  * Tạo mới: `gateway/tests/test_proxy.py`, `tests/integration/__init__.py`, `tests/integration/test_gateway_live.py`
-  * Tạo mới: `docs/API.md`, `docs/GATEWAY.md`
-  * Chỉnh sửa: `gateway/app/core/config.py`, `gateway/app/db/models.py`, `gateway/app/api/router.py`, `gateway/app/api/health.py`, `gateway/app/schemas/health.py`, `gateway/app/schemas/__init__.py`, `gateway/app/main.py`, `gateway/tests/conftest.py`, `gateway/tests/test_health.py`, `docs/ARCHITECTURE.md`, `.github/workflows/ci.yml`, `gateway/pyproject.toml`
+  * `gateway/app/security/models.py`: Data models, enums (`Severity`, `AttackType`, `InspectionLocation`, `RuleMatch`, `DetectionResult`).
+  * `gateway/app/security/normalizer.py`: `InputNormalizer` canonicalization (URL percent decoding, HTML unescaping, Unicode NFKC, whitespace/null bytes stripping).
+  * `gateway/app/security/rules/base.py`: `BaseRule`, `RegexRule` contract và bằng chứng khử nhạy cảm.
+  * `gateway/app/security/rules/sqli.py`: 5 rules phát hiện SQL Injection (`SQLI-001` đến `SQLI-005`).
+  * `gateway/app/security/rules/xss.py`: 4 rules phát hiện Cross-Site Scripting (`XSS-001` đến `XSS-004`).
+  * `gateway/app/security/rules/path_traversal.py`: 3 rules phát hiện Path Traversal (`PATH-001` đến `PATH-003`).
+  * `gateway/app/security/rules/command_injection.py`: 4 rules phát hiện Command Injection (`CMD-001` đến `CMD-004`).
+  * `gateway/app/security/rules/__init__.py`: Rule registry tập trung (`get_all_rules`).
+  * `gateway/app/security/scoring.py`: `RuleScorer` tính điểm tất định $0 - 100$.
+  * `gateway/app/security/engine.py`: `RuleEngine` quét toàn diện Path, Query, Safe Headers, Body (JSON recursive / Form / Text).
+  * `gateway/app/services/security.py`: `SecurityEventService` lưu bản ghi sự kiện bảo mật.
+  * `docs/RULE_ENGINE.md`: Tài liệu đặc tả kỹ thuật và danh mục luật Rule Catalog chi tiết.
+  * `scripts/verify_phase2_live.py`: Script kiểm thử thực tế 4 họ tấn công qua cổng mạng thật.
 
 * **Kiểm thử & Xác minh (Tests & Verification):**
-  * `pytest`: **13/13 tests passed** (100% pass, bao gồm health, target connectivity, request-id, GET/POST proxy, query params, status preservation, 502/504 errors, hop-by-hop filter, open proxy protection, DB persistence, sensitive redaction).
+  * `pytest`: **33/33 tests PASSED (100%)** bao gồm tests cho từng rule độc lập, test bộ dữ liệu hợp lệ (Benign corpus), test normalization, test engine aggregation, test proxy non-blocking integration và regression tests của Phase 1.
   * `ruff check gateway`: **All checks passed! (0 errors)**.
-  * `dashboard build`: `npm run build` thành công 100%.
+  * `live security verification`: **4/4 attack families detected, 0 false positives on benign traffic, 100% request_id traceability**.
   * `docker compose config`: Hợp lệ 100%.
 
-* **Giới hạn chủ đích (Known Limitations in Phase 1):**
-  * Chưa triển khai các luật phát hiện WAF (SQLi, XSS, Traversal) $\rightarrow$ Phase 2.
-  * Chưa triển khai trích xuất đặc trưng và mô hình ML $\rightarrow$ Phase 3, 5, 6.
-  * Chưa triển khai Risk Engine, Rate Limiting, Decision Engine $\rightarrow$ Phase 7, 8.
-  * Chưa triển khai giao diện hiển thị biểu đồ và danh sách log $\rightarrow$ Phase 9.
-  * Chưa triển khai kịch bản Attack Lab $\rightarrow$ Phase 10.
+* **Giới hạn chủ đích (Known Limitations in Phase 2):**
+  * Chưa triển khai trích xuất đặc trưng payload cho ML $\rightarrow$ Thuộc về **Phase 3**.
+  * Chưa triển khai mô hình Machine Learning (Random Forest & Isolation Forest) $\rightarrow$ Thuộc về **Phase 5 & 6**.
+  * Chưa triển khai Risk Engine, Decision Engine và Rate Limiter chặn tự động $\rightarrow$ Thuộc về **Phase 7 & 8**.
+  * Chưa hiển thị biểu đồ và sự kiện trên Dashboard UI $\rightarrow$ Thuộc về **Phase 9**.
+  * Chưa triển khai Attack Lab automated runner $\rightarrow$ Thuộc về **Phase 10**.
 
 ---
 
-### Phase 2 — Rule Engine (NOT STARTED)
-- [ ] Xây dựng Regex Matcher phát hiện SQL Injection, XSS, Path Traversal, Command Injection.
-- [ ] Phân tích URL, Query Parameters, Headers, Request Body.
-- [ ] Gán Rule Risk Score ($0 - 100$) và nhãn tấn công tương ứng.
+### Phase 3 — Feature Engineering (NOT STARTED)
+- [ ] *(RESERVED FOR ML TEAM)* 17 payload features (chiều dài, entropy, tỷ lệ ký tự đặc biệt, từ khóa SQL/XSS/Path).
+- [ ] *(RESERVED FOR ML TEAM)* HTTP & Behavior metadata features.
 
 ---
 
-*(Các phase từ Phase 3 đến Phase 12 giữ nguyên trạng thái NOT STARTED theo kế hoạch)*
+*(Các phase từ Phase 4 đến Phase 12 giữ nguyên trạng thái NOT STARTED theo kế hoạch)*

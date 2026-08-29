@@ -50,56 +50,26 @@ Tài liệu đặc tả các API endpoints của hệ thống **FastAPI WAF Gate
 
 ---
 
-## 2. Reverse Proxy Endpoint
+## 2. Reverse Proxy & Security Inspection Endpoint
 
-### 2.1. Dynamic Reverse Proxy
+### 2.1. Dynamic Reverse Proxy with Signature Inspection
 * **Endpoint:** `/api/proxy/{path:path}`
 * **Methods:** `GET`, `POST`, `PUT`, `PATCH`, `DELETE`, `OPTIONS`, `HEAD`
-* **Mô tả:** Nhận request từ Client, gắn Request ID, đo độ trễ, forward an toàn tới `TARGET_API_URL/{path}`, nhận kết quả từ Target, ghi log traffic vào SQLite và trả lại kết quả cho Client.
-* **Header Handling:**
-  * Client có thể gửi `X-Request-ID` (chuỗi ký tự an toàn $\le 64$ ký tự). Nếu không có, Gateway sẽ tự động sinh UUID4.
-  * Các Hop-by-hop headers (`Connection`, `Keep-Alive`, `Upgrade`, `Host`, `Content-Length`) được lọc tự động trước khi chuyển tiếp.
-* **Bảo vệ Open Proxy / SSRF:** Địa chỉ target luôn được khóa cố định theo cấu hình `TARGET_API_URL`. Gateway từ chối mọi yêu cầu chuyển tiếp tới domain lạ ngoài target được định cấu hình.
+* **Mô tả:** Nhận request từ Client, gắn `X-Request-ID`, chuẩn hóa dữ liệu, quét qua bộ luật Rule Engine (Phase 2 Detection Only), ghi nhận sự kiện vào `security_events` nếu phát hiện dấu hiệu tấn công, forward an toàn tới `TARGET_API_URL/{path}`, nhận kết quả từ Target, ghi log traffic vào bảng `requests` và trả lại kết quả cho Client.
+* **Nguyên tắc Non-blocking (Phase 2):** Các request chứa dấu hiệu tấn công vẫn được chuyển tiếp tới Target và phản hồi cho Client bình thường.
 
-#### Ví dụ 1: Tìm kiếm sản phẩm (GET)
+#### Ví dụ 1: Request Chứa Tấn Công SQL Injection (GET)
 * **Client Request:**
   ```http
-  GET /api/proxy/rest/products/search?q=apple HTTP/1.1
+  GET /api/proxy/rest/products/search?q=apple%27%20OR%201%3D1-- HTTP/1.1
   Host: localhost:8000
-  X-Request-ID: req-client-001
+  X-Request-ID: req-sqli-001
   ```
-* **Gateway Forward tới Upstream:**
-  ```http
-  GET http://juice-shop:3000/rest/products/search?q=apple
-  X-Request-ID: req-client-001
-  ```
-* **Response nhận được từ Target:** `200 OK`
-  ```json
-  {
-    "status": "success",
-    "data": [
-      { "id": 1, "name": "Apple Juice (1000ml)", "price": 1.99 }
-    ]
-  }
-  ```
-
-#### Ví dụ 2: Tạo người dùng (POST)
-* **Client Request:**
-  ```http
-  POST /api/proxy/api/Users HTTP/1.1
-  Host: localhost:8000
-  Content-Type: application/json
-  Authorization: Bearer secret-token-example
-
-  {
-    "email": "user@example.com",
-    "password": "UserPassword123"
-  }
-  ```
-* **Response:** `201 Created`
-* **Lưu trữ bảo mật (Database Persistence):**
-  * Trường `headers` trong database được ẩn: `{"authorization": "[REDACTED]"}`.
-  * Trường `password` không bao giờ xuất hiện ở dạng plaintext trong database log.
+* **Xử lý nội bộ:**
+  * Rule Engine khớp `SQLI-001` (Severity: `CRITICAL`, Score: `89.5`).
+  * Ghi bản ghi vào bảng `security_events` với `request_id = "req-sqli-001"`.
+  * Chuyển tiếp request sang `http://juice-shop:3000/rest/products/search?q=apple%27%20OR%201%3D1--`.
+* **Client Response:** Nhận kết quả phản hồi thực tế từ Juice Shop (`200 OK`).
 
 ---
 
