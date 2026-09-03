@@ -17,7 +17,7 @@ Tài liệu theo dõi trạng thái thực hiện các giai đoạn phát triể
 | **Phase 6** | **Anomaly Detection — Isolation Forest** | ML/Data Team (Member B) | **NOT STARTED** | *(RESERVED FOR ML TEAM)* Behavior window, Isolation Forest anomaly scoring. |
 | **Phase 7** | **Hybrid Risk Engine & Decision** | Backend / Security (Member A) | **NOT STARTED** | Weighted Risk Score (0–100), Thresholds (ALLOW/MONITOR/RATE_LIMIT/BLOCK). |
 | **Phase 8** | **Rate Limiting & Behavior Tracker** | Backend / Security (Member A) | **NOT STARTED** | IP tracking time-window, HTTP 429 response, endpoint limits. |
-| **Phase 9** | **Dashboard UI (Next.js)** | Frontend / Fullstack (Member C) | **NOT STARTED** | Overview cards, Timeline chart, Distribution, Security events, Explain UI. |
+| **Phase 9** | **Dashboard UI (Next.js)** | Frontend / Tech Lead (Member A) | **COMPLETED (Task 9.1 & 9.2)** | SOC Dashboard, 5 KPI cards, Timeline, Distribution, Events table, Payload Drawer, Simulator. |
 | **Phase 10** | **Attack Lab & Scenario Runner** | Fullstack / QA (Member C & D) | **NOT STARTED** | Attack scenarios JSON, CLI Runner, Automated campaigns. |
 | **Phase 11** | **System Evaluation & Comparison** | ML/Data & QA (Member B & D) | **NOT STARTED** | *(RESERVED FOR ML TEAM)* So sánh Rule vs ML vs Anomaly vs Hybrid, Evasion test, Benchmark. |
 | **Phase 12** | **Final Hardening & Documentation** | Toàn đội / Documentation | **NOT STARTED** | Clean run, error handling, audit log, hoàn thiện docs báo cáo. |
@@ -75,10 +75,36 @@ Tài liệu theo dõi trạng thái thực hiện các giai đoạn phát triể
 
 ---
 
+### Phase 9 — Dashboard UI & Real-Time Threat Visualization (COMPLETED Task 9.1 & 9.2)
+
+* **Mục tiêu (Objectives):**
+  * Xây dựng trung tâm chỉ huy an ninh trực quan (SOC Command Center) theo phong cách Dark Cyber Glassmorphism.
+  * Đảm bảo nguyên tắc học thuật 100%: Dữ liệu truy vấn trực tiếp từ bảng `requests` và `security_events` trong SQLite, không mock data.
+  * Chuẩn hóa danh xưng theo Phase 2: `ATTACKS DETECTED`, `SAFE REQUEST RATE`, `Threat Score (Rule Engine Phase 2)`.
+  * Tích hợp bảng bắn thử nghiệm Quick Simulator (1-click test) để demo trực quan trước Hội đồng mà không cần Postman.
+
+* **Sản phẩm bàn giao (Deliverables):**
+  * `gateway/app/api/dashboard.py`: 6 REST APIs thật (`/api/dashboard/stats`, `/events`, `/timeline`, `/distribution`, `/simulate`, `/reset-demo`).
+  * `gateway/tests/test_dashboard_api.py`: Bộ unit test tự động kiểm thử toàn bộ dashboard endpoints.
+  * `dashboard/src/components/Header.tsx`: Target status (`● 12.4ms`), WAF Mode (`MONITOR_ONLY`), Smart Polling (`3s/5s/Off`), Reset Demo.
+  * `dashboard/src/components/MetricCards.tsx`: 4 thẻ chỉ số KPI + Hộp Quick Simulator (SQLi, XSS, Path, Cmd, Benign).
+  * `dashboard/src/components/ThreatTimelineChart.tsx`: Biểu đồ Area Chart sóng Cyan (Benign) vs sóng Rose (Attacks).
+  * `dashboard/src/components/AttackDistributionChart.tsx`: Biểu đồ Donut Chart phân bố 4 họ tấn công.
+  * `dashboard/src/components/LiveEventsTable.tsx`: Bảng nhật ký có tìm kiếm, lọc theo Severity/Type, xuất file JSON.
+  * `dashboard/src/components/PayloadEvidenceDrawer.tsx`: Cửa sổ Drawer 2 tab (Tab 1: Rule Evidence Phase 2 Active; Tab 2: 17-Feature Vector chờ sẵn cho Phase 3).
+  * `docs/DASHBOARD_SPEC.md`: Tài liệu đặc tả kỹ thuật toàn diện cho Dashboard.
+
+* **Kiểm thử & Xác minh (Tests & Verification):**
+  * `pytest gateway/tests/`: **38/38 tests PASSED (100%)**.
+  * `ruff check gateway/`: **0 errors**.
+  * `next build`: **Compiled successfully, static generation 4/4 (125 kB)**.
+
+---
+
 ### Phase 3 — Feature Engineering (NOT STARTED)
 - [ ] *(RESERVED FOR ML TEAM)* 17 payload features (chiều dài, entropy, tỷ lệ ký tự đặc biệt, từ khóa SQL/XSS/Path).
 - [ ] *(RESERVED FOR ML TEAM)* HTTP & Behavior metadata features.
 
 ---
 
-*(Các phase từ Phase 4 đến Phase 12 giữ nguyên trạng thái NOT STARTED theo kế hoạch)*
+*(Các phase còn lại từ Phase 4 đến Phase 12 giữ nguyên trạng thái theo kế hoạch)*
