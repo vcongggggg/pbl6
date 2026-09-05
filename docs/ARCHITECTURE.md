@@ -58,13 +58,22 @@ graph TD
 * **Hiện tại (Phase 0-2):** Khởi tạo cấu trúc thư mục và tài liệu giao diện kết nối kỹ thuật [docs/ML_INTEGRATION.md](file:///c:/Study/HocKy6/PBL6/docs/ML_INTEGRATION.md).
 * **Tương lai (Phase 3–6, 11 - Planned):** Xây dựng module trích xuất đặc trưng, sinh tập dữ liệu huấn luyện, huấn luyện mô hình Random Forest & Isolation Forest, xuất file artifacts (`.joblib`).
 
-### 2.3. `dashboard/` (Frontend Visualization)
-* **Hiện tại (Phase 0-2):** Khởi tạo khung dự án Next.js 14 + TypeScript sạch sẽ, build thành công và hiển thị trang landing thông báo trạng thái nền tảng.
-* **Tương lai (Phase 9 - Planned):** Hiển thị thống kê lưu lượng thời gian thực, bảng nhật ký sự kiện bảo mật, giao diện cấu hình WAF và panel điều khiển Attack Lab.
+### 2.3. `dashboard/` (Frontend Visualization & SOC Command Center)
+* **Hiện tại (Đã hoàn thành Phase 9 Task 9.1 & 9.2):**
+  * Giao diện trung tâm chỉ huy an ninh **SOC Command Center** chuẩn Dark Cyber Glassmorphism trên Next.js 14 + Tailwind CSS + Lucide Icons + Recharts.
+  * **5 Thẻ KPI:** Total Traffic (RPS), Attacks Detected, Threat Score (Rule Engine Phase 2), Safe Request Rate (Forwarded 200 OK), và Hộp **Quick Simulator 1-click test**.
+  * **Biểu đồ thời gian thực:** Recharts Area Chart sóng kép (Benign vs Attacks) và Donut Chart phân bố 4 họ tấn công.
+  * **Bảng Live Security Events Table:** Tìm kiếm, phân trang, lọc Severity/Type, xuất file JSON.
+  * **Payload Evidence Drawer:** Tab 1 xem chi tiết bằng chứng Rule Engine (Raw vs Canonical Normalized), Tab 2 chờ sẵn 17-Feature Vector cho Phase 3.
+  * Tích hợp 6 REST APIs thật trên Gateway (`/api/dashboard/*`), cơ chế Smart Polling tự động tạm dừng khi xem chi tiết bằng chứng.
+* **Tương lai (Phase 5-7 - Planned):** Bổ sung hiển thị nhãn Random Forest, Anomaly gauge của Isolation Forest, và điều khiển chế độ chặn Active Defense (HTTP 403).
 
-### 2.4. `attack-lab/` (Attack Simulation)
+### 2.4. `attack-lab/` (Offensive AI — AI Attack Planner & Autonomous Red Teaming)
 * **Hiện tại (Phase 0-2):** Cấu trúc thư mục kịch bản `scenarios/` và tài liệu hướng dẫn an toàn.
-* **Tương lai (Phase 10 - Planned):** Triển khai các kịch bản tấn công (SQLi, XSS, Path Traversal, API Abuse) và script `runner.py` để tự động hóa chiến dịch thử nghiệm.
+* **Định hướng nâng cấp (Phase 10 — Theo chỉ đạo của Thầy hướng dẫn):**
+  * Nâng cấp từ script kịch bản tĩnh thành **AI Attack Planner Agent (Autonomous Red Teaming)**.
+  * Sử dụng AI để lập kế hoạch tấn công có mục tiêu, tự động sinh chuỗi request khai thác (SQLi, XSS, Path, Cmd, Brute Force).
+  * **Adaptive Evasion Engine:** Khi Gateway chặn bằng mã `403 Forbidden`, AI Agent sẽ tự động phân tích và áp dụng các kỹ thuật biến đổi payload (Obfuscation, URL encoding, token mixing, semantic mutation) để thử nghiệm vượt rào và đánh giá độ bền vững (Robustness) của hệ thống phòng thủ.
 
 ---
 
@@ -85,12 +94,13 @@ graph TD
 | **Input Normalization & Canonicalization** | ✅ Implemented | Phase 2 |
 | **Rule Risk Scoring (0–100 Bounded)** | ✅ Implemented | Phase 2 |
 | **Security Events DB Traceability** | ✅ Implemented | Phase 2 |
+| **SOC Dashboard UI & Real-time Charts** | ✅ Implemented | Phase 9 (Task 9.1 & 9.2) |
 | **Feature Extraction (17 Payload + Behavior)**| ⏳ Planned | Phase 3 (ML Team) |
 | **Dataset Generation & Lab Collection** | ⏳ Planned | Phase 4 (ML Team) |
 | **Random Forest Supervised ML** | ⏳ Planned | Phase 5 (ML Team) |
 | **Isolation Forest Anomaly Detection** | ⏳ Planned | Phase 6 (ML Team) |
 | **Weighted Risk Scoring & Decision Engine** | ⏳ Planned | Phase 7 |
 | **IP-based Rate Limiter (HTTP 429)** | ⏳ Planned | Phase 8 |
-| **Security Dashboard UI & Real-time Charts** | ⏳ Planned | Phase 9 |
-| **Attack Lab Scenarios & Runner CLI** | ⏳ Planned | Phase 10 |
+| **AI Attack Planner & Autonomous Red Team** | ⏳ Planned | Phase 10 |
 | **Multi-method Evaluation & Benchmark** | ⏳ Planned | Phase 11 (ML Team) |
+| **Final Hardening & Defense Report** | ⏳ Planned | Phase 12 |

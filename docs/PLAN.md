@@ -5,26 +5,26 @@
 
 ---
 
-# 1. TẦM NHÌN DỰ ÁN
+# 1. TẦM NHÌN DỰ ÁN (PROJECT VISION)
 
-Xây dựng một hệ thống Web API Security Platform trong môi trường lab, đóng vai trò như một WAF/IDS/IPS thông minh đứng trước Web API.
+Xây dựng một nền tảng an ninh thông minh hai chiều (**Web API Security & Autonomous Red Teaming Platform**) trong môi trường lab, kết hợp hài hòa hai trụ cột chiến lược theo định hướng học thuật của Giảng viên hướng dẫn:
+1. **AI trong An toàn thông tin (Defense AI):** Đóng vai trò WAF/IDS/IPS thông minh đứng trước Web API, tích hợp bộ lọc tất định (Rule Engine) cùng mô hình máy học có giám sát (Random Forest) và phát hiện dị biệt (Isolation Forest) để đánh giá rủi ro và ngăn chặn tấn công API theo thời gian thực.
+2. **Sử dụng AI để lập kế hoạch tấn công (Offensive AI — AI Attack Planner):** Đóng vai trò Red Team tự hành (`attack-lab/`), sử dụng AI để tự động phân tích mục tiêu, lập kế hoạch chuỗi tấn công và áp dụng kỹ thuật né tránh thích ứng (Adaptive Adversarial Evasion) khi bị WAF chặn để kiểm thử độ bền vững của hệ thống phòng thủ.
 
-Hệ thống phải có khả năng:
-
-- nhận HTTP request;
-- phân tích payload, URL, HTTP metadata và hành vi request;
-- phát hiện tấn công bằng Rule-based Detection;
-- phát hiện tấn công bằng Supervised Machine Learning;
-- phát hiện hành vi bất thường bằng Anomaly Detection;
-- kết hợp các nguồn tín hiệu thành Risk Score;
-- quyết định ALLOW / MONITOR / RATE LIMIT / BLOCK;
-- proxy request an toàn tới target Web API;
-- ghi log bảo mật;
-- hiển thị Dashboard thời gian thực/gần thời gian thực;
-- cung cấp Attack Lab để tạo các request tấn công phục vụ demo;
-- đánh giá và so sánh Rule-based, ML, Anomaly Detection và Hybrid Detection.
-
-Mục tiêu không phải xây một model ML đơn lẻ mà xây một hệ thống phòng thủ Web API hoàn chỉnh có thể demo end-to-end.
+Hệ thống sở hữu các năng lực cốt lõi:
+- Tiếp nhận và phân tích toàn diện bề mặt request (URL path, query parameters, headers, body payload, và hành vi IP).
+- Chuẩn hóa dữ liệu chống bypass đa tầng (Input Normalizer).
+- Phát hiện tấn công theo dấu hiệu tĩnh bằng **Rule Engine (16 rules tất định)**.
+- Trích xuất **17 đặc trưng** payload và ngữ cảnh HTTP phục vụ Machine Learning.
+- Phát hiện tấn công đã biết bằng **Random Forest (Supervised ML)**.
+- Phát hiện hành vi dị biệt và đòn tấn công mới lạ bằng **Isolation Forest (Anomaly Detection)**.
+- Tổng hợp điểm rủi ro đa nguồn thành **Weighted Hybrid Risk Score (0–100)**.
+- Đưa ra quyết định phòng thủ tự động: **ALLOW / MONITOR / RATE LIMIT (429) / BLOCK (403)**.
+- Reverse Proxy bất đồng bộ chuyển tiếp an toàn tới Target Web API (OWASP Juice Shop).
+- Lưu vết toàn diện với khả năng truy vết 100% qua `X-Request-ID` vào cơ sở dữ liệu SQLite (`requests` & `security_events`).
+- Hiển thị trung tâm chỉ huy an ninh trực quan **SOC Command Center Dashboard (Next.js 14)** với đồ thị thời gian thực, bảng nhật ký và hộp Quick Simulator 1-click test.
+- Cung cấp **AI Attack Planner Agent** phục vụ diễn tập đối kháng tự động (Autonomous Cyber Range).
+- Đánh giá thực nghiệm so sánh đa phương pháp (Rule vs ML vs Anomaly vs Hybrid) và kiểm thử độ bền vững trước đòn tấn công né tránh (Adversarial Robustness).
 
 ---
 
@@ -1392,267 +1392,156 @@ Mọi bug được sửa phải có test tương ứng.
 
 ---
 
-# 33. DEVELOPMENT PHASES
+# 33. DEVELOPMENT PHASES (TIẾN ĐỘ THỰC HIỆN CÁC GIAI ĐOẠN)
 
-## PHASE 0 — Analysis
+Hệ thống được chia thành 13 giai đoạn phát triển tuần tự, đã được bẻ nhỏ thành **50 Subtasks chi tiết** và quản lý trực tiếp trên GitHub Project Kanban của nhóm.
 
-- đọc toàn bộ plan;
-- inspect repository hiện tại;
-- không xóa code đang hoạt động;
-- xác định phần đã có;
-- tạo implementation checklist.
+## PHASE 0 — Analysis & Foundation (COMPLETED ✅)
+- Khởi tạo cấu trúc monorepo, FastAPI backend foundation, SQLite models, Next.js base, Docker Compose, CI workflow tự động, và thiết lập bộ Pull Request Templates.
+- Deliverable: Môi trường hoàn chỉnh, CI pass.
 
-Deliverable:
-- architecture confirmation;
-- gap analysis.
+## PHASE 1 — Infrastructure & Async Proxy (COMPLETED ✅)
+- Xây dựng Dynamic Reverse Proxy (`/api/proxy/{path:path}`), Request ID resolver, Hop-by-hop header filtering, SQLite traffic persistence có khử nhạy cảm, chống Open Proxy/SSRF, và endpoint kiểm tra kết nối target `GET /health/target`.
+- Deliverable: Reverse proxy hoạt động trơn tru với độ trễ thấp.
 
-## PHASE 1 — Infrastructure
+## PHASE 2 — Rule Engine & Signature Detection (COMPLETED ✅)
+- Triển khai **16 rules tĩnh tất định** (SQLi, XSS, Path Traversal, Command Injection), bộ chuẩn hóa an toàn `InputNormalizer`, chấm điểm rủi ro tất định `RuleScorer` (0–100), lưu vết sự kiện bảo mật `security_events`. Hoạt động ở chế độ **Detection Only (Non-blocking)**.
+- Deliverable: 33/33 Pytest unit tests pass 100%, 0 lỗi Ruff linter, live verification thành công.
 
-- Docker Compose
-- Gateway
-- Target API
-- Dashboard skeleton
-- SQLite
+## PHASE 3 — Feature Engineering (IN PROGRESS 🚀 — Next Up)
+- Trích xuất **17 đặc trưng** payload (độ dài, Shannon entropy, tỷ lệ ký tự đặc biệt), tần suất từ khóa tấn công (SQLi, XSS, Path, Cmd), và ngữ cảnh HTTP/hành vi metadata.
+- Phụ trách: `naocavang08` (Thành viên B).
+- Deliverable: `ml-engine/features/` pipeline trích xuất vector đặc trưng kèm test suite.
 
-Deliverable:
-- toàn hệ thống boot được.
+## PHASE 4 — Dataset Generation & Lab Traffic (PLANNED ⏳)
+- Thu thập và sinh tập dữ liệu cân bằng: Benign HTTP traffic từ Juice Shop crawler + Attack payloads từ SecLists/PayloadsAllTheThings.
+- Phụ trách: `naocavang08` (Thành viên B).
+- Deliverable: Bộ dataset chuẩn hóa CSV/Parquet chia Train/Test sạch sẽ.
 
-## PHASE 2 — Rule Engine
+## PHASE 5 — Random Forest Supervised ML (PLANNED ⏳)
+- Huấn luyện mô hình Random Forest phân loại đa lớp (Multi-class: Benign, SQLi, XSS, Path, Cmd), đánh giá Accuracy/F1, xuất file model `.joblib`, và tích hợp suy luận vào Gateway.
+- Phụ trách: `naocavang08` (Thành viên B).
+- Deliverable: Mô hình ML có độ trễ suy luận $< 5\text{ms}$.
 
-- SQLi
-- XSS
-- Traversal
-- Command Injection
-- Brute Force
-- API Abuse
+## PHASE 6 — Anomaly Detection — Isolation Forest (PLANNED ⏳)
+- Xây dựng mô hình Isolation Forest học phân phối lưu lượng sạch để phát hiện các dị biệt và biến thể tấn công mới lạ (Zero-day / Novel attacks).
+- Phụ trách: `naocavang08` (Thành viên B).
+- Deliverable: Bộ tính Anomaly Score chuẩn hóa $0.0 - 1.0$.
 
-Deliverable:
-- rule tests pass.
+## PHASE 7 — Hybrid Risk Engine & Decision (PLANNED ⏳)
+- Tổng hợp điểm số từ Rule Engine, Random Forest và Isolation Forest thành **Weighted Risk Score (0–100)**. Đưa ra 4 quyết định phòng thủ: **ALLOW / MONITOR / RATE_LIMIT / BLOCK (403)**.
+- Phụ trách: `vcongggggg` (Thành viên A).
+- Deliverable: Module ra quyết định phòng thủ chủ động (Active Defense).
 
-## PHASE 3 — Feature Engineering
+## PHASE 8 — Rate Limiting & Behavior Tracker (PLANNED ⏳)
+- Xây dựng bộ đếm tần suất Sliding Window theo IP trong bộ nhớ, tự động chặn và trả về `HTTP 429 Too Many Requests` khi vượt ngưỡng cho phép (chống Brute-force/DoS).
+- Phụ trách: `vcongggggg` (Thành viên A).
+- Deliverable: Rate limiter module bảo vệ ngưỡng gọi API.
 
-- 17 payload features
-- HTTP features
-- behavior features
+## PHASE 9 — SOC Dashboard UI & Real-Time Threat Visualization (COMPLETED Task 9.1 & 9.2 ✅)
+- Xây dựng trung tâm chỉ huy an ninh trực quan **SOC Command Center** chuẩn Dark Cyber Glassmorphism (Next.js 14 + Recharts):
+  * **6 REST APIs thật trên Gateway** (`GET /api/dashboard/stats`, `/events`, `/timeline`, `/distribution`, `POST /simulate`, `POST /reset-demo`).
+  * **5 Thẻ KPI:** Total Traffic (RPS), Attacks Detected, Threat Score (Rule Engine Phase 2), Safe Request Rate (Forwarded 200 OK).
+  * **Hộp Quick Simulator 1-click:** 5 nút bấm thử nghiệm (SQLi, XSS, Path, Cmd, Benign) nhảy số thật trên UI ngay lập tức.
+  * **Biểu đồ sóng kép Area Chart & Donut Chart:** Hiển thị lưu lượng Benign vs Attacks và tỷ lệ % phân bố các họ tấn công.
+  * **Bảng Live Security Events & Payload Evidence Drawer:** Phân tích đối chiếu Raw vs Canonical Input và tab chờ sẵn 17-Feature Vector cho Phase 3.
+- Phụ trách: `vcongggggg` (Thành viên A).
+- Deliverable: Giao diện web hoàn chỉnh chạy tại port 3000, 38/38 backend tests pass, production build thành công (125 kB).
 
-Deliverable:
-- feature extractor tests pass.
+## PHASE 10 — Offensive AI — AI Attack Planner & Autonomous Red Teaming (PLANNED ⏳)
+- Nâng cấp `attack-lab/` theo chỉ đạo học thuật của Thầy hướng dẫn: Xây dựng **AI Attack Planner Agent** tự động lập kế hoạch và thực thi chuỗi tấn công Web API có mục tiêu.
+- Tích hợp **Adaptive Evasion Engine**: Khi bị Gateway chặn 403, AI Agent sẽ tự động biến đổi payload (Obfuscation, URL encode, token mixing) để thử nghiệm vượt rào và đánh giá độ bền vững (Robustness) của hệ thống phòng thủ.
+- Phụ trách: `naocavang08` (Thành viên B).
+- Deliverable: Agent đối kháng tự động chạy kịch bản thử nghiệm Red Team.
 
-## PHASE 4 — Dataset
+## PHASE 11 — System Evaluation & Adversarial Benchmark (PLANNED ⏳)
+- Thực nghiệm đo đạc và lập bảng so sánh hiệu năng giữa 4 phương pháp: **Rule-based vs ML vs Anomaly vs Hybrid**.
+- Đánh giá khả năng chống chịu trước đòn tấn công né tránh (Adversarial Robustness) do AI Attack Planner tạo ra.
+- Phụ trách: `naocavang08` (Thành viên B).
+- Deliverable: Bảng số liệu thực nghiệm khoa học, biểu đồ ROC/PR curve, Confusion Matrix.
 
-- generator
-- benign cases
-- attack variants
-- lab traffic
-- train/test split
-
-Deliverable:
-- dataset report.
-
-## PHASE 5 — Random Forest
-
-- training
-- evaluation
-- model serialization
-- inference integration
-
-Deliverable:
-- model metrics.
-
-## PHASE 6 — Anomaly Detection
-
-- Isolation Forest
-- behavior window
-- anomaly scoring
-
-Deliverable:
-- anomaly evaluation.
-
-## PHASE 7 — Hybrid Risk Engine
-
-- normalize scores
-- weighted risk
-- threshold
-- decision
-
-Deliverable:
-- ALLOW/MONITOR/RATE_LIMIT/BLOCK.
-
-## PHASE 8 — Rate Limiting
-
-- IP tracking
-- endpoint tracking
-- 429 response
-- logging.
-
-## PHASE 9 — Dashboard
-
-- overview
-- charts
-- events
-- detail
-- risk
-- model explanation
-- config
-- attack lab
-
-## PHASE 10 — Attack Lab
-
-- scenarios
-- runner
-- result collection
-- campaign
-
-## PHASE 11 — Evaluation
-
-- Rule vs ML vs Anomaly vs Hybrid
-- metrics
-- performance
-- unseen attacks
-- false positives
-
-## PHASE 12 — Final Hardening
-
-- error handling
-- logging
-- documentation
-- Docker clean run
-- demo rehearsal
-- screenshots
-- report tables
+## PHASE 12 — Final Hardening, Audit Logs & Thesis Defense Report (PLANNED ⏳)
+- Đóng gói toàn bộ hệ thống bằng Docker Compose một lệnh chạy (`docker compose up --build`).
+- Tổng duyệt kịch bản demo trực tiếp (Demo Rehearsal) và hoàn thiện báo cáo đồ án, slide thuyết trình.
+- Phụ trách: Cả hai bạn (`vcongggggg` & `naocavang08`).
+- Deliverable: Hệ thống chạy ổn định 100%, slide và báo cáo tốt nghiệp đồ án.
 
 ---
 
-# 33A. TIMELINE GỢI Ý — 12 TUẦN
+# 33A. TIMELINE VẬN HÀNH THỰC TẾ (12 TUẦN)
 
-Timeline mặc định cho một PBL học kỳ. Có thể co giãn theo lịch môn nhưng phải giữ checkpoint.
-
-| Tuần | Trọng tâm | Deliverable | Checkpoint |
-|---|---|---|---|
-| 1 | Phân tích + Architecture | GAP analysis, architecture | Chốt scope |
-| 2 | Infrastructure | Docker + Gateway + Target + DB | **P0 checkpoint 1** |
-| 3 | Rule Engine | SQLi/XSS/Traversal/Command | Rule tests pass |
-| 4 | Feature Engineering | Payload + HTTP features | Feature tests pass |
-| 5 | Dataset | Generator + lab traffic | Dataset v1 |
-| 6 | Random Forest | Train + evaluation + inference | **P0 checkpoint 2** |
-| 7 | Risk Engine | Risk + decision + modes | ALLOW/MONITOR/BLOCK |
-| 8 | Rate Limit + Behavior | IP/time-window detection | API abuse demo |
-| 9 | Isolation Forest | Anomaly detection | P1 checkpoint |
-| 10 | Dashboard + Attack Lab | UI + scenarios | End-to-end demo |
-| 11 | Evaluation + Academic | Compare methods + benchmark research | **Freeze features** |
-| 12 | Hardening + Report | Test, docs, screenshots, demo | **Final freeze** |
-
-## Checkpoint rule
-
-### Checkpoint 1 — cuối tuần 2
-Phải có request chạy xuyên:
-Client → Gateway → Target.
-
-### Checkpoint 2 — cuối tuần 6
-Phải có:
-Rule + Feature Extraction + Random Forest + logging cơ bản.
-
-Nếu chưa đạt, không được làm P2.
-
-### Checkpoint 3 — cuối tuần 10
-Phải có:
-P0 hoàn chỉnh + Dashboard + Attack Lab cơ bản.
-
-### Final Freeze — tuần 12
-Không thêm feature lớn. Chỉ bug fix, evaluation, documentation và rehearsal.
-
-## Nếu chỉ có 1–2 người
-
-Ưu tiên:
-- P0 trước;
-- P1 Behavior/Anomaly sau;
-- P2 chỉ làm khi còn thời gian.
-
-Không được đánh đổi P0 để lấy nhiều công nghệ.
+| Tuần | Trọng tâm | Deliverable | Trạng thái |
+| :---: | :--- | :--- | :---: |
+| **1** | Phân tích yêu cầu + Kiến trúc Monorepo | Monorepo layout, Docker, CI workflow | **HOÀN THÀNH ✅** |
+| **2** | Infrastructure & Reverse Proxy Gateway | Dynamic Proxy, Request ID, Target Probe | **HOÀN THÀNH ✅** |
+| **3** | Rule Engine & Signature Detection | 16 Rules tất định, Normalizer, Scorer | **HOÀN THÀNH ✅** |
+| **4** | SOC Dashboard UI & Gateway REST APIs | Next.js Dashboard, Recharts, Quick Simulator | **HOÀN THÀNH ✅** |
+| **5** | Feature Engineering (17 Features) | Vector pipeline, extractor unit tests | **TIẾP THEO 🚀** |
+| **6** | Dataset Collection & Synthetic Generation | Tập dữ liệu sạch + tấn công (CSV/Parquet) | Kế hoạch ⏳ |
+| **7** | Random Forest Supervised ML | Mô hình ML, offline metrics, model inference | Kế hoạch ⏳ |
+| **8** | Anomaly Detection (Isolation Forest) | Phát hiện dị biệt, novel attack detection | Kế hoạch ⏳ |
+| **9** | Hybrid Risk Engine & Rate Limiting | Decision ALLOW/BLOCK, HTTP 429 limiter | Kế hoạch ⏳ |
+| **10** | Offensive AI — AI Attack Planner | Autonomous Red Team Agent, Evasion engine | Kế hoạch ⏳ |
+| **11** | Evaluation & Adversarial Robustness | Bảng so sánh 4 phương pháp, ROC curves | Kế hoạch ⏳ |
+| **12** | Final Hardening & Slide Báo Cáo | Docker 1-click, Demo rehearsal, Báo cáo đồ án | Kế hoạch ⏳ |
 
 ---
 
-# 33B. PHÂN CÔNG NHÓM
+# 33B. PHÂN CÔNG TRÁCH NHIỆM NHÓM 2 THÀNH VIÊN (CHÍNH THỨC)
 
-Phân công phải phản ánh đóng góp thực tế.
+Phân chia trách nhiệm minh bạch, bám sát ma trận 50 GitHub Issues trong tài liệu [docs/TASKS_BREAKDOWN.md](file:///c:/Study/HocKy6/PBL6/docs/TASKS_BREAKDOWN.md):
 
-## Thành viên A — Backend/Security
-- Gateway
-- Proxy
-- Rule Engine
-- Rate Limiting
-- Risk/Decision Engine
-- Security logging
-
-## Thành viên B — ML/Data
-- Dataset
-- Feature Engineering
-- Random Forest
-- Isolation Forest
-- Evaluation
-- Benchmark/related work
-
-## Thành viên C — Dashboard/Integration (nếu có)
-- Next.js Dashboard
-- Attack Lab UI
-- API integration
-- Visualization
-- Demo flow
-
-## Thành viên D — QA/Documentation (nếu có)
-- Test plan
-- Security test
-- Performance benchmark
-- Documentation
-- Report assets
-
-Nếu nhóm chỉ có 1–2 người, gộp vai trò nhưng phải ghi rõ module nào do ai phụ trách.
-
-Mỗi commit/PR và mỗi deliverable nên map được với thành viên thực hiện để thuận tiện chứng minh đóng góp cá nhân.
+```text
+┌──────────────────────────────────────────────────────────────────────────────────┐
+│                   PHÂN CÔNG TRÁCH NHIỆM ĐỒ ÁN PBL6 (2 THÀNH VIÊN)               │
+├────────────────────────────────────────┬─────────────────────────────────────────┤
+│ THÀNH VIÊN A: vcongggggg               │ THÀNH VIÊN B: naocavang08               │
+│ Vai trò: Tech Lead / Backend & UI      │ Vai trò: AI/ML Engineer & Offensive Red │
+├────────────────────────────────────────┼─────────────────────────────────────────┤
+│ • Reverse Proxy Gateway & Request ID   │ • Feature Engineering (17 Features)     │
+│ • Rule Engine (16 Rules tất định)      │ • Thu thập & sinh Dataset (Benign/Atk)  │
+│ • Input Normalizer & Scorer            │ • Huấn luyện Random Forest (Supervised) │
+│ • Hybrid Decision Engine (Phase 7)     │ • Huấn luyện Isolation Forest (Anomaly) │
+│ • IP Rate Limiting - 429 (Phase 8)     │ • Xây dựng AI Attack Planner (Phase 10) │
+│ • SOC Dashboard UI & Recharts (Phase 9)│ • Đánh giá thực nghiệm so sánh (Phase 11)│
+│ • Docker Compose Hardening (Phase 12)  │ • Soạn thảo Slide & Báo cáo đồ án       │
+└────────────────────────────────────────┴─────────────────────────────────────────┘
+```
 
 ---
 
-# 34. DEFINITION OF DONE
+# 34. DEFINITION OF DONE (TIÊU CHUẨN HOÀN THÀNH ĐỒ ÁN)
 
-Dự án chỉ được xem là hoàn thành khi:
-
-- [ ] docker compose up --build chạy được.
-- [ ] Target API truy cập được.
-- [ ] Gateway proxy được request.
-- [ ] Rule engine hoạt động.
-- [ ] Random Forest được load và inference.
-- [ ] Isolation Forest hoạt động.
-- [ ] Risk score được tính.
-- [ ] ALLOW hoạt động.
-- [ ] MONITOR hoạt động.
-- [ ] RATE LIMIT trả 429.
-- [ ] BLOCK trả 403.
-- [ ] SQLite ghi log.
-- [ ] Dashboard hiển thị log.
-- [ ] Dashboard hiển thị metrics.
-- [ ] Attack Lab chạy được.
-- [ ] SQLi test pass.
-- [ ] XSS test pass.
-- [ ] Traversal test pass.
-- [ ] Brute Force test pass.
-- [ ] API Abuse test pass.
-- [ ] Benign false-positive test pass.
-- [ ] Obfuscated/unseen test được thực hiện.
-- [ ] Có adversarial/evasion test tối thiểu.
-- [ ] Admin API có authentication.
-- [ ] Có audit log cho thay đổi cấu hình.
-- [ ] Có model evaluation.
-- [ ] Có Rule vs ML vs Anomaly vs Hybrid comparison.
-- [ ] Có performance evaluation.
-- [ ] Có related-work section.
-- [ ] Có khảo sát/đánh giá benchmark dataset phù hợp.
-- [ ] Có model version metadata.
-- [ ] Có mô tả retrain/drift workflow.
-- [ ] Có README.
-- [ ] Có DEMO.md.
-- [ ] Có ARCHITECTURE.md.
-- [ ] Có ML_MODEL.md.
-- [ ] Có EVALUATION.md.
+- [x] `docker compose up --build` chạy được toàn bộ stack.
+- [x] Target API (OWASP Juice Shop) truy cập và phản hồi tốt qua `/health/target`.
+- [x] Gateway Reverse Proxy chuyển tiếp request an toàn kèm `X-Request-ID`.
+- [x] Rule Engine phát hiện chính xác 16 signature tấn công tĩnh.
+- [x] Cơ sở dữ liệu SQLite ghi log đầy đủ vào bảng `requests` và `security_events`.
+- [x] SOC Dashboard Next.js hiển thị số liệu thật, không mock data.
+- [x] Quick Simulator 1-click test hoạt động và nhảy số thời gian thực.
+- [x] SQLi test pass (100%).
+- [x] XSS test pass (100%).
+- [x] Path Traversal test pass (100%).
+- [x] Command Injection test pass (100%).
+- [x] Benign false-positive test pass (0 false alarms).
+- [x] Có tài liệu `README.md`.
+- [x] Có tài liệu `ARCHITECTURE.md`.
+- [x] Có tài liệu `RULE_ENGINE.md`.
+- [x] Có tài liệu `DASHBOARD_SPEC.md`.
+- [x] Có tài liệu `TASKS_BREAKDOWN.md` phân công 50 issues.
+- [x] Có tài liệu `PROGRESS.md` theo dõi tiến độ thực tế.
+- [ ] Feature Extraction 17 đặc trưng được hoàn thành và kiểm thử.
+- [ ] Random Forest model được nạp và inference thành công trong Gateway.
+- [ ] Isolation Forest model tính được Anomaly score.
+- [ ] Weighted Hybrid Risk Score được tính toán từ các nguồn tín hiệu.
+- [ ] Quyết định phòng thủ tự động ALLOW / MONITOR / BLOCK (403).
+- [ ] Rate Limiting hoạt động và trả về HTTP 429 khi vượt ngưỡng.
+- [ ] AI Attack Planner Agent chạy được các chiến dịch tấn công tự động.
+- [ ] Có kịch bản né tránh thích ứng (Adaptive Adversarial Evasion).
+- [ ] Có báo cáo thực nghiệm so sánh Rule vs ML vs Anomaly vs Hybrid.
+- [ ] Slide thuyết trình và báo cáo đồ án hoàn chỉnh.
+- [ ] Có tài liệu `ML_MODEL.md` (Sau khi train model).
+- [ ] Có tài liệu `EVALUATION.md` (Sau khi đo benchmark).
 
 ---
 

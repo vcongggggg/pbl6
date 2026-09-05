@@ -72,25 +72,26 @@ Trước khi chuyển tiếp, các header sau sẽ bị loại bỏ:
 
 ---
 
-## 5. Ranh Giới Tích Hợp WAF Trong Tương Lai (Future WAF Integration Points)
+## 5. Ranh Giới Tích Hợp WAF Trong Hệ Thống (WAF Integration Pipeline)
 
-Kiến trúc Phase 1 được thiết kế theo dạng đường ống (Pipeline), chuẩn bị sẵn các vị trí cắm module cho các phase kế tiếp:
+Kiến trúc Gateway được thiết kế theo dạng đường ống (Pipeline) đa tầng:
 
 ```text
 [Incoming Request]
        ↓
-(Request Context Middleware - Gắn Request ID)
+(Request Context Middleware - Gắn Request ID & Context)
        ↓
-[Phase 1 Proxy Endpoint]
+[Proxy Endpoint /api/proxy/...]
        ↓
-   ─── CHUẨN BỊ SẴN ĐIỂM CHÈN (FUTURE PHASES) ───
-   │ [Phase 2] Rule Engine (SQLi, XSS, Path Traversal regex filters)
-   │ [Phase 3] Feature Extractor (17 Payload Features + Behavior)
-   │ [Phase 5] Supervised ML (Random Forest Classification)
-   │ [Phase 6] Anomaly Detection (Isolation Forest)
-   │ [Phase 7] Risk Scoring & Decision Engine (ALLOW / MONITOR / RATE_LIMIT / BLOCK)
-   │ [Phase 8] Rate Limiter (Token Bucket / Sliding Window)
-   ─────────────────────────────────────────────
+   ─── ĐƯỜNG ỐNG BẢO MẬT ĐA TẦNG (DEFENSE-IN-DEPTH PIPELINE) ───
+   │ [Phase 2] ✅ Rule Engine (16 Rules: SQLi, XSS, Path, Cmd + Normalizer + Scorer)
+   │ [Phase 9] ✅ Dashboard APIs (6 Endpoints: Stats, Events, Timeline, Dist, Sim, Reset)
+   │ [Phase 3] 🚀 Feature Extractor (17 Payload Features + HTTP Behavior) [NEXT UP]
+   │ [Phase 5] ⏳ Supervised ML (Random Forest Multi-class Classification)
+   │ [Phase 6] ⏳ Anomaly Detection (Isolation Forest Novel Attack Scoring)
+   │ [Phase 7] ⏳ Risk Scoring & Decision Engine (ALLOW / MONITOR / RATE_LIMIT / BLOCK)
+   │ [Phase 8] ⏳ Rate Limiter (In-Memory Sliding Window Tracking - HTTP 429)
+   ─────────────────────────────────────────────────────────────
        ↓
 [Forward to Upstream Target] (Khi Decision = ALLOW / MONITOR)
        ↓
