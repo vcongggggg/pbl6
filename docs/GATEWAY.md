@@ -6,12 +6,12 @@ Tài liệu chi tiết về thiết kế, cơ chế hoạt động và ranh gi�
 
 ## 1. Trách Nhiệm Của Gateway (Gateway Responsibilities)
 
-1. **Đóng vai trò Cổng Đơn Điểm (Single Point of Entry):** Toàn bộ lưu lượng từ Client và Attack Lab đều đi qua Gateway tại cổng `8000`.
-2. **Reverse Proxy Chuyển Tiếp Bất Đồng Bộ:** Chuyển tiếp request an toàn tới Target Web API (OWASP Juice Shop) bằng `httpx.AsyncClient` có quản lý Connection Pool.
+1. **Đóng vai trò Cổng Đơn Điểm (Single Point of Entry):** Toàn bộ lưu lượng từ Client và Máy 2 (Attack Lab / Red Team) đều đi qua Gateway tại cổng `8000`. Lắng nghe trên `0.0.0.0:8000` để nhận các kết nối trong mạng LAN.
+2. **Reverse Proxy Chuyển Tiếp Bất Đồng Bộ:** Chuyển tiếp request an toàn tới Target Web API tự xây dựng (`vulnerable-api`: Port 5000) bằng `httpx.AsyncClient` có quản lý Connection Pool.
 3. **Định Danh Request (Request ID Tracking):** Tiếp nhận hoặc sinh mới `X-Request-ID` cho từng request để theo dõi xuyên suốt từ Client $\rightarrow$ Gateway $\rightarrow$ Database $\rightarrow$ Client.
 4. **Ghi Nhận Lưu Lượng (Traffic Logging):** Lưu trữ metadata request/response vào cơ sở dữ liệu SQLite theo mô hình Service Layer độc lập.
 5. **Bảo Mật Cơ Bản (Security Boundaries):**
-   * Chống Open Proxy / SSRF: Địa chỉ upstream được cấu hình cố định qua biến môi trường `TARGET_API_URL`.
+   * Chống Open Proxy / SSRF: Địa chỉ upstream được cấu hình cố định qua biến môi trường `TARGET_API_URL` (mặc định: `http://vulnerable-api:5000`).
    * Lọc bỏ Hop-by-hop headers (`Connection`, `Keep-Alive`, `Upgrade`, `Transfer-Encoding`, v.v.).
    * Redact thông tin nhạy cảm (Token, mật khẩu, Authorization header) trước khi lưu log.
    * Xử lý lỗi an toàn không làm lộ stack trace hay địa chỉ IP nội bộ.
@@ -23,25 +23,30 @@ Tài liệu chi tiết về thiết kế, cơ chế hoạt động và ranh gi�
 ```mermaid
 sequenceDiagram
     autonumber
-    actor Client
-    participant GW as FastAPI Gateway
-    participant DB as SQLite DB (requests)
-    participant Target as OWASP Juice Shop
+    actor Attacker as Máy 2: Red Team (Attack Lab)
+    participant GW as FastAPI WAF Gateway (Máy 1)
+    participant DB as SQLite DB (requests & security_events)
+    participant Target as Vulnerable Web API (Port 5000)
 
-    Client->>GW: HTTP Request (/api/proxy/...)
-    Note over GW: 1. Validate / Generate X-Request-ID<br/>2. Lọc Hop-by-hop Headers<br/>3. Bắt đầu đo thời gian (Latency)
-    GW->>Target: Forward Request tới TARGET_API_URL
-    alt Target phản hồi bình thường
-        Target-->>GW: Response (Status, Headers, Content)
-        Note over GW: 4. Tính toán Latency (ms)<br/>5. Redact Header & Body nhạy cảm
-        GW->>DB: Ghi log vào bảng requests
-        GW-->>Client: Trả về Target Response + Header X-Request-ID
-    else Target bị ngắt kết nối (ConnectError)
-        GW->>DB: Ghi log trạng thái lỗi 502
-        GW-->>Client: 502 Bad Gateway (JSON chuẩn)
-    else Target xử lý quá lâu (Timeout)
-        GW->>DB: Ghi log trạng thái lỗi 504
-        GW-->>Client: 504 Gateway Timeout (JSON chuẩn)
+    Attacker->>GW: HTTP Request (/api/proxy/api/v1/...) qua LAN
+    Note over GW: 1. Validate / Generate X-Request-ID<br/>2. Input Normalizer (URL/HTML/Unicode)<br/>3. Rule Engine & ML Detection
+    
+    alt Phát hiện tấn công & Chế độ Active Defense (Phase 7)
+        Note over GW: 4. Risk Score >= 70 (CRITICAL)<br/>5. Decision = BLOCK
+        GW->>DB: Ghi log sự kiện bảo mật (Blocked)
+        GW-->>Attacker: HTTP 403 Forbidden (Ngắt kết nối)
+    else Request an toàn hoặc Chế độ Monitor Only
+        Note over GW: 4. Lọc Hop-by-hop Headers<br/>5. Bắt đầu đo Latency
+        GW->>Target: Forward Request tới TARGET_API_URL
+        alt Target phản hồi bình thường
+            Target-->>GW: Response (Status, Headers, Content)
+            Note over GW: 6. Tính toán Latency (ms)<br/>7. Redact Header & Body nhạy cảm
+            GW->>DB: Ghi log vào bảng requests
+            GW-->>Attacker: Trả về Target Response + Header X-Request-ID
+        else Target bị ngắt kết nối (ConnectError)
+            GW->>DB: Ghi log trạng thái lỗi 502
+            GW-->>Attacker: 502 Bad Gateway (JSON chuẩn)
+        end
     end
 ```
 
@@ -77,23 +82,23 @@ Trước khi chuyển tiếp, các header sau sẽ bị loại bỏ:
 Kiến trúc Gateway được thiết kế theo dạng đường ống (Pipeline) đa tầng:
 
 ```text
-[Incoming Request]
+[Incoming Request từ Mạng LAN (Máy 2)]
        ↓
-(Request Context Middleware - Gắn Request ID & Context)
+(Request Context Middleware - Gắn Request ID & Client IP)
        ↓
 [Proxy Endpoint /api/proxy/...]
        ↓
    ─── ĐƯỜNG ỐNG BẢO MẬT ĐA TẦNG (DEFENSE-IN-DEPTH PIPELINE) ───
    │ [Phase 2] ✅ Rule Engine (16 Rules: SQLi, XSS, Path, Cmd + Normalizer + Scorer)
    │ [Phase 9] ✅ Dashboard APIs (6 Endpoints: Stats, Events, Timeline, Dist, Sim, Reset)
-   │ [Phase 3] 🚀 Feature Extractor (17 Payload Features + HTTP Behavior) [NEXT UP]
+   │ [Phase 3] 🚀 Feature Extractor (17 Payload Features + HTTP Context) [NEXT UP]
    │ [Phase 5] ⏳ Supervised ML (Random Forest Multi-class Classification)
    │ [Phase 6] ⏳ Anomaly Detection (Isolation Forest Novel Attack Scoring)
    │ [Phase 7] ⏳ Risk Scoring & Decision Engine (ALLOW / MONITOR / RATE_LIMIT / BLOCK)
    │ [Phase 8] ⏳ Rate Limiter (In-Memory Sliding Window Tracking - HTTP 429)
    ─────────────────────────────────────────────────────────────
        ↓
-[Forward to Upstream Target] (Khi Decision = ALLOW / MONITOR)
+[Forward to Upstream Target: vulnerable-api:5000] (Khi Decision = ALLOW / MONITOR)
        ↓
 [Traffic Persistence & Log Event]
        ↓

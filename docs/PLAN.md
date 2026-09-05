@@ -20,7 +20,8 @@ Hệ thống sở hữu các năng lực cốt lõi:
 - Phát hiện hành vi dị biệt và đòn tấn công mới lạ bằng **Isolation Forest (Anomaly Detection)**.
 - Tổng hợp điểm rủi ro đa nguồn thành **Weighted Hybrid Risk Score (0–100)**.
 - Đưa ra quyết định phòng thủ tự động: **ALLOW / MONITOR / RATE LIMIT (429) / BLOCK (403)**.
-- Reverse Proxy bất đồng bộ chuyển tiếp an toàn tới Target Web API (OWASP Juice Shop).
+- Reverse Proxy bất đồng bộ chuyển tiếp an toàn tới Target Web API tự xây dựng (`vulnerable-api`: Port 5000).
+- Thiết lập mô hình **Thao trường Đối kháng Phân tán (Distributed Cyber Range)** giữa 2 máy vật lý qua mạng LAN: Máy 1 (Blue Team: WAF Gateway + Target API + SOC UI) đối đầu với Máy 2 (Red Team: AI Attack Planner + Adaptive Evasion).
 - Lưu vết toàn diện với khả năng truy vết 100% qua `X-Request-ID` vào cơ sở dữ liệu SQLite (`requests` & `security_events`).
 - Hiển thị trung tâm chỉ huy an ninh trực quan **SOC Command Center Dashboard (Next.js 14)** với đồ thị thời gian thực, bảng nhật ký và hộp Quick Simulator 1-click test.
 - Cung cấp **AI Attack Planner Agent** phục vụ diễn tập đối kháng tự động (Autonomous Cyber Range).
@@ -220,8 +221,8 @@ Mục tiêu là có một hệ thống P0 hoàn chỉnh trước giữa/cuối d
                +------------------+------------------+
                                   |
                                   v
-                         TARGET WEB API
-                       (OWASP Juice Shop)
+                          TARGET WEB API
+                     (vulnerable-api: Port 5000)
                                   |
                                   v
                               DATABASE
@@ -336,6 +337,21 @@ pbl6-api-security-ml/
 │   ├── package.json
 │   └── Dockerfile
 │
+├── vulnerable-api/
+│   ├── app/
+│   │   ├── main.py
+│   │   ├── core/
+│   │   │   ├── config.py
+│   │   │   └── database.py
+│   │   └── routes/
+│   │       ├── auth.py         # SQLi Auth Bypass & Brute Force
+│   │       ├── products.py     # SQLi UNION-based Search
+│   │       ├── comments.py     # Stored/Reflected XSS
+│   │       ├── documents.py    # Path Traversal / LFI
+│   │       └── tools.py        # Command Injection Ping
+│   ├── requirements.txt
+│   └── Dockerfile
+│
 └── docs/
     ├── ARCHITECTURE.md
     ├── DATASET.md
@@ -350,18 +366,21 @@ Agent có thể điều chỉnh cấu trúc nếu có lý do kỹ thuật, nhưn
 
 ---
 
-# 6. TARGET WEB API
+# 6. TARGET WEB API (VULNERABLE-API TỰ XÂY DỰNG)
 
-Ưu tiên sử dụng OWASP Juice Shop làm target lab vì tài liệu ban đầu đã định hướng hệ thống này.
+Theo chỉ đạo học thuật trực tiếp từ Giảng viên hướng dẫn, nhóm **không sử dụng OWASP Juice Shop** (do là sản phẩm bên thứ ba có sẵn), mà **tự xây dựng một ứng dụng mục tiêu Web API (`vulnerable-api`)** viết bằng Python / FastAPI.
 
-Target phải chạy độc lập với Gateway.
+Target chạy độc lập với Gateway tại cổng nội bộ `5000` (chỉ cho phép Gateway kết nối).
 
-Mục tiêu:
-- tạo môi trường Web API an toàn để thử nghiệm;
-- không tấn công hệ thống thật;
-- mọi payload và attack simulation chỉ chạy trong local/container lab.
-
-Nếu Juice Shop không phù hợp với một scenario cụ thể, được phép tạo thêm một small vulnerable API trong container riêng.
+Mục tiêu & Đặc điểm kỹ thuật:
+- Đảm bảo tính khách quan và minh bạch 100% về mã nguồn, cấu trúc dữ liệu và logic nghiệp vụ.
+- Cài cắm có chủ đích **5 nhóm lỗ hổng OWASP Top 10** kinh điển trên Web API:
+  1. `POST /api/v1/auth/login`: SQL Injection Auth Bypass (`' OR '1'='1`) & Brute Force.
+  2. `GET /api/v1/products/search`: SQL Injection UNION-based khai thác trích xuất dữ liệu.
+  3. `POST /api/v1/comments`: Stored & Reflected Cross-Site Scripting (XSS).
+  4. `GET /api/v1/documents/view`: Path Traversal / Local File Inclusion (LFI).
+  5. `POST /api/v1/tools/ping`: Command Injection (RCE).
+- Tự động sinh tài liệu chuẩn **OpenAPI / Swagger UI** (`/docs` và `/openapi.json`) để **AI Attack Planner (trên Máy 2)** có thể tự động trinh sát (Reconnaissance), phân tích tham số và lập kế hoạch tấn công.
 
 ---
 
@@ -1230,7 +1249,7 @@ Services:
 ```text
 gateway
 dashboard
-juice-shop
+vulnerable-api
 ```
 
 Optional:
@@ -1414,7 +1433,7 @@ Hệ thống được chia thành 13 giai đoạn phát triển tuần tự, đ�
 - Deliverable: `ml-engine/features/` pipeline trích xuất vector đặc trưng kèm test suite.
 
 ## PHASE 4 — Dataset Generation & Lab Traffic (PLANNED ⏳)
-- Thu thập và sinh tập dữ liệu cân bằng: Benign HTTP traffic từ Juice Shop crawler + Attack payloads từ SecLists/PayloadsAllTheThings.
+- Thu thập và sinh tập dữ liệu cân bằng: Benign HTTP traffic từ vulnerable-api crawler + Attack payloads từ SecLists/PayloadsAllTheThings.
 - Phụ trách: `naocavang08` (Thành viên B).
 - Deliverable: Bộ dataset chuẩn hóa CSV/Parquet chia Train/Test sạch sẽ.
 
@@ -1493,16 +1512,18 @@ Phân chia trách nhiệm minh bạch, bám sát ma trận 50 GitHub Issues tron
 
 ```text
 ┌──────────────────────────────────────────────────────────────────────────────────┐
-│                   PHÂN CÔNG TRÁCH NHIỆM ĐỒ ÁN PBL6 (2 THÀNH VIÊN)               │
+│             PHÂN CÔNG TRÁCH NHIỆM: CYBER RANGE 2 MÁY ĐỐI KHÁNG (PBL6)            │
 ├────────────────────────────────────────┬─────────────────────────────────────────┤
 │ THÀNH VIÊN A: vcongggggg               │ THÀNH VIÊN B: naocavang08               │
-│ Vai trò: Tech Lead / Backend & UI      │ Vai trò: AI/ML Engineer & Offensive Red │
+│ Vai trò: Tech Lead / Blue Team (Phòng) │ Vai trò: Red Team Lead (Tấn) & AI Eng   │
+│ Vị trí: MÁY 1 (Target API, WAF, SOC UI)│ Vị trí: MÁY 2 (AI Attack Planner Agent) │
 ├────────────────────────────────────────┼─────────────────────────────────────────┤
-│ • Reverse Proxy Gateway & Request ID   │ • Feature Engineering (17 Features)     │
-│ • Rule Engine (16 Rules tất định)      │ • Thu thập & sinh Dataset (Benign/Atk)  │
-│ • Input Normalizer & Scorer            │ • Huấn luyện Random Forest (Supervised) │
-│ • Hybrid Decision Engine (Phase 7)     │ • Huấn luyện Isolation Forest (Anomaly) │
-│ • IP Rate Limiting - 429 (Phase 8)     │ • Xây dựng AI Attack Planner (Phase 10) │
+│ • Xây dựng vulnerable-api (6 endpoints)│ • Feature Engineering (17 Features)     │
+│ • Reverse Proxy Gateway (0.0.0.0:8000) │ • Thu thập & sinh Dataset (vulnerable)  │
+│ • Rule Engine (16 Rules tất định)      │ • Huấn luyện Random Forest (Supervised) │
+│ • Input Normalizer & Scorer            │ • Huấn luyện Isolation Forest (Anomaly) │
+│ • Hybrid Decision Engine (Phase 7)     │ • Xây dựng AI Attack Planner (Phase 10) │
+│ • IP Rate Limiting - 429 (Phase 8)     │ • Adaptive Evasion Engine qua mạng LAN  │
 │ • SOC Dashboard UI & Recharts (Phase 9)│ • Đánh giá thực nghiệm so sánh (Phase 11)│
 │ • Docker Compose Hardening (Phase 12)  │ • Soạn thảo Slide & Báo cáo đồ án       │
 └────────────────────────────────────────┴─────────────────────────────────────────┘
@@ -1513,7 +1534,7 @@ Phân chia trách nhiệm minh bạch, bám sát ma trận 50 GitHub Issues tron
 # 34. DEFINITION OF DONE (TIÊU CHUẨN HOÀN THÀNH ĐỒ ÁN)
 
 - [x] `docker compose up --build` chạy được toàn bộ stack.
-- [x] Target API (OWASP Juice Shop) truy cập và phản hồi tốt qua `/health/target`.
+- [x] Target API (`vulnerable-api`: Port 5000) truy cập và phản hồi tốt qua `/health/target`.
 - [x] Gateway Reverse Proxy chuyển tiếp request an toàn kèm `X-Request-ID`.
 - [x] Rule Engine phát hiện chính xác 16 signature tấn công tĩnh.
 - [x] Cơ sở dữ liệu SQLite ghi log đầy đủ vào bảng `requests` và `security_events`.

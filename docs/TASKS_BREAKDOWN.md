@@ -8,8 +8,8 @@ Tài liệu phân rã chi tiết toàn bộ các giai đoạn (Phase 0 → Phase
 
 | Thành Viên | Phân Vai Trọng Tâm | Trách Nhiệm Kỹ Thuật Chính |
 | :--- | :--- | :--- |
-| **Thành viên A** | **Tech Lead / Backend Security & Dashboard UI**<br/>*(Đảm nhận vai trò A + C)* | • Hạ tầng Reverse Proxy Gateway (`gateway/app/api/proxy.py`).<br/>• Rule Engine, Input Normalizer, Bảng `security_events`.<br/>• Rate Limiter cửa sổ trượt (Sliding Window HTTP 429).<br/>• Decision Engine (ALLOW / MONITOR / RATE_LIMIT / BLOCK 403).<br/>• Tích hợp Inference nạp model ML vào Gateway ($<15\text{ms}$).<br/>• Xây dựng toàn bộ Next.js Dashboard UI (`dashboard/`). |
-| **Thành viên B** | **AI/ML Engineer & Offensive Red Team**<br/>*(Đảm nhận vai trò B + D)* | • Feature Engineering: Trích xuất 17 đặc trưng payload & HTTP (`ml-engine/features/`).<br/>• Thu thập & sinh tập dữ liệu huấn luyện Benign + Attack (`data/`).<br/>• Huấn luyện mô hình Random Forest & xuất `rf_model.joblib`.<br/>• Huấn luyện mô hình Anomaly Detection Isolation Forest.<br/>• Xây dựng AI Attack Planner Agent (`attack-lab/`).<br/>• Đo lường Benchmark, đánh giá so sánh, viết Slide & Báo cáo đồ án. |
+| **Thành viên A (`vcongggggg`)** | **Tech Lead / Blue Team Lead (Phòng Thủ)**<br/>*Vị trí: MÁY 1 (Target API, Gateway, SOC UI)* | • Xây dựng ứng dụng mục tiêu `vulnerable-api` (6 endpoints lỗ hổng chuẩn).<br/>• Hạ tầng Reverse Proxy Gateway (`gateway/app/api/proxy.py` lắng nghe `0.0.0.0:8000`).<br/>• Rule Engine, Input Normalizer, Bảng `security_events`.<br/>• Rate Limiter cửa sổ trượt (Sliding Window HTTP 429).<br/>• Decision Engine (ALLOW / MONITOR / RATE_LIMIT / BLOCK 403).<br/>• Tích hợp Inference nạp model ML vào Gateway ($<15\text{ms}$).<br/>• Xây dựng toàn bộ Next.js Dashboard UI (`dashboard/`). |
+| **Thành viên B (`naocavang08`)** | **Red Team Lead (Tấn Công) & AI/ML Engineer**<br/>*Vị trí: MÁY 2 (Autonomous Red Teaming)* | • Feature Engineering: Trích xuất 17 đặc trưng payload & HTTP (`ml-engine/features/`).<br/>• Thu thập & sinh tập dữ liệu huấn luyện Benign + Attack từ `vulnerable-api` (`data/`).<br/>• Huấn luyện mô hình Random Forest & xuất `rf_model.joblib`.<br/>• Huấn luyện mô hình Anomaly Detection Isolation Forest.<br/>• Xây dựng AI Attack Planner Agent (`attack-lab/`) trinh sát và tấn công qua mạng LAN.<br/>• Đo lường Benchmark, đánh giá so sánh, viết Slide & Báo cáo đồ án. |
 
 ---
 
@@ -39,7 +39,7 @@ Tài liệu phân rã chi tiết toàn bộ các giai đoạn (Phase 0 → Phase
 
 | Mã Task | Issue ID | Tên Task Chi Tiết | Phụ Trách | Đầu Ra (Deliverables) |
 | :--- | :---: | :--- | :---: | :--- |
-| **`TASK-4.1`** | `#19` | **Sinh tập dữ liệu hợp lệ (Benign Dataset):** Tạo 10,000 requests hợp lệ mô phỏng tương tác bình thường của người dùng trên Juice Shop. | **Thành viên B** | `data/synthetic_benign.csv` |
+| **`TASK-4.1`** | `#19` | **Sinh tập dữ liệu hợp lệ (Benign Dataset):** Tạo 10,000 requests hợp lệ mô phỏng tương tác bình thường của người dùng trên vulnerable-api. | **Thành viên B** | `data/synthetic_benign.csv` |
 | **`TASK-4.2`** | `#20` | **Sinh tập dữ liệu tấn công đa dạng (Malicious Dataset):** Tạo các biến thể payload SQLi, XSS, Path Traversal, Cmd Injection kèm làm rối (Obfuscation). | **Thành viên B** | `data/synthetic_attacks.csv` |
 | **`TASK-4.3`** | `#21` | **Tiền xử lý, Gán nhãn & Chia Stratified Split:** Làm sạch dữ liệu, gán nhãn 5 lớp (`0: BENIGN, 1: SQLI, 2: XSS, 3: PATH, 4: CMD`), chia tỷ lệ 70/15/15. | **Thành viên B** | `data/processed/train.csv`, `test.csv` |
 
@@ -101,7 +101,7 @@ Tài liệu phân rã chi tiết toàn bộ các giai đoạn (Phase 0 → Phase
 
 | Mã Task | Issue ID | Tên Task Chi Tiết | Phụ Trách | Đầu Ra (Deliverables) |
 | :--- | :---: | :--- | :---: | :--- |
-| **`TASK-10.1`**| `#39` | **Module Thăm Dò Cấu Trúc API (Reconnaissance):** Tác nhân tự động đọc OpenAPI spec của Juice Shop để lập danh sách endpoint và tham số. | **Thành viên B** | `attack-lab/agent/recon.py` |
+| **`TASK-10.1`**| `#39` | **Module Thăm Dò Cấu Trúc API (Reconnaissance):** Tác nhân tự động đọc OpenAPI spec của vulnerable-api (Máy 1) để lập danh sách endpoint và tham số. | **Thành viên B** | `attack-lab/agent/recon.py` |
 | **`TASK-10.2`**| `#40` | **Agent Lập Kế Hoạch Tấn Công Đa Bước (ReAct Planner):** Sử dụng LLM suy luận chuỗi tấn công logic (Thăm dò $\rightarrow$ Khai thác SQLi $\rightarrow$ Chiếm quyền). | **Thành viên B** | `attack-lab/agent/planner.py` |
 | **`TASK-10.3`**| `#41` | **Cơ Chế Tự Động Làm Rối Payload (Adaptive Evasion Engine):** Khi nhận phản hồi HTTP 403 từ WAF, tự động biến đổi payload (Hex, Double URL) để thử vượt rào. | **Thành viên B** | `attack-lab/agent/evasion.py` |
 | **`TASK-10.4`**| `#42` | **Giao Diện Đấu Trường AI (AI Arena) & Runner:** CLI runner chạy chiến dịch kiểm thử tự động và màn hình đối kháng trực tiếp trên Dashboard. | **Thành viên B & A** | `attack-lab/runner.py` |
@@ -124,6 +124,6 @@ Tài liệu phân rã chi tiết toàn bộ các giai đoạn (Phase 0 → Phase
 | Mã Task | Issue ID | Tên Task Chi Tiết | Phụ Trách | Đầu Ra (Deliverables) |
 | :--- | :---: | :--- | :---: | :--- |
 | **`TASK-12.1`**| `#47` | **Tối Ưu Hóa & Rà Soát Bảo Mật Mã Nguồn:** Khử rò rỉ bộ nhớ, kiểm toán bảo mật mã nguồn, chuẩn hóa error handlers an toàn tuyệt đối. | **Thành viên A** | Gateway release candidate |
-| **`TASK-12.2`**| `#48` | **Kiểm Thử Sạch Cụm Docker Compose Multi-Container:** Đảm bảo toàn bộ 3 dịch vụ (Gateway, Dashboard, Juice Shop) khởi động 1 lệnh `docker compose up`. | **Thành viên A** | `docker-compose.yml` verified |
+| **`TASK-12.2`**| `#48` | **Kiểm Thử Sạch Cụm Docker Compose Multi-Container:** Đảm bảo toàn bộ 3 dịch vụ (Gateway, Dashboard, vulnerable-api) khởi động 1 lệnh `docker compose up`. | **Thành viên A** | `docker-compose.yml` verified |
 | **`TASK-12.3`**| `#49` | **Kịch Bản & Script Chạy Thử Nghiệm Live Demo 10 Phút:** Chuẩn bị script tự động kích hoạt đợt tấn công của AI để biểu diễn trực tiếp trước Hội đồng. | **Thành viên A & B** | `scripts/demo_rehearsal.py` |
 | **`TASK-12.4`**| `#50` | **Hoàn Thiện Báo Cáo Đồ Án PBL6 & Slide Thuyết Trình:** Soạn thảo báo cáo PDF hoàn chỉnh theo mẫu trường và thiết kế slide thuyết trình bảo vệ. | **Thành viên A & B** | `docs/PBL6_FINAL_REPORT.pdf` & Slides |
