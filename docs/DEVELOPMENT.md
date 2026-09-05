@@ -64,7 +64,7 @@ npm run dev
 
 ## 4. Khởi Chạy Bằng Docker Compose (Khuyến nghị)
 
-Để khởi chạy toàn bộ hệ thống gồm Target Web API (Juice Shop), Gateway và Dashboard chỉ với 1 lệnh:
+Để khởi chạy toàn bộ hệ thống gồm Target Web API tự xây dựng (`vulnerable-api`), Gateway và Dashboard chỉ với 1 lệnh:
 
 ```bash
 # Build và chạy ngầm các container
@@ -78,9 +78,40 @@ docker compose down
 ```
 
 Các cổng dịch vụ khi chạy Docker:
-* **Gateway:** [http://localhost:8000](http://localhost:8000)
-* **Dashboard:** [http://localhost:3001](http://localhost:3001)
-* **Target Juice Shop:** [http://localhost:3000](http://localhost:3000)
+* **Gateway (WAF):** [http://localhost:8000](http://localhost:8000)
+* **Dashboard (SOC):** [http://localhost:3000](http://localhost:3000) (hoặc 3001)
+* **Target Vulnerable Web API:** [http://localhost:5000](http://localhost:5000)
+
+---
+
+## 5. Thiết Lập Thao Trường Đối Kháng 2 Máy (Cyber Range Qua Mạng LAN)
+
+Mô hình diễn tập thực chiến giữa 2 máy tính vật lý kết nối chung mạng Wi-Fi/LAN:
+
+### Bước 1: Thiết lập Máy 1 (Blue Team — Defender)
+1. Kiểm tra địa chỉ IP mạng LAN của Máy 1 (ví dụ: `192.168.1.15`):
+   ```bash
+   ipconfig   # Trên Windows PowerShell
+   ```
+2. Đảm bảo Gateway lắng nghe trên `0.0.0.0:8000` để các máy khác trong mạng gọi tới được.
+3. Khởi chạy toàn bộ stack:
+   ```bash
+   docker compose up -d
+   ```
+4. Mở Dashboard tại `http://localhost:3000` để sẵn sàng quan sát cảnh báo.
+
+### Bước 2: Thiết lập Máy 2 (Red Team — Attacker)
+1. Kết nối vào chung mạng Wi-Fi/LAN với Máy 1.
+2. Kiểm tra kết nối tới Máy 1:
+   ```bash
+   curl http://192.168.1.15:8000/health
+   curl http://192.168.1.15:8000/api/proxy/api/v1/health
+   ```
+3. Khởi chạy AI Attack Planner hoặc runner kịch bản tấn công:
+   ```bash
+   python attack-lab/cli.py --target http://192.168.1.15:8000/api/proxy --campaign sqli
+   ```
+4. Quan sát phản hồi: Nếu WAF chặn sẽ trả về `HTTP 403 Forbidden`, AI Attack Planner sẽ tự động chuyển sang chế độ Adaptive Evasion để thử vượt rào!
 
 ---
 

@@ -1,106 +1,143 @@
 # Kiến Trúc Hệ Thống (System Architecture) — PBL6
+## Mô Hình Thao Trường An Ninh Phân Tán (Distributed Cyber Range: Red Team vs Blue Team)
+
+---
 
 ## 1. Tổng Quan Kiến Trúc (Architecture Overview)
 
-Dự án **Web API Security Platform** được xây dựng nhằm cung cấp giải pháp bảo vệ toàn diện cho các dịch vụ Web API thông qua kiến trúc Reverse Proxy Gateway kết hợp đa tầng phòng thủ:
+Dự án **Web API Security Platform & Autonomous Red Teaming** được thiết kế theo mô hình **Thao trường An ninh Đối kháng Phân tán (Distributed Cyber Range)** triển khai trên **2 máy vật lý độc lập** kết nối qua mạng cục bộ (LAN / Wi-Fi):
+
+* **MÁY 1 (Blue Team — Phòng thủ — Phụ trách: `vcongggggg`):** Vận hành hệ thống phòng vệ gồm WAF Gateway (Reverse Proxy + Rule Engine + ML Detection Engine), ứng dụng mục tiêu tự xây dựng `vulnerable-api`, và trung tâm chỉ huy an ninh SOC Dashboard.
+* **MÁY 2 (Red Team — Tấn công — Phụ trách: `naocavang08`):** Vận hành hệ thống tấn công tự động gồm **AI Attack Planner (Offensive AI Agent)** và công cụ bắn payload thích ứng (Adaptive Evasion Engine) tấn công từ xa qua mạng LAN vào Máy 1.
 
 ```mermaid
-graph TD
-    Client[Người dùng / Attack Lab] -->|HTTP Request /api/proxy/...| Gateway[FastAPI WAF Gateway]
-    
-    subgraph Gateway_Pipeline["Gateway Request Pipeline (Phase 1-8)"]
-        ReqID[Request ID Resolver & Header Filter]
-        Parser[Request Surface Parser: Path, Query, Header, Body]
-        Normalizer[Input Normalizer: URL, HTML, Unicode, Spaces]
+graph LR
+    subgraph Machine2["MÁY 2: RED TEAM (ATTACKER) — naocavang08"]
+        AI_Planner["AI Attack Planner\n(Offensive AI Agent)"]
+        Recon["Recon Engine\n(OpenAPI Schema Parser)"]
+        Evasion["Adaptive Evasion Engine\n(Payload Obfuscator)"]
+        AttackEngine["Attack Lab Runner\n(LAN HTTP Client)"]
         
-        subgraph Detection_Engines["Detection Layer (Phase 2-6)"]
-            RuleEngine[Rule Engine - Phase 2: SQLi, XSS, Path, Cmd]
-            RFEngine[Random Forest Model - Planned Phase 5]
-            IFEngine[Isolation Forest Model - Planned Phase 6]
+        AI_Planner --> Recon
+        AI_Planner --> Evasion
+        Evasion --> AttackEngine
+    end
+
+    subgraph LAN["MẠNG CỤC BỘ (LAN / WI-FI)"]
+        LAN_Traffic["HTTP / REST API Traffic\nTarget: http://192.168.1.X:8000/api/proxy/..."]
+    end
+
+    subgraph Machine1["MÁY 1: BLUE TEAM (DEFENDER) — vcongggggg"]
+        subgraph Gateway["WAF Gateway (Lắng nghe 0.0.0.0:8000)"]
+            ReqID["Request ID Resolver & Header Filter"]
+            Normalizer["Input Normalizer: URL, HTML, Unicode"]
+            
+            subgraph DetectionLayer["Đa Tầng Phát Hiện (Multi-Layer Detection)"]
+                RuleEngine["Rule Engine (16 OWASP Signatures)"]
+                FeatureExt["17-Feature Extractor"]
+                RFEngine["Random Forest Classifier (Supervised)"]
+                IFEngine["Isolation Forest (Anomaly Detection)"]
+            end
+            
+            RiskEngine["Hybrid Risk Scoring & Decision Engine"]
+            RateLimiter["IP Rate Limiter (Sliding Window - 429)"]
         end
         
-        RiskEngine[Risk Scoring Engine - Planned Phase 7]
-        DecisionEngine[Decision Engine - Planned Phase 7]
-        RateLimiter[Rate Limiter - Planned Phase 8]
+        subgraph TargetService["Target Web API (Port 5000)"]
+            VulnAPI["vulnerable-api (Custom FastAPI)\n• /auth/login (SQLi & BruteForce)\n• /products/search (SQLi UNION)\n• /comments (Stored/Reflected XSS)\n• /documents/view (Path Traversal)\n• /tools/ping (Command Injection)\n• /docs & /openapi.json"]
+        end
+        
+        subgraph Storage["Cơ Sở Dữ Liệu"]
+            DB_Req[("SQLite: requests")]
+            DB_Sec[("SQLite: security_events")]
+        end
+        
+        subgraph Monitoring["Giao Diện SOC"]
+            Dashboard["Next.js SOC Dashboard (Port 3000)\n• 5 KPI Cards • Quick Simulator\n• Area & Donut Charts • Event Drawer"]
+        end
     end
+
+    AttackEngine -->|LAN Network Call| LAN_Traffic
+    LAN_Traffic -->|Gửi tới Gateway| ReqID
+    ReqID --> Normalizer
+    Normalizer --> DetectionLayer
+    RuleEngine & FeatureExt --> RFEngine & IFEngine
+    DetectionLayer --> RiskEngine
+    RiskEngine --> RateLimiter
     
-    Gateway --> ReqID
-    ReqID --> Parser
-    Parser --> Normalizer
-    Normalizer --> RuleEngine
-    RuleEngine -.-> RFEngine
-    RuleEngine -.-> IFEngine
+    RateLimiter -->|ALLOW: Forward 200 OK| VulnAPI
+    RateLimiter -->|BLOCK: Ngắt kết nối 403 Forbidden| LAN_Traffic
     
-    RuleEngine -->|Persist Detected Incidents| DB_Sec[(SQLite: security_events)]
-    
-    Normalizer -->|Phase 2: Non-blocking Async Proxy Forward| Target[Target Web API - Juice Shop]
-    
-    Gateway -->|Async Traffic Log & Redaction| DB_Req[(SQLite: requests)]
-    Dashboard[Next.js Dashboard - Phase 9] <-->|API Base URL| Gateway
+    Gateway -->|Lưu vết truy cập| DB_Req
+    Gateway -->|Lưu sự kiện bảo mật| DB_Sec
+    Dashboard <-->|REST API Polling| Gateway
 ```
 
 ---
 
 ## 2. Ranh Giới Và Trách Nhiệm Từng Thành Phần (Component Boundaries)
 
-### 2.1. `gateway/` (Backend / WAF Engine)
-* **Phase 0:** Khởi tạo ứng dụng FastAPI, cấu hình biến môi trường (`core/config.py`), logging chuẩn (`core/logging.py`), xử lý lỗi an toàn (`core/errors.py`), cấu trúc cơ sở dữ liệu SQLAlchemy (`db/`), và endpoint kiểm tra trạng thái `GET /health`.
-* **Phase 1:** Dynamic Reverse Proxy bất đồng bộ (`/api/proxy/{path:path}`), quản lý `X-Request-ID`, lọc hop-by-hop headers, khử thông tin nhạy cảm, chống Open Proxy/SSRF, và endpoint `GET /health/target`.
-* **Phase 2 (Hoàn thành):**
-  * Triển khai **Rule Engine** (`app/security/`) với 16 rules tất định phủ 4 họ tấn công (SQL Injection, XSS, Path Traversal, Command Injection).
-  * Bộ chuẩn hóa dữ liệu đầu vào có giới hạn độ sâu và độ dài (`InputNormalizer`).
-  * Cơ chế chấm điểm rủi ro tất định từ 0 đến 100 (`RuleScorer`).
-  * Lưu trữ và truy vết sự kiện bảo mật vào bảng `security_events` liên kết chặt chẽ với bảng `requests` qua `request_id`.
-  * Hoạt động theo nguyên tắc **Detection Only (Non-blocking)**: Không chặn request ở Phase 2, request vẫn tiếp tục được forward sang target.
-* **Tương lai (Phase 3–8 - Planned):** Triển khai trích xuất đặc trưng payload, nạp mô hình ML inference, tính toán Risk score và cơ chế chặn/rate limit.
+### 2.1. `vulnerable-api/` (Target Web API Tự Xây Dựng — Thay Thế Juice Shop)
+* **Lý do tự xây dựng:** Theo chỉ đạo của Giảng viên hướng dẫn, việc tự xây dựng Web API giúp nhóm làm chủ 100% mã nguồn, hiểu tường tận cơ chế khai thác các lỗ hổng OWASP Top 10 trên Web API thực tế, và cho phép định hình cấu trúc dữ liệu theo đúng yêu cầu đề tài.
+* **Công nghệ:** Python 3.12, FastAPI, SQLite, Pydantic, Uvicorn.
+* **Cổng dịch vụ:** Chạy nội bộ trên Port `5000` (chỉ cho phép Gateway kết nối qua mạng Docker hoặc localhost).
+* **6 Endpoints nghiệp vụ có chủ đích cài cắm lỗ hổng:**
+  1. `POST /api/v1/auth/login`: Xác thực người dùng — Lỗ hổng **SQL Injection Auth Bypass** (`' OR '1'='1`) và **Brute Force**.
+  2. `GET /api/v1/products/search`: Tra cứu danh mục — Lỗ hổng **SQL Injection UNION-based** (`' UNION SELECT ...`).
+  3. `POST /api/v1/comments` & `GET /api/v1/comments`: Đánh giá — Lỗ hổng **Stored & Reflected XSS** (`<script>alert(1)</script>`).
+  4. `GET /api/v1/documents/view`: Tải tài liệu — Lỗ hổng **Path Traversal / LFI** (`../../etc/passwd` hoặc `windows/win.ini`).
+  5. `POST /api/v1/tools/ping`: Quản trị mạng — Lỗ hổng **Command Injection** (`127.0.0.1; whoami`).
+  6. `GET /openapi.json` & `/docs`: Cung cấp đặc tả OpenAPI chuẩn để AI Attack Planner bên Máy 2 tự động trinh sát (Reconnaissance).
 
-### 2.2. `ml-engine/` (ML/Data Boundary - Reserved for ML Team)
-* **Hiện tại (Phase 0-2):** Khởi tạo cấu trúc thư mục và tài liệu giao diện kết nối kỹ thuật [docs/ML_INTEGRATION.md](file:///c:/Study/HocKy6/PBL6/docs/ML_INTEGRATION.md).
-* **Tương lai (Phase 3–6, 11 - Planned):** Xây dựng module trích xuất đặc trưng, sinh tập dữ liệu huấn luyện, huấn luyện mô hình Random Forest & Isolation Forest, xuất file artifacts (`.joblib`).
+### 2.2. `gateway/` (WAF Reverse Proxy Gateway — Lớp Phòng Thủ Chính)
+* **Vị trí:** Đứng trước `vulnerable-api`, lắng nghe trên `0.0.0.0:8000` để các máy trong mạng LAN đều có thể gửi request tới.
+* **Pipeline xử lý tuần tự (Request Pipeline):**
+  1. **Request Surface Parser & Resolver:** Bóc tách toàn bộ bề mặt request (Path, Query Params, Headers, JSON/Form Body), cấp phát `X-Request-ID`.
+  2. **Input Normalizer:** Chuẩn hóa đa tầng (URL decode đệ quy, HTML unescape, Unicode NFC canonicalization, loại bỏ ký tự rác/khoảng trắng dư thừa).
+  3. **Rule Engine (Phase 2 - Hoàn thành):** Kiểm tra đối sánh 16 signatures tất định (SQLi, XSS, Path, Cmd), chấm điểm rủi ro quy chuẩn 0–100 (`RuleScorer`).
+  4. **Feature Extraction (Phase 3 - Sắp làm):** Trích xuất vector 17 đặc trưng thống kê và ngữ cảnh từ request.
+  5. **Machine Learning Engines (Phase 5 & 6):**
+     * **Random Forest:** Phân loại đa lớp (Benign, SQLi, XSS, Path Traversal, Command Injection).
+     * **Isolation Forest:** Đo lường độ dị biệt (Anomaly Score) phát hiện các cuộc tấn công Zero-day hoặc hành vi bất thường.
+  6. **Hybrid Decision Engine (Phase 7):** Tổng hợp điểm số từ Rule + ML + Anomaly thành Weighted Risk Score và ra quyết định phòng thủ:
+     * `ALLOW` ($< 40$): Cho phép request đi tiếp tới `vulnerable-api`.
+     * `MONITOR` ($40 - 69$): Cho phép đi tiếp nhưng đánh dấu nghi vấn và ghi log chi tiết.
+     * `RATE_LIMIT` / `CHALLENGE`: Trả về `HTTP 429 Too Many Requests`.
+     * `BLOCK` ($\ge 70$): Ngắt kết nối ngay lập tức tại Gateway, trả về `HTTP 403 Forbidden`.
+  7. **Persistence:** Ghi nhận lưu lượng vào bảng `requests` và sự kiện an ninh vào `security_events` trong SQLite (`waf_gateway.db`).
 
-### 2.3. `dashboard/` (Frontend Visualization & SOC Command Center)
-* **Hiện tại (Đã hoàn thành Phase 9 Task 9.1 & 9.2):**
-  * Giao diện trung tâm chỉ huy an ninh **SOC Command Center** chuẩn Dark Cyber Glassmorphism trên Next.js 14 + Tailwind CSS + Lucide Icons + Recharts.
-  * **5 Thẻ KPI:** Total Traffic (RPS), Attacks Detected, Threat Score (Rule Engine Phase 2), Safe Request Rate (Forwarded 200 OK), và Hộp **Quick Simulator 1-click test**.
-  * **Biểu đồ thời gian thực:** Recharts Area Chart sóng kép (Benign vs Attacks) và Donut Chart phân bố 4 họ tấn công.
-  * **Bảng Live Security Events Table:** Tìm kiếm, phân trang, lọc Severity/Type, xuất file JSON.
-  * **Payload Evidence Drawer:** Tab 1 xem chi tiết bằng chứng Rule Engine (Raw vs Canonical Normalized), Tab 2 chờ sẵn 17-Feature Vector cho Phase 3.
-  * Tích hợp 6 REST APIs thật trên Gateway (`/api/dashboard/*`), cơ chế Smart Polling tự động tạm dừng khi xem chi tiết bằng chứng.
-* **Tương lai (Phase 5-7 - Planned):** Bổ sung hiển thị nhãn Random Forest, Anomaly gauge của Isolation Forest, và điều khiển chế độ chặn Active Defense (HTTP 403).
+### 2.3. `dashboard/` (SOC Command Center — Màn Hình Giám Sát Thời Gian Thực)
+* **Công nghệ:** Next.js 14 (App Router), Tailwind CSS, Recharts, Lucide Icons.
+* **Cổng dịch vụ:** Port `3000`.
+* **Tính năng hoàn thành (Phase 9):**
+  * 5 KPI Cards (Total Traffic, Attacks Detected, Threat Score, Safe Request Rate, Quick Simulator).
+  * Area Chart sóng kép biểu diễn lưu lượng sạch vs tấn công theo thời gian thực.
+  * Donut Chart phân bố tỷ lệ các họ tấn công đã nhận diện.
+  * Bảng sự kiện an ninh Live Events và ngăn kéo Payload Evidence Drawer đối chiếu chi tiết Raw Input vs Canonical Normalized.
 
-### 2.4. `attack-lab/` (Offensive AI — AI Attack Planner & Autonomous Red Teaming)
-* **Hiện tại (Phase 0-2):** Cấu trúc thư mục kịch bản `scenarios/` và tài liệu hướng dẫn an toàn.
-* **Định hướng nâng cấp (Phase 10 — Theo chỉ đạo của Thầy hướng dẫn):**
-  * Nâng cấp từ script kịch bản tĩnh thành **AI Attack Planner Agent (Autonomous Red Teaming)**.
-  * Sử dụng AI để lập kế hoạch tấn công có mục tiêu, tự động sinh chuỗi request khai thác (SQLi, XSS, Path, Cmd, Brute Force).
-  * **Adaptive Evasion Engine:** Khi Gateway chặn bằng mã `403 Forbidden`, AI Agent sẽ tự động phân tích và áp dụng các kỹ thuật biến đổi payload (Obfuscation, URL encoding, token mixing, semantic mutation) để thử nghiệm vượt rào và đánh giá độ bền vững (Robustness) của hệ thống phòng thủ.
+### 2.4. `attack-lab/` (Offensive AI — AI Attack Planner Trên Máy 2)
+* **Vị trí triển khai:** Chạy độc lập trên **MÁY 2 (Red Team)**.
+* **Cơ chế hoạt động:**
+  1. **Tự động Trinh sát (Automated Reconnaissance):** Đọc file đặc tả OpenAPI schema từ Máy 1 (`http://192.168.1.X:8000/api/proxy/openapi.json`), lập bản đồ bề mặt tấn công (Attack Surface Mapping).
+  2. **AI Planning Agent:** Sử dụng AI/LLM hoặc máy trạng thái heuristic để lên kế hoạch chuỗi tấn công (Kill Chain: Dò quét $\rightarrow$ Vượt quyền đăng nhập bằng SQLi $\rightarrow$ Khai thác chiếm quyền server qua Command Injection).
+  3. **Adaptive Evasion Engine:** Khi Gateway của Máy 1 chặn `403 Forbidden`, AI Planner tự động suy luận lý do bị chặn và tiến hành biến đổi payload (Mã hóa URL kép, hoán đổi ký tự viết hoa/thường, chèn comment nội dòng `/**/`, thay thế hàm tương đương) để bắn lại nhằm tìm cách vượt rào WAF.
 
 ---
 
-## 3. Quy Ước Trạng Thái Triển Khai
+## 3. Ma Trận Triển Khai & Phân Chia Trách Nhiệm 2 Máy
 
-| Module / Tính Năng | Trạng Thái Hiện Tại | Kế Hoạch Triển Khai |
-| :--- | :---: | :--- |
-| **FastAPI Foundation & Health API** | ✅ Implemented | Phase 0 |
-| **Centralized Config & Safe Logging** | ✅ Implemented | Phase 0 |
-| **Database Models & Session Management** | ✅ Implemented | Phase 0 |
-| **Next.js Frontend Foundation** | ✅ Implemented | Phase 0 |
-| **Docker Compose Orchestration** | ✅ Implemented | Phase 0 |
-| **Reverse Proxy & Request Forwarding** | ✅ Implemented | Phase 1 |
-| **Traffic Metadata & Redacted DB Logging** | ✅ Implemented | Phase 1 |
-| **Open Proxy / SSRF Protection** | ✅ Implemented | Phase 1 |
-| **Target Connectivity Health Probe** | ✅ Implemented | Phase 1 |
-| **Rule-based Detection Engine (16 Rules)** | ✅ Implemented | Phase 2 |
-| **Input Normalization & Canonicalization** | ✅ Implemented | Phase 2 |
-| **Rule Risk Scoring (0–100 Bounded)** | ✅ Implemented | Phase 2 |
-| **Security Events DB Traceability** | ✅ Implemented | Phase 2 |
-| **SOC Dashboard UI & Real-time Charts** | ✅ Implemented | Phase 9 (Task 9.1 & 9.2) |
-| **Feature Extraction (17 Payload + Behavior)**| ⏳ Planned | Phase 3 (ML Team) |
-| **Dataset Generation & Lab Collection** | ⏳ Planned | Phase 4 (ML Team) |
-| **Random Forest Supervised ML** | ⏳ Planned | Phase 5 (ML Team) |
-| **Isolation Forest Anomaly Detection** | ⏳ Planned | Phase 6 (ML Team) |
-| **Weighted Risk Scoring & Decision Engine** | ⏳ Planned | Phase 7 |
-| **IP-based Rate Limiter (HTTP 429)** | ⏳ Planned | Phase 8 |
-| **AI Attack Planner & Autonomous Red Team** | ⏳ Planned | Phase 10 |
-| **Multi-method Evaluation & Benchmark** | ⏳ Planned | Phase 11 (ML Team) |
-| **Final Hardening & Defense Report** | ⏳ Planned | Phase 12 |
+| Thành Phần Hệ Thống | Vị Trí Triển Khai | Thành Viên Phụ Trách | Trạng Thái Kỹ Thuật |
+| :--- | :--- | :--- | :---: |
+| **vulnerable-api** (Custom Web API) | **MÁY 1 (Blue Team)** | `vcongggggg` | 🚀 Tiếp tục xây dựng |
+| **FastAPI WAF Reverse Proxy** | **MÁY 1 (Blue Team)** | `vcongggggg` | ✅ Hoàn thành Phase 1 |
+| **Rule-based Detection Engine (16 Rules)** | **MÁY 1 (Blue Team)** | `vcongggggg` | ✅ Hoàn thành Phase 2 |
+| **SOC Dashboard (Next.js 14)** | **MÁY 1 (Blue Team)** | `vcongggggg` | ✅ Hoàn thành Phase 9 |
+| **Hybrid Decision & Active Blocking (403)**| **MÁY 1 (Blue Team)** | `vcongggggg` | ⏳ Phase 7 |
+| **IP Sliding Window Rate Limiter (429)** | **MÁY 1 (Blue Team)** | `vcongggggg` | ⏳ Phase 8 |
+| **17-Feature Extractor Pipeline** | Dùng chung (Shared) | `naocavang08` | ⏳ Phase 3 |
+| **Dataset Generation (Raw + Synthetic)** | Dùng chung (Shared) | `naocavang08` | ⏳ Phase 4 |
+| **Random Forest Supervised Classifier** | Model nạp Máy 1 | `naocavang08` | ⏳ Phase 5 |
+| **Isolation Forest Anomaly Detection** | Model nạp Máy 1 | `naocavang08` | ⏳ Phase 6 |
+| **AI Attack Planner (Offensive AI Agent)** | **MÁY 2 (Red Team)** | `naocavang08` | ⏳ Phase 10 |
+| **Adaptive Evasion & Red Team Campaigns** | **MÁY 2 (Red Team)** | `naocavang08` | ⏳ Phase 10 |
+| **Multi-Method Performance Evaluation** | Cả 2 máy | `naocavang08` & `vcongggggg` | ⏳ Phase 11 |

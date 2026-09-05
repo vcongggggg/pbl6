@@ -1,34 +1,47 @@
-# Web API Security Platform (PBL6 — An Toàn Thông Tin)
+# Web API Security Platform & Autonomous Red Teaming (PBL6 — An Toàn Thông Tin)
 
-> **Dự án:** Xây dựng hệ thống phát hiện và ngăn chặn tấn công Web API thông minh sử dụng Machine Learning.  
-> **Trạng thái hiện tại:** **Phase 0 — Project Bootstrap & Codebase Foundation (Hoàn thành)**.
+> **Đề tài:** Phát hiện và ngăn chặn tấn công Web API thông minh bằng Machine Learning kết hợp Thao trường An ninh Đối kháng (Distributed Cyber Range).  
+> **Trạng thái:** **Phase 0, 1, 2, 9 HOÀN THÀNH ✅** | **Đang triển khai:** `vulnerable-api` & **Phase 3 (Feature Engineering) 🚀**.
 
 ---
 
 ## 1. Tổng Quan Dự Án (Project Overview)
 
-Web API Security Platform là giải pháp an ninh mạng đóng vai trò như một Reverse Proxy / WAF Gateway thông minh đứng trước các dịch vụ Web API. 
+**Web API Security Platform** là giải pháp an ninh mạng toàn diện bảo vệ các dịch vụ Web API thông qua kiến trúc **Reverse Proxy WAF Gateway** kết hợp đa tầng phòng thủ (Defense-in-depth), được triển khai theo mô hình **Thao trường Đối kháng Phân tán (Distributed Cyber Range)** giữa 2 máy tính vật lý qua mạng cục bộ (LAN):
 
-Hệ thống được thiết kế theo mô hình phòng thủ nhiều tầng (Defense-in-depth), kết hợp:
-* **Rule-based Detection:** Bộ lọc mẫu tấn công cổ điển (SQLi, XSS, Path Traversal, Command Injection).
-* **Supervised Machine Learning:** Mô hình phân loại Random Forest nhận diện payload độc hại dạng đa nhãn (Multiclass).
-* **Anomaly Detection:** Mô hình Isolation Forest phát hiện hành vi bất thường theo cửa sổ thời gian (Time-window).
-* **Weighted Risk Scoring Engine:** Tổng hợp các tín hiệu phát hiện thành điểm nguy cơ (Risk Score $0 - 100$) để đưa ra quyết định (`ALLOW`, `MONITOR`, `RATE_LIMIT`, `BLOCK`).
+* **MÁY 1: BLUE TEAM (DEFENDER — Phụ trách: `vcongggggg`):**
+  * **WAF Reverse Proxy Gateway (FastAPI):** Lắng nghe trên `0.0.0.0:8000`, tiếp nhận lưu lượng từ mạng LAN.
+  * **Rule Engine (Phase 2):** 16 signatures tĩnh tất định bắt SQLi, XSS, Path Traversal, Command Injection.
+  * **Machine Learning Engine (Phase 5 & 6):** Random Forest (Supervised classification) + Isolation Forest (Zero-day anomaly detection).
+  * **Hybrid Risk Engine (Phase 7):** Ra quyết định phòng thủ tự động (`ALLOW` / `MONITOR` / `RATE_LIMIT 429` / `BLOCK 403`).
+  * **Vulnerable Web API (`vulnerable-api`):** Ứng dụng mục tiêu tự xây dựng (Port 5000), có 6 endpoints chứa các lỗ hổng OWASP Top 10 có chủ đích (thay thế Juice Shop theo chỉ đạo của Thầy).
+  * **SOC Command Center Dashboard (Next.js 14):** Giám sát lưu lượng mạng, cảnh báo mối đe dọa thời gian thực trên port 3000.
+* **MÁY 2: RED TEAM (ATTACKER — Phụ trách: `naocavang08`):**
+  * **AI Attack Planner Agent (Offensive AI — Phase 10):** Tác nhân AI tự động đọc OpenAPI spec từ Máy 1, lập kế hoạch chuỗi tấn công (Kill Chain) và gửi payload qua mạng LAN sang Máy 1.
+  * **Adaptive Evasion Engine:** Tự động đột biến/làm rối payload (Obfuscation, URL encoding, comment injection) khi bị WAF chặn 403 để thử nghiệm vượt rào.
 
 ---
 
-## 2. Ranh Giới Trách Nhiệm (Team Responsibility Boundary)
+## 2. Ranh Giới Trách Nhiệm Nhóm 2 Thành Viên
 
-Dự án phân chia ranh giới chuyên môn rõ ràng:
-
-* **Backend / Security Team (Member A & C):**
-  * Xây dựng API Gateway, Reverse Proxy bằng FastAPI (`gateway/`).
-  * Quản lý Rule Engine, Rate Limiting, Risk Scoring Engine, Decision Engine và SQLite Database.
-  * Xây dựng giao diện giám sát Real-time Dashboard bằng Next.js (`dashboard/`) và Attack Lab (`attack-lab/`).
-* **ML / Data Team (Member B):**
-  * Nghiên cứu, thu thập và tiền xử lý dữ liệu huấn luyện (`ml-engine/`).
-  * Trích xuất đặc trưng (Feature Engineering).
-  * Huấn luyện, đánh giá và xuất bản các artifacts mô hình (`.joblib`) theo đặc tả [docs/ML_INTEGRATION.md](file:///c:/Study/HocKy6/PBL6/docs/ML_INTEGRATION.md).
+```text
+┌──────────────────────────────────────────────────────────────────────────────────┐
+│             PHÂN CÔNG TRÁCH NHIỆM: CYBER RANGE 2 MÁY ĐỐI KHÁNG (PBL6)            │
+├────────────────────────────────────────┬─────────────────────────────────────────┤
+│ THÀNH VIÊN A: vcongggggg               │ THÀNH VIÊN B: naocavang08               │
+│ Vai trò: Tech Lead / Blue Team (Phòng) │ Vai trò: Red Team Lead (Tấn) & AI Eng   │
+│ Vị trí: MÁY 1 (Target API, WAF, SOC UI)│ Vị trí: MÁY 2 (AI Attack Planner Agent) │
+├────────────────────────────────────────┼─────────────────────────────────────────┤
+│ • Xây dựng vulnerable-api (6 endpoints)│ • Feature Engineering (17 Features)     │
+│ • Reverse Proxy Gateway (0.0.0.0:8000) │ • Thu thập & sinh Dataset (vulnerable)  │
+│ • Rule Engine (16 Rules tất định)      │ • Huấn luyện Random Forest (Supervised) │
+│ • Input Normalizer & Scorer            │ • Huấn luyện Isolation Forest (Anomaly) │
+│ • Hybrid Decision Engine (Phase 7)     │ • Xây dựng AI Attack Planner (Phase 10) │
+│ • IP Rate Limiting - 429 (Phase 8)     │ • Adaptive Evasion Engine qua mạng LAN  │
+│ • SOC Dashboard UI & Recharts (Phase 9)│ • Đánh giá thực nghiệm so sánh (Phase 11)│
+│ • Docker Compose Hardening (Phase 12)  │ • Soạn thảo Slide & Báo cáo đồ án       │
+└────────────────────────────────────────┴─────────────────────────────────────────┘
+```
 
 ---
 
@@ -36,135 +49,69 @@ Dự án phân chia ranh giới chuyên môn rõ ràng:
 
 ```text
 pbl6/
-├── gateway/              # FastAPI WAF Gateway application
+├── gateway/              # FastAPI WAF Gateway (Reverse Proxy, Rule, ML, SQLite DB)
 │   ├── app/
-│   │   ├── api/          # Route handlers (Health, etc.)
+│   │   ├── api/          # Route handlers (Health, Proxy, Dashboard REST APIs)
 │   │   ├── core/         # Config, logging, errors
-│   │   ├── db/           # SQLAlchemy session, base, models
-│   │   └── schemas/      # Pydantic request/response schemas
-│   ├── tests/            # Gateway unit tests (pytest)
-│   ├── pyproject.toml    # Python project & tooling configuration
+│   │   ├── db/           # SQLAlchemy session, SQLite models (requests, security_events)
+│   │   ├── security/     # Normalizer, Rule Engine (16 rules), Scorer
+│   │   └── services/     # Traffic logging, Security event persistence
+│   └── tests/            # Gateway unit tests (38/38 tests pass 100%)
+├── vulnerable-api/       # Target Web API tự xây dựng (FastAPI + SQLite, Port 5000)
+│   ├── app/
+│   │   ├── main.py       # Khởi tạo API, OpenAPI spec
+│   │   └── routes/       # Auth (SQLi), Products (SQLi), Comments (XSS), Documents (Path), Tools (Cmd)
 │   └── Dockerfile
-├── ml-engine/            # Reserved for ML/Data team (training, features, models)
-├── attack-lab/           # Local attack scenarios and campaign runner
-├── dashboard/            # Next.js TypeScript frontend dashboard
-│   ├── src/              # App router, components, central config
-│   ├── package.json
+├── dashboard/            # Next.js 14 SOC Command Center (Port 3000)
+│   ├── src/              # App router, KPI Cards, Recharts, Event Drawer, Quick Simulator
 │   └── Dockerfile
-├── shared/               # Shared types, contracts, and utilities
-├── tests/                # Integration, security, and performance test suites
-├── scripts/              # Automation and database helper scripts
-├── docs/                 # Documentation (Plan, Architecture, Development, ML contract)
-│   ├── PLAN.md
-│   ├── PROGRESS.md
-│   ├── GAP_ANALYSIS.md
-│   ├── ARCHITECTURE.md
-│   ├── DEVELOPMENT.md
-│   └── ML_INTEGRATION.md
-├── config/               # Configuration templates
-├── data/                 # Raw, processed data and model artifacts (.gitkeep)
-├── docker/               # Additional docker configs
-├── .github/workflows/    # CI Pipeline (lint, tests, build)
-├── .gitignore
-├── .dockerignore
-├── .env.example
-├── docker-compose.yml    # Root multi-container orchestration
-├── Makefile              # Developer task runner
+├── ml-engine/            # AI/ML Pipeline (Features, Dataset, Random Forest, Isolation Forest)
+├── attack-lab/           # Offensive AI (AI Attack Planner Agent, Adaptive Evasion, Scenarios)
+├── docs/                 # Toàn bộ tài liệu kỹ thuật & học thuật dự án
+│   ├── PLAN.md           # Master Plan 2.0 (Toàn bộ 13 Phases & WBS)
+│   ├── ARCHITECTURE.md   # Kiến trúc Thao trường An ninh Đối kháng 2 Máy
+│   ├── API.md            # Đặc tả API Gateway & vulnerable-api
+│   ├── GATEWAY.md        # Đặc tả Reverse Proxy & Security Pipeline
+│   ├── RULE_ENGINE.md    # Danh mục 16 luật tĩnh & Input Normalizer
+│   ├── DASHBOARD_SPEC.md # Đặc tả giao diện SOC Command Center
+│   ├── GLOSSARY.md       # Bảng thuật ngữ chuyên ngành (60+ terms)
+│   ├── PROGRESS.md       # Bảng theo dõi tiến độ chi tiết
+│   └── TASKS_BREAKDOWN.md# Bảng phân rã 50 GitHub Issues
+├── docker-compose.yml    # Khởi chạy 3 container (Gateway, Dashboard, vulnerable-api)
 └── README.md
 ```
 
 ---
 
-## 4. Yêu Cầu Cài Đặt (Prerequisites)
+## 4. Khởi Chạy Hệ Thống
 
-* **Python:** $\ge 3.11$ (Khuyến nghị 3.12).
-* **Node.js:** $\ge 18$ kèm `npm`.
-* **Docker & Docker Compose:** Đã cài đặt và đang chạy.
-
----
-
-## 5. Cấu Hình Môi Trường (Environment Configuration)
-
-Sao chép file cấu hình mẫu `.env.example` sang `.env`:
-```bash
-# Linux / macOS
-cp .env.example .env
-
-# Windows PowerShell
-Copy-Item .env.example .env
-```
-
-Các biến môi trường chính:
-* `APP_ENV`: Môi trường thực thi (`development` / `test` / `production`).
-* `APP_PORT`: Cổng Gateway (`8000`).
-* `TARGET_API_URL`: URL dịch vụ đích cần bảo vệ (`http://juice-shop:3000`).
-* `DATABASE_URL`: Đường dẫn SQLite (`sqlite:///./data/waf_security.db`).
-* `ADMIN_API_KEY`: Khóa xác thực cho các API quản trị WAF.
-
----
-
-## 6. Khởi Chạy Hệ Thống Bằng Docker (Khuyến nghị)
-
-Chạy toàn bộ cụm dịch vụ (Gateway, Dashboard, OWASP Juice Shop) bằng một lệnh duy nhất:
-
+### A. Khởi chạy 1 lệnh bằng Docker Compose (Khuyến nghị)
 ```bash
 docker compose up --build -d
 ```
+* **WAF Gateway:** [http://localhost:8000](http://localhost:8000)
+* **SOC Dashboard:** [http://localhost:3000](http://localhost:3000)
+* **Vulnerable Web API:** [http://localhost:5000](http://localhost:5000) (Swagger UI: `/docs`)
 
-Truy cập các dịch vụ:
-* **Gateway API:** [http://localhost:8000](http://localhost:8000)
-* **Gateway Health Check:** [http://localhost:8000/health](http://localhost:8000/health)
-* **Swagger API Docs:** [http://localhost:8000/docs](http://localhost:8000/docs)
-* **Dashboard Frontend:** [http://localhost:3001](http://localhost:3001)
-* **Target Web API (Juice Shop):** [http://localhost:3000](http://localhost:3000)
-
-Dừng hệ thống:
-```bash
-docker compose down
-```
+### B. Vận hành Thao trường Đối kháng 2 Máy (Cyber Range qua LAN)
+1. **Máy 1 (Blue Team):** Khởi chạy Gateway và Dashboard. Xác định IP mạng LAN (`ipconfig`, ví dụ `192.168.1.15`).
+2. **Máy 2 (Red Team):** Chạy AI Attack Planner:
+   ```bash
+   python attack-lab/cli.py --target http://192.168.1.15:8000/api/proxy --campaign sqli
+   ```
+3. **Quan sát trực tiếp:** Mở SOC Dashboard trên Máy 1 xem sự kiện tấn công từ Máy 2 xuất hiện theo thời gian thực!
 
 ---
 
-## 7. Kiểm Thử & Kiểm Tra Chất Lượng Mã Nguồn
+## 5. Kiểm Thử & Đảm Bảo Chất Lượng Mã Nguồn
 
-### Chạy Unit Tests Backend
 ```bash
+# Chạy Unit Tests Backend (38/38 tests)
 pytest gateway/tests
-```
 
-### Chạy Linter (Ruff)
-```bash
-ruff check gateway
-```
+# Kiểm tra Linter (0 warnings/errors)
+ruff check .
 
-### Build Frontend
-```bash
+# Build Frontend Next.js Production
 cd dashboard && npm run build
 ```
-
----
-
-## 8. Tài Liệu Dự Án (Documentation Links)
-
-* 📄 [docs/PLAN.md](file:///c:/Study/HocKy6/PBL6/docs/PLAN.md): Đặc tả kế hoạch tổng thể và yêu cầu kỹ thuật chi tiết.
-* 📄 [docs/PROGRESS.md](file:///c:/Study/HocKy6/PBL6/docs/PROGRESS.md): Bảng theo dõi tiến độ Phase 0 $\rightarrow$ Phase 12.
-* 📄 [docs/ARCHITECTURE.md](file:///c:/Study/HocKy6/PBL6/docs/ARCHITECTURE.md): Kiến trúc luồng xử lý và ranh giới hệ thống.
-* 📄 [docs/DEVELOPMENT.md](file:///c:/Study/HocKy6/PBL6/docs/DEVELOPMENT.md): Hướng dẫn chi tiết thiết lập môi trường lập trình.
-* 📄 [docs/ML_INTEGRATION.md](file:///c:/Study/HocKy6/PBL6/docs/ML_INTEGRATION.md): Giao kèo tích hợp giữa Gateway và ML Engine.
-
----
-
-## 9. Giới Hạn Hiện Tại (Known Limitations in Phase 0)
-
-Theo quy định nghiêm ngặt của **Phase 0 — Codebase Foundation**:
-* **Chưa triển khai các luật WAF (SQLi, XSS, Path Traversal, Command Injection)** $\rightarrow$ Sẽ triển khai tại **Phase 2**.
-* **Chưa triển khai trích xuất đặc trưng và mô hình ML** $\rightarrow$ Sẽ triển khai tại **Phase 3, 5, 6**.
-* **Chưa triển khai tính toán Risk Score, Rate Limiting và chặn tự động** $\rightarrow$ Sẽ triển khai tại **Phase 7, 8**.
-* **Chưa triển khai giao diện biểu đồ và danh sách log trên Dashboard** $\rightarrow$ Sẽ triển khai tại **Phase 9**.
-* **Chưa triển khai kịch bản Attack Lab** $\rightarrow$ Sẽ triển khai tại **Phase 10**.
-
----
-
-## 10. Giai Đoạn Kế Tiếp (Next Phase)
-
-👉 **Phase 1 — Infrastructure** (Thiết lập mạng Docker, kết nối reverse proxy thô tới Target Web API và hoàn thiện database logging).
