@@ -12,7 +12,7 @@ from app.db.session import SessionLocal
 @respx.mock
 def test_gateway_detects_sqli_and_persists_security_event_non_blocking(client: TestClient):
     """Verifies that a malicious SQLi request is detected, logged, and forwarded."""
-    respx.get("http://juice-shop:3000/rest/products/search?q=apple%27%20OR%201%3D1--").mock(
+    respx.get("http://vulnerable-api:5000/rest/products/search?q=apple%27%20OR%201%3D1--").mock(
         return_value=Response(200, json={"status": "success", "data": []})
     )
 
@@ -42,7 +42,7 @@ def test_gateway_detects_sqli_and_persists_security_event_non_blocking(client: T
 @respx.mock
 def test_gateway_detects_xss_in_body_non_blocking(client: TestClient):
     """Verifies XSS payload in POST body is detected, logged, and forwarded."""
-    respx.post("http://juice-shop:3000/api/Feedbacks").mock(
+    respx.post("http://vulnerable-api:5000/api/Feedbacks").mock(
         return_value=Response(201, json={"status": "created"})
     )
 
@@ -64,7 +64,7 @@ def test_gateway_detects_xss_in_body_non_blocking(client: TestClient):
 @respx.mock
 def test_gateway_detects_path_traversal_non_blocking(client: TestClient):
     """Verifies Path Traversal in query param is detected, logged, and forwarded."""
-    respx.get("http://juice-shop:3000/rest/doc?file=../../etc/passwd").mock(
+    respx.get("http://vulnerable-api:5000/rest/doc?file=../../etc/passwd").mock(
         return_value=Response(200, json={"content": "mocked file"})
     )
 
@@ -81,7 +81,7 @@ def test_gateway_detects_path_traversal_non_blocking(client: TestClient):
 @respx.mock
 def test_gateway_detects_command_injection_non_blocking(client: TestClient):
     """Verifies Command Injection in query param is detected, logged, and forwarded."""
-    respx.get("http://juice-shop:3000/api/system/ping?host=127.0.0.1%3B%20whoami").mock(
+    respx.get("http://vulnerable-api:5000/api/system/ping?host=127.0.0.1%3B%20whoami").mock(
         return_value=Response(200, json={"output": "pong"})
     )
 
@@ -98,7 +98,7 @@ def test_gateway_detects_command_injection_non_blocking(client: TestClient):
 @respx.mock
 def test_gateway_benign_request_creates_no_security_event(client: TestClient):
     """Verifies that legitimate traffic is logged in requests table with NO security_event."""
-    respx.get("http://juice-shop:3000/rest/products/search?q=apple+juice").mock(
+    respx.get("http://vulnerable-api:5000/rest/products/search?q=apple+juice").mock(
         return_value=Response(200, json={"status": "success", "data": [{"name": "Apple Juice"}]})
     )
 

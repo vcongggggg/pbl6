@@ -131,10 +131,10 @@ def test_dashboard_distribution(client: TestClient):
 def test_dashboard_simulate_and_reset(client: TestClient):
     """Verifies simulator fires requests and reset-demo clears test data."""
     # Mock proxy target upstream for simulate
-    respx.get("http://juice-shop:3000/rest/products/search").mock(
+    respx.get("http://vulnerable-api:5000/rest/products/search").mock(
         return_value=Response(200, json={"status": "success"})
     )
-    respx.post("http://juice-shop:3000/api/Feedbacks").mock(
+    respx.post("http://vulnerable-api:5000/api/Feedbacks").mock(
         return_value=Response(200, json={"status": "created"})
     )
 

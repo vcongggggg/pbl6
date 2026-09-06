@@ -1,13 +1,18 @@
 services:
-  # Target Web API: OWASP Juice Shop (Môi trường Web API bị tấn công trong Lab)
-  juice-shop:
-    image: bkimminich/juice-shop:v16.0.0
-    container_name: pbl6-juice-shop
+  # Target Web API: Bookie Bookstore (Vulnerable Web API tự xây dựng)
+  vulnerable-api:
+    build:
+      context: ./vulnerable-api
+      dockerfile: Dockerfile
+    container_name: pbl6-vulnerable-api
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "5000:5000"
     environment:
-      - NODE_ENV=unsafe
+      - DJANGO_ENV=development
+      - DEBUG=True
+      - ALLOWED_HOSTS=*
+      - PORT=5000
     networks:
       - pbl6-network
 
@@ -26,13 +31,13 @@ services:
       - APP_PORT=8000
       - LOG_LEVEL=INFO
       - DATABASE_URL=sqlite:////app/data/waf_security.db
-      - TARGET_API_URL=http://juice-shop:3000
+      - TARGET_API_URL=http://vulnerable-api:5000
       - WAF_MODE=MONITOR_ONLY
       - ADMIN_API_KEY=dev-admin-secret-key-change-me
     volumes:
       - ./data:/app/data
     depends_on:
-      - juice-shop
+      - vulnerable-api
     networks:
       - pbl6-network
 

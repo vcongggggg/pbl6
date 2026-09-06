@@ -13,7 +13,7 @@ from app.db.session import SessionLocal
 @respx.mock
 def test_request_id_generated_and_propagated(client: TestClient):
     """Verifies that an incoming request without X-Request-ID gets one generated and returned."""
-    respx.get("http://juice-shop:3000/rest/products").mock(
+    respx.get("http://vulnerable-api:5000/rest/products").mock(
         return_value=Response(200, json=[{"id": 1, "name": "Apple Juice"}])
     )
 
@@ -27,7 +27,7 @@ def test_request_id_generated_and_propagated(client: TestClient):
 @respx.mock
 def test_custom_request_id_preserved(client: TestClient):
     """Verifies that a valid client-supplied X-Request-ID is preserved and echoed."""
-    respx.get("http://juice-shop:3000/rest/products").mock(
+    respx.get("http://vulnerable-api:5000/rest/products").mock(
         return_value=Response(200, json=[{"id": 1, "name": "Apple Juice"}])
     )
 
@@ -43,7 +43,7 @@ def test_custom_request_id_preserved(client: TestClient):
 @respx.mock
 def test_get_proxy_forwarding_and_query_params(client: TestClient):
     """Verifies GET forwarding preserves path and query parameters."""
-    route = respx.get("http://juice-shop:3000/rest/products/search?q=orange").mock(
+    route = respx.get("http://vulnerable-api:5000/rest/products/search?q=orange").mock(
         return_value=Response(200, json={"data": [{"id": 2, "name": "Orange Juice"}]})
     )
 
@@ -70,7 +70,7 @@ def test_get_proxy_forwarding_and_query_params(client: TestClient):
 @respx.mock
 def test_post_json_proxy_forwarding(client: TestClient):
     """Verifies POST forwarding preserves JSON body and content headers."""
-    route = respx.post("http://juice-shop:3000/api/Users").mock(
+    route = respx.post("http://vulnerable-api:5000/api/Users").mock(
         return_value=Response(201, json={"status": "success", "data": {"id": 10}})
     )
 
@@ -101,7 +101,7 @@ def test_post_json_proxy_forwarding(client: TestClient):
 @respx.mock
 def test_response_status_preservation(client: TestClient):
     """Verifies upstream status codes (e.g., 404, 400) are accurately preserved."""
-    respx.get("http://juice-shop:3000/rest/unknown-path").mock(
+    respx.get("http://vulnerable-api:5000/rest/unknown-path").mock(
         return_value=Response(404, json={"error": "Not Found"})
     )
 
@@ -113,7 +113,7 @@ def test_response_status_preservation(client: TestClient):
 @respx.mock
 def test_target_unavailable_returns_controlled_502(client: TestClient):
     """Verifies that upstream connection failure returns a controlled 502 Bad Gateway."""
-    respx.get("http://juice-shop:3000/rest/down").mock(
+    respx.get("http://vulnerable-api:5000/rest/down").mock(
         side_effect=httpx.ConnectError("Connection refused by target")
     )
 
@@ -137,7 +137,7 @@ def test_target_unavailable_returns_controlled_502(client: TestClient):
 @respx.mock
 def test_target_timeout_returns_controlled_504(client: TestClient):
     """Verifies that upstream read/connect timeout returns a controlled 504 Gateway Timeout."""
-    respx.get("http://juice-shop:3000/rest/slow").mock(
+    respx.get("http://vulnerable-api:5000/rest/slow").mock(
         side_effect=httpx.ReadTimeout("Target took too long to respond")
     )
 
@@ -159,7 +159,7 @@ def test_target_timeout_returns_controlled_504(client: TestClient):
 @respx.mock
 def test_hop_by_hop_headers_are_filtered(client: TestClient):
     """Verifies hop-by-hop headers like Upgrade and custom proxy headers are filtered."""
-    route = respx.get("http://juice-shop:3000/rest/headers-check").mock(
+    route = respx.get("http://vulnerable-api:5000/rest/headers-check").mock(
         return_value=Response(200, json={"status": "ok"})
     )
 
@@ -178,8 +178,8 @@ def test_hop_by_hop_headers_are_filtered(client: TestClient):
 
 @respx.mock
 def test_open_proxy_protection(client: TestClient):
-    """Verifies gateway only proxies to configured juice-shop despite client headers."""
-    route = respx.get("http://juice-shop:3000/api/target").mock(
+    """Verifies gateway only proxies to configured vulnerable-api despite client headers."""
+    route = respx.get("http://vulnerable-api:5000/api/target").mock(
         return_value=Response(200, json={"status": "safe"})
     )
 
@@ -189,4 +189,4 @@ def test_open_proxy_protection(client: TestClient):
     )
     assert response.status_code == status.HTTP_200_OK
     assert route.called
-    assert route.calls.last.request.url.host == "juice-shop"
+    assert route.calls.last.request.url.host == "vulnerable-api"

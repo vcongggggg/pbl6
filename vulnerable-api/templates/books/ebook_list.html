@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% block title %}Đọc sách online - Bookie{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Đọc sách online</h1>
+    <div class="page-subtitle">Thư viện sách có bản đọc trực tuyến. Giá trên website chỉ dành cho sách giấy.</div>
+</div>
+
+<div class="white-panel filter-panel mb-4 fade-up">
+    <form method="get" action="{% url 'ebook_list' %}" class="row g-3 align-items-end">
+        <div class="col-md-5">
+            <label class="form-label small fw-600"><i class="bi bi-search me-1"></i>Tìm kiếm</label>
+            <input type="text" name="q" value="{{ search }}" class="form-control" placeholder="Tên sách, tác giả...">
+        </div>
+        <div class="col-md-5">
+            <label class="form-label small fw-600"><i class="bi bi-tag me-1"></i>Thể loại</label>
+            <select name="category" class="form-select">
+                <option value="">Tất cả thể loại</option>
+                {% for c in categories %}
+                <option value="{{ c.pk }}" {% if current_category_id == c.pk %}selected{% endif %}>{{ c.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-2">
+            <button type="submit" class="btn btn-gradient w-100"><i class="bi bi-funnel me-1"></i>Lọc</button>
+        </div>
+    </form>
+</div>
+
+<div class="result-bar">
+    <div class="result-count">{{ page.paginator.count }} sách đọc online</div>
+    <div class="result-meta">
+        {% if search %}
+        <span class="meta-chip"><i class="bi bi-search"></i>{{ search }}</span>
+        {% endif %}
+        <span class="meta-chip"><i class="bi bi-unlock"></i>Đọc online miễn phí</span>
+    </div>
+</div>
+
+<div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 row-cols-xl-4 g-4 mb-4">
+    {% for book in books %}
+    <div class="col fade-up">
+        <div class="card card-book h-100">
+            <span class="stock-badge stock-in">Đọc online</span>
+            <div class="img-wrapper">
+                <a href="{% url 'book_detail' book.pk %}">
+                    {% if book.cover_image %}
+                    <img src="{{ book.cover_image }}" class="card-img-top" alt="{{ book.title }}">
+                    {% else %}
+                    <div class="card-img-top d-flex align-items-center justify-content-center" style="font-size:3rem;color:var(--text-muted)">
+                        <i class="bi bi-book"></i>
+                    </div>
+                    {% endif %}
+                </a>
+            </div>
+            <div class="card-body d-flex flex-column">
+                <h5 class="card-title"><a href="{% url 'book_detail' book.pk %}">{{ book.title|truncatewords:8 }}</a></h5>
+                <p class="author mb-1">{{ book.author }}</p>
+                {% if book.category %}
+                <span class="meta-chip align-self-start mb-3"><i class="bi bi-tag"></i>{{ book.category.name }}</span>
+                {% endif %}
+                <div class="mt-auto">
+                    <div class="d-flex align-items-center justify-content-between mb-3">
+                        <span class="meta-chip"><i class="bi bi-book-half"></i>Bản đọc online</span>
+                        {% if user.is_authenticated %}
+                            {% if book.pk in wishlist_book_ids %}
+                            <button class="btn-icon btn-icon-heart ajax-wishlist active" data-book-id="{{ book.pk }}" data-action="remove" title="Bỏ yêu thích">
+                                <i class="bi bi-heart-fill"></i>
+                            </button>
+                            {% else %}
+                            <button class="btn-icon btn-icon-heart ajax-wishlist" data-book-id="{{ book.pk }}" data-action="add" title="Yêu thích">
+                                <i class="bi bi-heart"></i>
+                            </button>
+                            {% endif %}
+                        {% endif %}
+                    </div>
+                    <a href="{% url 'read_book' book.pk %}" class="btn btn-gradient w-100">
+                        <i class="bi bi-book-half me-1"></i>Đọc online
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12">
+        <div class="empty-state">
+            <span class="empty-icon"><i class="bi bi-search"></i></span>
+            <p class="mb-0">Chưa tìm thấy sách đọc online phù hợp. Thử đổi từ khóa hoặc thể loại.</p>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+{% if page.has_other_pages %}
+<nav>
+    <ul class="pagination justify-content-center">
+        {% if page.has_previous %}
+        <li class="page-item"><a class="page-link" href="?page={{ page.previous_page_number }}{% if search %}&q={{ search }}{% endif %}{% if current_category_id %}&category={{ current_category_id }}{% endif %}"><i class="bi bi-chevron-left"></i></a></li>
+        {% endif %}
+        {% for num in page.paginator.page_range %}
+            {% if page.number == num %}
+            <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+            {% elif num > page.number|add:"-3" and num < page.number|add:"3" %}
+            <li class="page-item"><a class="page-link" href="?page={{ num }}{% if search %}&q={{ search }}{% endif %}{% if current_category_id %}&category={{ current_category_id }}{% endif %}">{{ num }}</a></li>
+            {% endif %}
+        {% endfor %}
+        {% if page.has_next %}
+        <li class="page-item"><a class="page-link" href="?page={{ page.next_page_number }}{% if search %}&q={{ search }}{% endif %}{% if current_category_id %}&category={{ current_category_id }}{% endif %}"><i class="bi bi-chevron-right"></i></a></li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+{% endblock %}

@@ -48,7 +48,7 @@ export const Header: React.FC<HeaderProps> = ({
           <div className="flex items-center gap-3 text-xs text-slate-400 mt-0.5 font-mono">
             {/* Target Status */}
             <span className="flex items-center gap-1.5">
-              Target: <span className="text-slate-300">{stats?.target_url || "http://juice-shop:3000"}</span>
+              Target: <span className="text-slate-300">{stats?.target_url || "http://vulnerable-api:5000"}</span>
               <span className={`inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[11px] font-semibold ${
                 targetReachable
                   ? "text-emerald-400 bg-emerald-950/50 border border-emerald-800/40"

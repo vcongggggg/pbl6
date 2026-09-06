@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}Lịch sử đọc sách - Bookie{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title"><i class="bi bi-book me-2"></i>Lịch sử đọc sách</h1>
+    <div class="page-subtitle">Tiếp tục những cuốn sách bạn đang đọc dở.</div>
+</div>
+
+{% if history_items %}
+<div class="row g-4">
+    {% for item in history_items %}
+    <div class="col-12 col-md-6 fade-up">
+        <div class="white-panel h-100">
+            <div class="d-flex gap-3">
+                <div style="flex-shrink:0;width:90px;height:125px;overflow:hidden;border-radius:8px;box-shadow:var(--shadow-sm);background:rgba(45,42,38,.04)">
+                    <a href="{% url 'book_detail' item.book.pk %}">
+                        {% if item.book.cover_image %}
+                        <img src="{{ item.book.cover_image }}" alt="{{ item.book.title }}" style="width:100%;height:100%;object-fit:cover">
+                        {% else %}
+                        <div class="d-flex align-items-center justify-content-center h-100 text-muted" style="font-size:2rem"><i class="bi bi-book"></i></div>
+                        {% endif %}
+                    </a>
+                </div>
+                <div class="flex-grow-1 min-w-0">
+                    <div class="d-flex justify-content-between align-items-start gap-2 mb-1">
+                        <h5 class="fw-bold mb-0" style="font-size:1.05rem;font-family:'Manrope',sans-serif">
+                            <a href="{% url 'book_detail' item.book.pk %}" class="text-decoration-none" style="color:var(--text-primary)">{{ item.book.title }}</a>
+                        </h5>
+                        {% if item.is_finished %}
+                        <span class="meta-chip"><i class="bi bi-check-circle"></i>Đã xong</span>
+                        {% else %}
+                        <span class="meta-chip"><i class="bi bi-bookmark"></i>Đang đọc</span>
+                        {% endif %}
+                    </div>
+                    <p class="text-muted small mb-2">{{ item.book.author }}</p>
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between small text-secondary mb-1">
+                            <span>Tiến độ: {{ item.percentage }}%</span>
+                            <span>Trang {{ item.progress.last_page }}/{{ item.total_pages }}</span>
+                        </div>
+                        <div class="progress" style="height:8px;border-radius:4px;background:rgba(45,42,38,.08)">
+                            <div class="progress-bar" role="progressbar" style="width:{{ item.percentage }}%;background:var(--gradient-2);border-radius:4px" aria-valuenow="{{ item.percentage }}" aria-valuemin="0" aria-valuemax="100"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="d-flex align-items-center justify-content-between mt-3 pt-3 border-top" style="border-color:var(--border)!important">
+                <span class="text-muted" style="font-size:.78rem"><i class="bi bi-clock me-1"></i>{{ item.progress.last_read_at|date:"d/m/Y H:i" }}</span>
+                <a href="{% url 'read_book' item.book.pk %}" class="btn btn-gradient btn-gradient-sm">
+                    <i class="bi bi-play-fill me-1"></i>{% if item.is_finished %}Đọc lại{% else %}Đọc tiếp{% endif %}
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="empty-state fade-up">
+    <span class="empty-icon"><i class="bi bi-book"></i></span>
+    <h5 class="fw-bold mb-2">Chưa có lịch sử đọc sách</h5>
+    <p class="mb-3" style="color:var(--text-muted)">Bắt đầu đọc một cuốn sách online để lưu tiến độ tại đây.</p>
+    <a href="{% url 'ebook_list' %}" class="btn btn-gradient">
+        <i class="bi bi-book-half me-1"></i>Đọc sách online
+    </a>
+</div>
+{% endif %}
+{% endblock %}
