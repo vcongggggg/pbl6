@@ -312,7 +312,7 @@ async def simulate_attack_request(
     async with httpx.AsyncClient(transport=transport, base_url="http://local-gateway") as client:
         if attack_upper == "SQLI":
             res = await client.get(
-                "/api/proxy/rest/products/search?q=apple%27%20OR%201%3D1--",
+                "/api/proxy/api/v1/vulnerable/books/search/?q=Python%27%20OR%201%3D1--",
                 headers={"User-Agent": "PBL6-Simulator/1.0"},
             )
             return {
@@ -324,8 +324,8 @@ async def simulate_attack_request(
             }
         elif attack_upper == "XSS":
             res = await client.post(
-                "/api/proxy/api/Feedbacks",
-                json={"comment": "<script>alert('PBL6')</script>", "rating": 5},
+                "/api/proxy/api/v1/vulnerable/reviews/",
+                json={"book_id": 1, "review_text": "<script>alert('PBL6')</script>", "rating": 5},
                 headers={"User-Agent": "PBL6-Simulator/1.0"},
             )
             return {
@@ -337,7 +337,7 @@ async def simulate_attack_request(
             }
         elif attack_upper == "PATH":
             res = await client.get(
-                "/api/proxy/rest/products/search?file=..%2f..%2fetc%2fpasswd",
+                "/api/proxy/api/v1/vulnerable/files/download/?file=..%2f..%2f..%2f..%2fetc%2fpasswd",
                 headers={"User-Agent": "PBL6-Simulator/1.0"},
             )
             return {
@@ -348,8 +348,9 @@ async def simulate_attack_request(
                 "message": "Fired Path Traversal payload (../../etc/passwd) through query string.",
             }
         elif attack_upper == "CMD":
-            res = await client.get(
-                "/api/proxy/api/system/ping?host=127.0.0.1%3B%20whoami",
+            res = await client.post(
+                "/api/proxy/api/v1/vulnerable/admin/ping/",
+                json={"target": "127.0.0.1; whoami"},
                 headers={"User-Agent": "PBL6-Simulator/1.0"},
             )
             return {
@@ -357,11 +358,11 @@ async def simulate_attack_request(
                 "simulated": "COMMAND_INJECTION",
                 "status_code": res.status_code,
                 "request_id": res.headers.get("X-Request-ID"),
-                "message": "Fired Command Injection payload (; whoami) through query parameter.",
+                "message": "Fired Command Injection payload (; whoami) through request body.",
             }
         else:  # BENIGN
             res = await client.get(
-                "/api/proxy/rest/products/search?q=fresh+apple+juice",
+                "/api/proxy/api/v1/vulnerable/books/search/?q=Clean+Code",
                 headers={"User-Agent": "PBL6-Simulator/1.0"},
             )
             return {
@@ -369,7 +370,7 @@ async def simulate_attack_request(
                 "simulated": "BENIGN",
                 "status_code": res.status_code,
                 "request_id": res.headers.get("X-Request-ID"),
-                "message": "Fired legitimate benign search request (fresh apple juice).",
+                "message": "Fired legitimate benign book search request (Clean Code).",
             }
 
 

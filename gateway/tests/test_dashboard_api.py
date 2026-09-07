@@ -131,12 +131,15 @@ def test_dashboard_distribution(client: TestClient):
 def test_dashboard_simulate_and_reset(client: TestClient):
     """Verifies simulator fires requests and reset-demo clears test data."""
     # Mock proxy target upstream for simulate
-    respx.get("http://vulnerable-api:5000/rest/products/search").mock(
-        return_value=Response(200, json={"status": "success"})
-    )
-    respx.post("http://vulnerable-api:5000/api/Feedbacks").mock(
+    respx.get(
+        "http://vulnerable-api:5000/api/v1/vulnerable/books/search/?q=Python%27%20OR%201%3D1--"
+    ).mock(return_value=Response(200, json={"status": "success"}))
+    respx.post("http://vulnerable-api:5000/api/v1/vulnerable/reviews/").mock(
         return_value=Response(200, json={"status": "created"})
     )
+    respx.get(
+        "http://vulnerable-api:5000/api/v1/vulnerable/books/search/?q=Clean+Code"
+    ).mock(return_value=Response(200, json={"status": "success"}))
 
     # Test simulate SQLI
     res_sqli = client.post("/dashboard/simulate", json={"attack_type": "SQLI"})
