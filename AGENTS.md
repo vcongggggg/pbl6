@@ -21,3 +21,15 @@ Tài liệu này định nghĩa các ràng buộc hành vi bắt buộc cho AI A
 
 ## 4. Ngôn ngữ
 - Toàn bộ Issues, PR, Commits và trao đổi kỹ thuật phải dùng **Tiếng Việt chuyên nghiệp**.
+
+## 5. Quy tắc Đồng bộ Tài liệu & Chống Trôi Kiến Trúc (Docs Sync & Anti-Drift)
+- **Cập nhật Docs ngay khi đổi kiến trúc/hạ tầng**: Khi thay đổi Upstream Target (như thay OWASP Juice Shop bằng `vulnerable-api` Bookie Bookstore), đổi Port hoặc thêm cơ chế mới, **bắt buộc chạy `grep_search`** để rà soát và cập nhật toàn bộ `README.md`, thư mục `docs/` và sơ đồ kiến trúc.
+- **Xóa sạch di chứng code/test cũ**: Cập nhật toàn bộ file test (`tests/integration/test_gateway_live.py`) và scripts mock, không để sót endpoints hoặc mocks của Juice Shop cũ.
+
+## 6. Quy tắc Thẩm định Source Code Thực tế & Phân định Cổng Dịch vụ (Single Source of Truth)
+- **Đọc trực tiếp `docker-compose.yml`**: Không dựa vào trí nhớ cũ khi hướng dẫn User về URL, Port hay cách truy cập. Luôn đọc file cấu hình thực tế.
+- **Bảng phân định Cổng dịch vụ chuẩn**:
+  - `http://localhost:3000`: **SOC Dashboard UI** (Next.js 14 Frontend).
+  - `http://localhost:8000`: **WAF Gateway** (FastAPI Reverse Proxy).
+  - `http://localhost:5000`: **Target Web API** (`vulnerable-api` Bookie Bookstore).
+  - *Cảnh báo*: Tuyệt đối không nhầm lẫn port 3000 của Dashboard với Juice Shop ngày xưa, và không để Gateway trỏ nhầm sang Juice Shop.

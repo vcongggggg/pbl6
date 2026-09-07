@@ -7,7 +7,7 @@ Tài liệu chi tiết về kiến trúc, danh mục luật (Rule Catalog), quy 
 ## 1. Mục Đích & Nguyên Lý Cốt Lõi (Purpose & Principles)
 
 * **Phát hiện dựa trên dấu hiệu (Signature-Based Detection):** Nhận diện các mẫu tấn công phổ biến trong lưu lượng Web API thông qua biểu thức chính quy được biên dịch tối ưu (`re.compile`).
-* **Không làm gián đoạn lưu lượng (Detection Only / Non-Blocking in Phase 2):** Trong Phase 2, WAF Gateway hoạt động ở chế độ quan sát và ghi nhận. Mọi request (kể cả request chứa payload tấn công) đều được kiểm tra, ghi log sự kiện bảo mật vào database và **tiếp tục chuyển tiếp an toàn sang Web API đích (OWASP Juice Shop)**. Cơ chế chặn (HTTP 403 / 429) thuộc về Decision Engine ở Phase 7 & 8.
+* **Không làm gián đoạn lưu lượng (Detection Only / Non-Blocking in Phase 2):** Trong Phase 2, WAF Gateway hoạt động ở chế độ quan sát và ghi nhận. Mọi request (kể cả request chứa payload tấn công) đều được kiểm tra, ghi log sự kiện bảo mật vào database và **tiếp tục chuyển tiếp an toàn sang Web API đích (Bookie Bookstore - `vulnerable-api` Port 5000)**. Cơ chế chặn (HTTP 403 / 429) thuộc về Decision Engine ở Phase 7 & 8.
 * **Tính giải thích được (Explainability) & Minh bạch:** Mỗi cảnh báo đều chỉ rõ tấn công loại gì, vị trí nào (`path`, `query`, `body`, `header`), luật nào kích hoạt (`rule_id`), kèm trích xuất bằng chứng (Evidence) đã được khử thông tin nhạy cảm.
 * **Độc lập và có thể kiểm thử (Deterministic & Auditable):** Kết quả phân tích và điểm số rủi ro ($0 - 100$) hoàn toàn tất định và độc lập với các mô hình xác suất AI/ML.
 
@@ -51,7 +51,7 @@ flowchart TD
     Scorer --> Decision[Detection Result]
     
     Decision -->|If is_attack = True| DB_Sec[(SQLite: security_events)]
-    Decision --> Proxy[Forward to Upstream Target: OWASP Juice Shop]
+    Decision --> Proxy[Forward to Upstream Target: Bookie Bookstore vulnerable-api]
     Proxy --> DB_Req[(SQLite: requests)]
     Proxy --> Client[Return Target Response to Client]
 ```
