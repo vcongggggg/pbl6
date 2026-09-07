@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Shield, RefreshCw, Trash2, Activity } from "lucide-react";
+import { Shield, RefreshCw, Trash2, Activity, Sparkles } from "lucide-react";
 import { DashboardStats } from "@/types/dashboard";
 
 interface HeaderProps {
@@ -10,8 +10,10 @@ interface HeaderProps {
   setPollingInterval: (val: number) => void;
   onRefresh: () => void;
   onResetDemo: () => void;
+  onSeedDemo: () => void;
   isRefreshing: boolean;
   isResetting: boolean;
+  isSeeding: boolean;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -20,8 +22,10 @@ export const Header: React.FC<HeaderProps> = ({
   setPollingInterval,
   onRefresh,
   onResetDemo,
+  onSeedDemo,
   isRefreshing,
   isResetting,
+  isSeeding,
 }) => {
   const targetReachable = stats?.target_status === "ok";
 
@@ -84,6 +88,18 @@ export const Header: React.FC<HeaderProps> = ({
         >
           <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? "animate-spin text-cyan-400" : "text-slate-400"}`} />
           <span>Refresh</span>
+        </button>
+
+        {/* Seed Demo Data Button */}
+        <button
+          id="btn-seed-demo"
+          onClick={onSeedDemo}
+          disabled={isSeeding}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-950/40 hover:bg-emerald-900/60 text-emerald-300 border border-emerald-800/50 text-xs font-medium transition active:scale-95 disabled:opacity-50 shadow-sm cursor-pointer"
+          title="Nạp 125+ request và 36 sự kiện bảo mật mẫu để xem biểu đồ và bảng sự kiện hoàn chỉnh"
+        >
+          <Sparkles className={`w-3.5 h-3.5 text-emerald-400 ${isSeeding ? "animate-spin" : ""}`} />
+          <span>{isSeeding ? "Đang nạp..." : "⚡ Nạp Data Mẫu"}</span>
         </button>
 
         {/* Reset Demo Button */}

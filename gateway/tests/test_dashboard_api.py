@@ -168,3 +168,25 @@ def test_dashboard_simulate_and_reset(client: TestClient):
         assert db.query(RequestLog).count() == 0
     finally:
         db.close()
+
+
+def test_dashboard_seed_demo(client: TestClient):
+    """Verifies seed-demo populates realistic records and can be queried."""
+    res = client.post("/dashboard/seed-demo")
+    assert res.status_code == 200
+    data = res.json()
+    assert data["status"] == "success"
+    assert data["total_requests"] > 50
+    assert data["total_events"] == 36
+    assert data["family_breakdown"]["SQL_INJECTION"] > 0
+    assert data["family_breakdown"]["XSS"] > 0
+    assert data["family_breakdown"]["PATH_TRAVERSAL"] > 0
+    assert data["family_breakdown"]["COMMAND_INJECTION"] > 0
+
+    # Verify stats reflect seeded data
+    res_stats = client.get("/dashboard/stats")
+    assert res_stats.status_code == 200
+    stats = res_stats.json()
+    assert stats["attacks_detected"] == 36
+    assert stats["total_requests"] > 50
+

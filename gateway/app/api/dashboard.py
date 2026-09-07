@@ -1,6 +1,8 @@
 import datetime
 import json
+import random
 import time
+import uuid
 from typing import Any
 
 import httpx
@@ -140,13 +142,13 @@ def get_dashboard_events(
         rule_name = ev.attack_type
         evidence_snippet = ""
 
-        rule_matches = details_obj.get("rule_matches", [])
+        rule_matches = details_obj.get("rule_matches") or details_obj.get("matches") or []
         if rule_matches and isinstance(rule_matches, list):
             first_match = rule_matches[0]
             rule_id = first_match.get("rule_id", "UNKNOWN")
             location = first_match.get("location", "PAYLOAD")
-            rule_name = first_match.get("name", ev.attack_type)
-            evidence_snippet = first_match.get("evidence", "")
+            rule_name = first_match.get("name") or first_match.get("description", ev.attack_type)
+            evidence_snippet = first_match.get("evidence") or first_match.get("raw_input", "")
 
         items.append({
             "event_id": ev.event_id,
@@ -384,3 +386,12 @@ def reset_demo_data(db: Session = Depends(get_db)) -> dict[str, str]:
         "status": "ok",
         "message": "Security events and request logs reset successfully for clean demonstration.",
     }
+
+
+@router.post("/seed-demo", summary="Seed rich demo traffic and security incidents")
+def seed_demo_data_endpoint(db: Session = Depends(get_db)) -> dict[str, Any]:
+    """Populates ~125 realistic HTTP requests and 36 security incidents spanning the last 60 minutes."""
+    from app.services.seeder import seed_demo_dataset
+
+    return seed_demo_dataset(db)
+
