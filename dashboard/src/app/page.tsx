@@ -5,8 +5,7 @@ import { Header } from "@/components/Header";
 import { MetricCards } from "@/components/MetricCards";
 import { ThreatTimelineChart } from "@/components/ThreatTimelineChart";
 import { AttackDistributionChart } from "@/components/AttackDistributionChart";
-import { LiveEventsTable } from "@/components/LiveEventsTable";
-import { PayloadEvidenceDrawer } from "@/components/PayloadEvidenceDrawer";
+import { LiveEventsTable, PayloadEvidenceDrawer } from "@/components/events";
 import {
   fetchDashboardStats,
   fetchDashboardEvents,
