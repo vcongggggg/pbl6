@@ -242,7 +242,9 @@ export const LiveEventsTable: React.FC<LiveEventsTableProps> = ({
                   <tr
                     key={ev.event_id}
                     className={`hover:bg-slate-800/50 transition cursor-pointer ${
-                      isSelected ? "bg-purple-950/30 border-l-2 border-purple-500" : ""
+                      isSelected
+                        ? "bg-purple-950/50 border-l-4 border-purple-500 shadow-[inset_0_0_15px_rgba(168,85,247,0.2)]"
+                        : ""
                     }`}
                     onClick={() => onSelectEvent(ev)}
                   >
@@ -339,22 +341,30 @@ export const LiveEventsTable: React.FC<LiveEventsTableProps> = ({
                       {ev.rule_score.toFixed(1)}
                     </td>
 
-                    {/* View Action Button */}
-                    <td className="py-3 px-3 text-right">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onSelectEvent(ev);
-                        }}
-                        className={`inline-flex items-center gap-1 px-2.5 py-1 rounded text-[11px] border transition cursor-pointer ${
-                          isSelected
-                            ? "bg-purple-600 text-white border-purple-500 shadow-md shadow-purple-900/50"
-                            : "bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700"
-                        }`}
-                      >
-                        <Eye className="w-3 h-3" />
-                        <span>Inspect</span>
-                      </button>
+                    {/* View Action Button & Decision Badge */}
+                    <td className="py-3 px-3 text-right whitespace-nowrap">
+                      <div className="inline-flex items-center gap-2 justify-end">
+                        {ev.action === "BLOCKED" && (
+                          <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-950/80 text-rose-300 border border-rose-800 shadow-[0_0_8px_rgba(244,63,94,0.35)] animate-pulse">
+                            BLOCKED 403
+                          </span>
+                        )}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onSelectEvent(ev);
+                          }}
+                          aria-label={`Inspect event details for ${ev.event_id}`}
+                          className={`inline-flex items-center gap-1 px-2.5 py-1 rounded text-[11px] border transition cursor-pointer ${
+                            isSelected
+                              ? "bg-purple-600 text-white border-purple-500 shadow-md shadow-purple-900/50"
+                              : "bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700"
+                          }`}
+                        >
+                          <Eye className="w-3 h-3" />
+                          <span>Inspect</span>
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );

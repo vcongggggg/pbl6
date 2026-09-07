@@ -190,3 +190,24 @@ def test_dashboard_seed_demo(client: TestClient):
     assert stats["attacks_detected"] == 36
     assert stats["total_requests"] > 50
 
+
+def test_dashboard_toggle_waf_mode(client: TestClient):
+    """Verifies toggle-waf-mode switches between MONITOR_ONLY and ACTIVE_BLOCKING."""
+    # First toggle -> changes to ACTIVE_BLOCKING (or opposite of current)
+    res = client.post("/dashboard/toggle-waf-mode")
+    assert res.status_code == 200
+    mode1 = res.json()["waf_mode"]
+    assert mode1 in ("ACTIVE_BLOCKING", "MONITOR_ONLY")
+
+    # Verify reflected in stats
+    stats1 = client.get("/dashboard/stats").json()
+    assert stats1["waf_mode"] == mode1
+
+    # Second toggle -> flips back
+    res2 = client.post("/dashboard/toggle-waf-mode")
+    assert res2.status_code == 200
+    mode2 = res2.json()["waf_mode"]
+    assert mode2 != mode1
+    assert mode2 in ("ACTIVE_BLOCKING", "MONITOR_ONLY")
+
+

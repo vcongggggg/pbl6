@@ -1,3 +1,4 @@
+import json
 import logging
 
 from fastapi import APIRouter, Depends, Request, Response
@@ -5,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import Settings, get_settings
 from app.core.request_id import resolve_request_id
+from app.db.models import WafConfigModel
 from app.db.session import get_db
 from app.security.engine import RuleEngine
 from app.services.proxy import ProxyService
@@ -49,6 +51,7 @@ async def proxy_endpoint(
     db: Session = Depends(get_db),
     proxy_service: ProxyService = Depends(get_proxy_service),
     rule_engine: RuleEngine = Depends(get_rule_engine),
+    settings: Settings = Depends(get_settings),
 ) -> Response:
     """Handles signature inspection, reverse proxying, and DB persistence (non-blocking)."""
     # 1. Obtain unified request ID
@@ -60,7 +63,20 @@ async def proxy_endpoint(
     body_bytes = await request.body()
     query_str = str(request.url.query) if request.url.query else None
 
-    # 2. Inspect request through signature Rule Engine (Detection Only)
+    # 2. Check active runtime WAF Mode (persisted in SQLite, fallback to env)
+    active_waf_mode = settings.waf_mode
+    try:
+        cfg = db.query(WafConfigModel).filter(WafConfigModel.key == "waf_mode").first()
+        if cfg and cfg.value:
+            active_waf_mode = cfg.value
+    except Exception:
+        pass
+
+    action_decision = "MONITOR"
+    is_blocked = False
+    detection_result = None
+
+    # 3. Inspect request through signature Rule Engine
     try:
         detection_result = rule_engine.inspect_request(
             path=f"/{path}",
@@ -69,24 +85,61 @@ async def proxy_endpoint(
             body_bytes=body_bytes,
         )
 
-        # 3. Persist security event if attacks were detected
+        # 4. Persist security event if attacks were detected
         if detection_result.is_attack:
+            if active_waf_mode in ("ACTIVE_BLOCKING", "BLOCKING"):
+                action_decision = "BLOCKED"
+                is_blocked = True
+            else:
+                action_decision = "DETECTED"
+
             SecurityEventService.record_detection(
                 db=db,
                 request_id=request_id,
                 client_ip=client_ip,
                 detection_result=detection_result,
+                action=action_decision,
             )
     except Exception as sec_err:
         logger.error(f"Security inspection failed for request [{request_id}]: {sec_err}")
 
-    # 4. Forward request to upstream target (NON-BLOCKING in Phase 2)
-    response, latency_ms, response_size = await proxy_service.forward(
-        request=request,
-        path=path,
-        request_id=request_id,
-        body_bytes=body_bytes,
-    )
+    # 5. Handle decision: Block with 403 Forbidden or forward to upstream
+    if is_blocked and detection_result:
+        primary_family = (
+            detection_result.attack_families[0].value
+            if detection_result.attack_families
+            else "UNKNOWN"
+        )
+        block_content = json.dumps({
+            "blocked": True,
+            "status": 403,
+            "error": "WAF_ACCESS_DENIED",
+            "message": "Access blocked by [SHIELD] Web API Security Platform (WAF).",
+            "request_id": request_id,
+            "attack_type": primary_family,
+            "threat_score": detection_result.rule_risk_score,
+        }).encode("utf-8")
+
+        response = Response(
+            content=block_content,
+            status_code=403,
+            media_type="application/json",
+            headers={
+                "X-Request-ID": request_id,
+                "X-WAF-Action": "BLOCKED",
+                "X-WAF-Mode": active_waf_mode,
+            },
+        )
+        latency_ms = 1.2
+        response_size = len(block_content)
+    else:
+        # Forward request to upstream target
+        response, latency_ms, response_size = await proxy_service.forward(
+            request=request,
+            path=path,
+            request_id=request_id,
+            body_bytes=body_bytes,
+        )
 
     # 5. Persist traffic metadata in SQLite
     try:

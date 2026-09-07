@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   X,
   ShieldAlert,
@@ -27,6 +27,16 @@ export const PayloadEvidenceDrawer: React.FC<PayloadEvidenceDrawerProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<"rule" | "vector">("rule");
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
 
   if (!event) return null;
 
@@ -90,27 +100,42 @@ export const PayloadEvidenceDrawer: React.FC<PayloadEvidenceDrawerProps> = ({
   const explanation = getAttackExplanation(event.attack_type);
 
   return (
-    <div className="fixed inset-y-0 right-0 w-full sm:w-[500px] bg-slate-950/95 backdrop-blur-2xl border-l border-slate-800/90 shadow-2xl z-50 flex flex-col transition-all duration-300">
-      {/* Drawer Header */}
-      <div className="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-900/60">
-        <div className="flex items-center gap-2.5">
-          <ShieldAlert className="w-5 h-5 text-rose-400" />
-          <div>
-            <h3 className="text-sm font-bold text-white font-mono flex items-center gap-1.5">
-              Payload Evidence Drawer
-            </h3>
-            <p className="text-[11px] text-slate-400 font-mono">
-              Event ID: <span className="text-cyan-400">#{event.event_id.slice(0, 14)}...</span>
-            </p>
+    <>
+      {/* Backdrop overlay */}
+      <div
+        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 transition-opacity animate-in fade-in duration-200"
+        onClick={onClose}
+        aria-hidden="true"
+      />
+
+      {/* Drawer Panel */}
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Payload Evidence Drawer"
+        className="fixed inset-y-0 right-0 w-full sm:w-[500px] bg-slate-950/95 backdrop-blur-2xl border-l border-slate-800/90 shadow-2xl z-50 flex flex-col transition-all duration-300 animate-in slide-in-from-right duration-300"
+      >
+        {/* Drawer Header */}
+        <div className="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-900/60">
+          <div className="flex items-center gap-2.5">
+            <ShieldAlert className="w-5 h-5 text-rose-400" />
+            <div>
+              <h3 className="text-sm font-bold text-white font-mono flex items-center gap-1.5">
+                Payload Evidence Drawer
+              </h3>
+              <p className="text-[11px] text-slate-400 font-mono">
+                Event ID: <span className="text-cyan-400">#{event.event_id.slice(0, 14)}...</span>
+              </p>
+            </div>
           </div>
+          <button
+            onClick={onClose}
+            aria-label="Đóng ngăn kéo chi tiết"
+            className="p-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white transition cursor-pointer"
+          >
+            <X className="w-4 h-4" />
+          </button>
         </div>
-        <button
-          onClick={onClose}
-          className="p-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white transition cursor-pointer"
-        >
-          <X className="w-4 h-4" />
-        </button>
-      </div>
 
       {/* Tabs Switcher */}
       <div className="flex border-b border-slate-800 bg-slate-900/50 p-1.5 gap-1.5 text-xs font-mono">
@@ -206,7 +231,7 @@ export const PayloadEvidenceDrawer: React.FC<PayloadEvidenceDrawerProps> = ({
               <div className="flex justify-between items-center">
                 <span className="text-slate-400">Threat Score:</span>
                 <span className="text-rose-400 font-bold px-2 py-0.5 rounded bg-rose-950/50 border border-rose-800/60">
-                  {event.rule_score.toFixed(1)} / 10.0
+                  {event.rule_score.toFixed(1)} / 100
                 </span>
               </div>
 
@@ -354,5 +379,6 @@ export const PayloadEvidenceDrawer: React.FC<PayloadEvidenceDrawerProps> = ({
         </button>
       </div>
     </div>
+    </>
   );
 };

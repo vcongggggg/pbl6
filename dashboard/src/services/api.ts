@@ -93,3 +93,14 @@ export async function seedDemoData(): Promise<{ status: string; message: string 
   return res.json();
 }
 
+export async function toggleWafMode(): Promise<{ status: string; waf_mode: string; message: string }> {
+  const res = await fetch(`${API_BASE}/api/dashboard/toggle-waf-mode`, {
+    method: "POST",
+  });
+  if (!res.ok) {
+    throw new Error(`Failed to toggle WAF mode: HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
+

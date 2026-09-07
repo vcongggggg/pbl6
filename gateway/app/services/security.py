@@ -22,6 +22,7 @@ class SecurityEventService:
         client_ip: str,
         detection_result: DetectionResult,
         timestamp: datetime.datetime | None = None,
+        action: str = "DETECTED",
     ) -> SecurityEvent | None:
         """Persists security event record if an attack signature was matched."""
         if not detection_result.is_attack or not detection_result.matches:
@@ -73,7 +74,7 @@ class SecurityEventService:
             client_ip=client_ip,
             attack_type=primary_attack,
             severity=primary_severity,
-            action="DETECTED",
+            action=action,
             risk_score=detection_result.rule_risk_score,
             rule_score=detection_result.rule_risk_score,
             ml_score=None,

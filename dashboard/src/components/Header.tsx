@@ -11,9 +11,11 @@ interface HeaderProps {
   onRefresh: () => void;
   onResetDemo: () => void;
   onSeedDemo: () => void;
+  onToggleWafMode: () => void;
   isRefreshing: boolean;
   isResetting: boolean;
   isSeeding: boolean;
+  isTogglingWaf: boolean;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -23,9 +25,11 @@ export const Header: React.FC<HeaderProps> = ({
   onRefresh,
   onResetDemo,
   onSeedDemo,
+  onToggleWafMode,
   isRefreshing,
   isResetting,
   isSeeding,
+  isTogglingWaf,
 }) => {
   const targetReachable = stats?.target_status === "ok";
 
@@ -65,13 +69,32 @@ export const Header: React.FC<HeaderProps> = ({
 
             <span className="text-slate-600">|</span>
 
-            {/* WAF Mode */}
-            <span className="flex items-center gap-1.5">
-              Mode:
-              <span className="text-amber-400 bg-amber-950/40 border border-amber-800/40 px-2 py-0.2 rounded text-[11px] font-semibold">
-                [{stats?.waf_mode || "MONITOR_ONLY"}]
-              </span>
-            </span>
+            {/* Interactive WAF Mode Switcher */}
+            <div className="flex items-center gap-1.5">
+              <span>Mode:</span>
+              <button
+                id="btn-toggle-waf-mode"
+                onClick={onToggleWafMode}
+                disabled={isTogglingWaf}
+                className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-semibold border transition cursor-pointer active:scale-95 disabled:opacity-50 ${
+                  stats?.waf_mode === "ACTIVE_BLOCKING"
+                    ? "text-rose-300 bg-rose-950/60 border-rose-700 shadow-[0_0_12px_rgba(244,63,94,0.4)]"
+                    : "text-amber-300 bg-amber-950/50 border-amber-800/60 hover:bg-amber-900/60"
+                }`}
+                title="Bấm để chuyển đổi giữa [MONITOR_ONLY] (Chỉ giám sát) và [ACTIVE_BLOCKING] (Chặn 403)"
+                aria-label={`Toggle WAF Mode. Current: ${stats?.waf_mode || "MONITOR_ONLY"}`}
+              >
+                <span
+                  className={`w-1.5 h-1.5 rounded-full ${
+                    stats?.waf_mode === "ACTIVE_BLOCKING" ? "bg-rose-400 animate-ping" : "bg-amber-400"
+                  }`}
+                />
+                <span>[{stats?.waf_mode || "MONITOR_ONLY"}]</span>
+                <span className="text-[10px] text-slate-400 font-sans ml-0.5 underline">
+                  {stats?.waf_mode === "ACTIVE_BLOCKING" ? "Chặn 403" : "Chỉ ghi log"}
+                </span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -83,6 +106,7 @@ export const Header: React.FC<HeaderProps> = ({
           id="btn-refresh"
           onClick={onRefresh}
           disabled={isRefreshing}
+          aria-label="Tải lại số liệu dashboard"
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700/80 text-xs font-medium transition active:scale-95 disabled:opacity-50 shadow-sm cursor-pointer"
           title="Tải lại số liệu ngay lập tức"
         >
@@ -95,6 +119,7 @@ export const Header: React.FC<HeaderProps> = ({
           id="btn-seed-demo"
           onClick={onSeedDemo}
           disabled={isSeeding}
+          aria-label="Nạp dữ liệu thử nghiệm mẫu"
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-950/40 hover:bg-emerald-900/60 text-emerald-300 border border-emerald-800/50 text-xs font-medium transition active:scale-95 disabled:opacity-50 shadow-sm cursor-pointer"
           title="Nạp 125+ request và 36 sự kiện bảo mật mẫu để xem biểu đồ và bảng sự kiện hoàn chỉnh"
         >
@@ -102,11 +127,15 @@ export const Header: React.FC<HeaderProps> = ({
           <span>{isSeeding ? "Đang nạp..." : "⚡ Nạp Data Mẫu"}</span>
         </button>
 
+        {/* Vertical Divider separating dangerous Reset action */}
+        <div className="h-5 w-px bg-slate-800 mx-0.5" />
+
         {/* Reset Demo Button */}
         <button
           id="btn-reset-demo"
           onClick={onResetDemo}
           disabled={isResetting}
+          aria-label="Dọn sạch toàn bộ dữ liệu thử nghiệm"
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-950/40 hover:bg-rose-900/60 text-rose-300 border border-rose-800/50 text-xs font-medium transition active:scale-95 disabled:opacity-50 shadow-sm cursor-pointer"
           title="Dọn sạch log dữ liệu test để chuẩn bị demo mới"
         >

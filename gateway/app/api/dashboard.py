@@ -12,7 +12,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.core.config import Settings, get_settings
-from app.db.models import RequestLog, SecurityEvent
+from app.db.models import RequestLog, SecurityEvent, WafConfigModel
 from app.db.session import get_db
 
 router = APIRouter(prefix="/dashboard", tags=["Dashboard"])
@@ -79,6 +79,14 @@ async def get_dashboard_stats(
         request, settings.target_api_url.rstrip("/")
     )
 
+    active_waf_mode = settings.waf_mode
+    try:
+        cfg = db.query(WafConfigModel).filter(WafConfigModel.key == "waf_mode").first()
+        if cfg and cfg.value:
+            active_waf_mode = cfg.value
+    except Exception:
+        pass
+
     return {
         "total_requests": total_requests,
         "attacks_detected": attacks_detected,
@@ -89,7 +97,7 @@ async def get_dashboard_stats(
         "target_status": target_status,
         "target_latency_ms": target_latency_ms,
         "target_url": settings.target_api_url,
-        "waf_mode": settings.waf_mode,
+        "waf_mode": active_waf_mode,
         "active_phase": "Phase 2 (Rule Engine Active)",
     }
 
@@ -394,4 +402,29 @@ def seed_demo_data_endpoint(db: Session = Depends(get_db)) -> dict[str, Any]:
     from app.services.seeder import seed_demo_dataset
 
     return seed_demo_dataset(db)
+
+
+@router.post("/toggle-waf-mode", summary="Toggle WAF mode between MONITOR_ONLY and ACTIVE_BLOCKING")
+def toggle_waf_mode_endpoint(
+    db: Session = Depends(get_db),
+    settings: Settings = Depends(get_settings),
+) -> dict[str, Any]:
+    """Toggles runtime WAF operational mode between MONITOR_ONLY and ACTIVE_BLOCKING."""
+    cfg = db.query(WafConfigModel).filter(WafConfigModel.key == "waf_mode").first()
+    current_mode = cfg.value if (cfg and cfg.value) else settings.waf_mode
+    new_mode = "ACTIVE_BLOCKING" if current_mode == "MONITOR_ONLY" else "MONITOR_ONLY"
+
+    if cfg:
+        cfg.value = new_mode
+    else:
+        cfg = WafConfigModel(key="waf_mode", value=new_mode)
+        db.add(cfg)
+    db.commit()
+
+    return {
+        "status": "success",
+        "waf_mode": new_mode,
+        "message": f"Chế độ WAF đã chuyển sang [{new_mode}] thành công!",
+    }
+
 
