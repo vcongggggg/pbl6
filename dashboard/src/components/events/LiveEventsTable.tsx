@@ -14,6 +14,7 @@ import {
   RotateCcw,
   Network,
   Laptop,
+  Brain,
 } from "lucide-react";
 import { SecurityEventItem } from "@/types/dashboard";
 
@@ -30,6 +31,7 @@ interface LiveEventsTableProps {
   searchQuery: string;
   setSearchQuery: (q: string) => void;
   onSelectEvent: (event: SecurityEventItem) => void;
+  onExplainEvent?: (event: SecurityEventItem) => void;
   selectedEventId: string | null;
 }
 
@@ -46,6 +48,7 @@ export const LiveEventsTable: React.FC<LiveEventsTableProps> = ({
   searchQuery,
   setSearchQuery,
   onSelectEvent,
+  onExplainEvent,
   selectedEventId,
 }) => {
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
@@ -343,11 +346,24 @@ export const LiveEventsTable: React.FC<LiveEventsTableProps> = ({
 
                     {/* View Action Button & Decision Badge */}
                     <td className="py-3 px-3 text-right whitespace-nowrap">
-                      <div className="inline-flex items-center gap-2 justify-end">
+                      <div className="inline-flex items-center gap-1.5 justify-end">
                         {ev.action === "BLOCKED" && (
                           <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-950/80 text-rose-300 border border-rose-800 shadow-[0_0_8px_rgba(244,63,94,0.35)] animate-pulse">
                             BLOCKED 403
                           </span>
+                        )}
+                        {onExplainEvent && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onExplainEvent(ev);
+                            }}
+                            aria-label={`Explain detection decision for ${ev.event_id}`}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded text-[11px] border bg-purple-950/60 hover:bg-purple-900/80 text-purple-200 border-purple-800/80 hover:border-purple-600 transition cursor-pointer shadow-sm hover:shadow-[0_0_10px_rgba(168,85,247,0.3)]"
+                          >
+                            <Brain className="w-3 h-3 text-purple-400" />
+                            <span>Explain</span>
+                          </button>
                         )}
                         <button
                           onClick={(e) => {

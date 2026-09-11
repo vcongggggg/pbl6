@@ -18,7 +18,7 @@ Tài liệu theo dõi trạng thái thực hiện các giai đoạn phát triể
 | **Phase 6** | **Anomaly Detection — Isolation Forest** | ML/Data Team (Member B) | **NOT STARTED** | *(RESERVED FOR ML TEAM)* Behavior window, Isolation Forest anomaly scoring. |
 | **Phase 7** | **Hybrid Risk Engine & Decision** | Backend / Security (Member A) | **NOT STARTED** | Weighted Risk Score (0–100), Thresholds (ALLOW/MONITOR/RATE_LIMIT/BLOCK). |
 | **Phase 8** | **Rate Limiting & Behavior Tracker** | Backend / Security (Member A) | **NOT STARTED** | IP tracking time-window, HTTP 429 response, endpoint limits. |
-| **Phase 9** | **Dashboard UI (Next.js)** | Frontend / Tech Lead (Member A) | **COMPLETED (Tasks 9.1, 9.2, 9.3, 9.5) ✅** | SOC Dashboard, 5 KPI cards, Timeline, Distribution, Events table with Client IP origin, Payload Drawer, Quick Simulator, Reset Demo. *(Đang chờ: Task 9.4 - Explainability Modal)* |
+| **Phase 9** | **Dashboard UI (Next.js)** | Frontend / Tech Lead (Member A) | **COMPLETED (100% Tasks 9.1 → 9.5) ✅** | SOC Dashboard, 5 KPI cards, Timeline, Distribution, Events table with Client IP origin, Payload Drawer, Quick Simulator, Reset Demo, Detection Explainability Modal (#38). |
 | **Phase 10** | **Offensive AI — AI Attack Planner (Máy 2)** | AI/ML & Red Team (Member B) | **NOT STARTED** | AI Attack Planner Agent trên Máy 2, trinh sát OpenAPI, sinh payload né tránh (Adaptive Evasion) qua mạng LAN. |
 | **Phase 11** | **System Evaluation & Comparison** | ML/Data & Red Team (Member B & A) | **NOT STARTED** | So sánh Rule vs ML vs Anomaly vs Hybrid, Evasion test, Benchmark. |
 | **Phase 12** | **Final Hardening & Thesis Report** | Toàn đội (Member A & B) | **NOT STARTED** | Chạy multi-machine lab, audit log, hoàn thiện slide thuyết trình và báo cáo đồ án. |
@@ -129,15 +129,22 @@ Tài liệu theo dõi trạng thái thực hiện các giai đoạn phát triể
   * `dashboard/src/components/events/LiveEventsTable.tsx`: Bảng nhật ký sự kiện an ninh thời gian thực hiển thị nguồn Client IP (phân biệt LAN Attacker Máy 2 vs Localhost), tìm kiếm theo Request ID / IP, lọc Severity, Attack Type, reset bộ lọc, nút copy 1-click, phân trang và xuất dữ liệu JSON (Task 9.3).
   * `dashboard/src/components/events/PayloadEvidenceDrawer.tsx`: Cửa sổ Drawer 2 tab phân tích sâu đối sánh Canonical vs Raw Input, giải thích chi tiết cơ chế tấn công (CWE/CAPEC/MITRE), hiển thị regex pattern và chuẩn bị sẵn giao diện Vector 17 đặc trưng cho Phase 3 (Task 9.3).
   * `dashboard/src/components/events/index.ts`: Export chuẩn hóa module events theo đúng kiến trúc TASKS_BREAKDOWN.
+  * `dashboard/src/components/explain/DetectionExplainabilityModal.tsx`: Modal giải thích quyết định phòng thủ của WAF: trực quan hóa công thức tính điểm kết hợp Rule (40%) + RF (35%) + IF (25%), thang đo quyết định ALLOW/MONITOR/RATE_LIMIT/BLOCK 403, phân tích bối cảnh an ninh CWE/CAPEC/MITRE, và hỗ trợ xuất báo cáo JSON 1-click (Task 9.4 - #38).
+  * `dashboard/src/components/explain/index.ts`: Export chuẩn hóa module explainability.
   * `docs/DASHBOARD_SPEC.md`: Tài liệu đặc tả kỹ thuật toàn diện cho Dashboard.
 
-* **Nhiệm vụ còn lại của Phase 9:**
-  * **Task 9.4 (Issue #38):** Detection Explainability Modal — Trực quan hóa cấu trúc đóng góp điểm số phòng thủ đa tầng: Rule Engine (40%) + Random Forest (35%) + Isolation Forest (25%), hiển thị chi tiết căn cứ phân loại và quyết định WAF.
+* **Đánh giá hoàn thành Phase 9 (100% DONE):**
+  * Đã giải quyết đầy đủ tất cả **5/5 Subtasks** của Phase 9:
+    * Task 9.1 (#35): REST APIs Gateway.
+    * Task 9.2 (#36): 4 KPI Cards + 2 Biểu đồ Recharts.
+    * Task 9.3 (#37): Bảng Live Events + Payload Evidence Drawer.
+    * Task 9.4 (#38): Detection Explainability Modal.
+    * Task 9.5 (#63): UI/UX Polish, Quick Simulator & WAF Switcher.
 
 * **Kiểm thử & Xác minh (Tests & Verification):**
   * `pytest gateway/tests/`: **44/44 tests PASSED (100%)**.
   * `ruff check gateway/`: **0 errors**.
-  * `next build`: **Compiled successfully, static generation 4/4 (125 kB)**.
+  * `next build`: **Compiled successfully, static generation 4/4 (133 kB)**.
 
 ---
 

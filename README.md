@@ -1,7 +1,8 @@
 # Web API Security Platform & Autonomous Red Teaming (PBL6 — An Toàn Thông Tin)
 
 > **Đề tài:** Phát hiện và ngăn chặn tấn công Web API thông minh bằng Machine Learning kết hợp Thao trường An ninh Đối kháng (Distributed Cyber Range).  
-> **Trạng thái:** **Phase 0, 1, 2, 2B HOÀN THÀNH ✅ | Phase 9 (Tasks 9.1, 9.2, 9.3, 9.5) HOÀN THÀNH ✅** | **Đang triển khai:** Task 9.4 (Explainability Modal) & **Phase 3 (Feature Engineering) 🚀**.
+> **Trạng thái:** **Phase 0, 1, 2, 2B, 9 HOÀN THÀNH 100% ✅** | **Tiếp theo:** Phase 7 (Hybrid Decision Engine) & **Phase 3 (Feature Engineering) 🚀**.
+
 
 ---
 

@@ -143,7 +143,7 @@ Tài liệu thiết kế chi tiết kiến trúc, thành phần giao diện, lu�
 ---
 
 ### 4.5. Cửa Sổ Soi Chi Tiết Bằng Chứng (Payload Evidence Drawer)
-Cửa sổ trượt ra từ cạnh phải màn hình khi bấm nút `[View]` ở một sự kiện, chia làm 2 tab:
+Cửa sổ trượt ra từ cạnh phải màn hình khi bấm nút `[Inspect]` ở một sự kiện, chia làm 2 tab:
 * **Tab 1: Rule Engine Evidence (Phase 2 - Đang Hoạt Động 100%):**
   * Header request & Client IP.
   * Vị trí phát hiện (`Inspection Location`).
@@ -154,6 +154,24 @@ Cửa sổ trượt ra từ cạnh phải màn hình khi bấm nút `[View]` ở
   * Ngay khi Phase 3 hoàn thành, vector số học sẽ tự động hiển thị tại tab này mà không cần sửa giao diện.
 
 ---
+
+### 4.6. Màn Hình Giải Thích Quyết Định An Ninh (Detection Explainability Modal — Task 9.4)
+Hộp thoại Modal trung tâm giải thích tường minh cơ chế đa tầng (Defense-in-depth) và nguồn gốc quyết định phòng thủ của WAF:
+* **Công thức phân rã trọng số 3 tầng:**
+  $$\text{Weighted Risk Score} = 0.40 \times \text{Rule} + 0.35 \times \text{Random Forest} + 0.25 \times \text{Isolation Forest}$$
+* **3 Trụ cột phòng thủ:**
+  1. **Tầng 1: Deterministic Rule Engine (Trọng số 40%):** Hiển thị Rule ID, tên signature, vị trí phát hiện, regex pattern khớp và điểm đóng góp $+ (0.40 \times \text{Score})$.
+  2. **Tầng 2: Supervised Random Forest ML (Trọng số 35%):** Nhãn dự đoán đa lớp, độ tin cậy mô hình (%) và điểm ML ước tính.
+  3. **Tầng 3: Isolation Forest Anomaly Detection (Trọng số 25%):** Thang đo độ dị biệt $(0.0 - 1.0)$, độ lệch chuẩn và điểm Anomaly.
+* **Thang đo ma trận quyết định WAF (Decision Matrix):**
+  * $< 30$ điểm: `ALLOW (200 OK)` — Lưu lượng hợp lệ.
+  * $30 - 60$ điểm: `MONITOR` — Lưu vết sự kiện giám sát.
+  * $60 - 80$ điểm: `RATE_LIMIT (429)` — Áp dụng giới hạn tần suất.
+  * $> 80$ điểm: `BLOCK (403)` — Ngắt kết nối phòng vệ chủ động.
+* **Tích hợp:** Nút bấm `[Explain]` trực tiếp trên từng dòng của `LiveEventsTable` và nút chuyển tiếp trong `PayloadEvidenceDrawer`. Hỗ trợ xuất toàn bộ báo cáo phân tích ra file JSON 1-click.
+
+---
+
 
 ## 5. ĐẶC TẢ CÁC REST API TRÊN GATEWAY (TASK 9.1)
 
