@@ -11,14 +11,14 @@ Tài liệu theo dõi trạng thái thực hiện các giai đoạn phát triể
 | **Phase 0** | **Project Bootstrap & Codebase Foundation** | Toàn đội / System Architect | **COMPLETED** | Thiết lập cấu trúc Monorepo, tooling, CI, database models, tests và Next.js. |
 | **Phase 1** | **Infrastructure Setup** | Backend / DevOps (Member A) | **COMPLETED** | Reverse Proxy bất đồng bộ, X-Request-ID, lọc Header, ghi log SQLite, bảo vệ Open Proxy / SSRF, Probe Target Health. |
 | **Phase 2** | **Rule Engine / Signature-Based Detection** | Security Engineer (Member A) | **COMPLETED** | 16 rules tất định (SQLi, XSS, Path Traversal, Command Injection), Input Normalizer, Rule Risk Scoring (0-100), Security Event persistence & traceability. |
-| **Phase 2B**| **Custom Vulnerable Web API (`vulnerable-api`)** | Tech Lead (Member A) | **IN PROGRESS 🚀** | Tự xây dựng Web API mục tiêu (6 endpoints lỗ hổng chuẩn OWASP Top 10) thay thế Juice Shop theo chỉ đạo của Thầy. |
+| **Phase 2B**| **Custom Vulnerable Web API (`vulnerable-api`)** | Tech Lead (Member A) | **COMPLETED ✅** | Tự xây dựng Web API mục tiêu (Bookie Bookstore - 8 kịch bản lỗ hổng chuẩn OWASP Web & API Top 10 + OpenAPI Recon) thay thế Juice Shop theo chỉ đạo của Thầy. |
 | **Phase 3** | **Feature Engineering** | ML/Data Team (Member B) | **NOT STARTED** | *(RESERVED FOR ML TEAM)* 17 payload features, HTTP & Context features. |
 | **Phase 4** | **Dataset Generation & Lab Traffic** | ML/Data Team (Member B) | **NOT STARTED** | *(RESERVED FOR ML TEAM)* Sinh dữ liệu từ vulnerable-api + SecLists. |
 | **Phase 5** | **Supervised ML — Random Forest** | ML/Data Team (Member B) | **NOT STARTED** | *(RESERVED FOR ML TEAM)* Training, Multiclass, Evaluation, Serialization (`.joblib`). |
 | **Phase 6** | **Anomaly Detection — Isolation Forest** | ML/Data Team (Member B) | **NOT STARTED** | *(RESERVED FOR ML TEAM)* Behavior window, Isolation Forest anomaly scoring. |
 | **Phase 7** | **Hybrid Risk Engine & Decision** | Backend / Security (Member A) | **NOT STARTED** | Weighted Risk Score (0–100), Thresholds (ALLOW/MONITOR/RATE_LIMIT/BLOCK). |
 | **Phase 8** | **Rate Limiting & Behavior Tracker** | Backend / Security (Member A) | **NOT STARTED** | IP tracking time-window, HTTP 429 response, endpoint limits. |
-| **Phase 9** | **Dashboard UI (Next.js)** | Frontend / Tech Lead (Member A) | **COMPLETED (Task 9.1, 9.2, 9.3) ✅** | SOC Dashboard, 5 KPI cards, Timeline, Distribution, Events table with Client IP origin, Payload Drawer, Simulator. |
+| **Phase 9** | **Dashboard UI (Next.js)** | Frontend / Tech Lead (Member A) | **COMPLETED (Tasks 9.1, 9.2, 9.3, 9.5) ✅** | SOC Dashboard, 5 KPI cards, Timeline, Distribution, Events table with Client IP origin, Payload Drawer, Quick Simulator, Reset Demo. *(Đang chờ: Task 9.4 - Explainability Modal)* |
 | **Phase 10** | **Offensive AI — AI Attack Planner (Máy 2)** | AI/ML & Red Team (Member B) | **NOT STARTED** | AI Attack Planner Agent trên Máy 2, trinh sát OpenAPI, sinh payload né tránh (Adaptive Evasion) qua mạng LAN. |
 | **Phase 11** | **System Evaluation & Comparison** | ML/Data & Red Team (Member B & A) | **NOT STARTED** | So sánh Rule vs ML vs Anomaly vs Hybrid, Evasion test, Benchmark. |
 | **Phase 12** | **Final Hardening & Thesis Report** | Toàn đội (Member A & B) | **NOT STARTED** | Chạy multi-machine lab, audit log, hoàn thiện slide thuyết trình và báo cáo đồ án. |
@@ -80,28 +80,62 @@ Tài liệu theo dõi trạng thái thực hiện các giai đoạn phát triể
 
 ---
 
-### Phase 9 — Dashboard UI & Real-Time Threat Visualization (COMPLETED Task 9.1, 9.2, 9.3 ✅)
+### Phase 2B — Custom Vulnerable Web API (`vulnerable-api`) (COMPLETED ✅)
+
+* **Mục tiêu (Objectives):**
+  * Tự xây dựng ứng dụng mục tiêu Bookie Bookstore (`vulnerable-api`, Port 5000) thay thế OWASP Juice Shop bên thứ ba theo chỉ đạo của Thầy hướng dẫn để làm chủ 100% mã nguồn và logic lỗ hổng.
+  * Cài cắm có chủ đích **8 kịch bản lỗ hổng trọng điểm** kết hợp giữa OWASP Top 10 Web và OWASP Top 10 API Security:
+    1. **SQL Injection (Auth Bypass & Brute Force):** `POST /api/v1/vulnerable/auth/login/`
+    2. **SQL Injection (UNION-based Search):** `GET /api/v1/vulnerable/books/search/?q=...`
+    3. **Stored & Reflected XSS:** `GET /api/v1/vulnerable/reviews/?book_id=...` & `POST /api/v1/vulnerable/reviews/`
+    4. **Path Traversal / Local File Inclusion (LFI):** `GET /api/v1/vulnerable/files/download/?file=...`
+    5. **Command Injection (RCE):** `POST /api/v1/vulnerable/admin/ping/`
+    6. **Broken Object Level Authorization (BOLA / IDOR - OWASP API1:2023):** `GET & PUT /api/v1/vulnerable/orders/<order_id>/`
+    7. **Server-Side Request Forgery (SSRF - OWASP API7:2023):** `GET & POST /api/v1/vulnerable/books/fetch-cover/?url=...`
+    8. **Mass Assignment (Privilege Escalation - OWASP API6:2023):** `POST /api/v1/vulnerable/users/profile/update/`
+    * Kèm **Excessive Data Exposure (OWASP API3:2023):** `GET /api/v1/vulnerable/users/list/`
+    * Cung cấp **OpenAPI 3.0 Reconnaissance Endpoint:** `GET /api/v1/vulnerable/openapi.json` cho AI Attack Planner (Máy 2) tự động trinh sát.
+
+* **Sản phẩm bàn giao (Deliverables):**
+  * `vulnerable-api/books/api_vulnerable.py`: Module 8 endpoints chứa lỗ hổng có kiểm soát và OpenAPI schema generator.
+  * `vulnerable-api/books/test_vulnerable_api.py`: Bộ kiểm thử trực tiếp nội bộ cho các kịch bản lỗ hổng và dữ liệu hạt giống.
+  * `gateway/tests/test_vulnerable_api_endpoints.py`: Bộ test tích hợp Gateway proxying an toàn và truy vết tới các endpoints mới (BOLA, SSRF, Mass Assignment).
+  * `vulnerable-api/Dockerfile`: Dockerfile tối ưu hóa độc lập, cấu hình sẵn nạp fixtures và chạy trên port 5000.
+  * Các issues GitHub hoàn thành: #57, #58, #59, #60, #61, #64 (Merged qua PR #62).
+
+* **Kiểm thử & Xác minh (Tests & Verification):**
+  * `pytest gateway/tests/`: **44/44 tests PASSED (100%)**.
+  * `ruff check gateway/`: **0 errors**.
+  * Docker Compose liên kết 3 container hoạt động thông suốt.
+
+---
+
+### Phase 9 — Dashboard UI & Real-Time Threat Visualization (COMPLETED Tasks 9.1, 9.2, 9.3, 9.5 ✅ | In Progress: Task 9.4 🚀)
 
 * **Mục tiêu (Objectives):**
   * Xây dựng trung tâm chỉ huy an ninh trực quan (SOC Command Center) theo phong cách Dark Cyber Glassmorphism.
   * Đảm bảo nguyên tắc học thuật 100%: Dữ liệu truy vấn trực tiếp từ bảng `requests` và `security_events` trong SQLite, không mock data.
   * Chuẩn hóa danh xưng theo Phase 2: `ATTACKS DETECTED`, `SAFE REQUEST RATE`, `Threat Score (Rule Engine Phase 2)`.
   * Tích hợp bảng bắn thử nghiệm Quick Simulator (1-click test) để demo trực quan trước Hội đồng mà không cần Postman.
+  * Tích hợp tính năng Reset Demo Data (`POST /api/dashboard/reset-demo`) chuẩn bị sẵn cho kịch bản báo cáo bảo vệ.
 
 * **Sản phẩm bàn giao (Deliverables):**
   * `gateway/app/api/dashboard.py`: 6 REST APIs thật (`/api/dashboard/stats`, `/events`, `/timeline`, `/distribution`, `/simulate`, `/reset-demo`).
   * `gateway/tests/test_dashboard_api.py`: Bộ unit test tự động kiểm thử toàn bộ dashboard endpoints.
   * `dashboard/src/components/Header.tsx`: Target status (`● 12.4ms`), WAF Mode (`MONITOR_ONLY`), Smart Polling (`3s/5s/Off`), Reset Demo.
-  * `dashboard/src/components/MetricCards.tsx`: 4 thẻ chỉ số KPI + Hộp Quick Simulator (SQLi, XSS, Path, Cmd, Benign).
-  * `dashboard/src/components/ThreatTimelineChart.tsx`: Biểu đồ Area Chart sóng Cyan (Benign) vs sóng Rose (Attacks).
-  * `dashboard/src/components/AttackDistributionChart.tsx`: Biểu đồ Donut Chart phân bố 4 họ tấn công.
-  * `dashboard/src/components/events/LiveEventsTable.tsx`: Bảng nhật ký sự kiện an ninh thời gian thực hiển thị nguồn Client IP (phân biệt LAN Attacker Máy 2 vs Localhost), tìm kiếm theo Request ID / IP, lọc Severity, Attack Type, reset bộ lọc, nút copy 1-click, phân trang và xuất dữ liệu JSON.
-  * `dashboard/src/components/events/PayloadEvidenceDrawer.tsx`: Cửa sổ Drawer 2 tab phân tích sâu đối sánh Canonical vs Raw Input, giải thích chi tiết cơ chế tấn công (CWE/CAPEC/MITRE), hiển thị regex pattern và chuẩn bị sẵn giao diện Vector 17 đặc trưng cho Phase 3.
+  * `dashboard/src/components/MetricCards.tsx`: 4 thẻ chỉ số KPI + Hộp Quick Simulator (SQLi, XSS, Path, Cmd, Benign) (Task 9.2 & 9.5 - #63).
+  * `dashboard/src/components/ThreatTimelineChart.tsx`: Biểu đồ Area Chart sóng Cyan (Benign) vs sóng Rose (Attacks) (Task 9.2).
+  * `dashboard/src/components/AttackDistributionChart.tsx`: Biểu đồ Donut Chart phân bố 4 họ tấn công (Task 9.2).
+  * `dashboard/src/components/events/LiveEventsTable.tsx`: Bảng nhật ký sự kiện an ninh thời gian thực hiển thị nguồn Client IP (phân biệt LAN Attacker Máy 2 vs Localhost), tìm kiếm theo Request ID / IP, lọc Severity, Attack Type, reset bộ lọc, nút copy 1-click, phân trang và xuất dữ liệu JSON (Task 9.3).
+  * `dashboard/src/components/events/PayloadEvidenceDrawer.tsx`: Cửa sổ Drawer 2 tab phân tích sâu đối sánh Canonical vs Raw Input, giải thích chi tiết cơ chế tấn công (CWE/CAPEC/MITRE), hiển thị regex pattern và chuẩn bị sẵn giao diện Vector 17 đặc trưng cho Phase 3 (Task 9.3).
   * `dashboard/src/components/events/index.ts`: Export chuẩn hóa module events theo đúng kiến trúc TASKS_BREAKDOWN.
   * `docs/DASHBOARD_SPEC.md`: Tài liệu đặc tả kỹ thuật toàn diện cho Dashboard.
 
+* **Nhiệm vụ còn lại của Phase 9:**
+  * **Task 9.4 (Issue #38):** Detection Explainability Modal — Trực quan hóa cấu trúc đóng góp điểm số phòng thủ đa tầng: Rule Engine (40%) + Random Forest (35%) + Isolation Forest (25%), hiển thị chi tiết căn cứ phân loại và quyết định WAF.
+
 * **Kiểm thử & Xác minh (Tests & Verification):**
-  * `pytest gateway/tests/`: **38/38 tests PASSED (100%)**.
+  * `pytest gateway/tests/`: **44/44 tests PASSED (100%)**.
   * `ruff check gateway/`: **0 errors**.
   * `next build`: **Compiled successfully, static generation 4/4 (125 kB)**.
 

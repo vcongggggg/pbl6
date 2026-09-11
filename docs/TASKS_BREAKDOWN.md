@@ -20,6 +20,8 @@ Tài liệu phân rã chi tiết toàn bộ các giai đoạn (Phase 0 → Phase
 * **Phase 0 — Project Bootstrap & Codebase Foundation:** Monorepo, Docker Compose, FastAPI foundation, Next.js foundation, SQLite schema, CI workflow. *(Thành viên A & B)*
 * **Phase 1 — Real API Gateway Infrastructure:** Dynamic Reverse Proxy, X-Request-ID, header redaction, SQLite traffic logging (`requests`), `/health/target` probe. *(Thành viên A)*
 * **Phase 2 — Rule Engine / Signature Detection:** 16 rules tĩnh (SQLi, XSS, Path, Cmd), Input Normalizer bounded 16KB/depth 3, Rule Risk Score 0-100, `security_events` table, 33/33 tests pass. *(Thành viên A)*
+* **Phase 2B — Custom Vulnerable Web API (`vulnerable-api` - Bookie Bookstore):** Ứng dụng mục tiêu tự xây dựng làm chủ 100% mã nguồn với 8 kịch bản lỗ hổng chuẩn OWASP Web & API Top 10 (SQLi Auth Bypass, SQLi UNION Search, Stored/Reflected XSS, Path Traversal, Command Injection, BOLA/IDOR, SSRF, Mass Assignment) + Excessive Data Exposure + OpenAPI 3.0 Recon spec. Issues: #57, #58, #59, #60, #61, #64 (Merged qua PR #62). *(Thành viên A)*
+* **Phase 9 (Tasks 9.1, 9.2, 9.3, 9.5) — SOC Dashboard UI & REST APIs:** 6 Dashboard APIs, 4 KPI cards, Quick Simulator 1-click test, Area Chart & Donut Chart, Bảng Live Events phân biệt IP mạng LAN vs localhost, Payload Evidence Drawer, Reset Demo API. 44/44 tests pass. *(Thành viên A)*
 
 ---
 
@@ -88,12 +90,13 @@ Tài liệu phân rã chi tiết toàn bộ các giai đoạn (Phase 0 → Phase
 
 ### 🔵 PHASE 9: SECURITY DASHBOARD UI & REAL-TIME VISUALIZATION
 
-| Mã Task | Issue ID | Tên Task Chi Tiết | Phụ Trách | Đầu Ra (Deliverables) |
-| :--- | :---: | :--- | :---: | :--- |
-| **`TASK-9.1`** | `#35` | **Xây Dựng REST APIs Thống Kê Dashboard:** Viết các endpoint `GET /api/stats`, `GET /api/events`, `GET /api/traffic-series` trên FastAPI Gateway. | **Thành viên A** | `gateway/app/api/dashboard.py` |
-| **`TASK-9.2`** | `#36` | **Thẻ Chỉ Số Tổng Quan & Biểu Đồ Hoạt Động Thời Gian Thực:** Thiết kế Overview Cards và biểu đồ dòng thời gian tấn công bằng Recharts. | **Thành viên A** | `dashboard/src/components/charts/` |
-| **`TASK-9.3`** | `#37` | **Bảng Quản Lý Sự Kiện An Ninh (Security Events Table):** Bảng có tìm kiếm, lọc theo Severity, IP, Attack Type và cửa sổ xem chi tiết payload. | **Thành viên A** | `dashboard/src/components/events/` |
-| **`TASK-9.4`** | `#38` | **Màn Hình Giải Thích Quyết Định (Explainability Panel):** Trực quan hóa lý do WAF chặn (Rule nào khớp, Model nào dự đoán, điểm bao nhiêu). | **Thành viên A** | `dashboard/src/components/explain/` |
+| Mã Task | Issue ID | Tên Task Chi Tiết | Phụ Trách | Trạng Thái | Đầu Ra (Deliverables) |
+| :--- | :---: | :--- | :---: | :---: | :--- |
+| **`TASK-9.1`** | `#35` | **Xây Dựng REST APIs Thống Kê Dashboard:** Viết các endpoint `GET /api/dashboard/stats`, `/events`, `/timeline`, `/distribution` trên FastAPI Gateway. | **Thành viên A** | **HOÀN THÀNH ✅** | `gateway/app/api/dashboard.py` |
+| **`TASK-9.2`** | `#36` | **Thẻ Chỉ Số Tổng Quan & Biểu Đồ Hoạt Động Thời Gian Thực:** Thiết kế 4 KPI Cards và biểu đồ dòng thời gian tấn công sóng kép (Cyan vs Rose) bằng Recharts. | **Thành viên A** | **HOÀN THÀNH ✅** | `dashboard/src/components/ThreatTimelineChart.tsx`, `AttackDistributionChart.tsx` |
+| **`TASK-9.3`** | `#37` | **Bảng Quản Lý Sự Kiện An Ninh (Security Events Table):** Bảng có hiển thị Client IP (phân biệt LAN Attacker Máy 2 vs Localhost), tìm kiếm, lọc theo Severity, IP, Attack Type và Payload Evidence Drawer 2 tab đối soát. | **Thành viên A** | **HOÀN THÀNH ✅** | `dashboard/src/components/events/` |
+| **`TASK-9.4`** | `#38` | **Màn Hình Giải Thích Quyết Định (Explainability Panel / Modal):** Trực quan hóa tỷ trọng đóng góp rủi ro Rule (40%) + RF (35%) + IF (25%), hiển thị bằng chứng và quyết định phòng thủ của WAF. | **Thành viên A** | **ĐANG TRIỂN KHAI 🚀** | `dashboard/src/components/explain/` |
+| **`TASK-9.5`** | `#63` | **Quick Attack Simulator & Reset Demo Data:** Bảng bắn thử nghiệm 5 nút bấm (SQLi, XSS, Path, Cmd, Benign) và endpoint xóa trắng log phục vụ diễn tập trực tiếp. | **Thành viên A** | **HOÀN THÀNH ✅** | `dashboard/src/components/MetricCards.tsx`, `gateway/app/api/dashboard.py` |
 
 ---
 
