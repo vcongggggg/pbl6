@@ -131,12 +131,15 @@ def test_dashboard_distribution(client: TestClient):
 def test_dashboard_simulate_and_reset(client: TestClient):
     """Verifies simulator fires requests and reset-demo clears test data."""
     # Mock proxy target upstream for simulate
-    respx.get("http://juice-shop:3000/rest/products/search").mock(
-        return_value=Response(200, json={"status": "success"})
-    )
-    respx.post("http://juice-shop:3000/api/Feedbacks").mock(
+    respx.get(
+        "http://vulnerable-api:5000/api/v1/vulnerable/books/search/?q=Python%27%20OR%201%3D1--"
+    ).mock(return_value=Response(200, json={"status": "success"}))
+    respx.post("http://vulnerable-api:5000/api/v1/vulnerable/reviews/").mock(
         return_value=Response(200, json={"status": "created"})
     )
+    respx.get(
+        "http://vulnerable-api:5000/api/v1/vulnerable/books/search/?q=Clean+Code"
+    ).mock(return_value=Response(200, json={"status": "success"}))
 
     # Test simulate SQLI
     res_sqli = client.post("/dashboard/simulate", json={"attack_type": "SQLI"})
@@ -165,3 +168,46 @@ def test_dashboard_simulate_and_reset(client: TestClient):
         assert db.query(RequestLog).count() == 0
     finally:
         db.close()
+
+
+def test_dashboard_seed_demo(client: TestClient):
+    """Verifies seed-demo populates realistic records and can be queried."""
+    res = client.post("/dashboard/seed-demo")
+    assert res.status_code == 200
+    data = res.json()
+    assert data["status"] == "success"
+    assert data["total_requests"] > 50
+    assert data["total_events"] == 36
+    assert data["family_breakdown"]["SQL_INJECTION"] > 0
+    assert data["family_breakdown"]["XSS"] > 0
+    assert data["family_breakdown"]["PATH_TRAVERSAL"] > 0
+    assert data["family_breakdown"]["COMMAND_INJECTION"] > 0
+
+    # Verify stats reflect seeded data
+    res_stats = client.get("/dashboard/stats")
+    assert res_stats.status_code == 200
+    stats = res_stats.json()
+    assert stats["attacks_detected"] == 36
+    assert stats["total_requests"] > 50
+
+
+def test_dashboard_toggle_waf_mode(client: TestClient):
+    """Verifies toggle-waf-mode switches between MONITOR_ONLY and ACTIVE_BLOCKING."""
+    # First toggle -> changes to ACTIVE_BLOCKING (or opposite of current)
+    res = client.post("/dashboard/toggle-waf-mode")
+    assert res.status_code == 200
+    mode1 = res.json()["waf_mode"]
+    assert mode1 in ("ACTIVE_BLOCKING", "MONITOR_ONLY")
+
+    # Verify reflected in stats
+    stats1 = client.get("/dashboard/stats").json()
+    assert stats1["waf_mode"] == mode1
+
+    # Second toggle -> flips back
+    res2 = client.post("/dashboard/toggle-waf-mode")
+    assert res2.status_code == 200
+    mode2 = res2.json()["waf_mode"]
+    assert mode2 != mode1
+    assert mode2 in ("ACTIVE_BLOCKING", "MONITOR_ONLY")
+
+

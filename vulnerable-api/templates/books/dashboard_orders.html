@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}Đơn hàng - Bookie{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div>
+        <h1 class="fw-bold mb-1" style="font-size:1.6rem"><i class="bi bi-receipt me-2" style="color:var(--primary)"></i>Đơn hàng</h1>
+        <div class="text-muted" style="font-size:.9rem">Theo dõi danh sách đơn hàng toàn hệ thống.</div>
+    </div>
+    <a href="{% url 'dashboard' %}" class="btn btn-glass btn-sm"><i class="bi bi-speedometer2 me-1"></i>Về dashboard</a>
+</div>
+
+<form method="get" class="mb-3">
+    <div class="row g-2 align-items-center">
+        <div class="col-md-5">
+            <input type="text" name="q" class="form-control" placeholder="Tìm theo mã đơn hoặc username..." value="{{ query }}">
+        </div>
+        <div class="col-md-4">
+            <select name="status" class="form-select">
+                <option value="">Tất cả trạng thái</option>
+                {% for val, label in order_statuses %}
+                <option value="{{ val }}" {% if status == val %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-3 d-flex gap-2">
+            <button class="btn btn-glass" type="submit"><i class="bi bi-funnel me-1"></i>Lọc</button>
+            <a class="btn btn-glass" href="{% url 'dashboard_orders' %}">Xóa lọc</a>
+        </div>
+    </div>
+</form>
+
+<div class="white-panel">
+    <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0" style="font-size:.9rem">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Khách</th>
+                    <th>Trạng thái</th>
+                    <th>Tổng</th>
+                    <th>Ngày</th>
+                    <th class="text-end">Chi tiết</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for o in orders %}
+                <tr>
+                    <td>#{{ o.pk }}</td>
+                    <td>{{ o.user.username }}</td>
+                    <td>{{ o.status_display_vi }}</td>
+                    <td>{{ o.total|floatformat:0 }}</td>
+                    <td>{{ o.created_at|date:"d/m/Y H:i" }}</td>
+                    <td class="text-end">
+                        <a class="btn btn-glass btn-sm" href="{% url 'order_detail' o.pk %}"><i class="bi bi-eye me-1"></i>Xem</a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="6" class="text-center text-muted py-4"><i class="bi bi-inbox me-1"></i>Không có đơn hàng nào.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% if page.has_other_pages %}
+<div class="d-flex justify-content-center mt-3">
+    <nav>
+        <ul class="pagination pagination-sm">
+            {% if page.has_previous %}
+            <li class="page-item"><a class="page-link" href="?page={{ page.previous_page_number }}&q={{ query }}&status={{ status }}">Trước</a></li>
+            {% endif %}
+            <li class="page-item active"><span class="page-link">{{ page.number }}/{{ page.paginator.num_pages }}</span></li>
+            {% if page.has_next %}
+            <li class="page-item"><a class="page-link" href="?page={{ page.next_page_number }}&q={{ query }}&status={{ status }}">Tiếp</a></li>
+            {% endif %}
+        </ul>
+    </nav>
+</div>
+{% endif %}
+{% endblock %}

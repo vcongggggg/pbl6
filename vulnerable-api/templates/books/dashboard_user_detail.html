@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}Hồ sơ người dùng - Bookie{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div>
+        <h1 class="fw-bold mb-1" style="font-size:1.6rem">
+            <i class="bi bi-person-vcard me-2" style="color:var(--primary)"></i>{{ profile_user.username }}
+        </h1>
+        <div class="text-muted" style="font-size:.9rem">Role: {{ primary_role }} · Email: {{ profile_user.email|default:"Chưa có email" }}</div>
+    </div>
+    <a href="{% url 'dashboard_users' %}" class="btn btn-glass btn-sm"><i class="bi bi-arrow-left me-1"></i>Về danh sách user</a>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-4">
+        <div class="white-panel h-100">
+            <h5 class="fw-bold mb-3">Thông tin tài khoản</h5>
+            <p><strong>Username:</strong> {{ profile_user.username }}</p>
+            <p><strong>Họ tên:</strong> {{ profile_user.get_full_name|default:"-" }}</p>
+            <p><strong>Email:</strong> {{ profile_user.email|default:"-" }}</p>
+            <p><strong>Role:</strong> {{ primary_role }}</p>
+            <p><strong>Staff:</strong> {{ profile_user.is_staff|yesno:"Có,Không" }}</p>
+            <p><strong>Superuser:</strong> {{ profile_user.is_superuser|yesno:"Có,Không" }}</p>
+            <p><strong>Hoạt động:</strong> {{ profile_user.is_active|yesno:"Có,Không" }}</p>
+            <p><strong>Ngày tạo:</strong> {{ profile_user.date_joined|date:"d/m/Y H:i" }}</p>
+            <p><strong>Đăng nhập cuối:</strong> {{ profile_user.last_login|date:"d/m/Y H:i"|default:"-" }}</p>
+        </div>
+    </div>
+    <div class="col-lg-8">
+        <div class="white-panel mb-4">
+            <h5 class="fw-bold mb-3">Đơn hàng gần đây</h5>
+            <div class="table-responsive">
+                <table class="table table-sm align-middle mb-0">
+                    <thead><tr><th>ID</th><th>Trạng thái</th><th>Tổng tiền</th><th>Ngày</th></tr></thead>
+                    <tbody>
+                    {% for order in orders %}
+                    <tr>
+                        <td>#{{ order.pk }}</td>
+                        <td>{{ order.status_display_vi }}</td>
+                        <td>{{ order.total|floatformat:0 }}₫</td>
+                        <td>{{ order.created_at|date:"d/m/Y" }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="4" class="text-muted text-center py-3"><i class="bi bi-inbox me-1"></i>Chưa có đơn hàng.</td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="row g-4">
+            <div class="col-md-6">
+                <div class="white-panel h-100">
+                    <h5 class="fw-bold mb-3">Wishlist</h5>
+                    {% for item in wishlist_items %}
+                    <div class="small mb-2">{{ item.book.title }}</div>
+                    {% empty %}
+                    <div class="text-muted small"><i class="bi bi-inbox me-1"></i>Chưa có wishlist.</div>
+                    {% endfor %}
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="white-panel h-100">
+                    <h5 class="fw-bold mb-3">Đánh giá gần đây</h5>
+                    {% for rating in ratings %}
+                    <div class="small mb-2">{{ rating.book.title }} · {{ rating.score }}/5</div>
+                    {% empty %}
+                    <div class="text-muted small"><i class="bi bi-inbox me-1"></i>Chưa có đánh giá.</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

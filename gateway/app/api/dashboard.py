@@ -10,7 +10,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.core.config import Settings, get_settings
-from app.db.models import RequestLog, SecurityEvent
+from app.db.models import RequestLog, SecurityEvent, WafConfigModel
 from app.db.session import get_db
 
 router = APIRouter(prefix="/dashboard", tags=["Dashboard"])
@@ -77,6 +77,14 @@ async def get_dashboard_stats(
         request, settings.target_api_url.rstrip("/")
     )
 
+    active_waf_mode = settings.waf_mode
+    try:
+        cfg = db.query(WafConfigModel).filter(WafConfigModel.key == "waf_mode").first()
+        if cfg and cfg.value:
+            active_waf_mode = cfg.value
+    except Exception:
+        pass
+
     return {
         "total_requests": total_requests,
         "attacks_detected": attacks_detected,
@@ -87,7 +95,7 @@ async def get_dashboard_stats(
         "target_status": target_status,
         "target_latency_ms": target_latency_ms,
         "target_url": settings.target_api_url,
-        "waf_mode": settings.waf_mode,
+        "waf_mode": active_waf_mode,
         "active_phase": "Phase 2 (Rule Engine Active)",
     }
 
@@ -140,13 +148,13 @@ def get_dashboard_events(
         rule_name = ev.attack_type
         evidence_snippet = ""
 
-        rule_matches = details_obj.get("rule_matches", [])
+        rule_matches = details_obj.get("rule_matches") or details_obj.get("matches") or []
         if rule_matches and isinstance(rule_matches, list):
             first_match = rule_matches[0]
             rule_id = first_match.get("rule_id", "UNKNOWN")
             location = first_match.get("location", "PAYLOAD")
-            rule_name = first_match.get("name", ev.attack_type)
-            evidence_snippet = first_match.get("evidence", "")
+            rule_name = first_match.get("name") or first_match.get("description", ev.attack_type)
+            evidence_snippet = first_match.get("evidence") or first_match.get("raw_input", "")
 
         items.append({
             "event_id": ev.event_id,
@@ -312,7 +320,7 @@ async def simulate_attack_request(
     async with httpx.AsyncClient(transport=transport, base_url="http://local-gateway") as client:
         if attack_upper == "SQLI":
             res = await client.get(
-                "/api/proxy/rest/products/search?q=apple%27%20OR%201%3D1--",
+                "/api/proxy/api/v1/vulnerable/books/search/?q=Python%27%20OR%201%3D1--",
                 headers={"User-Agent": "PBL6-Simulator/1.0"},
             )
             return {
@@ -324,8 +332,8 @@ async def simulate_attack_request(
             }
         elif attack_upper == "XSS":
             res = await client.post(
-                "/api/proxy/api/Feedbacks",
-                json={"comment": "<script>alert('PBL6')</script>", "rating": 5},
+                "/api/proxy/api/v1/vulnerable/reviews/",
+                json={"book_id": 1, "review_text": "<script>alert('PBL6')</script>", "rating": 5},
                 headers={"User-Agent": "PBL6-Simulator/1.0"},
             )
             return {
@@ -337,7 +345,7 @@ async def simulate_attack_request(
             }
         elif attack_upper == "PATH":
             res = await client.get(
-                "/api/proxy/rest/products/search?file=..%2f..%2fetc%2fpasswd",
+                "/api/proxy/api/v1/vulnerable/files/download/?file=..%2f..%2f..%2f..%2fetc%2fpasswd",
                 headers={"User-Agent": "PBL6-Simulator/1.0"},
             )
             return {
@@ -348,8 +356,9 @@ async def simulate_attack_request(
                 "message": "Fired Path Traversal payload (../../etc/passwd) through query string.",
             }
         elif attack_upper == "CMD":
-            res = await client.get(
-                "/api/proxy/api/system/ping?host=127.0.0.1%3B%20whoami",
+            res = await client.post(
+                "/api/proxy/api/v1/vulnerable/admin/ping/",
+                json={"target": "127.0.0.1; whoami"},
                 headers={"User-Agent": "PBL6-Simulator/1.0"},
             )
             return {
@@ -357,11 +366,11 @@ async def simulate_attack_request(
                 "simulated": "COMMAND_INJECTION",
                 "status_code": res.status_code,
                 "request_id": res.headers.get("X-Request-ID"),
-                "message": "Fired Command Injection payload (; whoami) through query parameter.",
+                "message": "Fired Command Injection payload (; whoami) through request body.",
             }
         else:  # BENIGN
             res = await client.get(
-                "/api/proxy/rest/products/search?q=fresh+apple+juice",
+                "/api/proxy/api/v1/vulnerable/books/search/?q=Clean+Code",
                 headers={"User-Agent": "PBL6-Simulator/1.0"},
             )
             return {
@@ -369,7 +378,7 @@ async def simulate_attack_request(
                 "simulated": "BENIGN",
                 "status_code": res.status_code,
                 "request_id": res.headers.get("X-Request-ID"),
-                "message": "Fired legitimate benign search request (fresh apple juice).",
+                "message": "Fired legitimate benign book search request (Clean Code).",
             }
 
 
@@ -383,3 +392,37 @@ def reset_demo_data(db: Session = Depends(get_db)) -> dict[str, str]:
         "status": "ok",
         "message": "Security events and request logs reset successfully for clean demonstration.",
     }
+
+
+@router.post("/seed-demo", summary="Seed rich demo traffic and security incidents")
+def seed_demo_data_endpoint(db: Session = Depends(get_db)) -> dict[str, Any]:
+    """Populates ~125 realistic HTTP requests and 36 security incidents spanning the last 60 minutes."""
+    from app.services.seeder import seed_demo_dataset
+
+    return seed_demo_dataset(db)
+
+
+@router.post("/toggle-waf-mode", summary="Toggle WAF mode between MONITOR_ONLY and ACTIVE_BLOCKING")
+def toggle_waf_mode_endpoint(
+    db: Session = Depends(get_db),
+    settings: Settings = Depends(get_settings),
+) -> dict[str, Any]:
+    """Toggles runtime WAF operational mode between MONITOR_ONLY and ACTIVE_BLOCKING."""
+    cfg = db.query(WafConfigModel).filter(WafConfigModel.key == "waf_mode").first()
+    current_mode = cfg.value if (cfg and cfg.value) else settings.waf_mode
+    new_mode = "ACTIVE_BLOCKING" if current_mode == "MONITOR_ONLY" else "MONITOR_ONLY"
+
+    if cfg:
+        cfg.value = new_mode
+    else:
+        cfg = WafConfigModel(key="waf_mode", value=new_mode)
+        db.add(cfg)
+    db.commit()
+
+    return {
+        "status": "success",
+        "waf_mode": new_mode,
+        "message": f"Chế độ WAF đã chuyển sang [{new_mode}] thành công!",
+    }
+
+

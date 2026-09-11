@@ -76,6 +76,7 @@ pbl6/
 │   ├── DASHBOARD_SPEC.md # Đặc tả giao diện SOC Command Center
 │   ├── GLOSSARY.md       # Bảng thuật ngữ chuyên ngành (60+ terms)
 │   ├── PROGRESS.md       # Bảng theo dõi tiến độ chi tiết
+│   ├── REFERENCES.md     # 20 Tài liệu tham khảo khoa học & chuẩn quốc tế (USENIX, IEEE, ACM)
 │   └── TASKS_BREAKDOWN.md# Bảng phân rã 50 GitHub Issues
 ├── docker-compose.yml    # Khởi chạy 3 container (Gateway, Dashboard, vulnerable-api)
 └── README.md

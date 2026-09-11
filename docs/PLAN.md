@@ -1457,7 +1457,7 @@ Hệ thống được chia thành 13 giai đoạn phát triển tuần tự, đ�
 - Phụ trách: `vcongggggg` (Thành viên A).
 - Deliverable: Rate limiter module bảo vệ ngưỡng gọi API.
 
-## PHASE 9 — SOC Dashboard UI & Real-Time Threat Visualization (COMPLETED Task 9.1 & 9.2 ✅)
+## PHASE 9 — SOC Dashboard UI & Real-Time Threat Visualization (COMPLETED Task 9.1, 9.2, 9.3 ✅)
 - Xây dựng trung tâm chỉ huy an ninh trực quan **SOC Command Center** chuẩn Dark Cyber Glassmorphism (Next.js 14 + Recharts):
   * **6 REST APIs thật trên Gateway** (`GET /api/dashboard/stats`, `/events`, `/timeline`, `/distribution`, `POST /simulate`, `POST /reset-demo`).
   * **5 Thẻ KPI:** Total Traffic (RPS), Attacks Detected, Threat Score (Rule Engine Phase 2), Safe Request Rate (Forwarded 200 OK).

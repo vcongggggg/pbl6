@@ -69,14 +69,14 @@ export const AttackDistributionChart: React.FC<AttackDistributionChartProps> = (
       </div>
 
       {/* Legend Badges */}
-      <div className="grid grid-cols-2 gap-2 mt-2 pt-2 border-t border-slate-800/60 text-xs font-mono">
+      <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 mt-2 pt-2.5 border-t border-slate-800/60 text-[11px] font-mono">
         {data.map((item) => (
-          <div key={item.key} className="flex items-center justify-between pr-2">
-            <span className="flex items-center gap-1.5 text-slate-300 truncate">
+          <div key={item.key} className="flex items-center justify-between min-w-0 pr-1">
+            <span className="flex items-center gap-1.5 text-slate-300 min-w-0">
               <span className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ backgroundColor: item.color }} />
-              <span className="truncate">{item.name}</span>
+              <span className="whitespace-nowrap font-medium text-[11px]">{item.name}</span>
             </span>
-            <span className="text-slate-400 font-semibold shrink-0">
+            <span className="text-slate-400 font-semibold shrink-0 ml-1.5">
               {item.percentage}%
             </span>
           </div>

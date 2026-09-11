@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block title %}{% if mode == "create" %}Thêm sách{% else %}Sửa sách{% endif %} - Bookie{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div>
+        <h1 class="fw-bold mb-1" style="font-size:1.6rem"><i class="bi bi-book me-2" style="color:var(--primary)"></i>{% if mode == "create" %}Thêm sách{% else %}Sửa sách{% endif %}</h1>
+        <div class="text-muted" style="font-size:.9rem">Cập nhật thông tin sách giấy và nội dung đọc online.</div>
+    </div>
+    <a href="{% url 'dashboard_books' %}" class="btn btn-glass btn-sm"><i class="bi bi-arrow-left me-1"></i>Quay lại</a>
+</div>
+
+<div class="white-panel">
+    <form method="post" novalidate>
+        {% csrf_token %}
+        <div class="row g-3">
+            <div class="col-md-6">
+                <label class="form-label">Tiêu đề</label>
+                {{ form.title }}
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Tác giả</label>
+                {{ form.author }}
+            </div>
+            <div class="col-md-12">
+                <label class="form-label">Mô tả</label>
+                {{ form.description }}
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Giá</label>
+                {{ form.price }}
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Thể loại</label>
+                {{ form.category }}
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Tồn kho</label>
+                {{ form.stock }}
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Năm xuất bản</label>
+                {{ form.published_year }}
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Số trang</label>
+                {{ form.num_pages }}
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Ảnh bìa (URL)</label>
+                {{ form.cover_image }}
+            </div>
+            <div class="col-md-12">
+                <div class="form-check">
+                    {{ form.is_digital }}
+                    <label class="form-check-label">Hỗ trợ đọc trực tuyến</label>
+                </div>
+            </div>
+            <div class="col-md-12">
+                <label class="form-label">Nội dung dạng text</label>
+                {{ form.content_text }}
+            </div>
+            <div class="col-md-12">
+                <label class="form-label">Nội dung HTML đã lọc</label>
+                {{ form.content_html }}
+            </div>
+        </div>
+        <div class="mt-3 d-flex gap-2">
+            <button class="btn btn-gradient" type="submit"><i class="bi bi-check2 me-1"></i>Lưu</button>
+            <a class="btn btn-glass" href="{% url 'dashboard_books' %}">Hủy</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

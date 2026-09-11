@@ -22,8 +22,8 @@ class Settings(BaseSettings):
     # Database
     database_url: str = "sqlite:///./data/waf_security.db"
 
-    # Target Web API
-    target_api_url: str = "http://juice-shop:3000"
+    # Target Web API (In-house Bookie / Vulnerable API)
+    target_api_url: str = "http://vulnerable-api:5000"
 
     # Proxy Timeouts (in seconds)
     proxy_timeout_connect: float = 5.0

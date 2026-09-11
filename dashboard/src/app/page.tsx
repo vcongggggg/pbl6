@@ -5,8 +5,7 @@ import { Header } from "@/components/Header";
 import { MetricCards } from "@/components/MetricCards";
 import { ThreatTimelineChart } from "@/components/ThreatTimelineChart";
 import { AttackDistributionChart } from "@/components/AttackDistributionChart";
-import { LiveEventsTable } from "@/components/LiveEventsTable";
-import { PayloadEvidenceDrawer } from "@/components/PayloadEvidenceDrawer";
+import { LiveEventsTable, PayloadEvidenceDrawer } from "@/components/events";
 import {
   fetchDashboardStats,
   fetchDashboardEvents,
@@ -14,6 +13,8 @@ import {
   fetchDashboardDistribution,
   triggerSimulation,
   resetDemoData,
+  seedDemoData,
+  toggleWafMode,
 } from "@/services/api";
 import {
   AttackDistributionItem,
@@ -43,6 +44,8 @@ export default function SOCDashboard() {
   const [pollingInterval, setPollingInterval] = useState<number>(3); // 3s default
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   const [isResetting, setIsResetting] = useState<boolean>(false);
+  const [isSeeding, setIsSeeding] = useState<boolean>(false);
+  const [isTogglingWaf, setIsTogglingWaf] = useState<boolean>(false);
   const [isSimulating, setIsSimulating] = useState<boolean>(false);
   const [activeSimulation, setActiveSimulation] = useState<string | null>(null);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info" } | null>(null);
@@ -146,6 +149,35 @@ export default function SOCDashboard() {
     }
   };
 
+  // Seed Demo Action
+  const handleSeedDemo = async () => {
+    setIsSeeding(true);
+    try {
+      const res = await seedDemoData();
+      showToast(res.message || "Đã nạp thành công bộ dữ liệu mẫu!", "success");
+      setSelectedEvent(null);
+      await loadData(true);
+    } catch (err: any) {
+      showToast(`Seed demo failed: ${err.message}`, "error");
+    } finally {
+      setIsSeeding(false);
+    }
+  };
+
+  // Toggle WAF Mode Action
+  const handleToggleWafMode = async () => {
+    setIsTogglingWaf(true);
+    try {
+      const res = await toggleWafMode();
+      showToast(res.message, "success");
+      await loadData(false);
+    } catch (err: any) {
+      showToast(`Không thể chuyển chế độ WAF: ${err.message}`, "error");
+    } finally {
+      setIsTogglingWaf(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#07090e] text-slate-100 flex flex-col font-sans selection:bg-purple-500 selection:text-white">
       {/* Toast Notification Banner */}
@@ -171,8 +203,12 @@ export default function SOCDashboard() {
         setPollingInterval={setPollingInterval}
         onRefresh={() => loadData(true)}
         onResetDemo={handleResetDemo}
+        onSeedDemo={handleSeedDemo}
+        onToggleWafMode={handleToggleWafMode}
         isRefreshing={isRefreshing}
         isResetting={isResetting}
+        isSeeding={isSeeding}
+        isTogglingWaf={isTogglingWaf}
       />
 
       {/* 2. Main Dashboard Content Container */}

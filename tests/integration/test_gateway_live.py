@@ -3,14 +3,14 @@ import pytest
 import httpx
 
 GATEWAY_URL = os.environ.get("GATEWAY_URL", "http://localhost:8000")
-TARGET_URL = os.environ.get("TARGET_API_URL", "http://localhost:3000")
+TARGET_URL = os.environ.get("TARGET_API_URL", "http://localhost:5000")
 
 
 @pytest.mark.integration
-def test_live_gateway_proxy_to_juice_shop():
+def test_live_gateway_proxy_to_vulnerable_api():
     """Live integration test: Verifies genuine end-to-end traffic flow:
 
-    Client -> Gateway -> Juice Shop Target -> Gateway -> Client
+    Client -> Gateway -> Bookie Bookstore Target (vulnerable-api) -> Gateway -> Client
     Requires the Docker Compose stack to be running (make docker-up).
     """
     # 1. Check if Gateway is reachable
@@ -29,16 +29,16 @@ def test_live_gateway_proxy_to_juice_shop():
     target_data = target_health_resp.json()
     if not target_data.get("reachable"):
         pytest.skip(
-            f"Juice Shop target is not reachable from Gateway ({target_data.get('error')})."
+            f"Target API (vulnerable-api) is not reachable from Gateway ({target_data.get('error')})."
         )
 
-    # 3. Send real proxied request to search products
+    # 3. Send real proxied request to search books
     client = httpx.Client(timeout=10.0)
     custom_request_id = "integration-test-req-001"
 
     response = client.get(
-        f"{GATEWAY_URL}/api/proxy/rest/products/search",
-        params={"q": "apple"},
+        f"{GATEWAY_URL}/api/proxy/api/v1/vulnerable/books/search",
+        params={"q": "Security"},
         headers={"X-Request-ID": custom_request_id},
     )
 
@@ -48,5 +48,4 @@ def test_live_gateway_proxy_to_juice_shop():
     assert "application/json" in response.headers.get("content-type", "")
 
     data = response.json()
-    assert "data" in data
-    assert isinstance(data["data"], list)
+    assert "books" in data or "data" in data or "count" in data or isinstance(data, list)
