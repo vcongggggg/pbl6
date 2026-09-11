@@ -62,14 +62,14 @@ Tài liệu đặc tả các API endpoints của hệ thống **FastAPI WAF Gate
 #### Ví dụ: Request Chứa Tấn Công SQL Injection (GET)
 * **Client Request (từ Máy 2 gửi qua LAN):**
   ```http
-  GET /api/proxy/api/v1/products/search?q=laptop%27%20OR%201%3D1-- HTTP/1.1
+  GET /api/proxy/api/v1/vulnerable/books/search/?q=laptop%27%20OR%201%3D1-- HTTP/1.1
   Host: 192.168.1.15:8000
   X-Request-ID: req-sqli-001
   ```
 * **Xử lý nội bộ tại Gateway (Máy 1):**
   * Rule Engine khớp `SQLI-001` (Severity: `CRITICAL`, Score: `89.5`).
   * Ghi bản ghi vào bảng `security_events` với `request_id = "req-sqli-001"`.
-  * Chuyển tiếp request sang `http://vulnerable-api:5000/api/v1/products/search?q=laptop%27%20OR%201%3D1--`.
+  * Chuyển tiếp request sang `http://vulnerable-api:5000/api/v1/vulnerable/books/search/?q=laptop%27%20OR%201%3D1--`.
 * **Client Response:** Nhận kết quả phản hồi từ `vulnerable-api` (`200 OK`).
 
 ---
@@ -136,57 +136,62 @@ Các API endpoints phục vụ Dashboard UI thời gian thực (Phase 9 Task 9.1
 
 ---
 
-## 4. Vulnerable Target Web API (`vulnerable-api`) Endpoints
+## 4. Vulnerable Target Web API (`vulnerable-api` — Bookie Bookstore)
 
-Đây là các endpoint của ứng dụng mục tiêu tự xây dựng (chạy trên port 5000), có cài cắm các lỗ hổng có chủ đích phục vụ kịch bản kiểm thử:
+Ứng dụng mục tiêu Bookie Bookstore tự xây dựng (chạy trên port 5000), có cài cắm 8 kịch bản lỗ hổng có chủ đích chuẩn OWASP Web & API Top 10 phục vụ thao trường an ninh đối kháng:
 
-### 4.1. Auth Service (`POST /api/v1/auth/login`)
-* **Chức năng:** Đăng nhập tài khoản.
+### 4.1. Auth Service (`POST /api/v1/vulnerable/auth/login/`)
+* **Chức năng:** Xác thực người dùng & quản trị viên.
 * **Lỗ hổng:** **SQL Injection Auth Bypass** & **Brute Force**.
-* **Request:**
-  ```json
-  {
-    "username": "admin' OR '1'='1",
-    "password": "any_password"
-  }
-  ```
-* **Khai thác thành công:** Trả về access token quản trị mà không cần mật khẩu.
+* **Payload:** `username: admin' OR '1'='1 --`, `password: any`
+* **Khai thác:** Ghép chuỗi truy vấn trực tiếp không dùng bind parameters, cho phép đăng nhập trái phép vào tài khoản superuser.
 
-### 4.2. Products Service (`GET /api/v1/products/search`)
-* **Chức năng:** Tìm kiếm sản phẩm.
-* **Lỗ hổng:** **SQL Injection UNION-based**.
-* **Query:** `?q=' UNION SELECT id, username, password FROM users --`
-* **Khai thác thành công:** Trích xuất toàn bộ bảng thông tin tài khoản người dùng.
+### 4.2. Books Search Service (`GET /api/v1/vulnerable/books/search/?q=...`)
+* **Chức năng:** Tìm kiếm sách theo tiêu đề hoặc tác giả.
+* **Lỗ hổng:** **SQL Injection UNION-based Search**.
+* **Payload:** `?q=' UNION SELECT id, username, email, is_superuser FROM auth_user --`
+* **Khai thác:** Trích xuất toàn bộ dữ liệu người dùng và mật khẩu từ cơ sở dữ liệu.
 
-### 4.3. Comments Service (`POST /api/v1/comments` & `GET /api/v1/comments`)
-* **Chức năng:** Đăng và xem bình luận đánh giá.
+### 4.3. Reviews Service (`GET & POST /api/v1/vulnerable/reviews/`)
+* **Chức năng:** Đọc và đăng nhận xét đánh giá sách.
 * **Lỗ hổng:** **Stored & Reflected Cross-Site Scripting (XSS)**.
-* **Request:**
-  ```json
-  {
-    "author": "attacker",
-    "content": "<script>alert('PBL6_XSS_EXPLOIT')</script>"
-  }
-  ```
-* **Khai thác thành công:** Trả về nguyên văn script độc hại không qua HTML sanitization.
+* **Payload:** `{"comment": "<script>alert('PBL6_XSS_STORED')</script>"}`
+* **Khai thác:** Lưu trữ và render nguyên văn chuỗi JavaScript/HTML độc hại mà không qua sanitization/escaping.
 
-### 4.4. Documents Service (`GET /api/v1/documents/view`)
-* **Chức năng:** Xem và tải tài liệu.
+### 4.4. Files Service (`GET /api/v1/vulnerable/files/download/?file=...`)
+* **Chức năng:** Tải tài liệu đọc thử hoặc file đính kèm.
 * **Lỗ hổng:** **Path Traversal / Local File Inclusion (LFI)**.
-* **Query:** `?file=../../../../etc/passwd` hoặc `?file=..\..\..\windows\win.ini`
-* **Khai thác thành công:** Trả về nội dung các file hệ thống nhạy cảm của máy chủ.
+* **Payload:** `?file=../../windows/win.ini` hoặc `?file=../../../../etc/passwd`
+* **Khai thác:** Đọc file hệ thống tùy ý ngoài thư mục lưu trữ `media/` do thiếu kiểm tra chuẩn hóa đường dẫn.
 
-### 4.5. Network Tools Service (`POST /api/v1/tools/ping`)
-* **Chức năng:** Kiểm tra kết nối mạng (Network Diagnostic).
+### 4.5. Admin Ping Tool (`POST /api/v1/vulnerable/admin/ping/`)
+* **Chức năng:** Công cụ kiểm tra kết nối mạng (chẩn đoán máy chủ).
 * **Lỗ hổng:** **Command Injection (RCE)**.
-* **Request:**
-  ```json
-  {
-    "host": "127.0.0.1; whoami"
-  }
-  ```
-* **Khai thác thành công:** Thực thi lệnh hệ điều hành và trả về kết quả dòng lệnh.
+* **Payload:** `{"host": "127.0.0.1; whoami"}` hoặc `{"host": "127.0.0.1 & dir"}`
+* **Khai thác:** Thực thi lệnh hệ điều hành trực tiếp thông qua hàm `subprocess` không lọc đầu vào.
 
-### 4.6. Metadata & Schema Endpoints
-* **`GET /api/v1/health`**: Trả về trạng thái ứng dụng (`{"status": "ok", "service": "vulnerable-web-api"}`).
-* **`GET /openapi.json` & `GET /docs`**: Cung cấp đặc tả OpenAPI schema chuẩn để AI Attack Planner bên Máy 2 tự động trinh sát và lập kế hoạch tấn công.
+### 4.6. Orders Service (`GET & PUT /api/v1/vulnerable/orders/<int:order_id>/`)
+* **Chức năng:** Xem và cập nhật trạng thái đơn hàng.
+* **Lỗ hổng:** **Broken Object Level Authorization (BOLA / IDOR - OWASP API1:2023)**.
+* **Khai thác:** Bỏ qua kiểm tra quyền sở hữu đối tượng người dùng; bất kỳ người dùng nào cũng có thể đọc hoặc sửa địa chỉ, ghi chú, trạng thái đơn hàng của người khác chỉ bằng cách đổi ID.
+
+### 4.7. Book Cover Fetcher (`GET & POST /api/v1/vulnerable/books/fetch-cover/?url=...`)
+* **Chức năng:** Tải ảnh bìa sách từ URL bên ngoài.
+* **Lỗ hổng:** **Server-Side Request Forgery (SSRF - OWASP API7:2023)**.
+* **Payload:** `?url=http://127.0.0.1:8000/api/dashboard/stats`
+* **Khai thác:** Dùng server làm bàn đạp gửi request tới các tài nguyên nội bộ, quét mạng LAN hoặc đọc metadata máy chủ.
+
+### 4.8. User Profile Service (`POST & PUT /api/v1/vulnerable/users/profile/update/`)
+* **Chức năng:** Cập nhật thông tin tài khoản người dùng.
+* **Lỗ hổng:** **Mass Assignment & Privilege Escalation (OWASP API6:2023)**.
+* **Payload:** `{"user_id": 2, "is_staff": true, "is_superuser": true}`
+* **Khai thác:** Nạp toàn bộ các thuộc tính từ JSON vào model mà không có whitelist, cho phép người dùng thường tự leo thang thành quản trị viên.
+
+### 4.9. Users List Service (`GET /api/v1/vulnerable/users/list/`)
+* **Chức năng:** Danh sách người dùng hệ thống.
+* **Lỗ hổng:** **Excessive Data Exposure (OWASP API3:2023)**.
+* **Khai thác:** Trả về toàn bộ trường dữ liệu nhạy cảm bao gồm `password_hash`, `internal_secret_token` trong JSON response.
+
+### 4.10. OpenAPI 3.0 Reconnaissance Endpoint
+* **Endpoint:** `GET /api/v1/vulnerable/openapi.json`
+* **Mô tả:** Cung cấp đặc tả chuẩn OpenAPI 3.0 đầy đủ của tất cả 8 endpoints có lỗ hổng để **AI Attack Planner** (Máy 2) tự động trinh sát, bóc tách cấu trúc tham số và lập kế hoạch tấn công (Phase 10).

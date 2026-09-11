@@ -1,7 +1,7 @@
 # Web API Security Platform & Autonomous Red Teaming (PBL6 — An Toàn Thông Tin)
 
 > **Đề tài:** Phát hiện và ngăn chặn tấn công Web API thông minh bằng Machine Learning kết hợp Thao trường An ninh Đối kháng (Distributed Cyber Range).  
-> **Trạng thái:** **Phase 0, 1, 2, 9 HOÀN THÀNH ✅** | **Đang triển khai:** `vulnerable-api` & **Phase 3 (Feature Engineering) 🚀**.
+> **Trạng thái:** **Phase 0, 1, 2, 2B HOÀN THÀNH ✅ | Phase 9 (Tasks 9.1, 9.2, 9.3, 9.5) HOÀN THÀNH ✅** | **Đang triển khai:** Task 9.4 (Explainability Modal) & **Phase 3 (Feature Engineering) 🚀**.
 
 ---
 
@@ -14,7 +14,7 @@
   * **Rule Engine (Phase 2):** 16 signatures tĩnh tất định bắt SQLi, XSS, Path Traversal, Command Injection.
   * **Machine Learning Engine (Phase 5 & 6):** Random Forest (Supervised classification) + Isolation Forest (Zero-day anomaly detection).
   * **Hybrid Risk Engine (Phase 7):** Ra quyết định phòng thủ tự động (`ALLOW` / `MONITOR` / `RATE_LIMIT 429` / `BLOCK 403`).
-  * **Vulnerable Web API (`vulnerable-api`):** Ứng dụng mục tiêu tự xây dựng (Port 5000), có 6 endpoints chứa các lỗ hổng OWASP Top 10 có chủ đích (thay thế Juice Shop theo chỉ đạo của Thầy).
+  * **Vulnerable Web API (`vulnerable-api`):** Ứng dụng mục tiêu tự xây dựng Bookie Bookstore (Port 5000), có 8 kịch bản lỗ hổng chuẩn OWASP Web & API Top 10 (SQLi, XSS, Path, Cmd, BOLA/IDOR, SSRF, Mass Assignment, Data Exposure) và OpenAPI spec phục vụ AI trinh sát (thay thế Juice Shop theo chỉ đạo của Thầy).
   * **SOC Command Center Dashboard (Next.js 14):** Giám sát lưu lượng mạng, cảnh báo mối đe dọa thời gian thực trên port 3000.
 * **MÁY 2: RED TEAM (ATTACKER — Phụ trách: `naocavang08`):**
   * **AI Attack Planner Agent (Offensive AI — Phase 10):** Tác nhân AI tự động đọc OpenAPI spec từ Máy 1, lập kế hoạch chuỗi tấn công (Kill Chain) và gửi payload qua mạng LAN sang Máy 1.
@@ -32,7 +32,7 @@
 │ Vai trò: Tech Lead / Blue Team (Phòng) │ Vai trò: Red Team Lead (Tấn) & AI Eng   │
 │ Vị trí: MÁY 1 (Target API, WAF, SOC UI)│ Vị trí: MÁY 2 (AI Attack Planner Agent) │
 ├────────────────────────────────────────┼─────────────────────────────────────────┤
-│ • Xây dựng vulnerable-api (6 endpoints)│ • Feature Engineering (17 Features)     │
+│ • Xây dựng vulnerable-api (8 kịch bản)│ • Feature Engineering (17 Features)     │
 │ • Reverse Proxy Gateway (0.0.0.0:8000) │ • Thu thập & sinh Dataset (vulnerable)  │
 │ • Rule Engine (16 Rules tất định)      │ • Huấn luyện Random Forest (Supervised) │
 │ • Input Normalizer & Scorer            │ • Huấn luyện Isolation Forest (Anomaly) │
@@ -56,11 +56,10 @@ pbl6/
 │   │   ├── db/           # SQLAlchemy session, SQLite models (requests, security_events)
 │   │   ├── security/     # Normalizer, Rule Engine (16 rules), Scorer
 │   │   └── services/     # Traffic logging, Security event persistence
-│   └── tests/            # Gateway unit tests (38/38 tests pass 100%)
-├── vulnerable-api/       # Target Web API tự xây dựng (FastAPI + SQLite, Port 5000)
-│   ├── app/
-│   │   ├── main.py       # Khởi tạo API, OpenAPI spec
-│   │   └── routes/       # Auth (SQLi), Products (SQLi), Comments (XSS), Documents (Path), Tools (Cmd)
+│   └── tests/            # Gateway unit tests (44/44 tests pass 100%)
+├── vulnerable-api/       # Target Web API Bookie Bookstore (Port 5000)
+│   ├── bookstore/        # Cấu hình Django/Uvicorn, settings, urls
+│   ├── books/            # App nghiệp vụ, api_vulnerable.py (8 lỗ hổng OWASP + OpenAPI)
 │   └── Dockerfile
 ├── dashboard/            # Next.js 14 SOC Command Center (Port 3000)
 │   ├── src/              # App router, KPI Cards, Recharts, Event Drawer, Quick Simulator
@@ -107,11 +106,11 @@ docker compose up --build -d
 ## 5. Kiểm Thử & Đảm Bảo Chất Lượng Mã Nguồn
 
 ```bash
-# Chạy Unit Tests Backend (38/38 tests)
+# Chạy Unit Tests Backend (44/44 tests)
 pytest gateway/tests
 
 # Kiểm tra Linter (0 warnings/errors)
-ruff check .
+ruff check gateway/
 
 # Build Frontend Next.js Production
 cd dashboard && npm run build

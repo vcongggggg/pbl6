@@ -43,8 +43,8 @@ graph LR
             RateLimiter["IP Rate Limiter (Sliding Window - 429)"]
         end
         
-        subgraph TargetService["Target Web API (Port 5000)"]
-            VulnAPI["vulnerable-api (Custom FastAPI)\n• /auth/login (SQLi & BruteForce)\n• /products/search (SQLi UNION)\n• /comments (Stored/Reflected XSS)\n• /documents/view (Path Traversal)\n• /tools/ping (Command Injection)\n• /docs & /openapi.json"]
+        subgraph TargetService["Target Web API (Bookie Bookstore - Port 5000)"]
+            VulnAPI["vulnerable-api (Bookie Bookstore)\n• /vulnerable/auth/login/ (SQLi Auth Bypass)\n• /vulnerable/books/search/ (SQLi UNION)\n• /vulnerable/reviews/ (Stored/Reflected XSS)\n• /vulnerable/files/download/ (Path Traversal)\n• /vulnerable/admin/ping/ (Command Injection)\n• /vulnerable/orders/{id}/ (BOLA/IDOR - API1)\n• /vulnerable/books/fetch-cover/ (SSRF - API7)\n• /vulnerable/users/profile/update/ (Mass Assignment - API6)\n• /vulnerable/users/list/ (Data Exposure - API3)\n• /vulnerable/openapi.json (AI Recon Schema)"]
         end
         
         subgraph Storage["Cơ Sở Dữ Liệu"]
@@ -77,17 +77,22 @@ graph LR
 
 ## 2. Ranh Giới Và Trách Nhiệm Từng Thành Phần (Component Boundaries)
 
-### 2.1. `vulnerable-api/` (Target Web API Tự Xây Dựng — Thay Thế Juice Shop)
-* **Lý do tự xây dựng:** Theo chỉ đạo của Giảng viên hướng dẫn, việc tự xây dựng Web API giúp nhóm làm chủ 100% mã nguồn, hiểu tường tận cơ chế khai thác các lỗ hổng OWASP Top 10 trên Web API thực tế, và cho phép định hình cấu trúc dữ liệu theo đúng yêu cầu đề tài.
-* **Công nghệ:** Python 3.12, FastAPI, SQLite, Pydantic, Uvicorn.
+### 2.1. `vulnerable-api/` (Target Web API Tự Xây Dựng — Bookie Bookstore)
+* **Lý do tự xây dựng:** Theo chỉ đạo của Giảng viên hướng dẫn, việc tự xây dựng Web API giúp nhóm làm chủ 100% mã nguồn, hiểu tường tận cơ chế khai thác các lỗ hổng OWASP Top 10 trên Web API thực tế, và cho phép định hình cấu trúc dữ liệu theo đúng yêu cầu đề tài (thay thế hoàn toàn OWASP Juice Shop).
+* **Ứng dụng thực tế:** Nền tảng thương mại điện tử Bookie Bookstore với cơ sở dữ liệu SQLite, quản lý sách, đơn hàng, người dùng và đánh giá.
 * **Cổng dịch vụ:** Chạy nội bộ trên Port `5000` (chỉ cho phép Gateway kết nối qua mạng Docker hoặc localhost).
-* **6 Endpoints nghiệp vụ có chủ đích cài cắm lỗ hổng:**
-  1. `POST /api/v1/auth/login`: Xác thực người dùng — Lỗ hổng **SQL Injection Auth Bypass** (`' OR '1'='1`) và **Brute Force**.
-  2. `GET /api/v1/products/search`: Tra cứu danh mục — Lỗ hổng **SQL Injection UNION-based** (`' UNION SELECT ...`).
-  3. `POST /api/v1/comments` & `GET /api/v1/comments`: Đánh giá — Lỗ hổng **Stored & Reflected XSS** (`<script>alert(1)</script>`).
-  4. `GET /api/v1/documents/view`: Tải tài liệu — Lỗ hổng **Path Traversal / LFI** (`../../etc/passwd` hoặc `windows/win.ini`).
-  5. `POST /api/v1/tools/ping`: Quản trị mạng — Lỗ hổng **Command Injection** (`127.0.0.1; whoami`).
-  6. `GET /openapi.json` & `/docs`: Cung cấp đặc tả OpenAPI chuẩn để AI Attack Planner bên Máy 2 tự động trinh sát (Reconnaissance).
+* **8 Kịch bản lỗ hổng trọng điểm (OWASP Web & API Top 10):**
+  1. `POST /api/v1/vulnerable/auth/login/`: Xác thực người dùng — Lỗ hổng **SQL Injection Auth Bypass** (`' OR '1'='1`) và **Brute Force**.
+  2. `GET /api/v1/vulnerable/books/search/?q=...`: Tra cứu danh mục — Lỗ hổng **SQL Injection UNION-based** (`' UNION SELECT ...`).
+  3. `GET & POST /api/v1/vulnerable/reviews/`: Đánh giá sách — Lỗ hổng **Stored & Reflected Cross-Site Scripting (XSS)** (`<script>alert(1)</script>`).
+  4. `GET /api/v1/vulnerable/files/download/?file=...`: Tải tài liệu/file — Lỗ hổng **Path Traversal / Local File Inclusion (LFI)** (`../../windows/win.ini` hoặc `../../etc/passwd`).
+  5. `POST /api/v1/vulnerable/admin/ping/`: Quản trị chẩn đoán mạng — Lỗ hổng **Command Injection (RCE)** (`127.0.0.1; whoami`).
+  6. `GET & PUT /api/v1/vulnerable/orders/<int:order_id>/`: Chi tiết đơn hàng — Lỗ hổng **Broken Object Level Authorization (BOLA / IDOR - OWASP API1:2023)** xem và sửa đơn hàng của người khác mà không kiểm tra quyền.
+  7. `GET & POST /api/v1/vulnerable/books/fetch-cover/?url=...`: Tải ảnh bìa sách từ xa — Lỗ hổng **Server-Side Request Forgery (SSRF - OWASP API7:2023)** quét mạng nội bộ hoặc trích xuất metadata server.
+  8. `POST /api/v1/vulnerable/users/profile/update/`: Cập nhật thông tin — Lỗ hổng **Mass Assignment & Privilege Escalation (OWASP API6:2023)** tự gán quyền `is_staff`, `is_superuser`.
+  * **Kèm theo:**
+    * `GET /api/v1/vulnerable/users/list/`: Lỗ hổng **Excessive Data Exposure (OWASP API3:2023)** làm lộ toàn bộ password hashes và tokens nội bộ.
+    * `GET /api/v1/vulnerable/openapi.json`: Cung cấp đặc tả OpenAPI 3.0 chuẩn để AI Attack Planner bên Máy 2 tự động trinh sát (Reconnaissance).
 
 ### 2.2. `gateway/` (WAF Reverse Proxy Gateway — Lớp Phòng Thủ Chính)
 * **Vị trí:** Đứng trước `vulnerable-api`, lắng nghe trên `0.0.0.0:8000` để các máy trong mạng LAN đều có thể gửi request tới.

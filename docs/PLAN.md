@@ -1427,6 +1427,12 @@ Hệ thống được chia thành 13 giai đoạn phát triển tuần tự, đ�
 - Triển khai **16 rules tĩnh tất định** (SQLi, XSS, Path Traversal, Command Injection), bộ chuẩn hóa an toàn `InputNormalizer`, chấm điểm rủi ro tất định `RuleScorer` (0–100), lưu vết sự kiện bảo mật `security_events`. Hoạt động ở chế độ **Detection Only (Non-blocking)**.
 - Deliverable: 33/33 Pytest unit tests pass 100%, 0 lỗi Ruff linter, live verification thành công.
 
+## PHASE 2B — Custom Vulnerable Web API (`vulnerable-api` - Bookie Bookstore) (COMPLETED ✅)
+- Tự xây dựng Web API mục tiêu Bookie Bookstore (Port 5000) làm chủ 100% mã nguồn thay thế OWASP Juice Shop bên thứ ba theo chỉ đạo của Thầy hướng dẫn.
+- Tích hợp 8 kịch bản lỗ hổng chuẩn OWASP Web & API Top 10 (SQLi Auth Bypass, SQLi UNION Search, Stored/Reflected XSS, Path Traversal, Command Injection, BOLA/IDOR - API1:2023, SSRF - API7:2023, Mass Assignment - API6:2023) kèm Excessive Data Exposure và OpenAPI 3.0 Recon schema (`/api/v1/vulnerable/openapi.json`) cho AI Attack Planner (Máy 2) tự động trinh sát.
+- Phụ trách: `vcongggggg` (Thành viên A).
+- Deliverable: Service hoàn chỉnh trong `vulnerable-api/`, unit tests trong `gateway/tests/test_vulnerable_api_endpoints.py`, 44/44 backend tests pass 100%.
+
 ## PHASE 3 — Feature Engineering (IN PROGRESS 🚀 — Next Up)
 - Trích xuất **17 đặc trưng** payload (độ dài, Shannon entropy, tỷ lệ ký tự đặc biệt), tần suất từ khóa tấn công (SQLi, XSS, Path, Cmd), và ngữ cảnh HTTP/hành vi metadata.
 - Phụ trách: `naocavang08` (Thành viên B).
@@ -1457,15 +1463,16 @@ Hệ thống được chia thành 13 giai đoạn phát triển tuần tự, đ�
 - Phụ trách: `vcongggggg` (Thành viên A).
 - Deliverable: Rate limiter module bảo vệ ngưỡng gọi API.
 
-## PHASE 9 — SOC Dashboard UI & Real-Time Threat Visualization (COMPLETED Task 9.1, 9.2, 9.3 ✅)
+## PHASE 9 — SOC Dashboard UI & Real-Time Threat Visualization (COMPLETED Tasks 9.1, 9.2, 9.3, 9.5 ✅ | In Progress: Task 9.4 🚀)
 - Xây dựng trung tâm chỉ huy an ninh trực quan **SOC Command Center** chuẩn Dark Cyber Glassmorphism (Next.js 14 + Recharts):
   * **6 REST APIs thật trên Gateway** (`GET /api/dashboard/stats`, `/events`, `/timeline`, `/distribution`, `POST /simulate`, `POST /reset-demo`).
   * **5 Thẻ KPI:** Total Traffic (RPS), Attacks Detected, Threat Score (Rule Engine Phase 2), Safe Request Rate (Forwarded 200 OK).
   * **Hộp Quick Simulator 1-click:** 5 nút bấm thử nghiệm (SQLi, XSS, Path, Cmd, Benign) nhảy số thật trên UI ngay lập tức.
   * **Biểu đồ sóng kép Area Chart & Donut Chart:** Hiển thị lưu lượng Benign vs Attacks và tỷ lệ % phân bố các họ tấn công.
   * **Bảng Live Security Events & Payload Evidence Drawer:** Phân tích đối chiếu Raw vs Canonical Input và tab chờ sẵn 17-Feature Vector cho Phase 3.
+  * **Tính năng Reset Demo Data:** Chuẩn bị sẵn sàng trạng thái sạch cho các buổi demo trực tiếp.
 - Phụ trách: `vcongggggg` (Thành viên A).
-- Deliverable: Giao diện web hoàn chỉnh chạy tại port 3000, 38/38 backend tests pass, production build thành công (125 kB).
+- Deliverable: Giao diện web hoàn chỉnh chạy tại port 3000, 44/44 backend tests pass, production build thành công (125 kB). Đang triển khai Task 9.4 (Detection Explainability Modal).
 
 ## PHASE 10 — Offensive AI — AI Attack Planner & Autonomous Red Teaming (PLANNED ⏳)
 - Nâng cấp `attack-lab/` theo chỉ đạo học thuật của Thầy hướng dẫn: Xây dựng **AI Attack Planner Agent** tự động lập kế hoạch và thực thi chuỗi tấn công Web API có mục tiêu.
