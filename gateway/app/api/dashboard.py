@@ -1,8 +1,6 @@
 import datetime
 import json
-import random
 import time
-import uuid
 from typing import Any
 
 import httpx
