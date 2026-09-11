@@ -6,6 +6,7 @@ import { MetricCards } from "@/components/MetricCards";
 import { ThreatTimelineChart } from "@/components/ThreatTimelineChart";
 import { AttackDistributionChart } from "@/components/AttackDistributionChart";
 import { LiveEventsTable, PayloadEvidenceDrawer } from "@/components/events";
+import { DetectionExplainabilityModal } from "@/components/explain";
 import {
   fetchDashboardStats,
   fetchDashboardEvents,
@@ -39,6 +40,7 @@ export default function SOCDashboard() {
   const [attackTypeFilter, setAttackTypeFilter] = useState<string>("ALL");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [selectedEvent, setSelectedEvent] = useState<SecurityEventItem | null>(null);
+  const [explainingEvent, setExplainingEvent] = useState<SecurityEventItem | null>(null);
 
   // Operation states
   const [pollingInterval, setPollingInterval] = useState<number>(3); // 3s default
@@ -96,17 +98,17 @@ export default function SOCDashboard() {
     loadData(false);
   }, [loadData]);
 
-  // Smart Polling Effect: Pauses when user has opened PayloadEvidenceDrawer or interval is 0
-  const isDrawerOpen = selectedEvent !== null;
-  const isDrawerOpenRef = useRef(isDrawerOpen);
-  isDrawerOpenRef.current = isDrawerOpen;
+  // Smart Polling Effect: Pauses when user has opened PayloadEvidenceDrawer, ExplainModal, or interval is 0
+  const isInspectorOpen = selectedEvent !== null || explainingEvent !== null;
+  const isInspectorOpenRef = useRef(isInspectorOpen);
+  isInspectorOpenRef.current = isInspectorOpen;
 
   useEffect(() => {
     if (pollingInterval <= 0) return;
 
     const interval = setInterval(() => {
-      // Pause background refresh if user is currently inspecting a payload
-      if (!isDrawerOpenRef.current) {
+      // Pause background refresh if user is currently inspecting a payload or viewing explanation
+      if (!isInspectorOpenRef.current) {
         loadData(false);
       }
     }, pollingInterval * 1000);
@@ -245,6 +247,7 @@ export default function SOCDashboard() {
           searchQuery={searchQuery}
           setSearchQuery={setSearchQuery}
           onSelectEvent={(ev) => setSelectedEvent(ev)}
+          onExplainEvent={(ev) => setExplainingEvent(ev)}
           selectedEventId={selectedEvent?.event_id ?? null}
         />
       </main>
@@ -253,6 +256,13 @@ export default function SOCDashboard() {
       <PayloadEvidenceDrawer
         event={selectedEvent}
         onClose={() => setSelectedEvent(null)}
+        onOpenExplainModal={(ev) => setExplainingEvent(ev)}
+      />
+
+      {/* 4. Detection Explainability Modal (Task 9.4) */}
+      <DetectionExplainabilityModal
+        event={explainingEvent}
+        onClose={() => setExplainingEvent(null)}
       />
 
       {/* 4. Footer Status Bar */}

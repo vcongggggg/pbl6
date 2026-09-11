@@ -13,17 +13,21 @@ import {
   AlertTriangle,
   Info,
   Terminal,
+  Brain,
+  ChevronRight,
 } from "lucide-react";
 import { SecurityEventItem } from "@/types/dashboard";
 
 interface PayloadEvidenceDrawerProps {
   event: SecurityEventItem | null;
   onClose: () => void;
+  onOpenExplainModal?: (event: SecurityEventItem) => void;
 }
 
 export const PayloadEvidenceDrawer: React.FC<PayloadEvidenceDrawerProps> = ({
   event,
   onClose,
+  onOpenExplainModal,
 }) => {
   const [activeTab, setActiveTab] = useState<"rule" | "vector">("rule");
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
@@ -242,6 +246,29 @@ export const PayloadEvidenceDrawer: React.FC<PayloadEvidenceDrawerProps> = ({
                 </span>
               </div>
             </div>
+
+            {/* Explainability Modal Trigger Banner */}
+            {onOpenExplainModal && (
+              <button
+                onClick={() => onOpenExplainModal(event)}
+                className="w-full flex items-center justify-between p-3 rounded-xl bg-gradient-to-r from-purple-950/80 via-slate-900 to-purple-900/40 border border-purple-500/40 hover:border-purple-400 text-purple-200 transition group cursor-pointer shadow-lg shadow-purple-950/30"
+              >
+                <div className="flex items-center gap-2.5">
+                  <div className="p-1.5 rounded-lg bg-purple-900/60 border border-purple-700/60 text-purple-300 group-hover:scale-105 transition">
+                    <Brain className="w-4 h-4" />
+                  </div>
+                  <div className="text-left">
+                    <div className="text-xs font-bold text-white group-hover:text-purple-300 transition">
+                      Detection Explainability Breakdown
+                    </div>
+                    <div className="text-[10px] text-slate-400 font-mono">
+                      Phân tích rủi ro đa tầng: Rule (40%) + RF (35%) + IF (25%)
+                    </div>
+                  </div>
+                </div>
+                <ChevronRight className="w-4 h-4 text-purple-400 group-hover:translate-x-0.5 transition" />
+              </button>
+            )}
 
             {/* Attack Explanation Box */}
             <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-3.5 space-y-1.5">

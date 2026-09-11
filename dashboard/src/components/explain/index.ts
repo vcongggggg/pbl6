@@ -1,0 +1,1 @@
+export { DetectionExplainabilityModal } from "./DetectionExplainabilityModal";
