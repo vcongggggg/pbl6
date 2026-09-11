@@ -260,6 +260,222 @@ def vulnerable_admin_ping(request):
         }, status=500)
 
 
+@csrf_exempt
+def vulnerable_order_detail(request, order_id):
+    """
+    GET /api/v1/vulnerable/orders/<int:order_id>/
+    PUT / PATCH /api/v1/vulnerable/orders/<int:order_id>/
+    Intentional Vulnerability: Broken Object Level Authorization (BOLA / IDOR - OWASP API1:2023).
+    Does NOT check user authorization or ownership; any client can view or modify any order.
+    """
+    try:
+        from books.models import Order
+        order = Order.objects.filter(pk=order_id).first()
+        if not order:
+            return JsonResponse({
+                "status": "error",
+                "message": f"Order #{order_id} not found."
+            }, status=404)
+
+        if request.method == "GET":
+            items = []
+            for item in order.items.all():
+                items.append({
+                    "book_id": item.book_id,
+                    "book_title": item.book.title if item.book else "Unknown",
+                    "quantity": item.quantity,
+                    "unit_price": float(item.price),
+                })
+            return JsonResponse({
+                "status": "success",
+                "vulnerability": "BOLA_IDOR",
+                "order_id": order.id,
+                "customer_username": order.user.username if order.user else "Anonymous",
+                "customer_email": order.user.email if order.user else "",
+                "status": order.status,
+                "payment_status": order.payment_status,
+                "payment_method": order.payment_method,
+                "shipping_address": order.shipping_address or "123 Le Duan, Da Nang",
+                "note": order.note,
+                "total_amount": float(order.total),
+                "items": items,
+                "created_at": order.created_at.isoformat() if order.created_at else None,
+            }, status=200)
+
+        elif request.method in ["PUT", "PATCH"]:
+            try:
+                data = json.loads(request.body.decode("utf-8")) if request.body else request.POST
+            except Exception:
+                data = request.POST
+
+            if "status" in data:
+                order.status = data["status"]
+            if "shipping_address" in data:
+                order.shipping_address = data["shipping_address"]
+            if "note" in data:
+                order.note = data["note"]
+            order.save()
+
+            return JsonResponse({
+                "status": "success",
+                "vulnerability": "BOLA_IDOR",
+                "message": f"Order #{order_id} modified successfully without authorization check.",
+                "order_id": order.id,
+                "new_status": order.status,
+                "new_shipping_address": order.shipping_address,
+            }, status=200)
+
+        return JsonResponse({"error": "Method not allowed. Use GET, PUT, or PATCH."}, status=405)
+    except Exception as exc:
+        return JsonResponse({"status": "error", "message": str(exc)}, status=500)
+
+
+@csrf_exempt
+def vulnerable_fetch_cover(request):
+    """
+    GET /api/v1/vulnerable/books/fetch-cover/?url=...
+    POST /api/v1/vulnerable/books/fetch-cover/
+    Intentional Vulnerability: Server-Side Request Forgery (SSRF - OWASP API7:2023).
+    Fetches remote resource directly from user-supplied URL without IP/subnet filtering.
+    """
+    import urllib.request
+    import urllib.error
+
+    if request.method == "GET":
+        target_url = request.GET.get("url", "").strip()
+    elif request.method == "POST":
+        try:
+            data = json.loads(request.body.decode("utf-8")) if request.body else request.POST
+        except Exception:
+            data = request.POST
+        target_url = data.get("url", "").strip()
+    else:
+        return JsonResponse({"error": "Method not allowed. Use GET or POST."}, status=405)
+
+    if not target_url:
+        return JsonResponse({"error": "Missing 'url' parameter."}, status=400)
+
+    try:
+        req = urllib.request.Request(
+            target_url,
+            headers={"User-Agent": "Bookie-CoverFetcher/1.0"}
+        )
+        with urllib.request.urlopen(req, timeout=3.0) as resp:
+            content_type = resp.headers.get("content-type", "application/octet-stream")
+            content = resp.read()
+            try:
+                body_sample = content.decode("utf-8")[:2000]
+            except UnicodeDecodeError:
+                body_sample = f"<Binary data: {len(content)} bytes>"
+
+            return JsonResponse({
+                "status": "success",
+                "vulnerability": "SSRF",
+                "fetched_url": target_url,
+                "http_status": resp.status,
+                "content_type": content_type,
+                "content_length": len(content),
+                "body_preview": body_sample,
+            }, status=200)
+    except urllib.error.HTTPError as http_err:
+        return JsonResponse({
+            "status": "remote_error",
+            "vulnerability": "SSRF",
+            "fetched_url": target_url,
+            "http_status": http_err.code,
+            "message": str(http_err),
+        }, status=502)
+    except Exception as exc:
+        return JsonResponse({
+            "status": "error",
+            "vulnerability": "SSRF",
+            "fetched_url": target_url,
+            "message": str(exc),
+        }, status=500)
+
+
+@csrf_exempt
+def vulnerable_profile_update(request):
+    """
+    POST / PUT /api/v1/vulnerable/users/profile/update/
+    Intentional Vulnerability: Mass Assignment (OWASP API6:2023).
+    Blindly unpacks JSON keys into User model attributes, allowing privilege escalation.
+    """
+    if request.method not in ["POST", "PUT"]:
+        return JsonResponse({"error": "Method not allowed. Use POST or PUT."}, status=405)
+
+    try:
+        data = json.loads(request.body.decode("utf-8")) if request.body else request.POST
+    except Exception:
+        data = request.POST
+
+    user_id = data.get("user_id", 1)
+    try:
+        user_id = int(user_id)
+    except (ValueError, TypeError):
+        user_id = 1
+
+    from django.contrib.auth import get_user_model
+    UserModel = get_user_model()
+    user = UserModel.objects.filter(pk=user_id).first()
+
+    if not user:
+        return JsonResponse({"status": "error", "message": f"User #{user_id} not found."}, status=404)
+
+    forbidden_escalated_fields = []
+    for key, value in data.items():
+        if key in ["is_staff", "is_superuser", "is_active", "role"]:
+            forbidden_escalated_fields.append(f"{key}={value}")
+        if hasattr(user, key):
+            setattr(user, key, value)
+
+    user.save()
+
+    return JsonResponse({
+        "status": "success",
+        "vulnerability": "MASS_ASSIGNMENT",
+        "message": "User profile updated with unvalidated mass assignment.",
+        "user_id": user.id,
+        "username": user.username,
+        "email": user.email,
+        "is_staff": user.is_staff,
+        "is_superuser": user.is_superuser,
+        "escalated_fields_exploited": forbidden_escalated_fields,
+    }, status=200)
+
+
+def vulnerable_users_list(request):
+    """
+    GET /api/v1/vulnerable/users/list/
+    Intentional Vulnerability: Excessive Data Exposure (OWASP API3:2023).
+    Dumps all user records with sensitive internal hashes and tokens without filtering.
+    """
+    from django.contrib.auth import get_user_model
+    UserModel = get_user_model()
+
+    users = []
+    for u in UserModel.objects.all()[:20]:
+        users.append({
+            "id": u.id,
+            "username": u.username,
+            "email": u.email,
+            "password_hash": u.password,
+            "is_staff": u.is_staff,
+            "is_superuser": u.is_superuser,
+            "last_login": u.last_login.isoformat() if u.last_login else None,
+            "date_joined": u.date_joined.isoformat() if u.date_joined else None,
+            "internal_secret_token": f"sec_token_user_{u.id}_{hash(u.username)}",
+        })
+
+    return JsonResponse({
+        "status": "success",
+        "vulnerability": "EXCESSIVE_DATA_EXPOSURE",
+        "count": len(users),
+        "users": users,
+        "warning": "Sensitive password hashes and internal tokens exposed directly in API response.",
+    }, status=200)
+
+
 def vulnerable_openapi_spec(request):
     """
     GET /api/v1/vulnerable/openapi.json
@@ -387,6 +603,78 @@ def vulnerable_openapi_spec(request):
                         },
                     },
                     "responses": {"200": {"description": "Ping diagnostic output"}},
+                }
+            },
+            "/api/v1/vulnerable/orders/{order_id}/": {
+                "get": {
+                    "summary": "Order Detail (BOLA / IDOR)",
+                    "description": "Vulnerable to Broken Object Level Authorization (OWASP API1:2023).",
+                    "parameters": [
+                        {"name": "order_id", "in": "path", "required": True, "schema": {"type": "integer", "example": 1}}
+                    ],
+                    "responses": {"200": {"description": "Order details with customer info"}},
+                },
+                "patch": {
+                    "summary": "Modify Order without Ownership Check (BOLA / IDOR)",
+                    "description": "Allows unauthorized modification of order status and shipping address.",
+                    "parameters": [
+                        {"name": "order_id", "in": "path", "required": True, "schema": {"type": "integer", "example": 1}}
+                    ],
+                    "requestBody": {
+                        "required": True,
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {"type": "string", "example": "cancelled"},
+                                        "shipping_address": {"type": "string", "example": "Hacked Address 404"},
+                                    }
+                                }
+                            }
+                        },
+                    },
+                    "responses": {"200": {"description": "Order modified"}},
+                }
+            },
+            "/api/v1/vulnerable/books/fetch-cover/": {
+                "get": {
+                    "summary": "Fetch Book Cover from Remote URL (SSRF)",
+                    "description": "Vulnerable to Server-Side Request Forgery (OWASP API7:2023).",
+                    "parameters": [
+                        {"name": "url", "in": "query", "required": True, "schema": {"type": "string", "example": "http://127.0.0.1:8000/api/dashboard/stats"}}
+                    ],
+                    "responses": {"200": {"description": "Remote content returned"}},
+                }
+            },
+            "/api/v1/vulnerable/users/profile/update/": {
+                "post": {
+                    "summary": "Update Profile (Mass Assignment / Privilege Escalation)",
+                    "description": "Vulnerable to Mass Assignment (OWASP API6:2023). Attacker can self-assign admin roles.",
+                    "requestBody": {
+                        "required": True,
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "user_id": {"type": "integer", "example": 1},
+                                        "is_staff": {"type": "boolean", "example": True},
+                                        "is_superuser": {"type": "boolean", "example": True},
+                                        "role": {"type": "string", "example": "admin"},
+                                    }
+                                }
+                            }
+                        },
+                    },
+                    "responses": {"200": {"description": "Profile updated with escalated roles"}},
+                }
+            },
+            "/api/v1/vulnerable/users/list/": {
+                "get": {
+                    "summary": "User Directory (Excessive Data Exposure)",
+                    "description": "Vulnerable to Excessive Data Exposure (OWASP API3:2023). Dumps password hashes.",
+                    "responses": {"200": {"description": "List of users with sensitive fields"}},
                 }
             },
         },

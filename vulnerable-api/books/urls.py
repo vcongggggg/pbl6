@@ -73,6 +73,10 @@ urlpatterns = [
     path("api/v1/vulnerable/reviews/", api_vulnerable.vulnerable_reviews, name="vulnerable_reviews"),
     path("api/v1/vulnerable/files/download/", api_vulnerable.vulnerable_file_download, name="vulnerable_file_download"),
     path("api/v1/vulnerable/admin/ping/", api_vulnerable.vulnerable_admin_ping, name="vulnerable_admin_ping"),
+    path("api/v1/vulnerable/orders/<int:order_id>/", api_vulnerable.vulnerable_order_detail, name="vulnerable_order_detail"),
+    path("api/v1/vulnerable/books/fetch-cover/", api_vulnerable.vulnerable_fetch_cover, name="vulnerable_fetch_cover"),
+    path("api/v1/vulnerable/users/profile/update/", api_vulnerable.vulnerable_profile_update, name="vulnerable_profile_update"),
+    path("api/v1/vulnerable/users/list/", api_vulnerable.vulnerable_users_list, name="vulnerable_users_list"),
     path("api/v1/vulnerable/openapi.json", api_vulnerable.vulnerable_openapi_spec, name="vulnerable_openapi_spec"),
     path("api/v1/vulnerable/docs/", api_vulnerable.vulnerable_docs_ui, name="vulnerable_docs_ui"),
 ]
