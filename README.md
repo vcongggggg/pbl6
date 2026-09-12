@@ -77,6 +77,7 @@ pbl6/
 │   ├── GLOSSARY.md       # Bảng thuật ngữ chuyên ngành (60+ terms)
 │   ├── PROGRESS.md       # Bảng theo dõi tiến độ chi tiết
 │   ├── REFERENCES.md     # 20 Tài liệu tham khảo khoa học & chuẩn quốc tế (USENIX, IEEE, ACM)
+│   ├── ACADEMIC_DEEP_DIVE_GAP_ANALYSIS.md # Nghiên cứu chuyên sâu 20 paper & ma trận đối chiếu mã nguồn
 │   └── TASKS_BREAKDOWN.md# Bảng phân rã 50 GitHub Issues
 ├── docker-compose.yml    # Khởi chạy 3 container (Gateway, Dashboard, vulnerable-api)
 └── README.md
