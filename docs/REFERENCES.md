@@ -2,7 +2,8 @@
 
 > **Dự án:** Web API Security Platform & Autonomous Red Teaming on Distributed Cyber Range  
 > **Phiên bản tài liệu:** 1.0 (Cập nhật Học kỳ 6 - 2026)  
-> **Mục đích:** Cung cấp danh mục 20 công trình nghiên cứu khoa học, bài báo hội nghị quốc tế (USENIX, IEEE, ACM, Elsevier), tiêu chuẩn quốc tế (NIST, OWASP, MITRE) và mã nguồn mở chuẩn mực phục vụ bảo vệ đề tài, xây dựng cơ sở lý thuyết và định hình kiến trúc hệ thống.
+> **Mục đích:** Cung cấp danh mục 20 công trình nghiên cứu khoa học, bài báo hội nghị quốc tế (USENIX, IEEE, ACM, Elsevier), tiêu chuẩn quốc tế (NIST, OWASP, MITRE) và mã nguồn mở chuẩn mực phục vụ bảo vệ đề tài, xây dựng cơ sở lý thuyết và định hình kiến trúc hệ thống.  
+> 💡 **Báo cáo đối chiếu chuyên sâu & Gap Analysis:** Xem tài liệu [ACADEMIC_DEEP_DIVE_GAP_ANALYSIS.md](file:///c:/Study/HocKy6/PBL6/docs/ACADEMIC_DEEP_DIVE_GAP_ANALYSIS.md) và bản Word chuẩn nộp [docs/references/PBL6_Doi_Chieu_Chuyen_Sau_20_Tai_Lieu_Khoa_Hoc.docx](file:///c:/Study/HocKy6/PBL6/docs/references/PBL6_Doi_Chieu_Chuyen_Sau_20_Tai_Lieu_Khoa_Hoc.docx).
 
 ---
 
