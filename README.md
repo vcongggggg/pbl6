@@ -108,7 +108,7 @@ docker compose up --build -d
 ## 5. Kiểm Thử & Đảm Bảo Chất Lượng Mã Nguồn
 
 ```bash
-# Chạy Unit Tests Backend (44/44 tests)
+# Chạy Unit Tests Backend (56/56 tests pass 100%)
 pytest gateway/tests
 
 # Kiểm tra Linter (0 warnings/errors)

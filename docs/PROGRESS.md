@@ -16,7 +16,7 @@ Tài liệu theo dõi trạng thái thực hiện các giai đoạn phát triể
 | **Phase 4** | **Dataset Generation & Lab Traffic** | ML/Data Team (Member B) | **NOT STARTED** | *(RESERVED FOR ML TEAM)* Sinh dữ liệu từ vulnerable-api + SecLists. |
 | **Phase 5** | **Supervised ML — Random Forest** | ML/Data Team (Member B) | **NOT STARTED** | *(RESERVED FOR ML TEAM)* Training, Multiclass, Evaluation, Serialization (`.joblib`). |
 | **Phase 6** | **Anomaly Detection — Isolation Forest** | ML/Data Team (Member B) | **NOT STARTED** | *(RESERVED FOR ML TEAM)* Behavior window, Isolation Forest anomaly scoring. |
-| **Phase 7** | **Hybrid Risk Engine & Decision** | Backend / Security (Member A) | **NOT STARTED** | Weighted Risk Score (0–100), Thresholds (ALLOW/MONITOR/RATE_LIMIT/BLOCK). |
+| **Phase 7** | **Hybrid Risk Engine & Decision** | Backend / Security (Member A) | **COMPLETED (100% Tasks 7.1 → 7.3) ✅** | Weighted Risk Score (0–100), Thresholds (ALLOW/MONITOR/RATE_LIMIT/BLOCK), Active 403 Blocking Middleware. |
 | **Phase 8** | **Rate Limiting & Behavior Tracker** | Backend / Security (Member A) | **NOT STARTED** | IP tracking time-window, HTTP 429 response, endpoint limits. |
 | **Phase 9** | **Dashboard UI (Next.js)** | Frontend / Tech Lead (Member A) | **COMPLETED (100% Tasks 9.1 → 9.5) ✅** | SOC Dashboard, 5 KPI cards, Timeline, Distribution, Events table with Client IP origin, Payload Drawer, Quick Simulator, Reset Demo, Detection Explainability Modal (#38). |
 | **Phase 10** | **Offensive AI — AI Attack Planner (Máy 2)** | AI/ML & Red Team (Member B) | **NOT STARTED** | AI Attack Planner Agent trên Máy 2, trinh sát OpenAPI, sinh payload né tránh (Adaptive Evasion) qua mạng LAN. |
@@ -148,6 +148,36 @@ Tài liệu theo dõi trạng thái thực hiện các giai đoạn phát triể
 
 ---
 
+### Phase 7 — Hybrid Risk Engine & Decision Engine (COMPLETED 100% ✅)
+
+* **Mục tiêu (Objectives):**
+  * Xây dựng module `RiskEngine` tổng hợp rủi ro 3 trụ cột theo công thức chuẩn:
+    $$\text{Weighted Risk Score} = (0.40 \times \text{Rule}) + (0.35 \times \text{Random Forest}) + (0.25 \times \text{Isolation Forest})$$
+  * Chuẩn hóa động trọng số (Dynamic Weight Normalization) khi các thành phần ML/Anomaly chưa nạp hoặc đang trong giai đoạn huấn luyện để hệ thống luôn vận hành ổn định.
+  * Xây dựng module `DecisionEngine` thực thi chính sách đa ngưỡng an ninh:
+    * $< 30.0$: `ALLOW` (HTTP 200 OK)
+    * $30.0 - 59.9$: `MONITOR` (Ghi nhận sự kiện `security_events`, cho phép đi tiếp)
+    * $60.0 - 79.9$: `RATE_LIMIT` (Đánh dấu giới hạn tần suất)
+    * $\ge 80.0$: `BLOCK` (Ngắt luồng proxy ngay lập tức, trả về HTTP 403 Forbidden)
+  * Tương thích 4 chế độ WAF (`OFF`, `MONITOR_ONLY`, `ACTIVE_BLOCKING`, `HYBRID`).
+  * Tích hợp vào Reverse Proxy (`proxy.py`), ngắt luồng an toàn và trả về JSON phản hồi chuẩn hóa kèm headers `X-WAF-Action`, `X-WAF-Decision`, `X-WAF-Risk-Score`.
+
+* **Sản phẩm bàn giao (Deliverables):**
+  * `gateway/app/security/risk_engine.py`: `RiskEngine` và `RiskScoreBreakdown` (Task 7.1 - #30).
+  * `gateway/app/security/decision.py`: `DecisionEngine`, `PolicyAction`, `DecisionResult` (Task 7.2 - #31).
+  * `gateway/app/api/proxy.py`: Tích hợp chặn luồng 403 an toàn và gắn headers WAF (Task 7.3 - #32).
+  * `gateway/app/services/security.py`: Cập nhật lưu vết đầy đủ điểm rủi ro tổng hợp và breakdown.
+  * `gateway/tests/test_risk_engine.py`: 6 unit tests kiểm thử công thức 3 trụ cột, dynamic normalization, clamping, serialization.
+  * `gateway/tests/test_decision_engine.py`: 3 unit tests kiểm thử 4 ngưỡng hành động và 4 WAF modes.
+  * `gateway/tests/test_phase7_integration.py`: 3 integration tests kiểm thử chặn HTTP 403, Monitor mode, và Benign Allow.
+
+* **Kiểm thử & Xác minh (Tests & Verification):**
+  * `pytest gateway/tests/`: **56/56 tests PASSED (100%)**.
+  * `ruff check gateway/`: **0 errors**.
+  * `npm.cmd run build`: **Next.js static generation 4/4 passed (0 errors)**.
+
+---
+
 ### Phase 3 — Feature Engineering (NOT STARTED)
 - [ ] *(RESERVED FOR ML TEAM)* 17 payload features (chiều dài, entropy, tỷ lệ ký tự đặc biệt, từ khóa SQL/XSS/Path).
 - [ ] *(RESERVED FOR ML TEAM)* HTTP & Behavior metadata features.
@@ -155,3 +185,4 @@ Tài liệu theo dõi trạng thái thực hiện các giai đoạn phát triể
 ---
 
 *(Các phase còn lại từ Phase 4 đến Phase 12 giữ nguyên trạng thái theo kế hoạch)*
+

@@ -69,13 +69,13 @@ Tài liệu phân rã chi tiết toàn bộ các giai đoạn (Phase 0 → Phase
 
 ---
 
-### 🔵 PHASE 7: HYBRID RISK ENGINE & DECISION ENGINE
+### 🔵 PHASE 7: HYBRID RISK ENGINE & DECISION ENGINE (100% HOÀN THÀNH ✅)
 
-| Mã Task | Issue ID | Tên Task Chi Tiết | Phụ Trách | Đầu Ra (Deliverables) |
-| :--- | :---: | :--- | :---: | :--- |
-| **`TASK-7.1`** | `#30` | **Tính Điểm Nguy Cơ Tổng Hợp (Weighted Risk Score):** Công thức hợp nhất: $\text{Score} = 0.40 \times \text{Rule} + 0.35 \times \text{RF} + 0.25 \times \text{Anomaly}$. | **Thành viên A** | `gateway/app/security/risk_engine.py` |
-| **`TASK-7.2`** | `#31` | **Chính Sách Ra Quyết Định Đa Ngưỡng (Decision Policy):** Định nghĩa 4 hành động: $<30$ `ALLOW`, $30-60$ `MONITOR`, $60-80$ `RATE_LIMIT`, $>80$ `BLOCK (403)`. | **Thành viên A** | `gateway/app/security/decision.py` |
-| **`TASK-7.3`** | `#32` | **Cơ Chế Chặn Thực Tế (Blocking Proxy Middleware):** Khi quyết định là `BLOCK`, ngắt luồng proxy ngay lập tức, trả về HTTP 403 tùy biến an toàn. | **Thành viên A** | `gateway/app/api/proxy.py` |
+| Mã Task | Issue ID | Tên Task Chi Tiết | Phụ Trách | Trạng Thái | Đầu Ra (Deliverables) |
+| :--- | :---: | :--- | :---: | :---: | :--- |
+| **`TASK-7.1`** | `#30` | **Tính Điểm Nguy Cơ Tổng Hợp (Weighted Risk Score):** Công thức hợp nhất: $\text{Score} = 0.40 \times \text{Rule} + 0.35 \times \text{RF} + 0.25 \times \text{Anomaly}$. | **Thành viên A** | **HOÀN THÀNH ✅** | `gateway/app/security/risk_engine.py` |
+| **`TASK-7.2`** | `#31` | **Chính Sách Ra Quyết Định Đa Ngưỡng (Decision Policy):** Định nghĩa 4 hành động: $<30$ `ALLOW`, $30-60$ `MONITOR`, $60-80$ `RATE_LIMIT`, $>80$ `BLOCK (403)`. | **Thành viên A** | **HOÀN THÀNH ✅** | `gateway/app/security/decision.py` |
+| **`TASK-7.3`** | `#32` | **Cơ Chế Chặn Thực Tế (Blocking Proxy Middleware):** Khi quyết định là `BLOCK`, ngắt luồng proxy ngay lập tức, trả về HTTP 403 tùy biến an toàn. | **Thành viên A** | **HOÀN THÀNH ✅** | `gateway/app/api/proxy.py` |
 
 ---
 

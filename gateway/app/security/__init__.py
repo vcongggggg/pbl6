@@ -1,3 +1,4 @@
+from app.security.decision import DecisionEngine, DecisionResult, PolicyAction
 from app.security.engine import RuleEngine
 from app.security.models import (
     AttackType,
@@ -7,6 +8,7 @@ from app.security.models import (
     Severity,
 )
 from app.security.normalizer import InputNormalizer
+from app.security.risk_engine import RiskEngine, RiskScoreBreakdown
 from app.security.rules import (
     BaseRule,
     RegexRule,
@@ -21,10 +23,15 @@ from app.security.scoring import RuleScorer
 __all__ = [
     "AttackType",
     "BaseRule",
+    "DecisionEngine",
+    "DecisionResult",
     "DetectionResult",
     "InputNormalizer",
     "InspectionLocation",
+    "PolicyAction",
     "RegexRule",
+    "RiskEngine",
+    "RiskScoreBreakdown",
     "RuleEngine",
     "RuleMatch",
     "RuleScorer",
@@ -35,3 +42,4 @@ __all__ = [
     "get_sqli_rules",
     "get_xss_rules",
 ]
+
