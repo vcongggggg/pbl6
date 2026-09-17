@@ -79,12 +79,12 @@ Tài liệu phân rã chi tiết toàn bộ các giai đoạn (Phase 0 → Phase
 
 ---
 
-### 🔵 PHASE 8: IP-BASED RATE LIMITING & SLIDING WINDOW TRACKER
+### 🔵 PHASE 8: IP-BASED RATE LIMITING & SLIDING WINDOW TRACKER (100% HOÀN THÀNH ✅)
 
-| Mã Task | Issue ID | Tên Task Chi Tiết | Phụ Trách | Đầu Ra (Deliverables) |
-| :--- | :---: | :--- | :---: | :--- |
-| **`TASK-8.1`** | `#33` | **Bộ Theo Dõi Cửa Sổ Trượt Theo IP (Sliding Window Tracker):** Quản lý bộ đếm request theo IP trong bộ nhớ RAM với thời gian trượt 60 giây. | **Thành viên A** | `gateway/app/security/rate_limiter.py` |
-| **`TASK-8.2`** | `#34` | **Thực Thi Phản Hồi HTTP 429 Too Many Requests:** Tự động chặn tạm thời IP vượt ngưỡng tần suất (RPS limit) kèm header `Retry-After: 60`. | **Thành viên A** | `gateway/app/api/proxy.py` |
+| Mã Task | Issue ID | Tên Task Chi Tiết | Phụ Trách | Trạng Thái | Đầu Ra (Deliverables) |
+| :--- | :---: | :--- | :---: | :---: | :--- |
+| **`TASK-8.1`** | `#33` | **Bộ Theo Dõi Cửa Sổ Trượt Theo IP (Sliding Window Tracker):** Quản lý bộ đếm request theo IP trong bộ nhớ RAM với thời gian trượt 60 giây ($O(1)$ deque), phân tách quota theo endpoint scoping (`auth`: 10, `admin`: 15, `files`: 20, `global`: 60). | **Thành viên A** | **HOÀN THÀNH ✅** | `gateway/app/security/rate_limiter.py` |
+| **`TASK-8.2`** | `#34` | **Thực Thi Phản Hồi HTTP 429 Too Many Requests:** Tự động chặn tạm thời IP vượt ngưỡng tần suất (RPS limit) kèm header `Retry-After: <sec>`, `X-RateLimit-*`, lưu vết kiểm toán và tích hợp Reverse Proxy. | **Thành viên A** | **HOÀN THÀNH ✅** | `gateway/app/api/proxy.py`, `gateway/app/services/security.py` |
 
 ---
 

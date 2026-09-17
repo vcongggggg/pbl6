@@ -8,6 +8,7 @@ from app.security.models import (
     Severity,
 )
 from app.security.normalizer import InputNormalizer
+from app.security.rate_limiter import RateLimitResult, SlidingWindowRateLimiter
 from app.security.risk_engine import RiskEngine, RiskScoreBreakdown
 from app.security.rules import (
     BaseRule,
@@ -29,6 +30,7 @@ __all__ = [
     "InputNormalizer",
     "InspectionLocation",
     "PolicyAction",
+    "RateLimitResult",
     "RegexRule",
     "RiskEngine",
     "RiskScoreBreakdown",
@@ -36,6 +38,7 @@ __all__ = [
     "RuleMatch",
     "RuleScorer",
     "Severity",
+    "SlidingWindowRateLimiter",
     "get_all_rules",
     "get_command_injection_rules",
     "get_path_traversal_rules",

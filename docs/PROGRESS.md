@@ -17,7 +17,7 @@ Tài liệu theo dõi trạng thái thực hiện các giai đoạn phát triể
 | **Phase 5** | **Supervised ML — Random Forest** | ML/Data Team (Member B) | **NOT STARTED** | *(RESERVED FOR ML TEAM)* Training, Multiclass, Evaluation, Serialization (`.joblib`). |
 | **Phase 6** | **Anomaly Detection — Isolation Forest** | ML/Data Team (Member B) | **NOT STARTED** | *(RESERVED FOR ML TEAM)* Behavior window, Isolation Forest anomaly scoring. |
 | **Phase 7** | **Hybrid Risk Engine & Decision** | Backend / Security (Member A) | **COMPLETED (100% Tasks 7.1 → 7.3) ✅** | Weighted Risk Score (0–100), Thresholds (ALLOW/MONITOR/RATE_LIMIT/BLOCK), Active 403 Blocking Middleware. |
-| **Phase 8** | **Rate Limiting & Behavior Tracker** | Backend / Security (Member A) | **NOT STARTED** | IP tracking time-window, HTTP 429 response, endpoint limits. |
+| **Phase 8** | **Rate Limiting & Behavior Tracker** | Backend / Security (Member A) | **COMPLETED (100% Tasks 8.1 & 8.2) ✅** | In-Memory Sliding Window 60s trên RAM, HTTP 429 Too Many Requests, Retry-After header, Endpoint Quota Scoping (API4:2023). |
 | **Phase 9** | **Dashboard UI (Next.js)** | Frontend / Tech Lead (Member A) | **COMPLETED (100% Tasks 9.1 → 9.5) ✅** | SOC Dashboard, 5 KPI cards, Timeline, Distribution, Events table with Client IP origin, Payload Drawer, Quick Simulator, Reset Demo, Detection Explainability Modal (#38). |
 | **Phase 10** | **Offensive AI — AI Attack Planner (Máy 2)** | AI/ML & Red Team (Member B) | **NOT STARTED** | AI Attack Planner Agent trên Máy 2, trinh sát OpenAPI, sinh payload né tránh (Adaptive Evasion) qua mạng LAN. |
 | **Phase 11** | **System Evaluation & Comparison** | ML/Data & Red Team (Member B & A) | **NOT STARTED** | So sánh Rule vs ML vs Anomaly vs Hybrid, Evasion test, Benchmark. |
@@ -173,6 +173,35 @@ Tài liệu theo dõi trạng thái thực hiện các giai đoạn phát triể
 
 * **Kiểm thử & Xác minh (Tests & Verification):**
   * `pytest gateway/tests/`: **56/56 tests PASSED (100%)**.
+  * `ruff check gateway/`: **0 errors**.
+  * `npm.cmd run build`: **Next.js static generation 4/4 passed (0 errors)**.
+
+---
+
+### Phase 8 — Rate Limiting & Sliding Window Tracker (COMPLETED 100% ✅)
+
+* **Mục tiêu (Objectives):**
+  * Xây dựng bộ kiểm soát tần suất request theo địa chỉ IP với thuật toán cửa sổ trượt (Sliding Window) 60 giây trong bộ nhớ RAM ($O(1)$ deque).
+  * Khắc phục nhược điểm "Traffic Spike at Boundary" của thuật toán Fixed Window.
+  * Phân tách hạn ngạch theo Endpoint Scoping (OWASP API4:2023):
+    * `auth`: 10 req/min (Chống Brute-force mật khẩu & Credential Stuffing).
+    * `admin`: 15 req/min (Chống lạm dụng API quản trị).
+    * `files`: 20 req/min (Chống cạn kiệt tài nguyên I/O download).
+    * `global`: 60 req/min (Hạn mức chung cho toàn bộ hệ thống).
+  * Áp dụng hình phạt rủi ro (Risk Penalty) siết chặt 50% hạn ngạch khi request bị gắn cờ `RATE_LIMIT` từ Decision Engine (Phase 7).
+  * Thực thi tự động phản hồi `HTTP 429 Too Many Requests` kèm headers chuẩn RFC 6585 & NIST SP 800-115: `Retry-After: <seconds>`, `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`.
+  * Tự động lưu vết sự kiện `RATE_LIMIT_EXCEEDED` vào bảng `security_events` để theo dõi trên Dashboard.
+
+* **Sản phẩm bàn giao (Deliverables):**
+  * `gateway/app/security/rate_limiter.py`: `SlidingWindowRateLimiter` và `RateLimitResult` (Task 8.1 - #33).
+  * `gateway/app/api/proxy.py`: Tích hợp kiểm tra rate limit, ngắt luồng trả về 429 và gắn headers rate limit khi forward (Task 8.2 - #34).
+  * `gateway/app/services/security.py`: Phương thức `record_rate_limit` lưu vết kiểm toán an ninh.
+  * `docs/ACADEMIC_MAPPING_PHASES.md`: Bảng đối chiếu cơ sở khoa học chi tiết 20 bài báo tham khảo theo từng Phase và từng Task.
+  * `gateway/tests/test_rate_limiter.py`: 8 unit tests kiểm thử logic cửa sổ trượt, scoping, expiration, memory cleanup, thread safety.
+  * `gateway/tests/test_rate_limit_integration.py`: 2 integration tests kiểm thử chặn 429 trong Active mode và cho phép qua trong Monitor mode.
+
+* **Kiểm thử & Xác minh (Tests & Verification):**
+  * `pytest gateway/tests/`: **66/66 tests PASSED (100%)**.
   * `ruff check gateway/`: **0 errors**.
   * `npm.cmd run build`: **Next.js static generation 4/4 passed (0 errors)**.
 

@@ -10,6 +10,7 @@ from app.db.models import WafConfigModel
 from app.db.session import get_db
 from app.security.decision import DecisionEngine, PolicyAction
 from app.security.engine import RuleEngine
+from app.security.rate_limiter import SlidingWindowRateLimiter
 from app.security.risk_engine import RiskEngine
 from app.services.proxy import ProxyService
 from app.services.security import SecurityEventService
@@ -23,6 +24,7 @@ router = APIRouter(tags=["Proxy"])
 _rule_engine = RuleEngine()
 _risk_engine = RiskEngine()
 _decision_engine = DecisionEngine()
+_rate_limiter = SlidingWindowRateLimiter()
 
 
 def get_proxy_service(
@@ -49,6 +51,11 @@ def get_decision_engine() -> DecisionEngine:
     return _decision_engine
 
 
+def get_rate_limiter() -> SlidingWindowRateLimiter:
+    """Dependency injecting the in-memory sliding window rate limiter instance."""
+    return _rate_limiter
+
+
 @router.api_route(
     "/api/proxy/{path:path}",
     methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"],
@@ -67,6 +74,7 @@ async def proxy_endpoint(
     rule_engine: RuleEngine = Depends(get_rule_engine),
     risk_engine: RiskEngine = Depends(get_risk_engine),
     decision_engine: DecisionEngine = Depends(get_decision_engine),
+    rate_limiter: SlidingWindowRateLimiter = Depends(get_rate_limiter),
     settings: Settings = Depends(get_settings),
 ) -> Response:
     """Handles signature inspection, reverse proxying, and DB persistence (non-blocking)."""
@@ -88,9 +96,93 @@ async def proxy_endpoint(
     except Exception:
         pass
 
+    # 3. Phase 8: In-Memory Sliding Window Rate Limiting (API4:2023, ModSecurity CRS v4.0)
+    rate_limit_result = None
+    if active_waf_mode != "OFF":
+        rate_limit_result = rate_limiter.check_rate_limit(
+            client_ip=client_ip,
+            path=f"/{path}",
+        )
+
+        if rate_limit_result.is_limited:
+            if active_waf_mode in ("MONITOR_ONLY", "MONITOR"):
+                SecurityEventService.record_rate_limit(
+                    db=db,
+                    request_id=request_id,
+                    client_ip=client_ip,
+                    scope=rate_limit_result.scope,
+                    current_count=rate_limit_result.current_count,
+                    limit=rate_limit_result.limit,
+                    retry_after=rate_limit_result.retry_after,
+                    action="DETECTED",
+                )
+            else:
+                SecurityEventService.record_rate_limit(
+                    db=db,
+                    request_id=request_id,
+                    client_ip=client_ip,
+                    scope=rate_limit_result.scope,
+                    current_count=rate_limit_result.current_count,
+                    limit=rate_limit_result.limit,
+                    retry_after=rate_limit_result.retry_after,
+                    action="RATE_LIMIT",
+                )
+
+                rate_limit_body = json.dumps({
+                    "blocked": True,
+                    "status": 429,
+                    "error": "RATE_LIMIT_EXCEEDED",
+                    "message": "Rate limit exceeded. Temporary access restricted by [SHIELD] WAF.",
+                    "request_id": request_id,
+                    "client_ip": client_ip,
+                    "scope": rate_limit_result.scope,
+                    "limit": rate_limit_result.limit,
+                    "current_count": rate_limit_result.current_count,
+                    "retry_after": rate_limit_result.retry_after,
+                    "window_seconds": rate_limit_result.window_seconds,
+                }).encode("utf-8")
+
+                response = Response(
+                    content=rate_limit_body,
+                    status_code=429,
+                    media_type="application/json",
+                    headers={
+                        "Retry-After": str(rate_limit_result.retry_after),
+                        "X-RateLimit-Limit": str(rate_limit_result.limit),
+                        "X-RateLimit-Remaining": "0",
+                        "X-RateLimit-Reset": str(rate_limit_result.retry_after),
+                        "X-Request-ID": request_id,
+                        "X-WAF-Action": "RATE_LIMIT",
+                        "X-WAF-Decision": "RATE_LIMIT",
+                        "X-WAF-Risk-Score": "75.0",
+                        "X-WAF-Mode": active_waf_mode,
+                    },
+                )
+
+                try:
+                    TrafficService.record_traffic(
+                        db=db,
+                        request_id=request_id,
+                        client_ip=client_ip,
+                        user_agent=user_agent,
+                        method=request.method,
+                        url=str(request.url),
+                        path=f"/{path}",
+                        headers=dict(request.headers),
+                        query_params=query_str,
+                        body_bytes=body_bytes,
+                        response_status=429,
+                        response_time_ms=1.0,
+                        response_size=len(rate_limit_body),
+                    )
+                except Exception as err:
+                    logger.error(f"Failed to record rate limit traffic [{request_id}]: {err}")
+
+                return response
+
     detection_result = None
 
-    # 3. Inspect request through signature Rule Engine
+    # 4. Inspect request through signature Rule Engine
     try:
         detection_result = rule_engine.inspect_request(
             path=f"/{path}",
@@ -188,6 +280,10 @@ async def proxy_endpoint(
         response.headers["X-WAF-Action"] = decision.action.value
         response.headers["X-WAF-Decision"] = decision.action.value
         response.headers["X-WAF-Risk-Score"] = str(decision.risk_score)
+        if rate_limit_result:
+            response.headers["X-RateLimit-Limit"] = str(rate_limit_result.limit)
+            response.headers["X-RateLimit-Remaining"] = str(rate_limit_result.remaining)
+            response.headers["X-RateLimit-Reset"] = str(rate_limit_result.retry_after)
 
     # 5. Persist traffic metadata in SQLite
     try:

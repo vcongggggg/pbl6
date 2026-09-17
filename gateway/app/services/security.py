@@ -113,3 +113,66 @@ class SecurityEventService:
                 f"Failed to persist security event for request [{request_id}]: {err}"
             )
             return None
+
+    @staticmethod
+    def record_rate_limit(
+        db: Session,
+        request_id: str,
+        client_ip: str,
+        scope: str,
+        current_count: int,
+        limit: int,
+        retry_after: int,
+        timestamp: datetime.datetime | None = None,
+        action: str = "RATE_LIMIT",
+        severity: str = "HIGH",
+        risk_score: float = 75.0,
+        details_extra: dict[str, Any] | None = None,
+    ) -> SecurityEvent | None:
+        """Persists a rate limit violation event into the database."""
+        if timestamp is None:
+            timestamp = datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
+
+        event_id = uuid.uuid4().hex
+        details_dict: dict[str, Any] = {
+            "scope": scope,
+            "current_count": current_count,
+            "limit": limit,
+            "retry_after": retry_after,
+            "policy": "SLIDING_WINDOW_RATE_LIMIT",
+            "reason": f"IP exceeded sliding window rate limit for scope '{scope}' ({current_count}/{limit})",
+        }
+        if details_extra:
+            details_dict.update(details_extra)
+
+        event_record = SecurityEvent(
+            event_id=event_id,
+            request_id=request_id,
+            timestamp=timestamp,
+            client_ip=client_ip,
+            attack_type="RATE_LIMIT_EXCEEDED",
+            severity=severity,
+            action=action,
+            risk_score=risk_score,
+            rule_score=0.0,
+            ml_score=None,
+            anomaly_score=None,
+            behavior_score=risk_score,
+            details=json.dumps(details_dict),
+        )
+
+        try:
+            db.add(event_record)
+            db.commit()
+            db.refresh(event_record)
+            logger.info(
+                f"Rate limit event recorded [{event_id}] for request [{request_id}]: "
+                f"IP={client_ip} scope={scope} count={current_count}/{limit}"
+            )
+            return event_record
+        except Exception as err:
+            db.rollback()
+            logger.error(
+                f"Failed to persist rate limit event for request [{request_id}]: {err}"
+            )
+            return None
