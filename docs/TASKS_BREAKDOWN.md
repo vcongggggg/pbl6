@@ -60,12 +60,12 @@ Tài liệu phân rã chi tiết toàn bộ các giai đoạn (Phase 0 → Phase
 
 ### 🔵 PHASE 6: ANOMALY DETECTION — ISOLATION FOREST
 
-| Mã Task | Issue ID | Tên Task Chi Tiết | Phụ Trách | Đầu Ra (Deliverables) |
-| :--- | :---: | :--- | :---: | :--- |
-| **`TASK-6.1`** | `#26` | **Huấn luyện Isolation Forest trên Baseline Benign:** Huấn luyện mô hình chỉ trên dữ liệu hợp lệ để học phân bố lưu lượng chuẩn. | **Thành viên B** | `ml-engine/models/train_iforest.py` |
-| **`TASK-6.2`** | `#27` | **Chuẩn hóa Điểm Bất Thường (Anomaly Score 0–100):** Chuyển đổi raw decision function của Isolation Forest thành thang điểm rủi ro trực quan từ 0 đến 100. | **Thành viên B** | `gateway/app/security/anomaly.py` |
-| **`TASK-6.3`** | `#28` | **Kiểm thử Bắt Tấn Công Zero-Day & Obfuscation:** Đánh giá khả năng phát hiện các payload bị làm rối dị biệt mà Rule Engine và RF bỏ sót. | **Thành viên B** | `docs/reports/anomaly_eval.md` |
-| **`TASK-6.4`** | `#29` | **Tích hợp Anomaly Hook vào Request Pipeline:** Gọi bộ kiểm tra bất thường trong Gateway và ghi nhận trường `anomaly_score` vào `security_events`. | **Thành viên A** | `gateway/app/security/engine.py` |
+| Mã Task | Issue ID | Tên Task Chi Tiết | Phụ Trách | Trạng Thái | Đầu Ra (Deliverables) |
+| :--- | :---: | :--- | :---: | :---: | :--- |
+| **`TASK-6.1`** | `#26` | **Huấn luyện Isolation Forest trên Baseline Benign:** Huấn luyện mô hình chỉ trên dữ liệu hợp lệ để học phân bố lưu lượng chuẩn. | **Thành viên B** | CHƯA BẮT ĐẦU | `ml-engine/models/train_iforest.py` |
+| **`TASK-6.2`** | `#27` | **Chuẩn hóa Điểm Bất Thường (Anomaly Score 0–100):** Chuyển đổi raw decision function của Isolation Forest thành thang điểm rủi ro trực quan từ 0 đến 100. | **Thành viên B** | CHƯA BẮT ĐẦU | `ml-engine/models/train_iforest.py` |
+| **`TASK-6.3`** | `#28` | **Kiểm thử Bắt Tấn Công Zero-Day & Obfuscation:** Đánh giá khả năng phát hiện các payload bị làm rối dị biệt mà Rule Engine và RF bỏ sót. | **Thành viên B** | CHƯA BẮT ĐẦU | `docs/reports/anomaly_eval.md` |
+| **`TASK-6.4`** | `#29` | **Tích hợp Anomaly Hook vào Request Pipeline:** Nạp Isolation Forest trong RAM ($<10\text{ms}$), chuẩn hóa điểm 0-100, tích hợp vào `RiskEngine`, và ghi nhận trường `anomaly_score` vào `security_events`. | **Thành viên A** | **HOÀN THÀNH ✅** | `gateway/app/security/anomaly.py`, `proxy.py` |
 
 ---
 

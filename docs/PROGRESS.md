@@ -15,7 +15,7 @@ Tài liệu theo dõi trạng thái thực hiện các giai đoạn phát triể
 | **Phase 3** | **Feature Engineering** | ML/Data Team (Member B) | **NOT STARTED** | *(RESERVED FOR ML TEAM)* 17 payload features, HTTP & Context features. |
 | **Phase 4** | **Dataset Generation & Lab Traffic** | ML/Data Team (Member B) | **NOT STARTED** | *(RESERVED FOR ML TEAM)* Sinh dữ liệu từ vulnerable-api + SecLists. |
 | **Phase 5** | **Supervised ML — Random Forest** | ML/Data (Member B) & Backend (Member A) | **IN PROGRESS (Task 5.4 COMPLETED ✅)** | Training Tasks 5.1-5.3 (Member B). Gateway ML Inference Service & Resilient Fallback (Member A - Task 5.4 ✅). |
-| **Phase 6** | **Anomaly Detection — Isolation Forest** | ML/Data Team (Member B) | **NOT STARTED** | *(RESERVED FOR ML TEAM)* Behavior window, Isolation Forest anomaly scoring. |
+| **Phase 6** | **Anomaly Detection — Isolation Forest** | ML/Data (Member B) & Backend (Member A) | **IN PROGRESS (Task 6.4 COMPLETED ✅)** | Training Tasks 6.1-6.3 (Member B). Gateway Anomaly Hook & Telemetry Logging (Member A - Task 6.4 ✅). |
 | **Phase 7** | **Hybrid Risk Engine & Decision** | Backend / Security (Member A) | **COMPLETED (100% Tasks 7.1 → 7.3) ✅** | Weighted Risk Score (0–100), Thresholds (ALLOW/MONITOR/RATE_LIMIT/BLOCK), Active 403 Blocking Middleware. |
 | **Phase 8** | **Rate Limiting & Behavior Tracker** | Backend / Security (Member A) | **COMPLETED (100% Tasks 8.1 & 8.2) ✅** | In-Memory Sliding Window 60s trên RAM, HTTP 429 Too Many Requests, Retry-After header, Endpoint Quota Scoping (API4:2023). |
 | **Phase 9** | **Dashboard UI (Next.js)** | Frontend / Tech Lead (Member A) | **COMPLETED (100% Tasks 9.1 → 9.5) ✅** | SOC Dashboard, 5 KPI cards, Timeline, Distribution, Events table with Client IP origin, Payload Drawer, Quick Simulator, Reset Demo, Detection Explainability Modal (#38). |
@@ -224,6 +224,32 @@ Tài liệu theo dõi trạng thái thực hiện các giai đoạn phát triể
 
 * **Kiểm thử & Xác minh (Tests & Verification):**
   * `pytest gateway/tests/`: **73/73 tests PASSED (100%)**.
+  * `ruff check gateway/`: **0 errors**.
+  * `npm.cmd run build`: **Next.js static generation 4/4 passed (0 errors)**.
+
+---
+
+### Phase 6 — Task 6.4: Gateway Anomaly Detection Hook & Realtime Logging (COMPLETED ✅)
+
+* **Mục tiêu (Objectives):**
+  * Hoàn thiện mảnh ghép thứ 3 trong bộ ba phòng thủ đa tầng WAF Hybrid: Signature Rule (40%) + Supervised Random Forest (35%) + Unsupervised Isolation Forest (25%) theo [MDPI Electronics 2025](file:///c:/Study/HocKy6/PBL6/docs/REFERENCES.md#ref-09).
+  * Xây dựng service `AnomalyDetector` (`gateway/app/security/anomaly.py`) nạp sẵn mô hình Isolation Forest trong bộ nhớ RAM ($< 10\text{ms}$).
+  * Thiết lập cơ chế chuẩn hóa điểm rủi ro liên tục từng đoạn (Piecewise continuous normalization):
+    * $raw \ge 0$ (Inlier): $\max(0.0, 30.0 - raw \times 300.0) \in [0, 30]$ (`ALLOW`).
+    * $raw < 0$ (Outlier): $\min(100.0, 30.0 + |raw| \times 850.0) \in [30, 100]$ (`MONITOR`, `RATE_LIMIT`, `BLOCK`).
+  * Cơ chế chống chịu lỗi (Resilient Fallback - NIST SP 800-115): Khi Thành viên B chưa huấn luyện xong file model `iforest_model.joblib`, Gateway tự động fallback an toàn, co giãn động trọng số mà không làm gián đoạn hệ thống. Khi file xuất hiện, Gateway tự động nạp nóng (Hot-reload).
+  * Tích hợp `anomaly_score` vào `RiskEngine.calculate_weighted_score()` và lưu vết vào cột `anomaly_score` của bảng `security_events` trong SQLite phục vụ hiển thị trên Explainability Modal (#38).
+  * Gắn headers đo lường `X-WAF-Anomaly-Score` và `X-WAF-Anomaly-Latency`.
+
+* **Sản phẩm bàn giao (Deliverables):**
+  * `gateway/app/security/anomaly.py`: `AnomalyDetector`, `AnomalyResult`, `get_anomaly_detector` (Task 6.4 - #29).
+  * `gateway/app/api/proxy.py`: Tích hợp dự đoán bất thường, nạp điểm `anomaly_score` vào `RiskEngine`, và gắn headers telemetry.
+  * `gateway/app/security/__init__.py`: Export chuẩn hóa `AnomalyDetector` và `AnomalyResult`.
+  * `gateway/tests/test_anomaly_detector.py`: 4 unit tests kiểm thử fallback khi thiếu model, trích xuất 17 features, chuẩn hóa điểm số, độ trễ $<10\text{ms}$, và hot reload.
+  * `gateway/tests/test_anomaly_integration.py`: 2 integration tests kiểm thử Gateway với fallback và active model.
+
+* **Kiểm thử & Xác minh (Tests & Verification):**
+  * `pytest gateway/tests/`: **79/79 tests PASSED (100%)**.
   * `ruff check gateway/`: **0 errors**.
   * `npm.cmd run build`: **Next.js static generation 4/4 passed (0 errors)**.
 

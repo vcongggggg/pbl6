@@ -8,6 +8,7 @@ from app.core.config import Settings, get_settings
 from app.core.request_id import resolve_request_id
 from app.db.models import WafConfigModel
 from app.db.session import get_db
+from app.security.anomaly import AnomalyDetector, get_anomaly_detector
 from app.security.decision import DecisionEngine, PolicyAction
 from app.security.engine import RuleEngine
 from app.security.ml_detector import MLDetector
@@ -27,6 +28,7 @@ _risk_engine = RiskEngine()
 _decision_engine = DecisionEngine()
 _rate_limiter = SlidingWindowRateLimiter()
 _ml_detector = MLDetector()
+_anomaly_detector = get_anomaly_detector()
 
 
 def get_proxy_service(
@@ -63,6 +65,11 @@ def get_ml_detector() -> MLDetector:
     return _ml_detector
 
 
+def get_anomaly_detector_dep() -> AnomalyDetector:
+    """Dependency injecting the anomaly detection service instance."""
+    return _anomaly_detector
+
+
 @router.api_route(
     "/api/proxy/{path:path}",
     methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"],
@@ -83,6 +90,7 @@ async def proxy_endpoint(
     decision_engine: DecisionEngine = Depends(get_decision_engine),
     rate_limiter: SlidingWindowRateLimiter = Depends(get_rate_limiter),
     ml_detector: MLDetector = Depends(get_ml_detector),
+    anomaly_detector: AnomalyDetector = Depends(get_anomaly_detector_dep),
     settings: Settings = Depends(get_settings),
 ) -> Response:
     """Handles signature inspection, reverse proxying, and DB persistence (non-blocking)."""
@@ -201,18 +209,21 @@ async def proxy_endpoint(
     except Exception as sec_err:
         logger.error(f"Security inspection failed for request [{request_id}]: {sec_err}")
 
-    # 5. Task 5.4: Machine Learning Inference (Random Forest, <15ms latency)
+    # 5. Task 5.4 & Task 6.4: AI/ML Inference (Random Forest & Isolation Forest)
     body_text = body_bytes.decode("utf-8", errors="ignore") if body_bytes else ""
     payload_content = f"/{path} {query_str or ''} {body_text}".strip()
     ml_result = ml_detector.predict(payload_content)
     rf_score = ml_result.risk_score if ml_result.model_loaded else None
+
+    anomaly_result = anomaly_detector.predict(payload_content)
+    anomaly_score = anomaly_result.anomaly_score if anomaly_result.model_loaded else None
 
     # 6. Phase 7: Calculate Weighted Risk Score (Rule 40% + RF 35% + IF 25%)
     rule_score = detection_result.rule_risk_score if detection_result else 0.0
     risk_breakdown = risk_engine.calculate_weighted_score(
         rule_score=rule_score,
         rf_score=rf_score,
-        anomaly_score=None,
+        anomaly_score=anomaly_score,
     )
 
     # 7. Phase 7: Evaluate Multi-Threshold Policy Decision
@@ -246,6 +257,7 @@ async def proxy_endpoint(
                 "reason": decision.reason,
                 "breakdown": risk_breakdown.to_dict(),
                 "ml_inference": ml_result.to_dict() if ml_result.model_loaded else None,
+                "anomaly_inference": anomaly_result.to_dict() if anomaly_result.model_loaded else None,
             },
         )
 
@@ -280,6 +292,9 @@ async def proxy_endpoint(
             block_headers["X-WAF-ML-Score"] = str(ml_result.risk_score)
             block_headers["X-WAF-ML-Type"] = ml_result.attack_type
             block_headers["X-WAF-ML-Latency"] = f"{ml_result.latency_ms}ms"
+        if anomaly_result and anomaly_result.model_loaded:
+            block_headers["X-WAF-Anomaly-Score"] = str(anomaly_result.anomaly_score)
+            block_headers["X-WAF-Anomaly-Latency"] = f"{anomaly_result.latency_ms}ms"
 
         response = Response(
             content=block_content,
@@ -309,6 +324,9 @@ async def proxy_endpoint(
             response.headers["X-WAF-ML-Score"] = str(ml_result.risk_score)
             response.headers["X-WAF-ML-Type"] = ml_result.attack_type
             response.headers["X-WAF-ML-Latency"] = f"{ml_result.latency_ms}ms"
+        if anomaly_result and anomaly_result.model_loaded:
+            response.headers["X-WAF-Anomaly-Score"] = str(anomaly_result.anomaly_score)
+            response.headers["X-WAF-Anomaly-Latency"] = f"{anomaly_result.latency_ms}ms"
 
     # 5. Persist traffic metadata in SQLite
     try:

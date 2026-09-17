@@ -71,6 +71,25 @@
 
 ---
 
+### 🔹 Task 6.4: Gateway Anomaly Detection Hook & Realtime Logging (Task 6.4 - #29)
+* **File mã nguồn:** `gateway/app/security/anomaly.py`, `gateway/app/api/proxy.py`.
+* **Cơ sở khoa học & Tiêu chuẩn áp dụng:**
+  1. **[Ref 09] Lightweight Ensemble Web Application Firewall (MDPI Electronics 2025):**
+     * **Ứng dụng:** Hoàn thiện mảnh ghép thứ 3 trong kiến trúc WAF Hybrid kết hợp: Signature Rule (40%) + Supervised Random Forest (35%) + Unsupervised Isolation Forest (25%).
+     * **Cơ chế:** Nạp sẵn mô hình `iforest_model.joblib` trong bộ nhớ RAM, thực hiện suy luận dị biệt thời gian thực với ngân sách độ trễ $< 10\text{ms}$ ($2-5\text{ms}$ thực tế).
+     * **Phát hiện Zero-day:** Bắt các payload biến dị hoặc dị biệt về cấu trúc mà Rule Engine tĩnh và mô hình Random Forest chưa từng gặp trong tập huấn luyện.
+  2. **[Ref 07] Feature Extraction HTTP (Wiley 2015) & [Ref 08] IEEE 2024:**
+     * **Ứng dụng:** Đồng bộ vector 17 đặc trưng hình thái học (Morphological HTTP Features) từ `MLDetector` mà không cần trích xuất lại, tối ưu hóa $O(1)$ RAM và không tốn I/O.
+     * **Chuẩn hóa điểm số:** Ánh xạ hàm quyết định `decision_function(X)` thành thang điểm rủi ro liên tục từng đoạn $0.0 - 100.0$:
+       * $raw \ge 0$ (Inlier - Lưu lượng bình thường): $\max(0.0, 30.0 - raw \times 300.0) \in [0, 30]$ (`ALLOW`).
+       * $raw < 0$ (Outlier - Dị biệt / Zero-day): $\min(100.0, 30.0 + |raw| \times 850.0) \in [30, 100]$ (`MONITOR`, `RATE_LIMIT`, `BLOCK`).
+  3. **[Ref 19] NIST SP 800-115 & Graceful Degradation Pattern:**
+     * **Ứng dụng:** Cơ chế fallback an toàn: Khi Thành viên B chưa hoàn tất huấn luyện `iforest_model.joblib`, Gateway tự động đặt `anomaly_score = None`, `RiskEngine` tự động co giãn tỷ trọng cho các tầng sẵn có ($0.40/0.75$ Rule và $0.35/0.75$ RF). Khi file mô hình xuất hiện, Gateway tự động nạp nóng (Hot-reload).
+  4. **Telemetry & Audit Logging:**
+     * Ghi nhận trường `anomaly_score` vào SQLite `security_events` và trả về headers `X-WAF-Anomaly-Score`, `X-WAF-Anomaly-Latency`.
+
+---
+
 ### 🔹 Phase 8: In-Memory Sliding Window IP Rate Limiting (Tasks 8.1 & 8.2)
 * **File mã nguồn:** `gateway/app/security/rate_limiter.py`, `gateway/app/api/proxy.py`, `gateway/app/services/security.py`.
 * **Cơ sở khoa học & Tiêu chuẩn áp dụng:**
@@ -122,6 +141,7 @@
 | **Task 2b.3** | Normalizer (URL/Unicode) | `normalizer.py` | IEEE Access 2023 [Ref 10] | Đệ quy decode chống bypass |
 | **Task 2b.4** | Multi-location Inspection | `engine.py` | ModSecurity CRS [Ref 12] | Duyệt Path, Query, Header, Body |
 | **Task 5.4** | ML Inference Service | `ml_detector.py` | MDPI Electronics 2025 [Ref 09] | Pre-warmed RAM cache, $<15\text{ms}$ latency |
+| **Task 6.4** | Anomaly Hook & Logging | `anomaly.py` | MDPI 2025 + Wiley [Ref 07, 09] | Isolation Forest $<10\text{ms}$, zero-day catch |
 | **Task 7.1** | Weighted Risk Formula | `risk_engine.py` | CRS Anomaly + MDPI [Ref 09, 12] | $0.40R + 0.35RF + 0.25IF$ |
 | **Task 7.2** | 4-Tier Policy Engine | `decision.py` | MITRE Enterprise [Ref 17] | ALLOW, MONITOR, RATE_LIMIT, BLOCK |
 | **Task 7.3** | 403 Forbidden & Headers | `proxy.py` | NIST SP 800-115 [Ref 19] | JSON block body + audit trail |

@@ -1,3 +1,4 @@
+from app.security.anomaly import AnomalyDetector, AnomalyResult, get_anomaly_detector
 from app.security.decision import DecisionEngine, DecisionResult, PolicyAction
 from app.security.engine import RuleEngine
 from app.security.ml_detector import MLDetector, MLPredictionResult
@@ -23,6 +24,8 @@ from app.security.rules import (
 from app.security.scoring import RuleScorer
 
 __all__ = [
+    "AnomalyDetector",
+    "AnomalyResult",
     "AttackType",
     "BaseRule",
     "DecisionEngine",
@@ -43,6 +46,7 @@ __all__ = [
     "Severity",
     "SlidingWindowRateLimiter",
     "get_all_rules",
+    "get_anomaly_detector",
     "get_command_injection_rules",
     "get_path_traversal_rules",
     "get_sqli_rules",
