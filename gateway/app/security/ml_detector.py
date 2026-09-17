@@ -6,7 +6,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-import joblib
+try:
+    import joblib
+except ImportError:
+    joblib = None
 
 logger = logging.getLogger("waf.gateway.security.ml_detector")
 
@@ -189,6 +192,10 @@ class MLDetector:
 
     def load_model(self, path: str | Path) -> bool:
         """Loads a serialized joblib model into memory."""
+        if joblib is None:
+            logger.warning("joblib is not installed in the current environment. Unable to load model.")
+            return False
+
         resolved = Path(path).resolve()
         if not resolved.exists():
             logger.warning(f"Model file not found at: {resolved}")
