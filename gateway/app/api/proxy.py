@@ -10,6 +10,7 @@ from app.db.models import WafConfigModel
 from app.db.session import get_db
 from app.security.decision import DecisionEngine, PolicyAction
 from app.security.engine import RuleEngine
+from app.security.ml_detector import MLDetector
 from app.security.rate_limiter import SlidingWindowRateLimiter
 from app.security.risk_engine import RiskEngine
 from app.services.proxy import ProxyService
@@ -25,6 +26,7 @@ _rule_engine = RuleEngine()
 _risk_engine = RiskEngine()
 _decision_engine = DecisionEngine()
 _rate_limiter = SlidingWindowRateLimiter()
+_ml_detector = MLDetector()
 
 
 def get_proxy_service(
@@ -56,6 +58,11 @@ def get_rate_limiter() -> SlidingWindowRateLimiter:
     return _rate_limiter
 
 
+def get_ml_detector() -> MLDetector:
+    """Dependency injecting the machine learning inference service instance."""
+    return _ml_detector
+
+
 @router.api_route(
     "/api/proxy/{path:path}",
     methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"],
@@ -75,6 +82,7 @@ async def proxy_endpoint(
     risk_engine: RiskEngine = Depends(get_risk_engine),
     decision_engine: DecisionEngine = Depends(get_decision_engine),
     rate_limiter: SlidingWindowRateLimiter = Depends(get_rate_limiter),
+    ml_detector: MLDetector = Depends(get_ml_detector),
     settings: Settings = Depends(get_settings),
 ) -> Response:
     """Handles signature inspection, reverse proxying, and DB persistence (non-blocking)."""
@@ -193,21 +201,27 @@ async def proxy_endpoint(
     except Exception as sec_err:
         logger.error(f"Security inspection failed for request [{request_id}]: {sec_err}")
 
-    # 4. Phase 7: Calculate Weighted Risk Score (Rule 40% + RF 35% + IF 25%)
+    # 5. Task 5.4: Machine Learning Inference (Random Forest, <15ms latency)
+    body_text = body_bytes.decode("utf-8", errors="ignore") if body_bytes else ""
+    payload_content = f"/{path} {query_str or ''} {body_text}".strip()
+    ml_result = ml_detector.predict(payload_content)
+    rf_score = ml_result.risk_score if ml_result.model_loaded else None
+
+    # 6. Phase 7: Calculate Weighted Risk Score (Rule 40% + RF 35% + IF 25%)
     rule_score = detection_result.rule_risk_score if detection_result else 0.0
     risk_breakdown = risk_engine.calculate_weighted_score(
         rule_score=rule_score,
-        rf_score=None,
+        rf_score=rf_score,
         anomaly_score=None,
     )
 
-    # 5. Phase 7: Evaluate Multi-Threshold Policy Decision
+    # 7. Phase 7: Evaluate Multi-Threshold Policy Decision
     decision = decision_engine.evaluate(
         risk_breakdown=risk_breakdown,
         waf_mode=active_waf_mode,
     )
 
-    # 6. Persist security event if attacks were detected or elevated risk observed
+    # 8. Persist security event if attacks were detected or elevated risk observed
     if detection_result and (detection_result.is_attack or decision.action != PolicyAction.ALLOW):
         action_label = (
             "BLOCKED"
@@ -231,6 +245,7 @@ async def proxy_endpoint(
                 "decision": decision.action.value,
                 "reason": decision.reason,
                 "breakdown": risk_breakdown.to_dict(),
+                "ml_inference": ml_result.to_dict() if ml_result.model_loaded else None,
             },
         )
 
@@ -254,17 +269,23 @@ async def proxy_endpoint(
             "reason": decision.reason,
         }).encode("utf-8")
 
+        block_headers = {
+            "X-Request-ID": request_id,
+            "X-WAF-Action": "BLOCKED",
+            "X-WAF-Decision": decision.action.value,
+            "X-WAF-Risk-Score": str(decision.risk_score),
+            "X-WAF-Mode": active_waf_mode,
+        }
+        if ml_result and ml_result.model_loaded:
+            block_headers["X-WAF-ML-Score"] = str(ml_result.risk_score)
+            block_headers["X-WAF-ML-Type"] = ml_result.attack_type
+            block_headers["X-WAF-ML-Latency"] = f"{ml_result.latency_ms}ms"
+
         response = Response(
             content=block_content,
             status_code=403,
             media_type="application/json",
-            headers={
-                "X-Request-ID": request_id,
-                "X-WAF-Action": "BLOCKED",
-                "X-WAF-Decision": decision.action.value,
-                "X-WAF-Risk-Score": str(decision.risk_score),
-                "X-WAF-Mode": active_waf_mode,
-            },
+            headers=block_headers,
         )
         latency_ms = 1.2
         response_size = len(block_content)
@@ -284,6 +305,10 @@ async def proxy_endpoint(
             response.headers["X-RateLimit-Limit"] = str(rate_limit_result.limit)
             response.headers["X-RateLimit-Remaining"] = str(rate_limit_result.remaining)
             response.headers["X-RateLimit-Reset"] = str(rate_limit_result.retry_after)
+        if ml_result and ml_result.model_loaded:
+            response.headers["X-WAF-ML-Score"] = str(ml_result.risk_score)
+            response.headers["X-WAF-ML-Type"] = ml_result.attack_type
+            response.headers["X-WAF-ML-Latency"] = f"{ml_result.latency_ms}ms"
 
     # 5. Persist traffic metadata in SQLite
     try:

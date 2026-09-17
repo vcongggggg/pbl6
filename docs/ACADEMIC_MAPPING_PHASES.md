@@ -58,6 +58,19 @@
 
 ---
 
+### 🔹 Task 5.4: FastAPI Gateway ML Inference Service Integration (Task 5.4 - #25)
+* **File mã nguồn:** `gateway/app/security/ml_detector.py`, `gateway/app/api/proxy.py`.
+* **Cơ sở khoa học & Tiêu chuẩn áp dụng:**
+  1. **[Ref 09] Lightweight Ensemble Web Application Firewall (MDPI Electronics 2025):**
+     * **Ứng dụng:** Nạp sẵn mô hình học máy vào bộ nhớ RAM (Pre-warmed Model Caching), tối ưu hóa thời gian dự đoán với ngân sách độ trễ $< 15\text{ms}$ cho mỗi request.
+     * **Cơ chế:** Xuất vector phân bố xác suất `probabilities`, xác định lớp tấn công chiếm ưu thế (`SQLI`, `XSS`, `PATH_TRAVERSAL`, `COMMAND_INJECTION`, `BENIGN`), và ánh xạ độ tin cậy thành điểm rủi ro `rf_score` tích hợp trực tiếp vào công thức trọng số 35% của Phase 7.
+  2. **[Ref 07] Feature Extraction HTTP (Wiley 2015) & [Ref 08] IEEE 2024:**
+     * **Ứng dụng:** Bộ trích xuất 17 đặc trưng hình thái học (Morphological Features) siêu nhanh ($< 0.1\text{ms}$): Chiều dài chuỗi, Shannon entropy, số lượng dấu nháy đơn/kép, dấu ngoặc, tỷ lệ ký tự đặc biệt, và số lượng từ khóa/regex đặc trưng.
+  3. **[Ref 19] NIST SP 800-115 & Graceful Degradation Pattern:**
+     * **Ứng dụng:** Cơ chế fallback tự động (Resilient Fallback): khi Thành viên B chưa huấn luyện xong file model `rf_model.joblib`, Gateway không bị crash mà tự động chuyển sang chế độ Rule-only và ghi log cảnh báo; khi file mô hình xuất hiện, Gateway lập tức nạp nóng (Hot-reload) mà không cần khởi động lại.
+
+---
+
 ### 🔹 Phase 8: In-Memory Sliding Window IP Rate Limiting (Tasks 8.1 & 8.2)
 * **File mã nguồn:** `gateway/app/security/rate_limiter.py`, `gateway/app/api/proxy.py`, `gateway/app/services/security.py`.
 * **Cơ sở khoa học & Tiêu chuẩn áp dụng:**
@@ -108,6 +121,7 @@
 | **Task 2b.2** | Command Inj & Traversal | `rules.py` | ModSecurity CRS v4.0 [Ref 12] | Regex 930xxx, 932xxx |
 | **Task 2b.3** | Normalizer (URL/Unicode) | `normalizer.py` | IEEE Access 2023 [Ref 10] | Đệ quy decode chống bypass |
 | **Task 2b.4** | Multi-location Inspection | `engine.py` | ModSecurity CRS [Ref 12] | Duyệt Path, Query, Header, Body |
+| **Task 5.4** | ML Inference Service | `ml_detector.py` | MDPI Electronics 2025 [Ref 09] | Pre-warmed RAM cache, $<15\text{ms}$ latency |
 | **Task 7.1** | Weighted Risk Formula | `risk_engine.py` | CRS Anomaly + MDPI [Ref 09, 12] | $0.40R + 0.35RF + 0.25IF$ |
 | **Task 7.2** | 4-Tier Policy Engine | `decision.py` | MITRE Enterprise [Ref 17] | ALLOW, MONITOR, RATE_LIMIT, BLOCK |
 | **Task 7.3** | 403 Forbidden & Headers | `proxy.py` | NIST SP 800-115 [Ref 19] | JSON block body + audit trail |

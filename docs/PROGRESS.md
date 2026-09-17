@@ -14,7 +14,7 @@ Tài liệu theo dõi trạng thái thực hiện các giai đoạn phát triể
 | **Phase 2B**| **Custom Vulnerable Web API (`vulnerable-api`)** | Tech Lead (Member A) | **COMPLETED ✅** | Tự xây dựng Web API mục tiêu (Bookie Bookstore - 8 kịch bản lỗ hổng chuẩn OWASP Web & API Top 10 + OpenAPI Recon) thay thế Juice Shop theo chỉ đạo của Thầy. |
 | **Phase 3** | **Feature Engineering** | ML/Data Team (Member B) | **NOT STARTED** | *(RESERVED FOR ML TEAM)* 17 payload features, HTTP & Context features. |
 | **Phase 4** | **Dataset Generation & Lab Traffic** | ML/Data Team (Member B) | **NOT STARTED** | *(RESERVED FOR ML TEAM)* Sinh dữ liệu từ vulnerable-api + SecLists. |
-| **Phase 5** | **Supervised ML — Random Forest** | ML/Data Team (Member B) | **NOT STARTED** | *(RESERVED FOR ML TEAM)* Training, Multiclass, Evaluation, Serialization (`.joblib`). |
+| **Phase 5** | **Supervised ML — Random Forest** | ML/Data (Member B) & Backend (Member A) | **IN PROGRESS (Task 5.4 COMPLETED ✅)** | Training Tasks 5.1-5.3 (Member B). Gateway ML Inference Service & Resilient Fallback (Member A - Task 5.4 ✅). |
 | **Phase 6** | **Anomaly Detection — Isolation Forest** | ML/Data Team (Member B) | **NOT STARTED** | *(RESERVED FOR ML TEAM)* Behavior window, Isolation Forest anomaly scoring. |
 | **Phase 7** | **Hybrid Risk Engine & Decision** | Backend / Security (Member A) | **COMPLETED (100% Tasks 7.1 → 7.3) ✅** | Weighted Risk Score (0–100), Thresholds (ALLOW/MONITOR/RATE_LIMIT/BLOCK), Active 403 Blocking Middleware. |
 | **Phase 8** | **Rate Limiting & Behavior Tracker** | Backend / Security (Member A) | **COMPLETED (100% Tasks 8.1 & 8.2) ✅** | In-Memory Sliding Window 60s trên RAM, HTTP 429 Too Many Requests, Retry-After header, Endpoint Quota Scoping (API4:2023). |
@@ -202,6 +202,28 @@ Tài liệu theo dõi trạng thái thực hiện các giai đoạn phát triể
 
 * **Kiểm thử & Xác minh (Tests & Verification):**
   * `pytest gateway/tests/`: **66/66 tests PASSED (100%)**.
+  * `ruff check gateway/`: **0 errors**.
+  * `npm.cmd run build`: **Next.js static generation 4/4 passed (0 errors)**.
+
+---
+
+### Phase 5 — Task 5.4: FastAPI Gateway ML Inference Service Integration (COMPLETED ✅)
+
+* **Mục tiêu (Objectives):**
+  * Xây dựng tầng suy luận máy học (Inference Service) trong RAM cho Gateway với ngân sách độ trễ $< 15\text{ms}$ (MDPI Electronics 2025).
+  * Tích hợp bộ trích xuất nhanh 17 đặc trưng hình thái học (Morphological Features) trực tiếp từ payload (<0.1ms).
+  * Thiết lập cơ chế chống chịu lỗi (Resilient Fallback - NIST SP 800-115): Khi Thành viên B chưa huấn luyện xong file model `.joblib`, Gateway tự động fallback an toàn về Rule-only, không crash, và ghi log cảnh báo. Khi có file model, Gateway tự động nạp nóng (Hot-reload).
+  * Tích hợp điểm rủi ro `rf_score` vào bộ tính toán trọng số của `RiskEngine` (Phase 7: $0.40 \times \text{Rule} + 0.35 \times \text{RF} + 0.25 \times \text{Anomaly}$).
+  * Gắn kèm headers đo lường ML telemetry (`X-WAF-ML-Score`, `X-WAF-ML-Type`, `X-WAF-ML-Latency`) và lưu vết `ml_score` vào bảng `security_events` trong SQLite.
+
+* **Sản phẩm bàn giao (Deliverables):**
+  * `gateway/app/security/ml_detector.py`: `MLDetector` và `MLPredictionResult` (Task 5.4 - #25).
+  * `gateway/app/api/proxy.py`: Tích hợp dự đoán ML, nạp điểm `rf_score` vào `RiskEngine`, và gắn headers telemetry.
+  * `gateway/tests/test_ml_detector.py`: 5 unit tests kiểm thử fallback khi thiếu model, trích xuất 17 features, entropy, độ trễ $<15\text{ms}$, và hot reload.
+  * `gateway/tests/test_ml_integration.py`: 2 integration tests kiểm thử Gateway với fallback và active model.
+
+* **Kiểm thử & Xác minh (Tests & Verification):**
+  * `pytest gateway/tests/`: **73/73 tests PASSED (100%)**.
   * `ruff check gateway/`: **0 errors**.
   * `npm.cmd run build`: **Next.js static generation 4/4 passed (0 errors)**.
 

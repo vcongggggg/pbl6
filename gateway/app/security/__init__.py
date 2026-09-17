@@ -1,5 +1,6 @@
 from app.security.decision import DecisionEngine, DecisionResult, PolicyAction
 from app.security.engine import RuleEngine
+from app.security.ml_detector import MLDetector, MLPredictionResult
 from app.security.models import (
     AttackType,
     DetectionResult,
@@ -29,6 +30,8 @@ __all__ = [
     "DetectionResult",
     "InputNormalizer",
     "InspectionLocation",
+    "MLDetector",
+    "MLPredictionResult",
     "PolicyAction",
     "RateLimitResult",
     "RegexRule",
