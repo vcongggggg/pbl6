@@ -205,12 +205,50 @@ EMPIRICAL_MAX_BOUNDS: np.ndarray = np.array(
 
 EMPIRICAL_MIN_BOUNDS: np.ndarray = np.zeros(17, dtype=np.float32)
 
+# Empirical maximum upper bounds for the 23 HTTP context features
+HTTP_EMPIRICAL_MAX_BOUNDS: np.ndarray = np.array(
+    [
+        1.0,      # method_is_get
+        1.0,      # method_is_post
+        1.0,      # method_is_put
+        1.0,      # method_is_delete
+        1.0,      # method_is_patch
+        1.0,      # method_is_other
+        2048.0,   # path_length
+        20.0,     # path_depth
+        2048.0,   # query_length
+        50.0,     # query_param_count
+        10.0,     # query_to_path_ratio
+        65536.0,  # body_length
+        1.0,      # content_type_is_json
+        1.0,      # content_type_is_form
+        1.0,      # content_type_is_multipart
+        1.0,      # content_type_is_xml
+        1.0,      # content_type_is_missing
+        50.0,     # header_count
+        1.0,      # has_authorization
+        1.0,      # has_cookie
+        512.0,    # user_agent_length
+        1.0,      # is_suspicious_user_agent
+        1.0,      # content_length_mismatch
+    ],
+    dtype=np.float32,
+)
+
+HTTP_EMPIRICAL_MIN_BOUNDS: np.ndarray = np.zeros(23, dtype=np.float32)
+
+EXTENDED_EMPIRICAL_MAX_BOUNDS: np.ndarray = np.concatenate(
+    [EMPIRICAL_MAX_BOUNDS, HTTP_EMPIRICAL_MAX_BOUNDS]
+)
+EXTENDED_EMPIRICAL_MIN_BOUNDS: np.ndarray = np.zeros(40, dtype=np.float32)
+
 
 class FeatureNormalizer:
-    """Min-Max normalizer for 17-dimensional feature vectors.
+    """Min-Max normalizer for 17-dimensional or 40-dimensional feature vectors.
 
     Can operate in:
     1. Default empirical mode: Uses standardized domain upper bounds.
+       Automatically adapts to 17-dim canonical or 40-dim extended vectors.
     2. Fitted mode: Learns min and max vectors from training data matrix X.
     """
 
@@ -237,7 +275,7 @@ class FeatureNormalizer:
         self.scale_range = diff
 
     def fit(self, X: np.ndarray) -> FeatureNormalizer:
-        """Fits normalizer bounds from data matrix X (shape: [N, 17])."""
+        """Fits normalizer bounds from data matrix X (shape: [N, 17] or [N, 40])."""
         arr = np.asarray(X, dtype=np.float32)
         if arr.ndim == 1:
             arr = arr.reshape(1, -1)
@@ -251,7 +289,15 @@ class FeatureNormalizer:
     def transform(self, X: np.ndarray) -> np.ndarray:
         """Applies Min-Max scaling to input array X."""
         arr = np.asarray(X, dtype=np.float32)
-        scaled = (arr - self.min_bounds) / self.scale_range
+        # Automatically adapt to 40-dimensional extended vectors when using default bounds
+        if arr.shape[-1] == 40 and len(self.min_bounds) == 17:
+            min_b = EXTENDED_EMPIRICAL_MIN_BOUNDS
+            scale = EXTENDED_EMPIRICAL_MAX_BOUNDS - EXTENDED_EMPIRICAL_MIN_BOUNDS
+            scale[scale == 0.0] = 1.0
+            scaled = (arr - min_b) / scale
+        else:
+            scaled = (arr - self.min_bounds) / self.scale_range
+
         if self.clip:
             scaled = np.clip(scaled, 0.0, 1.0)
         return scaled
@@ -339,10 +385,10 @@ class FeatureExtractorPipeline:
         should_normalize = (
             normalize if normalize is not None else self.normalize_by_default
         )
-        if should_normalize:
-            vec = self.normalizer.transform(vec)
 
         if not include_http_context:
+            if should_normalize:
+                vec = self.normalizer.transform(vec)
             return vec
 
         # Extract HTTP context features
@@ -366,7 +412,11 @@ class FeatureExtractorPipeline:
             )
 
         http_vec = np.array(http_feat.to_list(), dtype=np.float32)
-        return np.concatenate([vec, http_vec])
+        raw_extended = np.concatenate([vec, http_vec])
+
+        if should_normalize:
+            return self.normalizer.transform(raw_extended)
+        return raw_extended
 
     def extract_batch(
         self,

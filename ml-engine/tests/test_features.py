@@ -247,6 +247,22 @@ class TestExtendedMultimodalVector:
         assert vec_ext[17 + 1] == 1.0  # method_is_post (index 1 in HTTPContextFeatures)
         assert vec_ext[17 + 12] == 1.0  # content_type_is_json
 
+    def test_extended_vector_normalization_bounds(self) -> None:
+        sample = {
+            "method": "POST",
+            "path": "/api/v1/vulnerable/books/search",
+            "query_params": "q=union+select",
+            "headers": {"Content-Type": "application/json", "User-Agent": "curl/7.88.1"},
+            "body": "search payload for machine learning security testing",
+        }
+        pipeline = FeatureExtractorPipeline()
+        vec_norm = pipeline.extract_vector(sample, normalize=True, include_http_context=True)
+
+        assert vec_norm.shape == (40,)
+        # All 40 features must be uniformly scaled and bounded in [0.0, 1.0]
+        assert np.all(vec_norm >= 0.0)
+        assert np.all(vec_norm <= 1.0)
+
 
 class TestBatchThroughputAndPerformance:
     """Tests for high-throughput batch feature extraction."""
