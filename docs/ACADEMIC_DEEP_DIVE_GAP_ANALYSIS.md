@@ -164,7 +164,7 @@ graph LR
   * **[ĐÃ CÓ]:** Kịch bản sinh dữ liệu và mô phỏng 5 họ tấn công.
   * **[CHƯA CÓ]:** Nạp dữ liệu thô CSIC 2010 vào thư mục huấn luyện của dự án.
   * **[CÓ THỂ THÊM VÀO - ĐIỂM CỘNG LỚN]:**
-    * Thành viên B (`naocavang08`) trong Phase 4 sẽ tải bộ dữ liệu CSIC 2010 về để trộn cùng log thực tế của `vulnerable-api`, tạo thành tập dataset huấn luyện phong phú với hơn 70.000 bản ghi.
+    * Thành viên A (`vcongggggg`) trong Phase 4 sẽ tải bộ dữ liệu CSIC 2010 về để trộn cùng log thực tế của `vulnerable-api`, tạo thành tập dataset huấn luyện phong phú với hơn 70.000 bản ghi.
 
 ---
 

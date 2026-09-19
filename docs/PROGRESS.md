@@ -12,20 +12,22 @@ Tài liệu theo dõi trạng thái thực hiện các giai đoạn phát triể
 | **Phase 1** | **Infrastructure Setup** | Backend / DevOps (Member A) | **COMPLETED** | Reverse Proxy bất đồng bộ, X-Request-ID, lọc Header, ghi log SQLite, bảo vệ Open Proxy / SSRF, Probe Target Health. |
 | **Phase 2** | **Rule Engine / Signature-Based Detection** | Security Engineer (Member A) | **COMPLETED** | 16 rules tất định (SQLi, XSS, Path Traversal, Command Injection), Input Normalizer, Rule Risk Scoring (0-100), Security Event persistence & traceability. |
 | **Phase 2B**| **Custom Vulnerable Web API (`vulnerable-api`)** | Tech Lead (Member A) | **COMPLETED ✅** | Tự xây dựng Web API mục tiêu (Bookie Bookstore - 8 kịch bản lỗ hổng chuẩn OWASP Web & API Top 10 + OpenAPI Recon) thay thế Juice Shop theo chỉ đạo của Thầy. |
-| **Phase 3** | **Feature Engineering** | ML/Data Team (Member B) | **NOT STARTED** | *(RESERVED FOR ML TEAM)* 17 payload features, HTTP & Context features. |
-| **Phase 4** | **Dataset Generation & Lab Traffic** | ML/Data Team (Member B) | **NOT STARTED** | *(RESERVED FOR ML TEAM)* Sinh dữ liệu từ vulnerable-api + SecLists. |
-| **Phase 5** | **Supervised ML — Random Forest** | ML/Data (Member B) & Backend (Member A) | **IN PROGRESS (Task 5.4 COMPLETED ✅)** | Training Tasks 5.1-5.3 (Member B). Gateway ML Inference Service & Resilient Fallback (Member A - Task 5.4 ✅). |
-| **Phase 6** | **Anomaly Detection — Isolation Forest** | ML/Data (Member B) & Backend (Member A) | **IN PROGRESS (Task 6.4 COMPLETED ✅)** | Training Tasks 6.1-6.3 (Member B). Gateway Anomaly Hook & Telemetry Logging (Member A - Task 6.4 ✅). |
-| **Phase 7** | **Hybrid Risk Engine & Decision** | Backend / Security (Member A) | **COMPLETED (100% Tasks 7.1 → 7.3) ✅** | Weighted Risk Score (0–100), Thresholds (ALLOW/MONITOR/RATE_LIMIT/BLOCK), Active 403 Blocking Middleware. |
-| **Phase 8** | **Rate Limiting & Behavior Tracker** | Backend / Security (Member A) | **COMPLETED (100% Tasks 8.1 & 8.2) ✅** | In-Memory Sliding Window 60s trên RAM, HTTP 429 Too Many Requests, Retry-After header, Endpoint Quota Scoping (API4:2023). |
+| **Phase 3** | **Feature Engineering** | ML/Defense (Member A - `vcongggggg`) | **IN PROGRESS (Next Up) 🚀** | 17 payload features, HTTP & Context features pipeline (`ml-engine/features/`). |
+| **Phase 4** | **Dataset Generation & Lab Traffic** | ML/Defense (Member A - `vcongggggg`) | **NOT STARTED** | Sinh dữ liệu từ vulnerable-api + SecLists/CSIC 2010. |
+| **Phase 5** | **Supervised ML — Random Forest** | ML/Defense (Member A - `vcongggggg`) | **IN PROGRESS (Task 5.4 COMPLETED ✅)** | Training Tasks 5.1-5.3. Gateway ML Inference Service & Resilient Fallback (Task 5.4 ✅ - PR #70). |
+| **Phase 6** | **Anomaly Detection — Isolation Forest** | ML/Defense (Member A - `vcongggggg`) | **IN PROGRESS (Task 6.4 COMPLETED ✅)** | Training Tasks 6.1-6.3. Gateway Anomaly Hook & Telemetry Logging (Task 6.4 ✅ - PR #71). |
+| **Phase 7** | **Hybrid Risk Engine & Decision** | Backend / Security (Member A) | **COMPLETED (100% Tasks 7.1 → 7.3) ✅** | Weighted Risk Score (0–100), Thresholds (ALLOW/MONITOR/RATE_LIMIT/BLOCK), Active 403 Blocking (PR #68). |
+| **Phase 8** | **Rate Limiting & Behavior Tracker** | Backend / Security (Member A) | **COMPLETED (100% Tasks 8.1 & 8.2) ✅** | In-Memory Sliding Window 60s trên RAM, HTTP 429 Too Many Requests, Retry-After header (PR #69). |
 | **Phase 9** | **Dashboard UI (Next.js)** | Frontend / Tech Lead (Member A) | **COMPLETED (100% Tasks 9.1 → 9.5) ✅** | SOC Dashboard, 5 KPI cards, Timeline, Distribution, Events table with Client IP origin, Payload Drawer, Quick Simulator, Reset Demo, Detection Explainability Modal (#38). |
-| **Phase 10** | **Offensive AI — AI Attack Planner (Máy 2)** | AI/ML & Red Team (Member B) | **NOT STARTED** | AI Attack Planner Agent trên Máy 2, trinh sát OpenAPI, sinh payload né tránh (Adaptive Evasion) qua mạng LAN. |
+| **Phase 10** | **Offensive AI — AI Attack Planner & PyTorch RL Model (Máy 2)** | Offensive AI & Red Team (Member B - `naocavang08`) | **NOT STARTED** | AI Attack Planner Agent trên Máy 2: Trinh sát OpenAPI, Môi trường mô phỏng Attack Graph, Mô hình né tránh WAF In-house bằng PyTorch Deep RL DQN (`evasion_agent.pt`), **100% PyTorch, KHÔNG dùng OpenAI API**. |
 | **Phase 11** | **System Evaluation & Comparison** | ML/Data & Red Team (Member B & A) | **NOT STARTED** | So sánh Rule vs ML vs Anomaly vs Hybrid, Evasion test, Benchmark. |
 | **Phase 12** | **Final Hardening & Thesis Report** | Toàn đội (Member A & B) | **NOT STARTED** | Chạy multi-machine lab, audit log, hoàn thiện slide thuyết trình và báo cáo đồ án. |
 
 > **🔔 ĐIỀU CHỈNH CHIẾN LƯỢC THEO CHỈ ĐẠO CỦA GIẢNG VIÊN HƯỚNG DẪN:**
 > * Không sử dụng OWASP Juice Shop vì là sản phẩm bên thứ ba có sẵn; nhóm tự xây dựng service **`vulnerable-api`** (FastAPI) để làm chủ 100% mã nguồn và logic lỗ hổng.
 > * Triển khai mô hình **Thao trường An ninh Đối kháng Phân tán (Distributed Cyber Range)** giữa 2 máy vật lý qua mạng LAN: **MÁY 1 (Blue Team: `vcongggggg`)** đối đầu với **MÁY 2 (Red Team: `naocavang08`)**.
+> * **Phân công nhiệm vụ rõ ràng:** Thành viên A (`vcongggggg`) phụ trách toàn bộ hệ thống phòng thủ & các mô hình phòng thủ (Feature Engineering, Dataset, Random Forest, Isolation Forest). Thành viên B (`naocavang08`) phụ trách toàn bộ hệ thống tấn công & mô hình AI tấn công tự huấn luyện.
+> * **Mô hình AI Tấn Công 100% Tự Xây Dựng (In-house PyTorch):** Tuyệt đối không gọi OpenAI API hay các API thương mại bên ngoài; tự thiết kế kiến trúc mạng nơ-ron Deep Reinforcement Learning (DQN / Policy Gradient) huấn luyện mô hình né tránh WAF (`evasion_agent.pt`) tự học từ phản hồi phòng thủ của Gateway.
 
 ---
 

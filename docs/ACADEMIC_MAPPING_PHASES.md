@@ -14,14 +14,14 @@
 | **Phase 1** | Target Web API & Vulnerability Lab | Triển khai REST API có chủ đích dính lỗ hổng bảo mật | **[Ref 11]** OWASP API Security Top 10 (2023)<br>**[Ref 14]** OWASP WSTG v4.2<br>**[Ref 18]** DefAtt Cyber Labs (IEEE CyberSA 2021) |
 | **Phase 2** | Reverse Proxy & Traffic Ingestion | Gateway bắt gói tin, đo lường độ trễ và chuyển tiếp | **[Ref 15]** Cyber Ranges (Computers & Security 2020)<br>**[Ref 19]** NIST SP 800-115 Security Testing |
 | **Phase 2b** | Signature Rule Engine | Regex chuẩn hóa ModSecurity CRS v4.0, giải mã URL kép | **[Ref 12]** OWASP ModSecurity CRS v4.0<br>**[Ref 10]** Systematic Review SQLi (IEEE Access 2023) |
-| **Phase 3** | Dataset & Preprocessing | Thu thập HTTP payloads, chuẩn hóa token, trích xuất đặc trưng | **[Ref 06]** CSIC 2010 HTTP Dataset<br>**[Ref 07]** Feature Extraction HTTP (Wiley 2015) |
-| **Phase 4** | Supervised ML Model (RF/XGBoost) | Huấn luyện Random Forest phân loại 5 họ tấn công | **[Ref 09]** Lightweight Ensemble WAF (MDPI Electronics 2025)<br>**[Ref 13]** OWASP Benchmark Project |
-| **Phase 5** | Unsupervised Anomaly Detection | Isolation Forest phát hiện Zero-day & Outliers | **[Ref 07]** Feature Extraction HTTP (Wiley 2015)<br>**[Ref 09]** Lightweight Ensemble WAF (MDPI 2025) |
-| **Phase 6** | Feature Extraction Service | Service trích xuất Shannon Entropy, Length, Char ratio | **[Ref 07]** Feature Extraction HTTP (Wiley 2015)<br>**[Ref 08]** Transformer/BERT Web Attacks (IEEE 2024) |
+| **Phase 3** | Feature Engineering Pipeline | Trích xuất 17 đặc trưng (Shannon Entropy, Length, Char ratio, Keywords, HTTP Context) | **[Ref 07]** Feature Extraction HTTP (Wiley 2015)<br>**[Ref 08]** Transformer/BERT Web Attacks (IEEE 2024) |
+| **Phase 4** | Dataset Generation & Lab Traffic | Thu thập HTTP payloads từ vulnerable-api, chuẩn hóa token, kết hợp CSIC 2010 | **[Ref 06]** CSIC 2010 HTTP Dataset<br>**[Ref 07]** Feature Extraction HTTP (Wiley 2015) |
+| **Phase 5** | Supervised ML Model (Random Forest) | Huấn luyện Random Forest phân loại 5 họ tấn công, nạp inference $<15\text{ms}$ | **[Ref 09]** Lightweight Ensemble WAF (MDPI Electronics 2025)<br>**[Ref 13]** OWASP Benchmark Project |
+| **Phase 6** | Unsupervised Anomaly Detection | Isolation Forest phát hiện Zero-day & Outliers trên lưu lượng sạch baseline | **[Ref 07]** Feature Extraction HTTP (Wiley 2015)<br>**[Ref 09]** Lightweight Ensemble WAF (MDPI 2025) |
 | **Phase 7** | Hybrid Risk & Decision Engine | Công thức tính điểm rủi ro có trọng số và 4 ngưỡng hành động | **[Ref 12]** OWASP ModSecurity Anomaly Scoring<br>**[Ref 09]** MDPI 2025 Ensemble Security Decision<br>**[Ref 17]** MITRE ATT&CK Mitigation |
 | **Phase 8** | IP Rate Limiting & Sliding Window | Bộ đếm cửa sổ trượt 60s trên RAM, HTTP 429 & Retry-After | **[Ref 11]** OWASP API4:2023 Resource Consumption<br>**[Ref 12]** OWASP ModSecurity CRS v4.0 Flood Defense<br>**[Ref 19]** NIST SP 800-115 Attack Disruption<br>**[Ref 20]** RFC 6585 HTTP 429 & Retry-After |
 | **Phase 9** | Dashboard & Security Monitoring | Quản lý WAF Mode, biểu đồ phân loại, timeline sự kiện | **[Ref 15]** Cyber Ranges Metrics Visualization<br>**[Ref 16]** MITRE CALDERA Telemetry UI |
-| **Phase 10**| Attack Scripts & Autonomous Agent | Tác tử AI tự động lập kế hoạch và tấn công API | **[Ref 01]** PentestGPT (USENIX Security 2024)<br>**[Ref 02]** AutoAttacker (arXiv 2024)<br>**[Ref 04]** RESTler (IEEE/ACM ICSE 2019) |
+| **Phase 10**| Offensive AI — PyTorch RL Evasion Model & Autonomous Red Teaming | Tác tử AI trinh sát OpenAPI, mô phỏng Attack Graph, huấn luyện Deep RL DQN Evasion Model (100% In-house PyTorch, KHÔNG dùng OpenAI API) | **[Ref 01]** PentestGPT (USENIX Security 2024)<br>**[Ref 02]** AutoAttacker (arXiv 2024)<br>**[Ref 04]** RESTler (IEEE/ACM ICSE 2019)<br>**[Ref 05]** Survey on LLM Cyberattacks (2024) |
 | **Phase 11**| Distributed Cyber Range Testbed | Mạng phân tán 2 máy vật lý qua Switch/LAN | **[Ref 03]** Incalmo Multi-Host (CMU/SEI 2024)<br>**[Ref 15]** Cyber Range Testbed Standards |
 | **Phase 12**| Benchmark, Evaluation & Evasion | Đo lường TPR, FPR, F1, kiểm thử kỹ thuật vượt rào AI | **[Ref 05]** Survey on LLM Cyberattacks (2024)<br>**[Ref 13]** OWASP Benchmark Youden Index |
 
@@ -123,8 +123,10 @@
 ---
 
 ### 🔹 Kế Hoạch Cho Các Phase Tiếp Theo (Phase 10, 11, 12)
-* **Phase 10 (AI Red Teaming Autonomous Agent):**
-  * Áp dụng trực tiếp kiến trúc 3 module của **PentestGPT [Ref 01]** (*Reasoning $\rightarrow$ Tool $\rightarrow$ Parsing*) và cơ chế phân rã mục tiêu API của **AutoAttacker [Ref 02]** & **RESTler [Ref 04]**.
+* **Phase 10 (Offensive AI — In-house PyTorch Deep RL Evasion Model & Autonomous Red Teaming):**
+  * **Trinh sát & Phân rã mục tiêu API:** Áp dụng cơ chế đọc OpenAPI schema và phân rã mục tiêu của **RESTler [Ref 04]** và **AutoAttacker [Ref 02]**.
+  * **Mô hình AI Tấn Công In-house (100% PyTorch, KHÔNG dùng OpenAI/Ollama API):** Tự xây dựng mô hình Deep Reinforcement Learning (DQN / Policy Gradient) theo cảm hứng từ các công trình *WAF-A-MoLE* và *Gym-WAF*, biến đổi payload đa hình (Polymorphic Mutation [Ref 05]) với không gian hành động biến dị (URL encoding, comment injection `/**/`, case swapping, keyword substitution) và hàm thưởng phạt từ Gateway phản hồi (Chặn `403` $\rightarrow$ Phạt $-1$, Vượt rào thành công $\rightarrow$ Thưởng $+10$).
+  * **Kiến trúc điều phối Red Team:** Kế thừa mô hình điều phối suy luận của **PentestGPT [Ref 01]** (*Reasoning $\rightarrow$ Tool $\rightarrow$ Parsing*).
 * **Phase 11 (Mạng Diễn Tập Phân Tán Cyber Range):**
   * Áp dụng mô hình điều phối tấn công từ xa của **Incalmo (CMU 2024) [Ref 03]** và kiến trúc phòng thí nghiệm ảo **DefAtt [Ref 18]** trên 2 máy vật lý kết nối qua LAN Switch.
 * **Phase 12 (Đánh Giá Toàn Diện & Kỹ Thuật Vượt Rào):**

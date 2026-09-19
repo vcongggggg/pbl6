@@ -1435,33 +1435,33 @@ Hệ thống được chia thành 13 giai đoạn phát triển tuần tự, đ�
 
 ## PHASE 3 — Feature Engineering (IN PROGRESS 🚀 — Next Up)
 - Trích xuất **17 đặc trưng** payload (độ dài, Shannon entropy, tỷ lệ ký tự đặc biệt), tần suất từ khóa tấn công (SQLi, XSS, Path, Cmd), và ngữ cảnh HTTP/hành vi metadata.
-- Phụ trách: `naocavang08` (Thành viên B).
+- Phụ trách: `vcongggggg` (Thành viên A).
 - Deliverable: `ml-engine/features/` pipeline trích xuất vector đặc trưng kèm test suite.
 
 ## PHASE 4 — Dataset Generation & Lab Traffic (PLANNED ⏳)
 - Thu thập và sinh tập dữ liệu cân bằng: Benign HTTP traffic từ vulnerable-api crawler + Attack payloads từ SecLists/PayloadsAllTheThings.
-- Phụ trách: `naocavang08` (Thành viên B).
+- Phụ trách: `vcongggggg` (Thành viên A).
 - Deliverable: Bộ dataset chuẩn hóa CSV/Parquet chia Train/Test sạch sẽ.
 
 ## PHASE 5 — Random Forest Supervised ML (PLANNED ⏳)
 - Huấn luyện mô hình Random Forest phân loại đa lớp (Multi-class: Benign, SQLi, XSS, Path, Cmd), đánh giá Accuracy/F1, xuất file model `.joblib`, và tích hợp suy luận vào Gateway.
-- Phụ trách: `naocavang08` (Thành viên B).
+- Phụ trách: `vcongggggg` (Thành viên A).
 - Deliverable: Mô hình ML có độ trễ suy luận $< 5\text{ms}$.
 
 ## PHASE 6 — Anomaly Detection — Isolation Forest (PLANNED ⏳)
 - Xây dựng mô hình Isolation Forest học phân phối lưu lượng sạch để phát hiện các dị biệt và biến thể tấn công mới lạ (Zero-day / Novel attacks).
-- Phụ trách: `naocavang08` (Thành viên B).
+- Phụ trách: `vcongggggg` (Thành viên A).
 - Deliverable: Bộ tính Anomaly Score chuẩn hóa $0.0 - 1.0$.
 
 ## PHASE 7 — Hybrid Risk Engine & Decision (PLANNED ⏳)
 - Tổng hợp điểm số từ Rule Engine, Random Forest và Isolation Forest thành **Weighted Risk Score (0–100)**. Đưa ra 4 quyết định phòng thủ: **ALLOW / MONITOR / RATE_LIMIT / BLOCK (403)**.
 - Phụ trách: `vcongggggg` (Thành viên A).
-- Deliverable: Module ra quyết định phòng thủ chủ động (Active Defense).
+- Deliverable: Module ra quyết định phòng thủ chủ động (Active Defense) (Đã hoàn thành trong PR #68).
 
 ## PHASE 8 — Rate Limiting & Behavior Tracker (PLANNED ⏳)
 - Xây dựng bộ đếm tần suất Sliding Window theo IP trong bộ nhớ, tự động chặn và trả về `HTTP 429 Too Many Requests` khi vượt ngưỡng cho phép (chống Brute-force/DoS).
 - Phụ trách: `vcongggggg` (Thành viên A).
-- Deliverable: Rate limiter module bảo vệ ngưỡng gọi API.
+- Deliverable: Rate limiter module bảo vệ ngưỡng gọi API (Đã hoàn thành trong PR #69).
 
 ## PHASE 9 — SOC Dashboard UI & Real-Time Threat Visualization (COMPLETED Tasks 9.1, 9.2, 9.3, 9.5 ✅ | In Progress: Task 9.4 🚀)
 - Xây dựng trung tâm chỉ huy an ninh trực quan **SOC Command Center** chuẩn Dark Cyber Glassmorphism (Next.js 14 + Recharts):
@@ -1476,14 +1476,15 @@ Hệ thống được chia thành 13 giai đoạn phát triển tuần tự, đ�
 
 ## PHASE 10 — Offensive AI — AI Attack Planner & Autonomous Red Teaming (PLANNED ⏳)
 - Nâng cấp `attack-lab/` theo chỉ đạo học thuật của Thầy hướng dẫn: Xây dựng **AI Attack Planner Agent** tự động lập kế hoạch và thực thi chuỗi tấn công Web API có mục tiêu.
-- Tích hợp **Adaptive Evasion Engine**: Khi bị Gateway chặn 403, AI Agent sẽ tự động biến đổi payload (Obfuscation, URL encode, token mixing) để thử nghiệm vượt rào và đánh giá độ bền vững (Robustness) của hệ thống phòng thủ.
+- **Offensive AI Model (100% In-house PyTorch, KHÔNG dùng OpenAI/Ollama API):** Tự thiết kế và huấn luyện mô hình tác tử né tránh WAF bằng Deep Reinforcement Learning (DQN / Policy Gradient) (`attack-lab/models/evasion_agent.pt`), học tối ưu các toán tử biến dị payload (mutation operators: URL encoding, comment injection `/**/`, case swapping, keyword substitution) dựa trên phần thưởng phản hồi (Reward/Penalty) từ Gateway phản hồi (Chặn `403` $\rightarrow$ Phạt $-1$, Vượt rào thành công $\rightarrow$ Thưởng $+10$).
+- Tích hợp **Adaptive Evasion Engine**: Khi bị Gateway chặn 403, AI Agent sẽ tự động biến đổi payload theo mô hình PyTorch nội bộ để thử nghiệm vượt rào và đánh giá độ bền vững (Robustness) của hệ thống phòng thủ.
 - Phụ trách: `naocavang08` (Thành viên B).
-- Deliverable: Agent đối kháng tự động chạy kịch bản thử nghiệm Red Team.
+- Deliverable: Agent đối kháng tự động chạy kịch bản thử nghiệm Red Team với mô hình PyTorch nội bộ.
 
 ## PHASE 11 — System Evaluation & Adversarial Benchmark (PLANNED ⏳)
 - Thực nghiệm đo đạc và lập bảng so sánh hiệu năng giữa 4 phương pháp: **Rule-based vs ML vs Anomaly vs Hybrid**.
 - Đánh giá khả năng chống chịu trước đòn tấn công né tránh (Adversarial Robustness) do AI Attack Planner tạo ra.
-- Phụ trách: `naocavang08` (Thành viên B).
+- Phụ trách: `naocavang08` & `vcongggggg` (Thành viên B & A).
 - Deliverable: Bảng số liệu thực nghiệm khoa học, biểu đồ ROC/PR curve, Confusion Matrix.
 
 ## PHASE 12 — Final Hardening, Audit Logs & Thesis Defense Report (PLANNED ⏳)
@@ -1507,7 +1508,7 @@ Hệ thống được chia thành 13 giai đoạn phát triển tuần tự, đ�
 | **7** | Random Forest Supervised ML | Mô hình ML, offline metrics, model inference | Kế hoạch ⏳ |
 | **8** | Anomaly Detection (Isolation Forest) | Phát hiện dị biệt, novel attack detection | Kế hoạch ⏳ |
 | **9** | Hybrid Risk Engine & Rate Limiting | Decision ALLOW/BLOCK, HTTP 429 limiter | Kế hoạch ⏳ |
-| **10** | Offensive AI — AI Attack Planner | Autonomous Red Team Agent, Evasion engine | Kế hoạch ⏳ |
+| **10** | Offensive AI — AI Attack Planner & PyTorch RL Model | Autonomous Red Team Agent, Evasion engine (100% PyTorch) | Kế hoạch ⏳ |
 | **11** | Evaluation & Adversarial Robustness | Bảng so sánh 4 phương pháp, ROC curves | Kế hoạch ⏳ |
 | **12** | Final Hardening & Slide Báo Cáo | Docker 1-click, Demo rehearsal, Báo cáo đồ án | Kế hoạch ⏳ |
 
@@ -1522,17 +1523,21 @@ Phân chia trách nhiệm minh bạch, bám sát ma trận 50 GitHub Issues tron
 │             PHÂN CÔNG TRÁCH NHIỆM: CYBER RANGE 2 MÁY ĐỐI KHÁNG (PBL6)            │
 ├────────────────────────────────────────┬─────────────────────────────────────────┤
 │ THÀNH VIÊN A: vcongggggg               │ THÀNH VIÊN B: naocavang08               │
-│ Vai trò: Tech Lead / Blue Team (Phòng) │ Vai trò: Red Team Lead (Tấn) & AI Eng   │
-│ Vị trí: MÁY 1 (Target API, WAF, SOC UI)│ Vị trí: MÁY 2 (AI Attack Planner Agent) │
+│ Vai trò: Tech Lead / Blue Team & AI Eng│ Vai trò: Red Team Lead & Offensive AI   │
+│ Vị trí: MÁY 1 (Target API, WAF, ML, SOC│ Vị trí: MÁY 2 (Autonomous Red Teaming)  │
 ├────────────────────────────────────────┼─────────────────────────────────────────┤
-│ • Xây dựng vulnerable-api (6 endpoints)│ • Feature Engineering (17 Features)     │
-│ • Reverse Proxy Gateway (0.0.0.0:8000) │ • Thu thập & sinh Dataset (vulnerable)  │
-│ • Rule Engine (16 Rules tất định)      │ • Huấn luyện Random Forest (Supervised) │
-│ • Input Normalizer & Scorer            │ • Huấn luyện Isolation Forest (Anomaly) │
-│ • Hybrid Decision Engine (Phase 7)     │ • Xây dựng AI Attack Planner (Phase 10) │
-│ • IP Rate Limiting - 429 (Phase 8)     │ • Adaptive Evasion Engine qua mạng LAN  │
-│ • SOC Dashboard UI & Recharts (Phase 9)│ • Đánh giá thực nghiệm so sánh (Phase 11)│
-│ • Docker Compose Hardening (Phase 12)  │ • Soạn thảo Slide & Báo cáo đồ án       │
+│ • Xây dựng vulnerable-api (8 endpoints)│ • Tự động trinh sát OpenAPI spec        │
+│ • Reverse Proxy Gateway (0.0.0.0:8000) │ • Môi trường mô phỏng Attack Graph      │
+│ • Rule Engine (16 Rules tất định)      │ • Huấn luyện In-house PyTorch Evasion   │
+│ • Input Normalizer & Scorer            │   Model (Deep RL DQN: evasion_agent.pt) │
+│ • Feature Engineering (17 Features)    │   (100% In-house, KHÔNG dùng OpenAI)    │
+│ • Thu thập & sinh Dataset (vulnerable) │ • AI Arena Runner (Tấn công qua LAN)    │
+│ • Huấn luyện Random Forest (Phòng thủ) │ • Đánh giá tấn công né tránh (Task 11.2)│
+│ • Huấn luyện Isolation Forest (Dị biệt)│ • Soạn thảo Slide & Báo cáo đồ án       │
+│ • Hybrid Decision Engine (Phase 7)     │                                         │
+│ • IP Rate Limiting - 429 (Phase 8)     │                                         │
+│ • SOC Dashboard UI & Recharts (Phase 9)│                                         │
+│ • Docker Compose Hardening (Phase 12)  │                                         │
 └────────────────────────────────────────┴─────────────────────────────────────────┘
 ```
 
