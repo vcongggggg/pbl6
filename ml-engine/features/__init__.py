@@ -12,6 +12,18 @@ Academic Foundation:
 - [Ref 09] MDPI Electronics 2025: Lightweight feature extraction for real-time WAF inline scoring.
 """
 
+from .keywords import (
+    AttackKeywordFeatures,
+    count_cmd_injection_patterns,
+    count_cmd_keywords,
+    count_path_traversal_patterns,
+    count_sql_keywords,
+    count_sqli_patterns,
+    count_xss_keywords,
+    count_xss_patterns,
+    extract_keyword_features,
+    extract_keyword_features_batch,
+)
 from .payload import (
     PayloadMorphologyFeatures,
     calculate_entropy,
@@ -22,10 +34,20 @@ from .payload import (
 )
 
 __all__ = [
+    "AttackKeywordFeatures",
     "PayloadMorphologyFeatures",
     "calculate_entropy",
     "calculate_special_char_ratio",
+    "count_cmd_injection_patterns",
+    "count_cmd_keywords",
+    "count_path_traversal_patterns",
+    "count_sql_keywords",
+    "count_sqli_patterns",
+    "count_xss_keywords",
+    "count_xss_patterns",
     "extract_char_counts",
+    "extract_keyword_features",
+    "extract_keyword_features_batch",
     "extract_payload_features",
     "extract_payload_features_batch",
 ]
