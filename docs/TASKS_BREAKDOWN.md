@@ -43,7 +43,7 @@ Tài liệu phân rã chi tiết toàn bộ các giai đoạn (Phase 0 → Phase
 | :--- | :---: | :--- | :---: | :---: | :--- |
 | **`TASK-4.1`** | `#19` | **Sinh tập dữ liệu hợp lệ (Benign Dataset):** Tạo 10,000 requests hợp lệ mô phỏng tương tác bình thường của người dùng trên vulnerable-api. | **Thành viên A** | **HOÀN THÀNH ✅** | `data/synthetic_benign.csv` |
 | **`TASK-4.2`** | `#20` | **Sinh tập dữ liệu tấn công đa dạng (Malicious Dataset):** Tạo các biến thể payload SQLi, XSS, Path Traversal, Cmd Injection kèm làm rối (Obfuscation). | **Thành viên A** | **HOÀN THÀNH ✅** | `data/synthetic_attacks.csv` |
-| **`TASK-4.3`** | `#21` | **Tiền xử lý, Gán nhãn & Chia Stratified Split:** Làm sạch dữ liệu, gán nhãn 5 lớp (`0: BENIGN, 1: SQLI, 2: XSS, 3: PATH, 4: CMD`), chia tỷ lệ 70/15/15. | **Thành viên A** | *Chờ triển khai* | `data/processed/train.csv`, `test.csv` |
+| **`TASK-4.3`** | `#21` | **Tiền xử lý & Chia Stratified Split cho Model Tấn Công:** Làm sạch dữ liệu tấn công, gán nhãn 4 lớp (`1: SQLI, 2: XSS, 3: PATH, 4: CMD`), chia phân tầng tỷ lệ 70/15/15 cho Model Tấn công (Offensive AI). | **Thành viên A** | **HOÀN THÀNH ✅** | `data/processed/attack/train.csv`, `val.csv`, `test.csv` |
 
 ---
 
