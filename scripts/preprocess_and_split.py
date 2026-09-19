@@ -16,10 +16,8 @@ Chuyên biệt cho bài toán huấn luyện Model Tấn công (Offensive AI / R
 """
 
 import argparse
-import csv
 import hashlib
 import json
-import os
 import sys
 from collections import Counter
 from pathlib import Path
@@ -223,7 +221,7 @@ def main():
     report_path = PROJECT_ROOT / args.report if not Path(args.report).is_absolute() else Path(args.report)
 
     print("=" * 75)
-    print(f"🚀 PBL6 Attack Dataset Preprocessing & Stratified Split Pipeline (Task 4.3)")
+    print("🚀 PBL6 Attack Dataset Preprocessing & Stratified Split Pipeline (Task 4.3)")
     print(f"• Input Attack File : {input_path}")
     print(f"• Output Directory  : {output_dir}")
     print(f"• Random Seed       : {args.seed}")
@@ -295,7 +293,7 @@ def main():
     print(f"  - Report: {report_path}")
 
     print("\n" + "=" * 75)
-    print(f"🎉 Hoàn thành xuất tập dữ liệu Model Tấn Công thành công!")
+    print("🎉 Hoàn thành xuất tập dữ liệu Model Tấn Công thành công!")
     print(f"• Attack Train : {train_file} ({train_file.stat().st_size / 1024 / 1024:.2f} MB)")
     print(f"• Attack Val   : {val_file} ({val_file.stat().st_size / 1024 / 1024:.2f} MB)")
     print(f"• Attack Test  : {test_file} ({test_file.stat().st_size / 1024 / 1024:.2f} MB)")
