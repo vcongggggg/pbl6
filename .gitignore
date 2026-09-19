@@ -61,6 +61,9 @@ data/raw/*
 !data/raw/.gitkeep
 data/processed/*
 !data/processed/.gitkeep
+!data/processed/attack/
+!data/processed/attack/*.csv
+!data/processed/attack/*.json
 data/artifacts/*
 !data/artifacts/.gitkeep
 *.joblib
