@@ -31,7 +31,7 @@ Tài liệu phân rã chi tiết toàn bộ các giai đoạn (Phase 0 → Phase
 | :--- | :---: | :--- | :---: | :---: | :--- |
 | **`TASK-3.1`** | `#14` | **Trích xuất đặc trưng hình thái Payload:** Chiều dài URL/Body, Shannon Entropy đo độ hỗn loạn, tỷ lệ ký tự đặc biệt (`'`, `"`, `<`, `>`, `;`, `%`, `\`). | **Thành viên A** | **HOÀN THÀNH ✅** | `ml-engine/features/payload.py` |
 | **`TASK-3.2`** | `#15` | **Trích xuất đặc trưng từ khóa tấn công:** Tần suất từ khóa SQLi (`UNION`, `SELECT`), XSS (`<script`, `onerror`), Path (`../`), Command (`whoami`, `cat`). | **Thành viên A** | **HOÀN THÀNH ✅** | `ml-engine/features/keywords.py` |
-| **`TASK-3.3`** | `#16` | **Trích xuất đặc trưng ngữ cảnh HTTP:** Mã hóa One-hot cho Method (GET, POST...), Content-Type, tỷ lệ tham số query. | **Thành viên A** | *Chờ triển khai* | `ml-engine/features/http_context.py` |
+| **`TASK-3.3`** | `#16` | **Trích xuất đặc trưng ngữ cảnh HTTP:** Mã hóa One-hot cho Method (GET, POST...), Content-Type, tỷ lệ tham số query. | **Thành viên A** | **HOÀN THÀNH ✅** | `ml-engine/features/http_context.py` |
 | **`TASK-3.4`** | `#17` | **Pipeline Vector hóa 17 chiều:** Kết hợp các bộ trích xuất thành vector 17 chiều chuẩn hóa (`numpy.ndarray`) có Min-Max scaling. | **Thành viên A** | *Chờ triển khai* | `ml-engine/features/extractor.py` |
 | **`TASK-3.5`** | `#18` | **Unit Test Suite cho Feature Extractor:** Bộ kiểm thử tự động xác minh tính đúng đắn trên các tập dữ liệu mẫu và trường hợp biên (edge cases). | **Thành viên A** | *Chờ triển khai* | `ml-engine/tests/test_features.py` |
 
