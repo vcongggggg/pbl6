@@ -39,11 +39,11 @@ Tài liệu phân rã chi tiết toàn bộ các giai đoạn (Phase 0 → Phase
 
 ### 🔵 PHASE 4: DATASET GENERATION & LAB TRAFFIC COLLECTION
 
-| Mã Task | Issue ID | Tên Task Chi Tiết | Phụ Trách | Đầu Ra (Deliverables) |
-| :--- | :---: | :--- | :---: | :--- |
-| **`TASK-4.1`** | `#19` | **Sinh tập dữ liệu hợp lệ (Benign Dataset):** Tạo 10,000 requests hợp lệ mô phỏng tương tác bình thường của người dùng trên vulnerable-api. | **Thành viên B** | `data/synthetic_benign.csv` |
-| **`TASK-4.2`** | `#20` | **Sinh tập dữ liệu tấn công đa dạng (Malicious Dataset):** Tạo các biến thể payload SQLi, XSS, Path Traversal, Cmd Injection kèm làm rối (Obfuscation). | **Thành viên B** | `data/synthetic_attacks.csv` |
-| **`TASK-4.3`** | `#21` | **Tiền xử lý, Gán nhãn & Chia Stratified Split:** Làm sạch dữ liệu, gán nhãn 5 lớp (`0: BENIGN, 1: SQLI, 2: XSS, 3: PATH, 4: CMD`), chia tỷ lệ 70/15/15. | **Thành viên B** | `data/processed/train.csv`, `test.csv` |
+| Mã Task | Issue ID | Tên Task Chi Tiết | Phụ Trách | Trạng Thái | Đầu Ra (Deliverables) |
+| :--- | :---: | :--- | :---: | :---: | :--- |
+| **`TASK-4.1`** | `#19` | **Sinh tập dữ liệu hợp lệ (Benign Dataset):** Tạo 10,000 requests hợp lệ mô phỏng tương tác bình thường của người dùng trên vulnerable-api. | **Thành viên B** | **HOÀN THÀNH ✅** | `data/synthetic_benign.csv` |
+| **`TASK-4.2`** | `#20` | **Sinh tập dữ liệu tấn công đa dạng (Malicious Dataset):** Tạo các biến thể payload SQLi, XSS, Path Traversal, Cmd Injection kèm làm rối (Obfuscation). | **Thành viên B** | *Chờ triển khai* | `data/synthetic_attacks.csv` |
+| **`TASK-4.3`** | `#21` | **Tiền xử lý, Gán nhãn & Chia Stratified Split:** Làm sạch dữ liệu, gán nhãn 5 lớp (`0: BENIGN, 1: SQLI, 2: XSS, 3: PATH, 4: CMD`), chia tỷ lệ 70/15/15. | **Thành viên B** | *Chờ triển khai* | `data/processed/train.csv`, `test.csv` |
 
 ---
 
