@@ -8,8 +8,8 @@ Tài liệu phân rã chi tiết toàn bộ các giai đoạn (Phase 0 → Phase
 
 | Thành Viên | Phân Vai Trọng Tâm | Trách Nhiệm Kỹ Thuật Chính |
 | :--- | :--- | :--- |
-| **Thành viên A (`vcongggggg`)** | **Tech Lead / Blue Team Lead (Phòng Thủ)**<br/>*Vị trí: MÁY 1 (Target API, Gateway, SOC UI)* | • Xây dựng ứng dụng mục tiêu `vulnerable-api` (6 endpoints lỗ hổng chuẩn).<br/>• Hạ tầng Reverse Proxy Gateway (`gateway/app/api/proxy.py` lắng nghe `0.0.0.0:8000`).<br/>• Rule Engine, Input Normalizer, Bảng `security_events`.<br/>• Rate Limiter cửa sổ trượt (Sliding Window HTTP 429).<br/>• Decision Engine (ALLOW / MONITOR / RATE_LIMIT / BLOCK 403).<br/>• Tích hợp Inference nạp model ML vào Gateway ($<15\text{ms}$).<br/>• Xây dựng toàn bộ Next.js Dashboard UI (`dashboard/`). |
-| **Thành viên B (`naocavang08`)** | **Red Team Lead (Tấn Công) & AI/ML Engineer**<br/>*Vị trí: MÁY 2 (Autonomous Red Teaming)* | • Feature Engineering: Trích xuất 17 đặc trưng payload & HTTP (`ml-engine/features/`).<br/>• Thu thập & sinh tập dữ liệu huấn luyện Benign + Attack từ `vulnerable-api` (`data/`).<br/>• Huấn luyện mô hình Random Forest & xuất `rf_model.joblib`.<br/>• Huấn luyện mô hình Anomaly Detection Isolation Forest.<br/>• Xây dựng AI Attack Planner Agent (`attack-lab/`) trinh sát và tấn công qua mạng LAN.<br/>• Đo lường Benchmark, đánh giá so sánh, viết Slide & Báo cáo đồ án. |
+| **Thành viên A (`vcongggggg`)** | **Tech Lead / Blue Team Lead & Defense AI/ML Engineer (Phòng Thủ & Mô Hình WAF)**<br/>*Vị trí: MÁY 1 (Target API, Gateway, SOC UI, Defense ML Models)* | • Xây dựng ứng dụng mục tiêu `vulnerable-api` (6 endpoints lỗ hổng chuẩn).<br/>• Hạ tầng Reverse Proxy Gateway (`gateway/app/api/proxy.py` lắng nghe `0.0.0.0:8000`).<br/>• Rule Engine, Input Normalizer, Bảng `security_events`.<br/>• Rate Limiter cửa sổ trượt (Sliding Window HTTP 429).<br/>• Decision Engine (ALLOW / MONITOR / RATE_LIMIT / BLOCK 403).<br/>• **Feature Engineering:** Trích xuất 17 đặc trưng payload & HTTP (`ml-engine/features/`).<br/>• **Dataset Generation:** Sinh tập dữ liệu huấn luyện Benign + Malicious (`data/`).<br/>• **Supervised Model:** Huấn luyện Random Forest & xuất `rf_model.joblib`.<br/>• **Anomaly Model:** Huấn luyện Isolation Forest & xuất `iforest_model.joblib`.<br/>• Tích hợp Inference nạp 2 model ML vào Gateway ($<15\text{ms}$ và $<10\text{ms}$).<br/>• Xây dựng toàn bộ Next.js Dashboard UI (`dashboard/`).<br/>• Đo lường hiệu năng & độ trễ Gateway dưới tải (Task 11.3). |
+| **Thành viên B (`naocavang08`)** | **Red Team Lead & Offensive AI Engineer (Tác Tử AI Tấn Công & Evasion Model)**<br/>*Vị trí: MÁY 2 (Autonomous Red Teaming / Attack Lab)* | • Tự động trinh sát bề mặt tấn công OpenAPI spec từ Máy 1 (`attack-lab/agent/recon.py`).<br/>• Xây dựng môi trường mô phỏng chuỗi tấn công Attack Graph & Action Space (`attack-lab/agent/planner.py`).<br/>• **Offensive AI Model:** Tự thiết kế kiến trúc & huấn luyện mô hình né tránh WAF bằng PyTorch nội bộ: Deep Reinforcement Learning (DQN) / Adversarial Payload Generator (`attack-lab/models/evasion_agent.pt`), **KHÔNG dùng OpenAI API**.<br/>• Xây dựng CLI runner thực thi chiến dịch tấn công độc lập qua mạng LAN (`attack-lab/runner.py`).<br/>• Đánh giá khả năng chống tấn công Evasion bằng AI (Task 11.2) và đồng biên soạn Báo cáo đồ án. |
 
 ---
 
@@ -29,62 +29,62 @@ Tài liệu phân rã chi tiết toàn bộ các giai đoạn (Phase 0 → Phase
 
 | Mã Task | Issue ID | Tên Task Chi Tiết | Phụ Trách | Đầu Ra (Deliverables) |
 | :--- | :---: | :--- | :---: | :--- |
-| **`TASK-3.1`** | `#14` | **Trích xuất đặc trưng hình thái Payload:** Chiều dài URL/Body, Shannon Entropy đo độ hỗn loạn, tỷ lệ ký tự đặc biệt (`'`, `"`, `<`, `>`, `;`, `%`, `\`). | **Thành viên B** | `ml-engine/features/payload.py` |
-| **`TASK-3.2`** | `#15` | **Trích xuất đặc trưng từ khóa tấn công:** Tần suất từ khóa SQLi (`UNION`, `SELECT`), XSS (`<script`, `onerror`), Path (`../`), Command (`whoami`, `cat`). | **Thành viên B** | `ml-engine/features/keywords.py` |
-| **`TASK-3.3`** | `#16` | **Trích xuất đặc trưng ngữ cảnh HTTP:** Mã hóa One-hot cho Method (GET, POST...), Content-Type, tỷ lệ tham số query. | **Thành viên B** | `ml-engine/features/http_context.py` |
-| **`TASK-3.4`** | `#17` | **Pipeline Vector hóa 17 chiều:** Kết hợp các bộ trích xuất thành vector 17 chiều chuẩn hóa (`numpy.ndarray`) có Min-Max scaling. | **Thành viên B** | `ml-engine/features/extractor.py` |
-| **`TASK-3.5`** | `#18` | **Unit Test Suite cho Feature Extractor:** Bộ kiểm thử tự động xác minh tính đúng đắn trên các tập dữ liệu mẫu và trường hợp biên (edge cases). | **Thành viên B** | `ml-engine/tests/test_features.py` |
+| **`TASK-3.1`** | `#14` | **Trích xuất đặc trưng hình thái Payload:** Chiều dài URL/Body, Shannon Entropy đo độ hỗn loạn, tỷ lệ ký tự đặc biệt (`'`, `"`, `<`, `>`, `;`, `%`, `\`). | **Thành viên A** | `ml-engine/features/payload.py` |
+| **`TASK-3.2`** | `#15` | **Trích xuất đặc trưng từ khóa tấn công:** Tần suất từ khóa SQLi (`UNION`, `SELECT`), XSS (`<script`, `onerror`), Path (`../`), Command (`whoami`, `cat`). | **Thành viên A** | `ml-engine/features/keywords.py` |
+| **`TASK-3.3`** | `#16` | **Trích xuất đặc trưng ngữ cảnh HTTP:** Mã hóa One-hot cho Method (GET, POST...), Content-Type, tỷ lệ tham số query. | **Thành viên A** | `ml-engine/features/http_context.py` |
+| **`TASK-3.4`** | `#17` | **Pipeline Vector hóa 17 chiều:** Kết hợp các bộ trích xuất thành vector 17 chiều chuẩn hóa (`numpy.ndarray`) có Min-Max scaling. | **Thành viên A** | `ml-engine/features/extractor.py` |
+| **`TASK-3.5`** | `#18` | **Unit Test Suite cho Feature Extractor:** Bộ kiểm thử tự động xác minh tính đúng đắn trên các tập dữ liệu mẫu và trường hợp biên (edge cases). | **Thành viên A** | `ml-engine/tests/test_features.py` |
 
 ---
 
 ### 🔵 PHASE 4: DATASET GENERATION & LAB TRAFFIC COLLECTION
 
-| Mã Task | Issue ID | Tên Task Chi Tiết | Phụ Trách | Trạng Thái | Đầu Ra (Deliverables) |
-| :--- | :---: | :--- | :---: | :---: | :--- |
-| **`TASK-4.1`** | `#19` | **Sinh tập dữ liệu hợp lệ (Benign Dataset):** Tạo 10,000 requests hợp lệ mô phỏng tương tác bình thường của người dùng trên vulnerable-api. | **Thành viên B** | **HOÀN THÀNH ✅** | `data/synthetic_benign.csv` |
-| **`TASK-4.2`** | `#20` | **Sinh tập dữ liệu tấn công đa dạng (Malicious Dataset):** Tạo các biến thể payload SQLi, XSS, Path Traversal, Cmd Injection kèm làm rối (Obfuscation). | **Thành viên B** | *Chờ triển khai* | `data/synthetic_attacks.csv` |
-| **`TASK-4.3`** | `#21` | **Tiền xử lý, Gán nhãn & Chia Stratified Split:** Làm sạch dữ liệu, gán nhãn 5 lớp (`0: BENIGN, 1: SQLI, 2: XSS, 3: PATH, 4: CMD`), chia tỷ lệ 70/15/15. | **Thành viên B** | *Chờ triển khai* | `data/processed/train.csv`, `test.csv` |
+| Mã Task | Issue ID | Tên Task Chi Tiết | Phụ Trách | Đầu Ra (Deliverables) |
+| :--- | :---: | :--- | :---: | :--- |
+| **`TASK-4.1`** | `#19` | **Sinh tập dữ liệu hợp lệ (Benign Dataset):** Tạo 10,000 requests hợp lệ mô phỏng tương tác bình thường của người dùng trên vulnerable-api. | **Thành viên A** | `data/synthetic_benign.csv` |
+| **`TASK-4.2`** | `#20` | **Sinh tập dữ liệu tấn công đa dạng (Malicious Dataset):** Tạo các biến thể payload SQLi, XSS, Path Traversal, Cmd Injection kèm làm rối (Obfuscation). | **Thành viên A** | `data/synthetic_attacks.csv` |
+| **`TASK-4.3`** | `#21` | **Tiền xử lý, Gán nhãn & Chia Stratified Split:** Làm sạch dữ liệu, gán nhãn 5 lớp (`0: BENIGN, 1: SQLI, 2: XSS, 3: PATH, 4: CMD`), chia tỷ lệ 70/15/15. | **Thành viên A** | `data/processed/train.csv`, `test.csv` |
 
 ---
 
 ### 🔵 PHASE 5: SUPERVISED ML — RANDOM FOREST (PHÂN LOẠI ĐA NHÃN)
 
-| Mã Task | Issue ID | Tên Task Chi Tiết | Phụ Trách | Đầu Ra (Deliverables) |
-| :--- | :---: | :--- | :---: | :--- |
-| **`TASK-5.1`** | `#22` | **Huấn luyện Random Forest & Tối ưu Siêu tham số:** Xây dựng script huấn luyện `RandomForestClassifier` với GridSearchCV (`n_estimators`, `max_depth`). | **Thành viên B** | `ml-engine/models/train_rf.py` |
-| **`TASK-5.2`** | `#23` | **Đánh giá Mô hình & Confusion Matrix:** Đo lường Precision, Recall, F1-Score từng lớp và vẽ biểu đồ Ma trận nhầm lẫn (Confusion Matrix). | **Thành viên B** | `docs/reports/rf_evaluation.md` |
-| **`TASK-5.3`** | `#24` | **Đóng gói Model Artifact & Metadata:** Xuất mô hình `rf_model.joblib` kèm file JSON lưu danh sách 17 features và ngưỡng phân loại. | **Thành viên B** | `ml-engine/artifacts/rf_model.joblib` |
-| **`TASK-5.4`** | `#25` | **Tích hợp Model Inference vào FastAPI Gateway:** Nạp model vào bộ nhớ RAM khi Gateway khởi động, dự đoán thời gian thực với độ trễ $< 15\text{ms}$. | **Thành viên A** | `gateway/app/security/ml_detector.py` |
+| Mã Task | Issue ID | Tên Task Chi Tiết | Phụ Trách | Trạng Thái | Đầu Ra (Deliverables) |
+| :--- | :---: | :--- | :---: | :---: | :--- |
+| **`TASK-5.1`** | `#22` | **Huấn luyện Random Forest & Tối ưu Siêu tham số:** Xây dựng script huấn luyện `RandomForestClassifier` với GridSearchCV (`n_estimators`, `max_depth`). | **Thành viên A** | CHƯA BẮT ĐẦU | `ml-engine/models/train_rf.py` |
+| **`TASK-5.2`** | `#23` | **Đánh giá Mô hình & Confusion Matrix:** Đo lường Precision, Recall, F1-Score từng lớp và vẽ biểu đồ Ma trận nhầm lẫn (Confusion Matrix). | **Thành viên A** | CHƯA BẮT ĐẦU | `docs/reports/rf_evaluation.md` |
+| **`TASK-5.3`** | `#24` | **Đóng gói Model Artifact & Metadata:** Xuất mô hình `rf_model.joblib` kèm file JSON lưu danh sách 17 features và ngưỡng phân loại. | **Thành viên A** | CHƯA BẮT ĐẦU | `ml-engine/artifacts/rf_model.joblib` |
+| **`TASK-5.4`** | `#25` | **Tích hợp Model Inference vào FastAPI Gateway:** Nạp model vào bộ nhớ RAM khi Gateway khởi động, dự đoán thời gian thực với độ trễ $< 15\text{ms}$, trích xuất 17 đặc trưng nhanh, và tích hợp `rf_score` vào `RiskEngine`. | **Thành viên A** | **HOÀN THÀNH ✅** | `gateway/app/security/ml_detector.py` |
 
 ---
 
 ### 🔵 PHASE 6: ANOMALY DETECTION — ISOLATION FOREST
 
-| Mã Task | Issue ID | Tên Task Chi Tiết | Phụ Trách | Đầu Ra (Deliverables) |
-| :--- | :---: | :--- | :---: | :--- |
-| **`TASK-6.1`** | `#26` | **Huấn luyện Isolation Forest trên Baseline Benign:** Huấn luyện mô hình chỉ trên dữ liệu hợp lệ để học phân bố lưu lượng chuẩn. | **Thành viên B** | `ml-engine/models/train_iforest.py` |
-| **`TASK-6.2`** | `#27` | **Chuẩn hóa Điểm Bất Thường (Anomaly Score 0–100):** Chuyển đổi raw decision function của Isolation Forest thành thang điểm rủi ro trực quan từ 0 đến 100. | **Thành viên B** | `gateway/app/security/anomaly.py` |
-| **`TASK-6.3`** | `#28` | **Kiểm thử Bắt Tấn Công Zero-Day & Obfuscation:** Đánh giá khả năng phát hiện các payload bị làm rối dị biệt mà Rule Engine và RF bỏ sót. | **Thành viên B** | `docs/reports/anomaly_eval.md` |
-| **`TASK-6.4`** | `#29` | **Tích hợp Anomaly Hook vào Request Pipeline:** Gọi bộ kiểm tra bất thường trong Gateway và ghi nhận trường `anomaly_score` vào `security_events`. | **Thành viên A** | `gateway/app/security/engine.py` |
+| Mã Task | Issue ID | Tên Task Chi Tiết | Phụ Trách | Trạng Thái | Đầu Ra (Deliverables) |
+| :--- | :---: | :--- | :---: | :---: | :--- |
+| **`TASK-6.1`** | `#26` | **Huấn luyện Isolation Forest trên Baseline Benign:** Huấn luyện mô hình chỉ trên dữ liệu hợp lệ để học phân bố lưu lượng chuẩn. | **Thành viên A** | CHƯA BẮT ĐẦU | `ml-engine/models/train_iforest.py` |
+| **`TASK-6.2`** | `#27` | **Chuẩn hóa Điểm Bất Thường (Anomaly Score 0–100):** Chuyển đổi raw decision function của Isolation Forest thành thang điểm rủi ro trực quan từ 0 đến 100. | **Thành viên A** | CHƯA BẮT ĐẦU | `ml-engine/models/train_iforest.py` |
+| **`TASK-6.3`** | `#28` | **Kiểm thử Bắt Tấn Công Zero-Day & Obfuscation:** Đánh giá khả năng phát hiện các payload bị làm rối dị biệt mà Rule Engine và RF bỏ sót. | **Thành viên A** | CHƯA BẮT ĐẦU | `docs/reports/anomaly_eval.md` |
+| **`TASK-6.4`** | `#29` | **Tích hợp Anomaly Hook vào Request Pipeline:** Nạp Isolation Forest trong RAM ($<10\text{ms}$), chuẩn hóa điểm 0-100, tích hợp vào `RiskEngine`, và ghi nhận trường `anomaly_score` vào `security_events`. | **Thành viên A** | **HOÀN THÀNH ✅** | `gateway/app/security/anomaly.py`, `proxy.py` |
 
 ---
 
-### 🔵 PHASE 7: HYBRID RISK ENGINE & DECISION ENGINE
+### 🔵 PHASE 7: HYBRID RISK ENGINE & DECISION ENGINE (100% HOÀN THÀNH ✅)
 
-| Mã Task | Issue ID | Tên Task Chi Tiết | Phụ Trách | Đầu Ra (Deliverables) |
-| :--- | :---: | :--- | :---: | :--- |
-| **`TASK-7.1`** | `#30` | **Tính Điểm Nguy Cơ Tổng Hợp (Weighted Risk Score):** Công thức hợp nhất: $\text{Score} = 0.40 \times \text{Rule} + 0.35 \times \text{RF} + 0.25 \times \text{Anomaly}$. | **Thành viên A** | `gateway/app/security/risk_engine.py` |
-| **`TASK-7.2`** | `#31` | **Chính Sách Ra Quyết Định Đa Ngưỡng (Decision Policy):** Định nghĩa 4 hành động: $<30$ `ALLOW`, $30-60$ `MONITOR`, $60-80$ `RATE_LIMIT`, $>80$ `BLOCK (403)`. | **Thành viên A** | `gateway/app/security/decision.py` |
-| **`TASK-7.3`** | `#32` | **Cơ Chế Chặn Thực Tế (Blocking Proxy Middleware):** Khi quyết định là `BLOCK`, ngắt luồng proxy ngay lập tức, trả về HTTP 403 tùy biến an toàn. | **Thành viên A** | `gateway/app/api/proxy.py` |
+| Mã Task | Issue ID | Tên Task Chi Tiết | Phụ Trách | Trạng Thái | Đầu Ra (Deliverables) |
+| :--- | :---: | :--- | :---: | :---: | :--- |
+| **`TASK-7.1`** | `#30` | **Tính Điểm Nguy Cơ Tổng Hợp (Weighted Risk Score):** Công thức hợp nhất: $\text{Score} = 0.40 \times \text{Rule} + 0.35 \times \text{RF} + 0.25 \times \text{Anomaly}$. | **Thành viên A** | **HOÀN THÀNH ✅** | `gateway/app/security/risk_engine.py` |
+| **`TASK-7.2`** | `#31` | **Chính Sách Ra Quyết Định Đa Ngưỡng (Decision Policy):** Định nghĩa 4 hành động: $<30$ `ALLOW`, $30-60$ `MONITOR`, $60-80$ `RATE_LIMIT`, $>80$ `BLOCK (403)`. | **Thành viên A** | **HOÀN THÀNH ✅** | `gateway/app/security/decision.py` |
+| **`TASK-7.3`** | `#32` | **Cơ Chế Chặn Thực Tế (Blocking Proxy Middleware):** Khi quyết định là `BLOCK`, ngắt luồng proxy ngay lập tức, trả về HTTP 403 tùy biến an toàn. | **Thành viên A** | **HOÀN THÀNH ✅** | `gateway/app/api/proxy.py` |
 
 ---
 
-### 🔵 PHASE 8: IP-BASED RATE LIMITING & SLIDING WINDOW TRACKER
+### 🔵 PHASE 8: IP-BASED RATE LIMITING & SLIDING WINDOW TRACKER (100% HOÀN THÀNH ✅)
 
-| Mã Task | Issue ID | Tên Task Chi Tiết | Phụ Trách | Đầu Ra (Deliverables) |
-| :--- | :---: | :--- | :---: | :--- |
-| **`TASK-8.1`** | `#33` | **Bộ Theo Dõi Cửa Sổ Trượt Theo IP (Sliding Window Tracker):** Quản lý bộ đếm request theo IP trong bộ nhớ RAM với thời gian trượt 60 giây. | **Thành viên A** | `gateway/app/security/rate_limiter.py` |
-| **`TASK-8.2`** | `#34` | **Thực Thi Phản Hồi HTTP 429 Too Many Requests:** Tự động chặn tạm thời IP vượt ngưỡng tần suất (RPS limit) kèm header `Retry-After: 60`. | **Thành viên A** | `gateway/app/api/proxy.py` |
+| Mã Task | Issue ID | Tên Task Chi Tiết | Phụ Trách | Trạng Thái | Đầu Ra (Deliverables) |
+| :--- | :---: | :--- | :---: | :---: | :--- |
+| **`TASK-8.1`** | `#33` | **Bộ Theo Dõi Cửa Sổ Trượt Theo IP (Sliding Window Tracker):** Quản lý bộ đếm request theo IP trong bộ nhớ RAM với thời gian trượt 60 giây ($O(1)$ deque), phân tách quota theo endpoint scoping (`auth`: 10, `admin`: 15, `files`: 20, `global`: 60). | **Thành viên A** | **HOÀN THÀNH ✅** | `gateway/app/security/rate_limiter.py` |
+| **`TASK-8.2`** | `#34` | **Thực Thi Phản Hồi HTTP 429 Too Many Requests:** Tự động chặn tạm thời IP vượt ngưỡng tần suất (RPS limit) kèm header `Retry-After: <sec>`, `X-RateLimit-*`, lưu vết kiểm toán và tích hợp Reverse Proxy. | **Thành viên A** | **HOÀN THÀNH ✅** | `gateway/app/api/proxy.py`, `gateway/app/services/security.py` |
 
 ---
 
@@ -104,10 +104,10 @@ Tài liệu phân rã chi tiết toàn bộ các giai đoạn (Phase 0 → Phase
 
 | Mã Task | Issue ID | Tên Task Chi Tiết | Phụ Trách | Đầu Ra (Deliverables) |
 | :--- | :---: | :--- | :---: | :--- |
-| **`TASK-10.1`**| `#39` | **Module Thăm Dò Cấu Trúc API (Reconnaissance):** Tác nhân tự động đọc OpenAPI spec của vulnerable-api (Máy 1) để lập danh sách endpoint và tham số. | **Thành viên B** | `attack-lab/agent/recon.py` |
-| **`TASK-10.2`**| `#40` | **Agent Lập Kế Hoạch Tấn Công Đa Bước (ReAct Planner):** Sử dụng LLM suy luận chuỗi tấn công logic (Thăm dò $\rightarrow$ Khai thác SQLi $\rightarrow$ Chiếm quyền). | **Thành viên B** | `attack-lab/agent/planner.py` |
-| **`TASK-10.3`**| `#41` | **Cơ Chế Tự Động Làm Rối Payload (Adaptive Evasion Engine):** Khi nhận phản hồi HTTP 403 từ WAF, tự động biến đổi payload (Hex, Double URL) để thử vượt rào. | **Thành viên B** | `attack-lab/agent/evasion.py` |
-| **`TASK-10.4`**| `#42` | **Giao Diện Đấu Trường AI (AI Arena) & Runner:** CLI runner chạy chiến dịch kiểm thử tự động và màn hình đối kháng trực tiếp trên Dashboard. | **Thành viên B & A** | `attack-lab/runner.py` |
+| **`TASK-10.1`**| `#39` | **Module Thăm Dò Cấu Trúc API (Reconnaissance):** Tác nhân tự động đọc OpenAPI spec của vulnerable-api (Máy 1) qua mạng LAN để lập danh sách endpoint và tham số mục tiêu. | **Thành viên B** | `attack-lab/agent/recon.py` |
+| **`TASK-10.2`**| `#40` | **Môi Trường Mô Phỏng Tấn Công & Lập Kế Hoạch Chuỗi (Attack Graph / RL Environment):** Dựng đồ thị tấn công API (State Space, Action Space, Reward Function) phục vụ tác nhân AI đối kháng WAF. | **Thành viên B** | `attack-lab/agent/planner.py`, `attack-lab/environment/` |
+| **`TASK-10.3`**| `#41` | **Huấn Luyện Mô Hình Né Tránh WAF Bằng PyTorch (Deep RL DQN / Evasion Model):** Tự xây dựng & huấn luyện mạng nơ-ron bằng **PyTorch** tự học chính sách biến dị payload khi bị WAF chặn 403, xuất `evasion_agent.pt`. **100% In-house, KHÔNG dùng OpenAI API.** | **Thành viên B** | `attack-lab/models/evasion_agent.pt`, `attack-lab/agent/evasion.py` |
+| **`TASK-10.4`**| `#42` | **Giao Diện Đấu Trường AI (AI Arena) & Runner:** CLI runner chạy chiến dịch kiểm thử tự động từ Máy 2 và màn hình đối kháng trực tiếp trên Dashboard. | **Thành viên B & A** | `attack-lab/runner.py`, `dashboard/src/components/arena/` |
 
 ---
 

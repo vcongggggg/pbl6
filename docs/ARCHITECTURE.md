@@ -120,12 +120,13 @@ graph LR
   * Donut Chart phân bố tỷ lệ các họ tấn công đã nhận diện.
   * Bảng sự kiện an ninh Live Events và ngăn kéo Payload Evidence Drawer đối chiếu chi tiết Raw Input vs Canonical Normalized.
 
-### 2.4. `attack-lab/` (Offensive AI — AI Attack Planner Trên Máy 2)
-* **Vị trí triển khai:** Chạy độc lập trên **MÁY 2 (Red Team)**.
+### 2.4. `attack-lab/` (Offensive AI — AI Attack Planner & PyTorch Evasion Model Trên Máy 2)
+* **Vị trí triển khai:** Chạy độc lập trên **MÁY 2 (Red Team — `naocavang08`)**.
 * **Cơ chế hoạt động:**
   1. **Tự động Trinh sát (Automated Reconnaissance):** Đọc file đặc tả OpenAPI schema từ Máy 1 (`http://192.168.1.X:8000/api/proxy/openapi.json`), lập bản đồ bề mặt tấn công (Attack Surface Mapping).
-  2. **AI Planning Agent:** Sử dụng AI/LLM hoặc máy trạng thái heuristic để lên kế hoạch chuỗi tấn công (Kill Chain: Dò quét $\rightarrow$ Vượt quyền đăng nhập bằng SQLi $\rightarrow$ Khai thác chiếm quyền server qua Command Injection).
-  3. **Adaptive Evasion Engine:** Khi Gateway của Máy 1 chặn `403 Forbidden`, AI Planner tự động suy luận lý do bị chặn và tiến hành biến đổi payload (Mã hóa URL kép, hoán đổi ký tự viết hoa/thường, chèn comment nội dòng `/**/`, thay thế hàm tương đương) để bắn lại nhằm tìm cách vượt rào WAF.
+  2. **Attack Graph & Action Space:** Xây dựng môi trường mô phỏng chuỗi tấn công (Kill Chain) với không gian trạng thái 17 đặc trưng payload và không gian hành động biến dị (Mutation operators: URL encoding, comment injection `/**/`, case alternation, keyword substitution).
+  3. **Mô Hình AI Tấn Công Né Tránh WAF Tự Huấn Luyện Bằng PyTorch (`evasion_agent.pt`):** Tự xây dựng kiến trúc mạng Deep Reinforcement Learning (DQN / Policy Gradient) bằng **PyTorch nội bộ**, tự học chính sách biến đổi payload tối ưu dựa trên phản hồi Reward/Penalty từ WAF Gateway (Chặn `403` $\rightarrow$ Phạt $-1$, Vượt rào $\rightarrow$ Thưởng $+10$). **Hoàn toàn 100% In-house PyTorch, KHÔNG sử dụng OpenAI API hoặc Ollama.**
+  4. **AI Arena Runner:** CLI runner điều phối các đợt bắn payload qua mạng LAN và ghi nhận telemetry đối kháng.
 
 ---
 
@@ -137,12 +138,13 @@ graph LR
 | **FastAPI WAF Reverse Proxy** | **MÁY 1 (Blue Team)** | `vcongggggg` | ✅ Hoàn thành Phase 1 |
 | **Rule-based Detection Engine (16 Rules)** | **MÁY 1 (Blue Team)** | `vcongggggg` | ✅ Hoàn thành Phase 2 |
 | **SOC Dashboard (Next.js 14)** | **MÁY 1 (Blue Team)** | `vcongggggg` | ✅ Hoàn thành Phase 9 |
-| **Hybrid Decision & Active Blocking (403)**| **MÁY 1 (Blue Team)** | `vcongggggg` | ⏳ Phase 7 |
-| **IP Sliding Window Rate Limiter (429)** | **MÁY 1 (Blue Team)** | `vcongggggg` | ⏳ Phase 8 |
-| **17-Feature Extractor Pipeline** | Dùng chung (Shared) | `naocavang08` | ⏳ Phase 3 |
-| **Dataset Generation (Raw + Synthetic)** | Dùng chung (Shared) | `naocavang08` | ⏳ Phase 4 |
-| **Random Forest Supervised Classifier** | Model nạp Máy 1 | `naocavang08` | ⏳ Phase 5 |
-| **Isolation Forest Anomaly Detection** | Model nạp Máy 1 | `naocavang08` | ⏳ Phase 6 |
-| **AI Attack Planner (Offensive AI Agent)** | **MÁY 2 (Red Team)** | `naocavang08` | ⏳ Phase 10 |
-| **Adaptive Evasion & Red Team Campaigns** | **MÁY 2 (Red Team)** | `naocavang08` | ⏳ Phase 10 |
+| **Hybrid Decision & Active Blocking (403)**| **MÁY 1 (Blue Team)** | `vcongggggg` | ⏳ Phase 7 (PR #68) |
+| **IP Sliding Window Rate Limiter (429)** | **MÁY 1 (Blue Team)** | `vcongggggg` | ⏳ Phase 8 (PR #69) |
+| **17-Feature Extractor Pipeline** | Dùng chung (Shared) | `vcongggggg` | ⏳ Phase 3 (Next) |
+| **Dataset Generation (Raw + Synthetic)** | Dùng chung (Shared) | `vcongggggg` | ⏳ Phase 4 |
+| **Random Forest Supervised Classifier** | Model nạp Máy 1 | `vcongggggg` | ⏳ Phase 5 |
+| **Isolation Forest Anomaly Detection** | Model nạp Máy 1 | `vcongggggg` | ⏳ Phase 6 |
+| **OpenAPI Recon & Attack Graph Environment**| **MÁY 2 (Red Team)** | `naocavang08` | ⏳ Phase 10 |
+| **In-House PyTorch Evasion Model (`evasion_agent.pt`)**| **MÁY 2 (Red Team)** | `naocavang08` | ⏳ Phase 10 (100% PyTorch) |
+| **AI Arena Runner & LAN Campaigns** | **MÁY 2 (Red Team)** | `naocavang08` | ⏳ Phase 10 |
 | **Multi-Method Performance Evaluation** | Cả 2 máy | `naocavang08` & `vcongggggg` | ⏳ Phase 11 |

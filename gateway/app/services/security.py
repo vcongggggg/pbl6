@@ -23,8 +23,13 @@ class SecurityEventService:
         detection_result: DetectionResult,
         timestamp: datetime.datetime | None = None,
         action: str = "DETECTED",
+        risk_score: float | None = None,
+        ml_score: float | None = None,
+        anomaly_score: float | None = None,
+        behavior_score: float | None = None,
+        details_extra: dict[str, Any] | None = None,
     ) -> SecurityEvent | None:
-        """Persists security event record if an attack signature was matched."""
+        """Persists security event record if an attack signature was matched or risk detected."""
         if not detection_result.is_attack or not detection_result.matches:
             return None
 
@@ -45,12 +50,19 @@ class SecurityEventService:
             else "LOW"
         )
 
+        effective_risk_score = (
+            risk_score
+            if risk_score is not None
+            else detection_result.rule_risk_score
+        )
+
         # Build explainable details payload
         details_dict: dict[str, Any] = {
             "total_matches": detection_result.total_matches,
             "attack_families": [f.value for f in detection_result.attack_families],
             "highest_severity": primary_severity,
             "rule_risk_score": detection_result.rule_risk_score,
+            "weighted_risk_score": effective_risk_score,
             "execution_time_ms": detection_result.execution_time_ms,
             "matches": [
                 {
@@ -67,6 +79,9 @@ class SecurityEventService:
             ],
         }
 
+        if details_extra:
+            details_dict.update(details_extra)
+
         event_record = SecurityEvent(
             event_id=event_id,
             request_id=request_id,
@@ -75,11 +90,11 @@ class SecurityEventService:
             attack_type=primary_attack,
             severity=primary_severity,
             action=action,
-            risk_score=detection_result.rule_risk_score,
+            risk_score=effective_risk_score,
             rule_score=detection_result.rule_risk_score,
-            ml_score=None,
-            anomaly_score=None,
-            behavior_score=None,
+            ml_score=ml_score,
+            anomaly_score=anomaly_score,
+            behavior_score=behavior_score,
             details=json.dumps(details_dict),
         )
 
@@ -96,5 +111,68 @@ class SecurityEventService:
             db.rollback()
             logger.error(
                 f"Failed to persist security event for request [{request_id}]: {err}"
+            )
+            return None
+
+    @staticmethod
+    def record_rate_limit(
+        db: Session,
+        request_id: str,
+        client_ip: str,
+        scope: str,
+        current_count: int,
+        limit: int,
+        retry_after: int,
+        timestamp: datetime.datetime | None = None,
+        action: str = "RATE_LIMIT",
+        severity: str = "HIGH",
+        risk_score: float = 75.0,
+        details_extra: dict[str, Any] | None = None,
+    ) -> SecurityEvent | None:
+        """Persists a rate limit violation event into the database."""
+        if timestamp is None:
+            timestamp = datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
+
+        event_id = uuid.uuid4().hex
+        details_dict: dict[str, Any] = {
+            "scope": scope,
+            "current_count": current_count,
+            "limit": limit,
+            "retry_after": retry_after,
+            "policy": "SLIDING_WINDOW_RATE_LIMIT",
+            "reason": f"IP exceeded sliding window rate limit for scope '{scope}' ({current_count}/{limit})",
+        }
+        if details_extra:
+            details_dict.update(details_extra)
+
+        event_record = SecurityEvent(
+            event_id=event_id,
+            request_id=request_id,
+            timestamp=timestamp,
+            client_ip=client_ip,
+            attack_type="RATE_LIMIT_EXCEEDED",
+            severity=severity,
+            action=action,
+            risk_score=risk_score,
+            rule_score=0.0,
+            ml_score=None,
+            anomaly_score=None,
+            behavior_score=risk_score,
+            details=json.dumps(details_dict),
+        )
+
+        try:
+            db.add(event_record)
+            db.commit()
+            db.refresh(event_record)
+            logger.info(
+                f"Rate limit event recorded [{event_id}] for request [{request_id}]: "
+                f"IP={client_ip} scope={scope} count={current_count}/{limit}"
+            )
+            return event_record
+        except Exception as err:
+            db.rollback()
+            logger.error(
+                f"Failed to persist rate limit event for request [{request_id}]: {err}"
             )
             return None

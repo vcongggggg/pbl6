@@ -1,7 +1,7 @@
 # Web API Security Platform & Autonomous Red Teaming (PBL6 — An Toàn Thông Tin)
 
 > **Đề tài:** Phát hiện và ngăn chặn tấn công Web API thông minh bằng Machine Learning kết hợp Thao trường An ninh Đối kháng (Distributed Cyber Range).  
-> **Trạng thái:** **Phase 0, 1, 2, 2B, 9 HOÀN THÀNH 100% ✅** | **Tiếp theo:** Phase 7 (Hybrid Decision Engine) & **Phase 3 (Feature Engineering) 🚀**.
+> **Trạng thái:** **Phase 0, 1, 2, 2B, 7, 8, 9 HOÀN THÀNH 100% ✅** | **Tiếp theo:** Phase 3 (Feature Engineering) & Phase 10 (AI Attack Planner) 🚀.
 
 
 ---
@@ -78,6 +78,7 @@ pbl6/
 │   ├── PROGRESS.md       # Bảng theo dõi tiến độ chi tiết
 │   ├── REFERENCES.md     # 20 Tài liệu tham khảo khoa học & chuẩn quốc tế (USENIX, IEEE, ACM)
 │   ├── ACADEMIC_DEEP_DIVE_GAP_ANALYSIS.md # Nghiên cứu chuyên sâu 20 paper & ma trận đối chiếu mã nguồn
+│   ├── ACADEMIC_MAPPING_PHASES.md        # Đối chiếu cơ sở khoa học 20 paper theo từng Phase & Task
 │   └── TASKS_BREAKDOWN.md# Bảng phân rã 50 GitHub Issues
 ├── docker-compose.yml    # Khởi chạy 3 container (Gateway, Dashboard, vulnerable-api)
 └── README.md
@@ -108,7 +109,7 @@ docker compose up --build -d
 ## 5. Kiểm Thử & Đảm Bảo Chất Lượng Mã Nguồn
 
 ```bash
-# Chạy Unit Tests Backend (44/44 tests)
+# Chạy Unit Tests Backend (56/56 tests pass 100%)
 pytest gateway/tests
 
 # Kiểm tra Linter (0 warnings/errors)

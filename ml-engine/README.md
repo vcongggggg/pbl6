@@ -1,6 +1,6 @@
-# ML Engine Component (Reserved for ML/Data Team)
+# ML Engine Component (Phòng Thủ WAF — Phụ Trách: Thành Viên A `vcongggggg`)
 
-Thư mục `ml-engine/` là không gian làm việc độc lập của nhóm ML/Data, chịu trách nhiệm nghiên cứu, xử lý dữ liệu và huấn luyện các mô hình Machine Learning.
+Thư mục `ml-engine/` là không gian làm việc của hệ thống phòng thủ Machine Learning, chịu trách nhiệm nghiên cứu, xử lý dữ liệu, trích xuất đặc trưng và huấn luyện các mô hình Machine Learning phòng vệ cho WAF Gateway.
 
 ## Cấu trúc thư mục:
 ```text
@@ -9,24 +9,23 @@ ml-engine/
 │   ├── raw/
 │   ├── processed/
 │   └── evaluation/
-├── src/
-│   ├── generate_dataset.py     # Sinh tập dữ liệu huấn luyện
-│   ├── collect_lab_traffic.py  # Thu thập traffic thực tế từ lab
-│   ├── features.py             # Bộ trích xuất đặc trưng dùng chung
-│   ├── train_rf.py             # Huấn luyện Random Forest
-│   ├── train_anomaly.py        # Huấn luyện Isolation Forest
-│   ├── evaluate.py             # Đánh giá các chỉ số
-│   ├── compare_models.py       # So sánh đa mô hình
-│   └── generate_report.py      # Xuất báo cáo số liệu
-├── notebooks/                  # Thử nghiệm Jupyter Notebooks
+├── features/
+│   ├── payload.py              # Trích xuất đặc trưng hình thái payload
+│   ├── keywords.py             # Trích xuất tần suất từ khóa tấn công
+│   ├── http_context.py         # Trích xuất ngữ cảnh HTTP và hành vi
+│   └── extractor.py            # Pipeline vector hóa 17 chiều chuẩn hóa
+├── models/
+│   ├── train_rf.py             # Huấn luyện Random Forest (Supervised)
+│   ├── train_iforest.py        # Huấn luyện Isolation Forest (Anomaly)
+│   └── evaluate.py             # Đánh giá chỉ số & ma trận nhầm lẫn
+├── artifacts/                  # Nơi lưu model .joblib và metadata JSON
+├── tests/                      # Unit test suite cho ml-engine
 └── requirements.txt
 ```
 
-## Trách nhiệm theo Phase:
-- **Phase 3:** Xây dựng Feature Engineering.
-- **Phase 4:** Tạo Dataset và cơ chế phân chia (Stratified, Unseen payload, Attack family).
+## Trách nhiệm các Phase (Thành Viên A):
+- **Phase 3:** Xây dựng Feature Engineering Pipeline 17 đặc trưng (`ml-engine/features/`).
+- **Phase 4:** Tạo Dataset cân bằng (Lưu lượng sạch `vulnerable-api` + SecLists/CSIC 2010).
 - **Phase 5:** Huấn luyện mô hình phân loại có giám sát (Random Forest).
 - **Phase 6:** Huấn luyện mô hình phát hiện bất thường (Isolation Forest).
-- **Phase 11:** Thực hiện đánh giá thực nghiệm đa phương pháp (Rule vs ML vs Anomaly vs Hybrid).
-
-> **LƯU Ý (Phase 0):** Hiện tại chưa triển khai code huấn luyện hay sinh dữ liệu giả lập. Mã nguồn ML sẽ được triển khai chi tiết ở các phase tương ứng.
+- **Phase 11:** Phối hợp đánh giá thực nghiệm đối kháng đa phương pháp (Rule vs ML vs Anomaly vs Hybrid).

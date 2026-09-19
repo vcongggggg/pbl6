@@ -12,20 +12,22 @@ Tài liệu theo dõi trạng thái thực hiện các giai đoạn phát triể
 | **Phase 1** | **Infrastructure Setup** | Backend / DevOps (Member A) | **COMPLETED** | Reverse Proxy bất đồng bộ, X-Request-ID, lọc Header, ghi log SQLite, bảo vệ Open Proxy / SSRF, Probe Target Health. |
 | **Phase 2** | **Rule Engine / Signature-Based Detection** | Security Engineer (Member A) | **COMPLETED** | 16 rules tất định (SQLi, XSS, Path Traversal, Command Injection), Input Normalizer, Rule Risk Scoring (0-100), Security Event persistence & traceability. |
 | **Phase 2B**| **Custom Vulnerable Web API (`vulnerable-api`)** | Tech Lead (Member A) | **COMPLETED ✅** | Tự xây dựng Web API mục tiêu (Bookie Bookstore - 8 kịch bản lỗ hổng chuẩn OWASP Web & API Top 10 + OpenAPI Recon) thay thế Juice Shop theo chỉ đạo của Thầy. |
-| **Phase 3** | **Feature Engineering** | ML/Data Team (Member B) | **NOT STARTED** | *(RESERVED FOR ML TEAM)* 17 payload features, HTTP & Context features. |
-| **Phase 4** | **Dataset Generation & Lab Traffic** | ML/Data Team (Member B) | **NOT STARTED** | *(RESERVED FOR ML TEAM)* Sinh dữ liệu từ vulnerable-api + SecLists. |
-| **Phase 5** | **Supervised ML — Random Forest** | ML/Data Team (Member B) | **NOT STARTED** | *(RESERVED FOR ML TEAM)* Training, Multiclass, Evaluation, Serialization (`.joblib`). |
-| **Phase 6** | **Anomaly Detection — Isolation Forest** | ML/Data Team (Member B) | **NOT STARTED** | *(RESERVED FOR ML TEAM)* Behavior window, Isolation Forest anomaly scoring. |
-| **Phase 7** | **Hybrid Risk Engine & Decision** | Backend / Security (Member A) | **NOT STARTED** | Weighted Risk Score (0–100), Thresholds (ALLOW/MONITOR/RATE_LIMIT/BLOCK). |
-| **Phase 8** | **Rate Limiting & Behavior Tracker** | Backend / Security (Member A) | **NOT STARTED** | IP tracking time-window, HTTP 429 response, endpoint limits. |
+| **Phase 3** | **Feature Engineering** | ML/Defense (Member A - `vcongggggg`) | **IN PROGRESS (Next Up) 🚀** | 17 payload features, HTTP & Context features pipeline (`ml-engine/features/`). |
+| **Phase 4** | **Dataset Generation & Lab Traffic** | ML/Defense (Member A - `vcongggggg`) | **NOT STARTED** | Sinh dữ liệu từ vulnerable-api + SecLists/CSIC 2010. |
+| **Phase 5** | **Supervised ML — Random Forest** | ML/Defense (Member A - `vcongggggg`) | **IN PROGRESS (Task 5.4 COMPLETED ✅)** | Training Tasks 5.1-5.3. Gateway ML Inference Service & Resilient Fallback (Task 5.4 ✅ - PR #70). |
+| **Phase 6** | **Anomaly Detection — Isolation Forest** | ML/Defense (Member A - `vcongggggg`) | **IN PROGRESS (Task 6.4 COMPLETED ✅)** | Training Tasks 6.1-6.3. Gateway Anomaly Hook & Telemetry Logging (Task 6.4 ✅ - PR #71). |
+| **Phase 7** | **Hybrid Risk Engine & Decision** | Backend / Security (Member A) | **COMPLETED (100% Tasks 7.1 → 7.3) ✅** | Weighted Risk Score (0–100), Thresholds (ALLOW/MONITOR/RATE_LIMIT/BLOCK), Active 403 Blocking (PR #68). |
+| **Phase 8** | **Rate Limiting & Behavior Tracker** | Backend / Security (Member A) | **COMPLETED (100% Tasks 8.1 & 8.2) ✅** | In-Memory Sliding Window 60s trên RAM, HTTP 429 Too Many Requests, Retry-After header (PR #69). |
 | **Phase 9** | **Dashboard UI (Next.js)** | Frontend / Tech Lead (Member A) | **COMPLETED (100% Tasks 9.1 → 9.5) ✅** | SOC Dashboard, 5 KPI cards, Timeline, Distribution, Events table with Client IP origin, Payload Drawer, Quick Simulator, Reset Demo, Detection Explainability Modal (#38). |
-| **Phase 10** | **Offensive AI — AI Attack Planner (Máy 2)** | AI/ML & Red Team (Member B) | **NOT STARTED** | AI Attack Planner Agent trên Máy 2, trinh sát OpenAPI, sinh payload né tránh (Adaptive Evasion) qua mạng LAN. |
+| **Phase 10** | **Offensive AI — AI Attack Planner & PyTorch RL Model (Máy 2)** | Offensive AI & Red Team (Member B - `naocavang08`) | **NOT STARTED** | AI Attack Planner Agent trên Máy 2: Trinh sát OpenAPI, Môi trường mô phỏng Attack Graph, Mô hình né tránh WAF In-house bằng PyTorch Deep RL DQN (`evasion_agent.pt`), **100% PyTorch, KHÔNG dùng OpenAI API**. |
 | **Phase 11** | **System Evaluation & Comparison** | ML/Data & Red Team (Member B & A) | **NOT STARTED** | So sánh Rule vs ML vs Anomaly vs Hybrid, Evasion test, Benchmark. |
 | **Phase 12** | **Final Hardening & Thesis Report** | Toàn đội (Member A & B) | **NOT STARTED** | Chạy multi-machine lab, audit log, hoàn thiện slide thuyết trình và báo cáo đồ án. |
 
 > **🔔 ĐIỀU CHỈNH CHIẾN LƯỢC THEO CHỈ ĐẠO CỦA GIẢNG VIÊN HƯỚNG DẪN:**
 > * Không sử dụng OWASP Juice Shop vì là sản phẩm bên thứ ba có sẵn; nhóm tự xây dựng service **`vulnerable-api`** (FastAPI) để làm chủ 100% mã nguồn và logic lỗ hổng.
 > * Triển khai mô hình **Thao trường An ninh Đối kháng Phân tán (Distributed Cyber Range)** giữa 2 máy vật lý qua mạng LAN: **MÁY 1 (Blue Team: `vcongggggg`)** đối đầu với **MÁY 2 (Red Team: `naocavang08`)**.
+> * **Phân công nhiệm vụ rõ ràng:** Thành viên A (`vcongggggg`) phụ trách toàn bộ hệ thống phòng thủ & các mô hình phòng thủ (Feature Engineering, Dataset, Random Forest, Isolation Forest). Thành viên B (`naocavang08`) phụ trách toàn bộ hệ thống tấn công & mô hình AI tấn công tự huấn luyện.
+> * **Mô hình AI Tấn Công 100% Tự Xây Dựng (In-house PyTorch):** Tuyệt đối không gọi OpenAI API hay các API thương mại bên ngoài; tự thiết kế kiến trúc mạng nơ-ron Deep Reinforcement Learning (DQN / Policy Gradient) huấn luyện mô hình né tránh WAF (`evasion_agent.pt`) tự học từ phản hồi phòng thủ của Gateway.
 
 ---
 
@@ -148,6 +150,113 @@ Tài liệu theo dõi trạng thái thực hiện các giai đoạn phát triể
 
 ---
 
+### Phase 7 — Hybrid Risk Engine & Decision Engine (COMPLETED 100% ✅)
+
+* **Mục tiêu (Objectives):**
+  * Xây dựng module `RiskEngine` tổng hợp rủi ro 3 trụ cột theo công thức chuẩn:
+    $$\text{Weighted Risk Score} = (0.40 \times \text{Rule}) + (0.35 \times \text{Random Forest}) + (0.25 \times \text{Isolation Forest})$$
+  * Chuẩn hóa động trọng số (Dynamic Weight Normalization) khi các thành phần ML/Anomaly chưa nạp hoặc đang trong giai đoạn huấn luyện để hệ thống luôn vận hành ổn định.
+  * Xây dựng module `DecisionEngine` thực thi chính sách đa ngưỡng an ninh:
+    * $< 30.0$: `ALLOW` (HTTP 200 OK)
+    * $30.0 - 59.9$: `MONITOR` (Ghi nhận sự kiện `security_events`, cho phép đi tiếp)
+    * $60.0 - 79.9$: `RATE_LIMIT` (Đánh dấu giới hạn tần suất)
+    * $\ge 80.0$: `BLOCK` (Ngắt luồng proxy ngay lập tức, trả về HTTP 403 Forbidden)
+  * Tương thích 4 chế độ WAF (`OFF`, `MONITOR_ONLY`, `ACTIVE_BLOCKING`, `HYBRID`).
+  * Tích hợp vào Reverse Proxy (`proxy.py`), ngắt luồng an toàn và trả về JSON phản hồi chuẩn hóa kèm headers `X-WAF-Action`, `X-WAF-Decision`, `X-WAF-Risk-Score`.
+
+* **Sản phẩm bàn giao (Deliverables):**
+  * `gateway/app/security/risk_engine.py`: `RiskEngine` và `RiskScoreBreakdown` (Task 7.1 - #30).
+  * `gateway/app/security/decision.py`: `DecisionEngine`, `PolicyAction`, `DecisionResult` (Task 7.2 - #31).
+  * `gateway/app/api/proxy.py`: Tích hợp chặn luồng 403 an toàn và gắn headers WAF (Task 7.3 - #32).
+  * `gateway/app/services/security.py`: Cập nhật lưu vết đầy đủ điểm rủi ro tổng hợp và breakdown.
+  * `gateway/tests/test_risk_engine.py`: 6 unit tests kiểm thử công thức 3 trụ cột, dynamic normalization, clamping, serialization.
+  * `gateway/tests/test_decision_engine.py`: 3 unit tests kiểm thử 4 ngưỡng hành động và 4 WAF modes.
+  * `gateway/tests/test_phase7_integration.py`: 3 integration tests kiểm thử chặn HTTP 403, Monitor mode, và Benign Allow.
+
+* **Kiểm thử & Xác minh (Tests & Verification):**
+  * `pytest gateway/tests/`: **56/56 tests PASSED (100%)**.
+  * `ruff check gateway/`: **0 errors**.
+  * `npm.cmd run build`: **Next.js static generation 4/4 passed (0 errors)**.
+
+---
+
+### Phase 8 — Rate Limiting & Sliding Window Tracker (COMPLETED 100% ✅)
+
+* **Mục tiêu (Objectives):**
+  * Xây dựng bộ kiểm soát tần suất request theo địa chỉ IP với thuật toán cửa sổ trượt (Sliding Window) 60 giây trong bộ nhớ RAM ($O(1)$ deque).
+  * Khắc phục nhược điểm "Traffic Spike at Boundary" của thuật toán Fixed Window.
+  * Phân tách hạn ngạch theo Endpoint Scoping (OWASP API4:2023):
+    * `auth`: 10 req/min (Chống Brute-force mật khẩu & Credential Stuffing).
+    * `admin`: 15 req/min (Chống lạm dụng API quản trị).
+    * `files`: 20 req/min (Chống cạn kiệt tài nguyên I/O download).
+    * `global`: 60 req/min (Hạn mức chung cho toàn bộ hệ thống).
+  * Áp dụng hình phạt rủi ro (Risk Penalty) siết chặt 50% hạn ngạch khi request bị gắn cờ `RATE_LIMIT` từ Decision Engine (Phase 7).
+  * Thực thi tự động phản hồi `HTTP 429 Too Many Requests` kèm headers chuẩn RFC 6585 & NIST SP 800-115: `Retry-After: <seconds>`, `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`.
+  * Tự động lưu vết sự kiện `RATE_LIMIT_EXCEEDED` vào bảng `security_events` để theo dõi trên Dashboard.
+
+* **Sản phẩm bàn giao (Deliverables):**
+  * `gateway/app/security/rate_limiter.py`: `SlidingWindowRateLimiter` và `RateLimitResult` (Task 8.1 - #33).
+  * `gateway/app/api/proxy.py`: Tích hợp kiểm tra rate limit, ngắt luồng trả về 429 và gắn headers rate limit khi forward (Task 8.2 - #34).
+  * `gateway/app/services/security.py`: Phương thức `record_rate_limit` lưu vết kiểm toán an ninh.
+  * `docs/ACADEMIC_MAPPING_PHASES.md`: Bảng đối chiếu cơ sở khoa học chi tiết 20 bài báo tham khảo theo từng Phase và từng Task.
+  * `gateway/tests/test_rate_limiter.py`: 8 unit tests kiểm thử logic cửa sổ trượt, scoping, expiration, memory cleanup, thread safety.
+  * `gateway/tests/test_rate_limit_integration.py`: 2 integration tests kiểm thử chặn 429 trong Active mode và cho phép qua trong Monitor mode.
+
+* **Kiểm thử & Xác minh (Tests & Verification):**
+  * `pytest gateway/tests/`: **66/66 tests PASSED (100%)**.
+  * `ruff check gateway/`: **0 errors**.
+  * `npm.cmd run build`: **Next.js static generation 4/4 passed (0 errors)**.
+
+---
+
+### Phase 5 — Task 5.4: FastAPI Gateway ML Inference Service Integration (COMPLETED ✅)
+
+* **Mục tiêu (Objectives):**
+  * Xây dựng tầng suy luận máy học (Inference Service) trong RAM cho Gateway với ngân sách độ trễ $< 15\text{ms}$ (MDPI Electronics 2025).
+  * Tích hợp bộ trích xuất nhanh 17 đặc trưng hình thái học (Morphological Features) trực tiếp từ payload (<0.1ms).
+  * Thiết lập cơ chế chống chịu lỗi (Resilient Fallback - NIST SP 800-115): Khi Thành viên B chưa huấn luyện xong file model `.joblib`, Gateway tự động fallback an toàn về Rule-only, không crash, và ghi log cảnh báo. Khi có file model, Gateway tự động nạp nóng (Hot-reload).
+  * Tích hợp điểm rủi ro `rf_score` vào bộ tính toán trọng số của `RiskEngine` (Phase 7: $0.40 \times \text{Rule} + 0.35 \times \text{RF} + 0.25 \times \text{Anomaly}$).
+  * Gắn kèm headers đo lường ML telemetry (`X-WAF-ML-Score`, `X-WAF-ML-Type`, `X-WAF-ML-Latency`) và lưu vết `ml_score` vào bảng `security_events` trong SQLite.
+
+* **Sản phẩm bàn giao (Deliverables):**
+  * `gateway/app/security/ml_detector.py`: `MLDetector` và `MLPredictionResult` (Task 5.4 - #25).
+  * `gateway/app/api/proxy.py`: Tích hợp dự đoán ML, nạp điểm `rf_score` vào `RiskEngine`, và gắn headers telemetry.
+  * `gateway/tests/test_ml_detector.py`: 5 unit tests kiểm thử fallback khi thiếu model, trích xuất 17 features, entropy, độ trễ $<15\text{ms}$, và hot reload.
+  * `gateway/tests/test_ml_integration.py`: 2 integration tests kiểm thử Gateway với fallback và active model.
+
+* **Kiểm thử & Xác minh (Tests & Verification):**
+  * `pytest gateway/tests/`: **73/73 tests PASSED (100%)**.
+  * `ruff check gateway/`: **0 errors**.
+  * `npm.cmd run build`: **Next.js static generation 4/4 passed (0 errors)**.
+
+---
+
+### Phase 6 — Task 6.4: Gateway Anomaly Detection Hook & Realtime Logging (COMPLETED ✅)
+
+* **Mục tiêu (Objectives):**
+  * Hoàn thiện mảnh ghép thứ 3 trong bộ ba phòng thủ đa tầng WAF Hybrid: Signature Rule (40%) + Supervised Random Forest (35%) + Unsupervised Isolation Forest (25%) theo [MDPI Electronics 2025](file:///c:/Study/HocKy6/PBL6/docs/REFERENCES.md#ref-09).
+  * Xây dựng service `AnomalyDetector` (`gateway/app/security/anomaly.py`) nạp sẵn mô hình Isolation Forest trong bộ nhớ RAM ($< 10\text{ms}$).
+  * Thiết lập cơ chế chuẩn hóa điểm rủi ro liên tục từng đoạn (Piecewise continuous normalization):
+    * $raw \ge 0$ (Inlier): $\max(0.0, 30.0 - raw \times 300.0) \in [0, 30]$ (`ALLOW`).
+    * $raw < 0$ (Outlier): $\min(100.0, 30.0 + |raw| \times 850.0) \in [30, 100]$ (`MONITOR`, `RATE_LIMIT`, `BLOCK`).
+  * Cơ chế chống chịu lỗi (Resilient Fallback - NIST SP 800-115): Khi Thành viên B chưa huấn luyện xong file model `iforest_model.joblib`, Gateway tự động fallback an toàn, co giãn động trọng số mà không làm gián đoạn hệ thống. Khi file xuất hiện, Gateway tự động nạp nóng (Hot-reload).
+  * Tích hợp `anomaly_score` vào `RiskEngine.calculate_weighted_score()` và lưu vết vào cột `anomaly_score` của bảng `security_events` trong SQLite phục vụ hiển thị trên Explainability Modal (#38).
+  * Gắn headers đo lường `X-WAF-Anomaly-Score` và `X-WAF-Anomaly-Latency`.
+
+* **Sản phẩm bàn giao (Deliverables):**
+  * `gateway/app/security/anomaly.py`: `AnomalyDetector`, `AnomalyResult`, `get_anomaly_detector` (Task 6.4 - #29).
+  * `gateway/app/api/proxy.py`: Tích hợp dự đoán bất thường, nạp điểm `anomaly_score` vào `RiskEngine`, và gắn headers telemetry.
+  * `gateway/app/security/__init__.py`: Export chuẩn hóa `AnomalyDetector` và `AnomalyResult`.
+  * `gateway/tests/test_anomaly_detector.py`: 4 unit tests kiểm thử fallback khi thiếu model, trích xuất 17 features, chuẩn hóa điểm số, độ trễ $<10\text{ms}$, và hot reload.
+  * `gateway/tests/test_anomaly_integration.py`: 2 integration tests kiểm thử Gateway với fallback và active model.
+
+* **Kiểm thử & Xác minh (Tests & Verification):**
+  * `pytest gateway/tests/`: **79/79 tests PASSED (100%)**.
+  * `ruff check gateway/`: **0 errors**.
+  * `npm.cmd run build`: **Next.js static generation 4/4 passed (0 errors)**.
+
+---
+
 ### Phase 3 — Feature Engineering (NOT STARTED)
 - [ ] *(RESERVED FOR ML TEAM)* 17 payload features (chiều dài, entropy, tỷ lệ ký tự đặc biệt, từ khóa SQL/XSS/Path).
 - [ ] *(RESERVED FOR ML TEAM)* HTTP & Behavior metadata features.
@@ -155,3 +264,4 @@ Tài liệu theo dõi trạng thái thực hiện các giai đoạn phát triể
 ---
 
 *(Các phase còn lại từ Phase 4 đến Phase 12 giữ nguyên trạng thái theo kế hoạch)*
+
