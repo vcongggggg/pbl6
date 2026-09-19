@@ -12,6 +12,17 @@ Academic Foundation:
 - [Ref 09] MDPI Electronics 2025: Lightweight feature extraction for real-time WAF inline scoring.
 """
 
+from .extractor import (
+    CANONICAL_FEATURE_NAMES,
+    EXTENDED_FEATURE_NAMES,
+    CanonicalFeatureVector,
+    FeatureExtractorPipeline,
+    FeatureNormalizer,
+    extract_17_features,
+    extract_17_vector,
+    extract_batch_vectors,
+    resolve_payload_text,
+)
 from .http_context import (
     HTTP_CONTEXT_FEATURE_NAMES,
     HTTPContextFeatures,
@@ -42,6 +53,11 @@ from .payload import (
 
 __all__ = [
     "AttackKeywordFeatures",
+    "CANONICAL_FEATURE_NAMES",
+    "CanonicalFeatureVector",
+    "EXTENDED_FEATURE_NAMES",
+    "FeatureExtractorPipeline",
+    "FeatureNormalizer",
     "HTTPContextFeatures",
     "HTTP_CONTEXT_FEATURE_NAMES",
     "PayloadMorphologyFeatures",
@@ -54,6 +70,9 @@ __all__ = [
     "count_sqli_patterns",
     "count_xss_keywords",
     "count_xss_patterns",
+    "extract_17_features",
+    "extract_17_vector",
+    "extract_batch_vectors",
     "extract_char_counts",
     "extract_http_context_features",
     "extract_http_context_features_batch",
@@ -62,5 +81,7 @@ __all__ = [
     "extract_keyword_features_batch",
     "extract_payload_features",
     "extract_payload_features_batch",
+    "resolve_payload_text",
 ]
+
 
