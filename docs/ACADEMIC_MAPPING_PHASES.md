@@ -142,6 +142,7 @@
 | **Task 2b.2** | Command Inj & Traversal | `rules.py` | ModSecurity CRS v4.0 [Ref 12] | Regex 930xxx, 932xxx |
 | **Task 2b.3** | Normalizer (URL/Unicode) | `normalizer.py` | IEEE Access 2023 [Ref 10] | Đệ quy decode chống bypass |
 | **Task 2b.4** | Multi-location Inspection | `engine.py` | ModSecurity CRS [Ref 12] | Duyệt Path, Query, Header, Body |
+| **Task 3.1** | Morphological Features | `payload.py` | Wiley SCN 2015 [Ref 08] | Shannon Entropy, Length, 9 char counts, special ratio |
 | **Task 5.4** | ML Inference Service | `ml_detector.py` | MDPI Electronics 2025 [Ref 09] | Pre-warmed RAM cache, $<15\text{ms}$ latency |
 | **Task 6.4** | Anomaly Hook & Logging | `anomaly.py` | MDPI 2025 + Wiley [Ref 07, 09] | Isolation Forest $<10\text{ms}$, zero-day catch |
 | **Task 7.1** | Weighted Risk Formula | `risk_engine.py` | CRS Anomaly + MDPI [Ref 09, 12] | $0.40R + 0.35RF + 0.25IF$ |
