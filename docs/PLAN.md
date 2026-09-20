@@ -524,43 +524,59 @@ Rule result phải trả về:
 
 ---
 
-# 10. SUPERVISED ML — RANDOM FOREST
+# 10. SUPERVISED ML — MULTI-MODEL BENCHMARKING & RANDOM FOREST (CHAMPION MODEL)
 
-Random Forest là model chính.
+Theo chuẩn mực phương pháp luận nghiên cứu khoa học ([Ref 08] Wiley 2015, [Ref 09] IEEE Access 2024, [Ref 10] IEEE Access 2023), hệ thống không chỉ huấn luyện đơn lẻ một mô hình mà xây dựng **Pipeline đối sánh đa mô hình (Multi-Model Benchmarking)** trên cùng tập dữ liệu 20.000 mẫu thực tế (vector 17 đặc trưng), từ đó chọn ra **Mô hình vô địch (Champion Model)** nạp vào Gateway.
 
-Initial configuration:
+## 10.1. 5 Mô hình ứng viên đại diện cho 5 trường phái thuật toán
 
-```text
-n_estimators = 100
-max_depth = 10
-random_state = 42
-class_weight = balanced
-```
+Hệ thống tiến hành huấn luyện và đo lường đồng thời 5 mô hình đại diện:
+1. **Mô hình 1: Logistic Regression (Multinomial)**
+   - *Trường phái:* Tuyến tính (Linear Classifier).
+   - *Vai trò:* Mốc chuẩn sàn (Baseline Floor). Đo lường hiệu năng tối thiểu của thuật toán tuyến tính.
+2. **Mô hình 2: Decision Tree (CART)**
+   - *Trường phái:* Cây quyết định phi tuyến đơn lẻ (Single Non-linear Tree).
+   - *Vai trò:* Mô phỏng suy luận luật rẽ nhánh `if/else`, kiểm tra mức độ quá khớp (overfitting) trên dữ liệu làm mờ.
+3. **Mô hình 3: Support Vector Machine (Linear SVM)**
+   - *Trường phái:* Cực đại hóa lề siêu phẳng phân tách (Max-margin Classifier - [Ref 08], [Ref 10]).
+   - *Vai trò:* Đại diện trường phái hình học lề cực đại, hoạt động ổn định trên không gian số 17 chiều.
+4. **Mô hình 4: Random Forest (Bagging Ensemble)**
+   - *Trường phái:* Tổ hợp đóng bao (Bagging - [Ref 08], [Ref 09], [Ref 11]).
+   - *Vai trò:* **Ứng viên vô địch (Champion Model dự kiến)** nhờ khả năng triệt tiêu quá khớp, xử lý cực tốt dữ liệu nhiễu/obfuscation, độ trễ suy luận $< 2\text{ms}$ trên CPU, và cung cấp Feature Importance.
+5. **Mô hình 5: XGBoost / Gradient Boosting (GBDT)**
+   - *Trường phái:* Tổ hợp tăng cường theo gradient (Boosting Ensemble - [Ref 09]).
+   - *Vai trò:* Đối thủ đối chứng mạnh nhất trên dữ liệu dạng bảng, so găng độ chính xác biên vs Độ trễ suy luận với Random Forest.
+*(Hệ thống có thể bổ sung Multi-Layer Perceptron - MLP để so sánh đối chứng thêm trường phái Mạng nơ-ron nhân tạo).*
 
-Có thể tune sau khi baseline hoạt động.
+## 10.2. Tiêu chí đánh giá và lựa chọn Mô hình vô địch (Champion Model)
 
-Không hard-code Accuracy 100%.
+Việc lựa chọn mô hình tích hợp vào WAF Gateway dựa trên phân tích đánh đổi đa tiêu chí (Trade-off Analysis):
+1. **Hiệu năng phân loại (Predictive Performance):**
+   - $F_1$-score (Macro & Weighted) $\ge 98\%$.
+   - False Positive Rate (FPR) $\le 1.0\%$ (hạn chế tối đa chặn nhầm người dùng hợp lệ).
+   - Youden's Index $J = \text{TPR} - \text{FPR} \ge 0.90$ theo chuẩn OWASP Benchmark Project ([Ref 15-16]).
+2. **Ràng buộc vận hành WAF thời gian thực (Operational Constraints):**
+   - **Độ trễ suy luận (Inference Latency):** $\le 15\text{ms}$ trên CPU đơn lõi (mục tiêu $< 3\text{ms}$).
+   - **Kích thước mô hình:** $< 50\text{MB}$ để nạp gọn trong RAM và nạp nóng (Hot-reload) tức thì.
+   - **Tính diễn giải (Explainability):** Cung cấp Feature Importance rõ ràng phục vụ SOC Dashboard.
 
-Phải train trên dataset thực tế đã tạo.
+## 10.3. Đóng gói Model Artifact & Metadata
 
-## Labels
+Mô hình chiến thắng (Random Forest) được đóng gói tự động:
+- File nhị phân: `ml-engine/artifacts/rf_model.joblib`
+- Metadata: `ml-engine/artifacts/rf_metadata.json` (lưu schema 17 features, version, hyper-parameters, thresholds, confusion matrix, metrics).
+- Tích hợp trực tiếp: Gateway `ml_detector.py` tự động phát hiện file và nạp nóng vào RAM.
 
-Ít nhất:
-- BENIGN
-- SQLI
-- XSS
-- PATH_TRAVERSAL
-- COMMAND_INJECTION
-- BRUTE_FORCE
-- API_ABUSE
+## 10.4. Nhãn phân loại (Classification Labels)
 
-Có thể dùng multiclass.
+Không gian nhãn 5 lớp đa nhãn:
+- `0: BENIGN` (Lưu lượng sạch)
+- `1: SQLI` (SQL Injection)
+- `2: XSS` (Cross-Site Scripting)
+- `3: PATH_TRAVERSAL` (Duyệt đường dẫn trái phép)
+- `4: COMMAND_INJECTION` (Tiêm lệnh hệ điều hành)
 
-Đồng thời có thể quy đổi thành:
-- benign
-- malicious
-
-cho binary evaluation.
+Đồng thời hỗ trợ quy đổi nhị phân (`0: Benign`, `1: Attack`) cho đánh giá an ninh tổng quát.
 
 ---
 
@@ -1433,20 +1449,22 @@ Hệ thống được chia thành 13 giai đoạn phát triển tuần tự, đ�
 - Phụ trách: `vcongggggg` (Thành viên A).
 - Deliverable: Service hoàn chỉnh trong `vulnerable-api/`, unit tests trong `gateway/tests/test_vulnerable_api_endpoints.py`, 44/44 backend tests pass 100%.
 
-## PHASE 3 — Feature Engineering (IN PROGRESS 🚀 — Next Up)
-- Trích xuất **17 đặc trưng** payload (độ dài, Shannon entropy, tỷ lệ ký tự đặc biệt), tần suất từ khóa tấn công (SQLi, XSS, Path, Cmd), và ngữ cảnh HTTP/hành vi metadata.
+## PHASE 3 — Feature Engineering (COMPLETED Tasks 3.1 - 3.5 ✅)
+- Trích xuất **17 đặc trưng chuẩn tắc** payload (12 đặc trưng hình thái học & entropy theo Wiley 2015 + 5 đặc trưng từ khóa/cú pháp) và 23 đặc trưng ngữ cảnh HTTP mở rộng.
 - Phụ trách: `vcongggggg` (Thành viên A).
-- Deliverable: `ml-engine/features/` pipeline trích xuất vector đặc trưng kèm test suite.
+- Deliverable: Hoàn thành trong PR #74, #76, #77, #79; 79/79 unit tests pass 100%.
 
-## PHASE 4 — Dataset Generation & Lab Traffic (PLANNED ⏳)
-- Thu thập và sinh tập dữ liệu cân bằng: Benign HTTP traffic từ vulnerable-api crawler + Attack payloads từ SecLists/PayloadsAllTheThings.
+## PHASE 4 — Dataset Generation & Lab Traffic (COMPLETED Tasks 4.1 - 4.3 ✅)
+- Thu thập và sinh tập dữ liệu 20.000 mẫu cân bằng (10k Benign + 10k Attacks đa dạng 4 họ, 60% obfuscation né tránh WAF, tỷ lệ vượt rule tĩnh 22.23%), phân tách Stratified 70/15/15 có mã băm SHA-256 chống rò rỉ dữ liệu.
 - Phụ trách: `vcongggggg` (Thành viên A).
-- Deliverable: Bộ dataset chuẩn hóa CSV/Parquet chia Train/Test sạch sẽ.
+- Deliverable: Hoàn thành trong PR #73, #75, #78; báo cáo phân phối dataset đầy đủ.
 
-## PHASE 5 — Random Forest Supervised ML (PLANNED ⏳)
-- Huấn luyện mô hình Random Forest phân loại đa lớp (Multi-class: Benign, SQLi, XSS, Path, Cmd), đánh giá Accuracy/F1, xuất file model `.joblib`, và tích hợp suy luận vào Gateway.
+## PHASE 5 — Multi-Model Benchmarking & Random Forest Supervised ML (IN PROGRESS 🚀 — Next Up)
+- Xây dựng **Pipeline đối sánh 5 mô hình ứng viên** (Logistic Regression, Decision Tree, Linear SVM, Random Forest, XGBoost/GBDT) trên tập 20.000 mẫu (17 đặc trưng).
+- Đánh giá toàn diện đa tiêu chí: Precision, Recall, F1-Score, FPR, Youden's Index $J \ge 0.90$ và Độ trễ suy luận trên CPU ($\le 15\text{ms}$).
+- Lựa chọn Mô hình vô địch (**Random Forest**) xuất file model `rf_model.joblib` và `rf_metadata.json`, tự động nạp nóng vào Gateway `ml_detector.py`.
 - Phụ trách: `vcongggggg` (Thành viên A).
-- Deliverable: Mô hình ML có độ trễ suy luận $< 5\text{ms}$.
+- Deliverable: `ml-engine/models/train_rf.py`, `docs/reports/rf_evaluation.md`, `ml-engine/artifacts/rf_model.joblib`, kèm notebook `ml-engine/notebooks/01_train_and_benchmark.ipynb`.
 
 ## PHASE 6 — Anomaly Detection — Isolation Forest (PLANNED ⏳)
 - Xây dựng mô hình Isolation Forest học phân phối lưu lượng sạch để phát hiện các dị biệt và biến thể tấn công mới lạ (Zero-day / Novel attacks).

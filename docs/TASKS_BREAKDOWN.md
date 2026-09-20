@@ -47,13 +47,13 @@ Tài liệu phân rã chi tiết toàn bộ các giai đoạn (Phase 0 → Phase
 
 ---
 
-### 🔵 PHASE 5: SUPERVISED ML — RANDOM FOREST (PHÂN LOẠI ĐA NHÃN)
+### 🔵 PHASE 5: SUPERVISED ML — MULTI-MODEL BENCHMARKING & RANDOM FOREST (CHAMPION MODEL)
 
 | Mã Task | Issue ID | Tên Task Chi Tiết | Phụ Trách | Trạng Thái | Đầu Ra (Deliverables) |
 | :--- | :---: | :--- | :---: | :---: | :--- |
-| **`TASK-5.1`** | `#22` | **Huấn luyện Random Forest & Tối ưu Siêu tham số:** Xây dựng script huấn luyện `RandomForestClassifier` với GridSearchCV (`n_estimators`, `max_depth`). | **Thành viên A** | CHƯA BẮT ĐẦU | `ml-engine/models/train_rf.py` |
-| **`TASK-5.2`** | `#23` | **Đánh giá Mô hình & Confusion Matrix:** Đo lường Precision, Recall, F1-Score từng lớp và vẽ biểu đồ Ma trận nhầm lẫn (Confusion Matrix). | **Thành viên A** | CHƯA BẮT ĐẦU | `docs/reports/rf_evaluation.md` |
-| **`TASK-5.3`** | `#24` | **Đóng gói Model Artifact & Metadata:** Xuất mô hình `rf_model.joblib` kèm file JSON lưu danh sách 17 features và ngưỡng phân loại. | **Thành viên A** | CHƯA BẮT ĐẦU | `ml-engine/artifacts/rf_model.joblib` |
+| **`TASK-5.1`** | `#22` | **Huấn Luyện & Đối Sánh 5 Mô Hình Ứng Viên (Multi-Model Training Pipeline):** Xây dựng pipeline huấn luyện đồng thời 5 mô hình đại diện 5 trường phái (Logistic Regression, Decision Tree, Linear SVM, Random Forest, XGBoost/GBDT) trên tập 20.000 mẫu vector 17 đặc trưng, tối ưu hóa siêu tham số bằng `GridSearchCV` / K-Fold CV. | **Thành viên A** | **HOÀN THÀNH ✅** | `ml-engine/models/train_rf.py` |
+| **`TASK-5.2`** | `#23` | **Đánh Giá Toàn Diện, Báo Cáo Đối Sánh & Ma Trận Nhầm Lẫn:** Đo lường đa tiêu chí (Accuracy, Precision, Recall, F1-Score, FPR, Youden's Index $J \ge 0.90$, Độ trễ suy luận trên CPU $< 15\text{ms}$), xuất bảng so sánh 5 mô hình và Confusion Matrix của Champion Model. | **Thành viên A** | **HOÀN THÀNH ✅** | `docs/reports/rf_evaluation.md` |
+| **`TASK-5.3`** | `#24` | **Đóng Gói Champion Model Artifact, Metadata & Notebook Trình Diễn:** Đóng gói mô hình vô địch `rf_model.joblib` kèm `rf_metadata.json` (schema 17 features, version, thresholds, metrics) cho Gateway nạp nóng; đồng thời cung cấp Jupyter Notebook trực quan hóa biểu đồ (Confusion Matrix heatmap, Feature Importance) phục vụ demo trước Hội đồng. | **Thành viên A** | **HOÀN THÀNH ✅** | `ml-engine/artifacts/rf_model.joblib`, `rf_metadata.json`, `ml-engine/notebooks/01_train_and_benchmark.ipynb` |
 | **`TASK-5.4`** | `#25` | **Tích hợp Model Inference vào FastAPI Gateway:** Nạp model vào bộ nhớ RAM khi Gateway khởi động, dự đoán thời gian thực với độ trễ $< 15\text{ms}$, trích xuất 17 đặc trưng nhanh, và tích hợp `rf_score` vào `RiskEngine`. | **Thành viên A** | **HOÀN THÀNH ✅** | `gateway/app/security/ml_detector.py` |
 
 ---
