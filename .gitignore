@@ -67,6 +67,7 @@ data/processed/*
 data/artifacts/*
 !data/artifacts/.gitkeep
 *.joblib
+!ml-engine/artifacts/rf_model.joblib
 *.pkl
 *.pickle
 *.h5
