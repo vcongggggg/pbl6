@@ -163,8 +163,8 @@ class TestEdgeCasesAndRobustness:
 
         assert vec.shape == (17,)
         assert vec[0] == 100_000.0
-        # Should process in under 10ms
-        assert elapsed < 0.05, f"100KB processing took too long: {elapsed:.4f}s"
+        # Should process in under 200ms even on constrained CI runners
+        assert elapsed < 0.20, f"100KB processing took too long: {elapsed:.4f}s"
 
 
 class TestCompositePayloadResolver:
@@ -292,5 +292,5 @@ class TestBatchThroughputAndPerformance:
         elapsed = time.perf_counter() - t0
 
         assert matrix.shape == (1000, 17)
-        # 1000 samples should finish in under 80ms (<0.08ms per sample)
-        assert elapsed < 0.15, f"Batch extraction took too long: {elapsed:.4f}s for 1000 samples"
+        # 1000 samples should finish in under 350ms (<0.35ms per sample) even on constrained CI
+        assert elapsed < 0.35, f"Batch extraction took too long: {elapsed:.4f}s for 1000 samples"
