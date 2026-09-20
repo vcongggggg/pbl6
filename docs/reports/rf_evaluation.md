@@ -25,10 +25,10 @@ Thực nghiệm được thực hiện trên toàn bộ tập dữ liệu **20.0
 ## 2. LUẬN CHỨNG KHOA HỌC LỰA CHỌN RANDOM FOREST LÀM CHAMPION MODEL
 
 Dựa trên bảng đối sánh đa tiêu chí giữa 5 trường phái thuật toán:
-1. **Vượt trội so với Mô hình Tuyến tính (Logistic Regression):** F1-Score của Random Forest cao hơn đáng kể (so với ~88%), chứng minh dữ liệu tấn công có chứa obfuscation mang tính phi tuyến cao mà mô hình tuyến tính bỏ sót.
-2. **Khắc phục triệt để nhược điểm của Cây đơn lẻ (Decision Tree):** Decision Tree đơn lẻ có xu hướng quá khớp (overfitting) và FPR cao hơn. Random Forest áp dụng kỹ thuật Bagging 100 cây giúp triệt tiêu phương sai và giảm hẳn FPR.
-3. **So găng giữa Random Forest và XGBoost:** Cả hai đều đạt F1-Score xuất sắc (> 98%), tuy nhiên **Random Forest có độ trễ suy luận nhanh hơn gấp đôi** trên CPU đơn lõi, kích thước mô hình nhẹ hơn và cơ chế Feature Importance trực quan hơn.
-4. **So với Mạng Nơ-ron (MLP):** MLP tốn thời gian huấn luyện và độ trễ suy luận lớn hơn mà không cải thiện F1 trên vector số 17 chiều.
+1. **Vượt trội so với Mô hình Tuyến tính (Logistic Regression):** F1-Score của Random Forest đạt 99.93% với FPR = 0.00% (so với 97.44% và FPR = 0.13% của Logistic Regression), chứng minh dữ liệu tấn công có chứa các biến thể làm rối (obfuscation) mang tính phi tuyến cao cần cấu trúc cây để phân tách chính xác.
+2. **Khắc phục triệt để nhược điểm của Cây đơn lẻ (Decision Tree):** Decision Tree đơn lẻ có xu hướng quá khớp (overfitting) và dễ tổn thương trước biến thể mới. Random Forest áp dụng kỹ thuật Bagging 100 cây giúp triệt tiêu phương sai (variance reduction) và bảo đảm FPR = 0.00% trên tập Benign.
+3. **So găng giữa Random Forest và XGBoost:** Cả hai mô hình ensemble đều đạt F1-Score vượt trội (> 99.9%), nhưng Random Forest được lựa chọn làm Champion Model nhờ cơ chế Bagging Ensemble ít bị overfit trên các mẫu nhiễu/biến dị đối kháng (adversarial mutations) hơn Boosting, cơ chế giải thích Feature Importance trực quan (Gini Importance), và khả năng đóng gói joblib thuần túy, khởi tạo nhanh, không phụ thuộc thư viện native C++ phức tạp trong môi trường Docker container.
+4. **So với Mạng Nơ-ron (MLP):** MLP tốn thời gian huấn luyện gấp 50 lần (18.96s so với 0.35s) và có tỷ lệ dương tính giả cao nhất (FPR = 1.80%), không phù hợp cho WAF thời gian thực.
 5. **Chỉ số Youden's Index:** Random Forest đạt $J = 0.9989 \ge 0.90$, vượt xa ngưỡng chuẩn của OWASP Benchmark Project.
 
 ---

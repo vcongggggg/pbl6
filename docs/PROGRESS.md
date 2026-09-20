@@ -253,8 +253,7 @@ Tài liệu theo dõi trạng thái thực hiện các giai đoạn phát triể
 
 * **Sản phẩm bàn giao (Deliverables):**
   * `docs/reports/rf_evaluation.md`: Báo cáo đánh giá khoa học chuyên sâu về Champion Random Forest.
-  * `ml-engine/notebooks/01_train_and_benchmark.ipynb`: Jupyter Notebook trực quan hóa Confusion Matrix Heatmap và Feature Importance.
-  * `ml-engine/notebooks/generate_notebook.py`: Script tự động biên dịch notebook đồng bộ codebase.
+  * `ml-engine/notebooks/01_train_and_benchmark.ipynb`: Jupyter Notebook trực quan hóa Confusion Matrix Heatmap và Feature Importance (đã nhúng sẵn đầy đủ biểu đồ trực quan).
 
 ---
 
