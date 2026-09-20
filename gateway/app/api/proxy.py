@@ -272,13 +272,19 @@ async def proxy_endpoint(
         else:
             primary_family = "UNKNOWN"
         block_content = json.dumps({
+            "type": "https://api.bookie.local/errors/waf-forbidden",
+            "title": "Forbidden by Web Application Firewall",
             "blocked": True,
             "status": 403,
             "error": "WAF_ACCESS_DENIED",
             "message": "Access blocked by [SHIELD] Web API Security Platform (WAF).",
+            "detail": decision.reason,
+            "instance": f"/api/proxy/{path}",
             "request_id": request_id,
             "decision": decision.action.value,
+            "action": "BLOCKED",
             "attack_type": primary_family,
+            "risk_score": decision.risk_score,
             "threat_score": decision.risk_score,
             "breakdown": risk_breakdown.to_dict(),
             "reason": decision.reason,

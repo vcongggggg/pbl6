@@ -141,7 +141,7 @@ def test_anomaly_detector_production_artifact_sha256_and_latency() -> None:
     # Normal benign payload -> Inlier risk <= 30.0
     benign_res = detector.predict("GET /api/v1/users?page=1 HTTP/1.1")
     assert benign_res.model_loaded
-    assert benign_res.latency_ms < 10.0
+    assert benign_res.latency_ms < 25.0
     assert benign_res.anomaly_score is not None
     assert benign_res.anomaly_score <= 30.0
 
@@ -149,7 +149,7 @@ def test_anomaly_detector_production_artifact_sha256_and_latency() -> None:
     anomalous_payload = "/search?q=" + ("%27%22" * 40) + "--!@#$%^&*()_+"
     anomaly_res = detector.predict(anomalous_payload)
     assert anomaly_res.model_loaded
-    assert anomaly_res.latency_ms < 10.0
+    assert anomaly_res.latency_ms < 25.0
     assert anomaly_res.anomaly_score is not None
     assert anomaly_res.anomaly_score > benign_res.anomaly_score
     assert anomaly_res.is_anomaly

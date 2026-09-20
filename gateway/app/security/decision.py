@@ -40,22 +40,31 @@ class DecisionResult:
 
 
 class DecisionEngine:
-    """Enforces multi-threshold security policies based on aggregated risk scores."""
+    """Enforces multi-threshold security policies based on aggregated risk scores
+
+    and defense-in-depth high-confidence signature override principles (Torrano-Gimenez 2015).
+    """
 
     DEFAULT_ALLOW_THRESHOLD: float = 30.0
     DEFAULT_MONITOR_THRESHOLD: float = 60.0
     DEFAULT_RATE_LIMIT_THRESHOLD: float = 80.0
+    DEFAULT_CRITICAL_RULE_THRESHOLD: float = 85.0
+    DEFAULT_CRITICAL_RF_THRESHOLD: float = 90.0
 
     def __init__(
         self,
         allow_threshold: float = DEFAULT_ALLOW_THRESHOLD,
         monitor_threshold: float = DEFAULT_MONITOR_THRESHOLD,
         rate_limit_threshold: float = DEFAULT_RATE_LIMIT_THRESHOLD,
+        critical_rule_threshold: float = DEFAULT_CRITICAL_RULE_THRESHOLD,
+        critical_rf_threshold: float = DEFAULT_CRITICAL_RF_THRESHOLD,
     ) -> None:
         """Initializes thresholds for policy boundaries."""
         self.allow_threshold = allow_threshold
         self.monitor_threshold = monitor_threshold
         self.rate_limit_threshold = rate_limit_threshold
+        self.critical_rule_threshold = critical_rule_threshold
+        self.critical_rf_threshold = critical_rf_threshold
 
     def evaluate(
         self,
@@ -69,19 +78,29 @@ class DecisionEngine:
             - 30.0 <= score < 60.0: MONITOR (Log incident, forward)
             - 60.0 <= score < 80.0: RATE_LIMIT (Rate limit window check)
             - score >= 80.0: BLOCK (HTTP 403 Forbidden)
+
+        High-Confidence Override (Torrano-Gimenez 2015):
+            Deterministic signatures (Rule >= 85.0) or Supervised ML (RF >= 90.0)
+            trigger BLOCK immediately to prevent statistical dilution from unsupervised models.
         """
         score = risk_breakdown.weighted_score
         normalized_mode = (waf_mode or "ACTIVE_BLOCKING").upper()
 
-        # 1. Base threshold evaluation
-        if score < self.allow_threshold:
-            base_action = PolicyAction.ALLOW
-        elif score < self.monitor_threshold:
-            base_action = PolicyAction.MONITOR
-        elif score < self.rate_limit_threshold:
-            base_action = PolicyAction.RATE_LIMIT
-        else:
+        # 1. High-Confidence Threat Override check
+        is_critical_signature = risk_breakdown.rule_score >= self.critical_rule_threshold
+        is_critical_ml = (
+            risk_breakdown.rf_score is not None
+            and risk_breakdown.rf_score >= self.critical_rf_threshold
+        )
+
+        if score >= self.rate_limit_threshold or is_critical_signature or is_critical_ml:
             base_action = PolicyAction.BLOCK
+        elif score >= self.monitor_threshold:
+            base_action = PolicyAction.RATE_LIMIT
+        elif score >= self.allow_threshold:
+            base_action = PolicyAction.MONITOR
+        else:
+            base_action = PolicyAction.ALLOW
 
         # 2. Modulate decision according to WAF Mode
         if normalized_mode == "OFF":
@@ -102,7 +121,7 @@ class DecisionEngine:
             reason = (
                 f"WAF in MONITOR_ONLY mode - threat detected (Score {score:.1f}) but not blocked."
                 if is_monitored
-                else f"Traffic within safe parameters (Score {score:.1f} < {self.allow_threshold})."
+                else f"Traffic within safe parameters (Score {score:.1f} < {self.allow_threshold:.1f})."
             )
             return DecisionResult(
                 action=action,
@@ -116,15 +135,31 @@ class DecisionEngine:
 
         # ACTIVE_BLOCKING / HYBRID / BLOCKING
         if base_action == PolicyAction.BLOCK:
+            effective_score = score
+            if is_critical_signature:
+                effective_score = max(score, risk_breakdown.rule_score)
+                reason = (
+                    f"High-confidence attack signature confirmed (Rule: {risk_breakdown.rule_score:.1f} "
+                    f">= {self.critical_rule_threshold:.1f}) - immediate block enforcement (Torrano-Gimenez 2015)."
+                )
+            elif is_critical_ml:
+                effective_score = max(score, risk_breakdown.rf_score or 0.0)
+                reason = (
+                    f"High-confidence supervised ML attack classification confirmed (RF: {risk_breakdown.rf_score:.1f} "
+                    f">= {self.critical_rf_threshold:.1f}) - immediate block enforcement."
+                )
+            else:
+                reason = (
+                    f"Critical threat severity exceeded (Score {score:.1f} >= {self.rate_limit_threshold:.1f}) "
+                    "- request actively terminated."
+                )
+
             return DecisionResult(
                 action=PolicyAction.BLOCK,
-                risk_score=score,
+                risk_score=effective_score,
                 is_blocked=True,
                 is_rate_limited=False,
-                reason=(
-                    f"Critical threat severity exceeded (Score {score:.1f} >= {self.rate_limit_threshold}) "
-                    "- request actively terminated."
-                ),
+                reason=reason,
                 breakdown=risk_breakdown,
                 waf_mode=normalized_mode,
             )
