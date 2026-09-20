@@ -68,6 +68,7 @@ data/artifacts/*
 !data/artifacts/.gitkeep
 *.joblib
 !ml-engine/artifacts/rf_model.joblib
+!ml-engine/artifacts/iforest_model.joblib
 *.pkl
 *.pickle
 *.h5
