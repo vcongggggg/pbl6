@@ -58,14 +58,14 @@ Tài liệu phân rã chi tiết toàn bộ các giai đoạn (Phase 0 → Phase
 
 ---
 
-### 🔵 PHASE 6: ANOMALY DETECTION — ISOLATION FOREST
+### 🟢 PHASE 6: ANOMALY DETECTION — ISOLATION FOREST (100% HOÀN THÀNH ✅)
 
 | Mã Task | Issue ID | Tên Task Chi Tiết | Phụ Trách | Trạng Thái | Đầu Ra (Deliverables) |
 | :--- | :---: | :--- | :---: | :---: | :--- |
-| **`TASK-6.1`** | `#26` | **Huấn luyện Isolation Forest trên Baseline Benign:** Huấn luyện mô hình chỉ trên dữ liệu hợp lệ để học phân bố lưu lượng chuẩn. | **Thành viên A** | **SẴN SÀNG TẠO PR 🚀** | `ml-engine/models/train_iforest.py` |
-| **`TASK-6.2`** | `#27` | **Chuẩn hóa Điểm Bất Thường (Anomaly Score 0–100):** Chuyển đổi raw decision function của Isolation Forest thành thang điểm rủi ro trực quan từ 0 đến 100. | **Thành viên A** | CHƯA BẮT ĐẦU | `ml-engine/models/train_iforest.py` |
-| **`TASK-6.3`** | `#28` | **Kiểm thử Bắt Tấn Công Zero-Day & Obfuscation:** Đánh giá khả năng phát hiện các payload bị làm rối dị biệt mà Rule Engine và RF bỏ sót. | **Thành viên A** | CHƯA BẮT ĐẦU | `docs/reports/anomaly_eval.md` |
-| **`TASK-6.4`** | `#29` | **Tích hợp Anomaly Hook vào Request Pipeline:** Nạp Isolation Forest trong RAM ($<10\text{ms}$), chuẩn hóa điểm 0-100, tích hợp vào `RiskEngine`, và ghi nhận trường `anomaly_score` vào `security_events`. | **Thành viên A** | **HOÀN THÀNH ✅** | `gateway/app/security/anomaly.py`, `proxy.py` |
+| **`TASK-6.1`** | `#26` | **Huấn luyện Isolation Forest trên Baseline Benign:** Huấn luyện mô hình chỉ trên dữ liệu hợp lệ để học phân bố lưu lượng chuẩn. | **Thành viên A** | **HOÀN THÀNH ✅ (PR #85)** | `ml-engine/models/train_iforest.py`, `iforest_model.joblib` |
+| **`TASK-6.2`** | `#27` | **Chuẩn hóa Điểm Bất Thường (Anomaly Score 0–100):** Chuyển đổi raw decision function của Isolation Forest thành thang điểm rủi ro trực quan từ 0 đến 100 theo Piecewise Scaling. | **Thành viên A** | **HOÀN THÀNH ✅ (PR #89)** | `ml-engine/models/evaluate_anomaly.py`, `anomaly_eval.md` |
+| **`TASK-6.3`** | `#28` | **Kiểm thử Bắt Tấn Công Zero-Day & Obfuscation:** Đánh giá khả năng phát hiện các payload bị làm rối dị biệt mà Rule Engine và RF bỏ sót; bổ sung xác thực SHA-256 chống CWE-502. | **Thành viên A** | **HOÀN THÀNH ✅ (PR #89)** | `docs/reports/anomaly_eval.md`, `test_anomaly_eval.py` |
+| **`TASK-6.4`** | `#29` | **Tích hợp Anomaly Hook vào Request Pipeline:** Nạp Isolation Forest trong RAM ($<10\text{ms}$), chuẩn hóa điểm 0-100, tích hợp vào `RiskEngine`, lưu vết `anomaly_score` vào `security_events` ngay cả khi 0 rule match, và gắn telemetry headers. | **Thành viên A** | **HOÀN THÀNH ✅** | `gateway/app/security/anomaly.py`, `proxy.py`, `security.py` |
 
 ---
 

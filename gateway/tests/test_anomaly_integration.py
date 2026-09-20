@@ -4,6 +4,7 @@ from pathlib import Path
 
 import joblib
 import numpy as np
+import pytest
 import respx
 from fastapi import status
 from fastapi.testclient import TestClient
@@ -109,3 +110,67 @@ def test_anomaly_proxy_integration_with_active_model(client: TestClient):
                 assert details["breakdown"]["anomaly_score"] is not None
         finally:
             detector.unload()
+
+
+@respx.mock
+def test_anomaly_proxy_production_artifact_integration(client: TestClient):
+    """Verifies that the production iforest_model.joblib artifact operates seamlessly
+
+    within the live reverse proxy pipeline, attaching headers and logging anomaly scores.
+    """
+    repo_root = Path(__file__).resolve().parents[2]
+    model_path = repo_root / "ml-engine" / "artifacts" / "iforest_model.joblib"
+    if not model_path.exists():
+        pytest.skip("Production artifact iforest_model.joblib not present")
+
+    detector = get_anomaly_detector()
+    loaded = detector.load_model(model_path)
+    assert loaded is True
+    assert detector.is_loaded
+
+    try:
+        # Ensure ACTIVE_BLOCKING mode
+        with SessionLocal() as db:
+            cfg = db.query(WafConfigModel).filter(WafConfigModel.key == "waf_mode").first()
+            if not cfg:
+                cfg = WafConfigModel(key="waf_mode", value="ACTIVE_BLOCKING")
+                db.add(cfg)
+            else:
+                cfg.value = "ACTIVE_BLOCKING"
+            db.commit()
+
+        # 1. Normal benign request
+        respx.get("http://vulnerable-api:5000/api/v1/users?page=1").mock(
+            return_value=Response(200, json={"users": ["alice", "bob"]})
+        )
+
+        resp_benign = client.get("/api/proxy/api/v1/users?page=1")
+        assert resp_benign.status_code == status.HTTP_200_OK
+        assert "X-WAF-Anomaly-Score" in resp_benign.headers
+        assert float(resp_benign.headers["X-WAF-Anomaly-Score"]) <= 30.0
+        assert "X-WAF-Anomaly-Latency" in resp_benign.headers
+
+        # 2. Critical obfuscated attack request triggering active blocking
+        attack_query = ("%27%22" * 40) + "--UNION%20SELECT%20null,null--"
+        respx.get(
+            "http://vulnerable-api:5000/rest/products/search"
+        ).mock(return_value=Response(200, json={"items": []}))
+
+        resp_attack = client.get(
+            f"/api/proxy/rest/products/search?q={attack_query}"
+        )
+        assert resp_attack.status_code == status.HTTP_403_FORBIDDEN
+        assert "X-WAF-Anomaly-Score" in resp_attack.headers
+        anomaly_score_header = float(resp_attack.headers["X-WAF-Anomaly-Score"])
+        assert anomaly_score_header > 60.0
+
+        # 3. Verify SQLite persistence of anomaly_score
+        req_id = resp_attack.headers["X-Request-ID"]
+        with SessionLocal() as db:
+            event = db.query(SecurityEvent).filter(SecurityEvent.request_id == req_id).first()
+            assert event is not None
+            assert event.anomaly_score is not None
+            assert event.anomaly_score == anomaly_score_header
+            assert event.action == "BLOCKED"
+    finally:
+        detector.unload()
