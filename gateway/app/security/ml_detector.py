@@ -208,6 +208,32 @@ class MLDetector:
             logger.warning(f"Model file not found at: {resolved}")
             return False
 
+        # Verify cryptographic SHA-256 hash before loading to prevent CWE-502
+        meta_candidates = [
+            resolved.with_name("rf_metadata.json"),
+            resolved.parent / "artifacts" / "rf_metadata.json",
+        ]
+        for meta_candidate in meta_candidates:
+            if meta_candidate.exists() and meta_candidate.is_file():
+                try:
+                    import hashlib
+                    import json
+                    meta_info = json.loads(meta_candidate.read_text(encoding="utf-8"))
+                    expected_hash = meta_info.get("sha256_hash")
+                    if expected_hash:
+                        actual_hash = hashlib.sha256(resolved.read_bytes()).hexdigest()
+                        if actual_hash != expected_hash:
+                            logger.critical(
+                                f"Cryptographic hash mismatch for {resolved}! Expected {expected_hash}, got {actual_hash}. "
+                                "Aborting model load to prevent CWE-502 untrusted deserialization."
+                            )
+                            self._is_loaded = False
+                            return False
+                        logger.info(f"Model cryptographic integrity verified (SHA-256: {actual_hash[:12]}...).")
+                        break
+                except Exception as ex:
+                    logger.warning(f"Error checking cryptographic hash against {meta_candidate}: {ex}")
+
         try:
             model = joblib.load(resolved)
             if not hasattr(model, "predict_proba"):

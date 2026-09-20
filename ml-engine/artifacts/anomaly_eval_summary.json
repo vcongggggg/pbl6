@@ -1,0 +1,110 @@
+{
+  "task": "TASK-6.3",
+  "description": "Zero-Day & Obfuscated Attack Anomaly Detection Evaluation (Isolation Forest)",
+  "evaluated_at": "2026-09-20 08:49:17 UTC",
+  "models": {
+    "isolation_forest": "C:\\Study\\HocKy6\\PBL6\\ml-engine\\artifacts\\iforest_model.joblib",
+    "random_forest": "C:\\Study\\HocKy6\\PBL6\\ml-engine\\artifacts\\rf_model.joblib"
+  },
+  "datasets": {
+    "benign_baseline": {
+      "name": "Benign Validation Baseline",
+      "sample_count": 2000,
+      "is_attack": false,
+      "rule_engine": {
+        "triggered": 0,
+        "rate": 0.0,
+        "avg_risk_score": 0.0,
+        "avg_latency_ms": 0.102
+      },
+      "random_forest": {
+        "triggered": 0,
+        "rate": 0.0,
+        "avg_risk_score": 0.87,
+        "avg_latency_ms": 0.0359
+      },
+      "isolation_forest": {
+        "triggered": 15,
+        "triggered_high_risk": 0,
+        "rate": 0.75,
+        "avg_risk_score": 2.17,
+        "avg_raw_score": 0.2135,
+        "raw_min": -0.0275,
+        "raw_max": 0.2904,
+        "avg_latency_ms": 0.019
+      },
+      "ensemble_3tier": {
+        "triggered": 15,
+        "rate": 0.75,
+        "avg_risk_score": 3.02,
+        "total_pipeline_latency_ms": 0.2192
+      }
+    },
+    "known_attacks": {
+      "name": "Known Attack Test Set (PR #78)",
+      "sample_count": 1500,
+      "is_attack": true,
+      "rule_engine": {
+        "triggered": 1150,
+        "rate": 76.67,
+        "avg_risk_score": 60.91,
+        "avg_latency_ms": 0.1723
+      },
+      "random_forest": {
+        "triggered": 1500,
+        "rate": 100.0,
+        "avg_risk_score": 99.73,
+        "avg_latency_ms": 0.0369
+      },
+      "isolation_forest": {
+        "triggered": 334,
+        "triggered_high_risk": 153,
+        "rate": 22.27,
+        "avg_risk_score": 16.68,
+        "avg_raw_score": 0.1077,
+        "raw_min": -0.1048,
+        "raw_max": 0.2827,
+        "avg_latency_ms": 0.0131
+      },
+      "ensemble_3tier": {
+        "triggered": 1500,
+        "rate": 100.0,
+        "avg_risk_score": 99.75,
+        "total_pipeline_latency_ms": 0.3487
+      }
+    },
+    "zero_day_obfuscated": {
+      "name": "Zero-Day & Obfuscated Attacks",
+      "sample_count": 500,
+      "is_attack": true,
+      "rule_engine": {
+        "triggered": 310,
+        "rate": 62.0,
+        "avg_risk_score": 54.46,
+        "avg_latency_ms": 0.2418
+      },
+      "random_forest": {
+        "triggered": 500,
+        "rate": 100.0,
+        "avg_risk_score": 97.31,
+        "avg_latency_ms": 0.0397
+      },
+      "isolation_forest": {
+        "triggered": 120,
+        "triggered_high_risk": 82,
+        "rate": 24.0,
+        "avg_risk_score": 20.28,
+        "avg_raw_score": 0.0824,
+        "raw_min": -0.0959,
+        "raw_max": 0.1955,
+        "avg_latency_ms": 0.02
+      },
+      "ensemble_3tier": {
+        "triggered": 500,
+        "rate": 100.0,
+        "avg_risk_score": 97.71,
+        "total_pipeline_latency_ms": 0.484
+      }
+    }
+  }
+}
