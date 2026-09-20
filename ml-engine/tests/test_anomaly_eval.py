@@ -8,15 +8,11 @@ Academic & Security Specs:
 
 from __future__ import annotations
 
-import hashlib
 import json
-import shutil
 import sys
 import tempfile
 from pathlib import Path
-from typing import Any
 
-import joblib
 import numpy as np
 import pytest
 
@@ -30,14 +26,13 @@ if str(ML_ENGINE_DIR) not in sys.path:
 if str(GATEWAY_DIR) not in sys.path:
     sys.path.insert(0, str(GATEWAY_DIR))
 
-from models.evaluate_anomaly import (
-    generate_obfuscated_zero_day_payloads,
+from app.security.anomaly import AnomalyDetector  # noqa: E402
+from app.security.ml_detector import MLDetector  # noqa: E402
+from models.evaluate_anomaly import (  # noqa: E402
     generate_markdown_report,
+    generate_obfuscated_zero_day_payloads,
 )
-from models.train_iforest import normalize_anomaly_score
-from app.security.anomaly import AnomalyDetector
-from app.security.ml_detector import MLDetector
-
+from models.train_iforest import normalize_anomaly_score  # noqa: E402
 
 # -----------------------------------------------------------------------------
 # 1. EVALUATION SUITE GENERATION TESTS

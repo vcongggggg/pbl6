@@ -16,7 +16,6 @@ from __future__ import annotations
 
 import json
 import logging
-import os
 import sys
 import time
 from pathlib import Path
@@ -36,8 +35,8 @@ if str(ML_ENGINE_DIR) not in sys.path:
 if str(GATEWAY_DIR) not in sys.path:
     sys.path.insert(0, str(GATEWAY_DIR))
 
-from features.extractor import FeatureExtractorPipeline
-from app.security.engine import RuleEngine
+from app.security.engine import RuleEngine  # noqa: E402
+from features.extractor import FeatureExtractorPipeline  # noqa: E402
 
 logging.basicConfig(
     level=logging.INFO,
