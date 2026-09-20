@@ -96,10 +96,20 @@ class MLDetector:
     """
 
     DEFAULT_MODEL_PATHS: list[str] = [
+        # Champion Supervised Models from Phase 5 (Model-Agnostic: XGBoost / RF / LightGBM)
+        "ml-engine/artifacts/best_model.joblib",
+        "ml-engine/artifacts/xgb_model.joblib",
         "ml-engine/artifacts/rf_model.joblib",
+        "ml-engine/models/best_model.joblib",
+        "ml-engine/models/xgb_model.joblib",
         "ml-engine/models/rf_model.joblib",
+        "gateway/models/best_model.joblib",
         "gateway/models/rf_model.joblib",
+        "../ml-engine/artifacts/best_model.joblib",
+        "../ml-engine/artifacts/xgb_model.joblib",
         "../ml-engine/artifacts/rf_model.joblib",
+        "../ml-engine/models/best_model.joblib",
+        "../ml-engine/models/xgb_model.joblib",
         "../ml-engine/models/rf_model.joblib",
     ]
 

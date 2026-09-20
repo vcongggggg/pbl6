@@ -43,13 +43,15 @@ class DecisionEngine:
     """Enforces multi-threshold security policies based on aggregated risk scores
 
     and defense-in-depth high-confidence signature override principles (Torrano-Gimenez 2015).
+    Model-Agnostic: Evaluates generic Supervised ML scores without coupling to specific algorithms.
     """
 
     DEFAULT_ALLOW_THRESHOLD: float = 30.0
     DEFAULT_MONITOR_THRESHOLD: float = 60.0
     DEFAULT_RATE_LIMIT_THRESHOLD: float = 80.0
     DEFAULT_CRITICAL_RULE_THRESHOLD: float = 85.0
-    DEFAULT_CRITICAL_RF_THRESHOLD: float = 90.0
+    DEFAULT_CRITICAL_ML_THRESHOLD: float = 90.0
+    DEFAULT_CRITICAL_RF_THRESHOLD: float = 90.0  # Backward-compatible alias
 
     def __init__(
         self,
@@ -57,14 +59,19 @@ class DecisionEngine:
         monitor_threshold: float = DEFAULT_MONITOR_THRESHOLD,
         rate_limit_threshold: float = DEFAULT_RATE_LIMIT_THRESHOLD,
         critical_rule_threshold: float = DEFAULT_CRITICAL_RULE_THRESHOLD,
-        critical_rf_threshold: float = DEFAULT_CRITICAL_RF_THRESHOLD,
+        critical_ml_threshold: float = DEFAULT_CRITICAL_ML_THRESHOLD,
+        critical_rf_threshold: float | None = None,
     ) -> None:
         """Initializes thresholds for policy boundaries."""
         self.allow_threshold = allow_threshold
         self.monitor_threshold = monitor_threshold
         self.rate_limit_threshold = rate_limit_threshold
         self.critical_rule_threshold = critical_rule_threshold
-        self.critical_rf_threshold = critical_rf_threshold
+        effective_ml_thresh = (
+            critical_rf_threshold if critical_rf_threshold is not None else critical_ml_threshold
+        )
+        self.critical_ml_threshold = effective_ml_thresh
+        self.critical_rf_threshold = effective_ml_thresh  # Backward compatibility
 
     def evaluate(
         self,
@@ -80,17 +87,18 @@ class DecisionEngine:
             - score >= 80.0: BLOCK (HTTP 403 Forbidden)
 
         High-Confidence Override (Torrano-Gimenez 2015):
-            Deterministic signatures (Rule >= 85.0) or Supervised ML (RF >= 90.0)
+            Deterministic signatures (Rule >= 85.0) or Supervised ML (Score >= 90.0)
             trigger BLOCK immediately to prevent statistical dilution from unsupervised models.
         """
         score = risk_breakdown.weighted_score
         normalized_mode = (waf_mode or "ACTIVE_BLOCKING").upper()
 
-        # 1. High-Confidence Threat Override check
+        # 1. High-Confidence Threat Override check (Model-Agnostic: checks ml_score or rf_score)
         is_critical_signature = risk_breakdown.rule_score >= self.critical_rule_threshold
+        ml_score = risk_breakdown.ml_score if risk_breakdown.ml_score is not None else risk_breakdown.rf_score
         is_critical_ml = (
-            risk_breakdown.rf_score is not None
-            and risk_breakdown.rf_score >= self.critical_rf_threshold
+            ml_score is not None
+            and ml_score >= self.critical_ml_threshold
         )
 
         if score >= self.rate_limit_threshold or is_critical_signature or is_critical_ml:
@@ -143,10 +151,10 @@ class DecisionEngine:
                     f">= {self.critical_rule_threshold:.1f}) - immediate block enforcement (Torrano-Gimenez 2015)."
                 )
             elif is_critical_ml:
-                effective_score = max(score, risk_breakdown.rf_score or 0.0)
+                effective_score = max(score, ml_score or 0.0)
                 reason = (
-                    f"High-confidence supervised ML attack classification confirmed (RF: {risk_breakdown.rf_score:.1f} "
-                    f">= {self.critical_rf_threshold:.1f}) - immediate block enforcement."
+                    f"High-confidence supervised ML classification confirmed (Score: {ml_score:.1f} "
+                    f">= {self.critical_ml_threshold:.1f}) - immediate block enforcement."
                 )
             else:
                 reason = (
