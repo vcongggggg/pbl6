@@ -11,6 +11,11 @@ try:
 except ImportError:
     joblib = None
 
+try:
+    import numpy as np
+except ImportError:
+    np = None
+
 logger = logging.getLogger("waf.gateway.security.ml_detector")
 
 FEATURE_NAMES: list[str] = [
@@ -91,8 +96,10 @@ class MLDetector:
     """
 
     DEFAULT_MODEL_PATHS: list[str] = [
+        "ml-engine/artifacts/rf_model.joblib",
         "ml-engine/models/rf_model.joblib",
         "gateway/models/rf_model.joblib",
+        "../ml-engine/artifacts/rf_model.joblib",
         "../ml-engine/models/rf_model.joblib",
     ]
 
@@ -207,6 +214,13 @@ class MLDetector:
                 logger.error(f"Loaded object from {resolved} does not implement predict_proba.")
                 return False
 
+            # Enforce single-thread execution for real-time per-request WAF latency
+            if hasattr(model, "n_jobs") and getattr(model, "n_jobs", None) != 1:
+                try:
+                    model.n_jobs = 1
+                except Exception:
+                    pass
+
             self._model = model
             self._classes = [str(c) for c in getattr(model, "classes_", ["BENIGN", "ATTACK"])]
             self._model_path = resolved
@@ -255,7 +269,11 @@ class MLDetector:
 
         # 3. Model inference
         try:
-            proba_array = self._model.predict_proba([feature_vector])[0]
+            if np is not None:
+                inp = np.asarray([feature_vector], dtype=np.float32)
+            else:
+                inp = [feature_vector]
+            proba_array = self._model.predict_proba(inp)[0]
             probabilities = {
                 cls_name: round(float(prob), 4)
                 for cls_name, prob in zip(self._classes, proba_array)
