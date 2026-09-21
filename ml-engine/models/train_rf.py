@@ -504,8 +504,11 @@ def generate_evaluation_markdown(
         "| :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |",
     ]
 
-    for b in benchmark_results:
-        is_champion = "Random Forest" in b["model_name"]
+    # Determine champion strictly and objectively based on actual empirical metrics (highest F1-macro)
+    best_idx = max(range(len(benchmark_results)), key=lambda i: (benchmark_results[i]["f1_macro"], benchmark_results[i]["youden_index_j"]))
+
+    for idx, b in enumerate(benchmark_results):
+        is_champion = (idx == best_idx)
         prefix = "**" if is_champion else ""
         suffix = " (CHAMPION) 🏆**" if is_champion else ""
         lines.append(
@@ -513,21 +516,22 @@ def generate_evaluation_markdown(
             f"{b['accuracy']*100:.2f}% | {b['precision_macro']*100:.2f}% | "
             f"{b['recall_macro']*100:.2f}% | {b['f1_macro']*100:.2f}% | "
             f"{b['fpr_benign']*100:.2f}% | **{b['youden_index_j']:.4f}** | "
-            f"**{b['avg_latency_ms']:.3f} ms** |"
+            f"**{b['avg_latency_ms']:.4f} ms** |"
         )
 
     lines.extend([
         "",
         "---",
         "",
-        "## 2. LUẬN CHỨNG KHOA HỌC LỰA CHỌN RANDOM FOREST LÀM CHAMPION MODEL",
+        "## 2. LUẬN CHỨNG KHOA HỌC ĐỐI SÁNH ĐA MÔ HÌNH VÀ QUÁN QUÂN THỰC NGHIỆM",
         "",
-        "Dựa trên bảng đối sánh đa tiêu chí giữa 5 trường phái thuật toán:",
-        "1. **Vượt trội so với Mô hình Tuyến tính (Logistic Regression):** F1-Score của Random Forest đạt 99.93% với FPR = 0.00% (so với 97.44% và FPR = 0.13% của Logistic Regression), chứng minh dữ liệu tấn công có chứa các biến thể làm rối (obfuscation) mang tính phi tuyến cao cần cấu trúc cây để phân tách chính xác.",
-        "2. **Khắc phục triệt để nhược điểm của Cây đơn lẻ (Decision Tree):** Decision Tree đơn lẻ có xu hướng quá khớp (overfitting) và dễ tổn thương trước biến thể mới. Random Forest áp dụng kỹ thuật Bagging 100 cây giúp triệt tiêu phương sai (variance reduction) và bảo đảm FPR = 0.00% trên tập Benign.",
-        "3. **So găng giữa Random Forest và XGBoost:** Cả hai mô hình ensemble đều đạt F1-Score vượt trội (> 99.9%), nhưng Random Forest được lựa chọn làm Champion Model nhờ cơ chế Bagging Ensemble ít bị overfit trên các mẫu nhiễu/biến dị đối kháng (adversarial mutations) hơn Boosting, cơ chế giải thích Feature Importance trực quan (Gini Importance), và khả năng đóng gói joblib thuần túy, khởi tạo nhanh, không phụ thuộc thư viện native C++ phức tạp trong môi trường Docker container.",
-        "4. **So với Mạng Nơ-ron (MLP):** MLP tốn thời gian huấn luyện gấp 50 lần (18.96s so với 0.35s) và có tỷ lệ dương tính giả cao nhất (FPR = 1.80%), không phù hợp cho WAF thời gian thực.",
-        f"5. **Chỉ số Youden's Index:** Random Forest đạt $J = {benchmark_results[3]['youden_index_j'] if len(benchmark_results) > 3 else 0.98:.4f} \\ge 0.90$, vượt xa ngưỡng chuẩn của OWASP Benchmark Project.",
+        "Dựa trên bảng đối sánh khách quan theo số liệu thực nghiệm giữa 5 trường phái thuật toán:",
+        "1. **Vượt trội so với Mô hình Tuyến tính (Logistic Regression):** Các mô hình phi tuyến (XGBoost, RF, Decision Tree) vượt trội hoàn toàn về F1-Score so với Logistic Regression, chứng minh dữ liệu tấn công có chứa obfuscation phi tuyến cao.",
+        "2. **Khắc phục triệt để nhược điểm của Cây đơn lẻ (Decision Tree):** Decision Tree đơn lẻ có FPR cao hơn (0.13%). Các mô hình Ensemble (XGBoost, RF) giảm triệt để FPR về 0.00%.",
+        "3. **So găng khách quan giữa XGBoost và Random Forest:** Căn cứ trên kết quả đo lường thực tế, **XGBoost là Quán Quân Thực Nghiệm (Empirical Champion 🏆)** khi dẫn đầu toàn diện về cả F1-Score (99.97%), Youden Index (0.9995) và độ trễ CPU siêu nhanh (0.0039 ms/mẫu — nhanh hơn gần 10 lần so với Random Forest 0.0368 ms).",
+        "4. **Vai trò của Random Forest:** Random Forest đạt F1-Score bám sát (99.93%), FPR tuyệt đối 0.00%, đóng vai trò là giải pháp dự phòng triển khai nhẹ (Deployment Fallback) không phụ thuộc thư viện runtime C++ native.",
+        "5. **So với Mạng Nơ-ron (MLP):** MLP tốn thời gian huấn luyện (18.96s) và độ trễ suy luận lớn hơn mà không cải thiện F1 trên vector số 17 chiều.",
+        f"6. **Chỉ số Youden's Index chuẩn OWASP:** Cả XGBoost ($J = {benchmark_results[4]['youden_index_j'] if len(benchmark_results) > 4 else 0.9995:.4f}$) và Random Forest đều vượt xa ngưỡng chuẩn của OWASP Benchmark Project ($J \\ge 0.90$).",
         "",
         "---",
         "",
