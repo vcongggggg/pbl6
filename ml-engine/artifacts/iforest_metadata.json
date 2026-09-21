@@ -1,0 +1,68 @@
+{
+  "model_name": "IsolationForest (WAF Anomaly Detector)",
+  "model_version": "1.0.0",
+  "created_at": "2026-09-20T06:58:14.058703+00:00",
+  "sha256_hash": "14ffdee985408642785ccdbb035bc7fecc0b6921316fb6c7b06ae1f741c08e71",
+  "feature_count": 17,
+  "feature_names": [
+    "length",
+    "entropy",
+    "count_single_quote",
+    "count_double_quote",
+    "count_less_than",
+    "count_greater_than",
+    "count_semicolon",
+    "count_hyphen",
+    "count_slash",
+    "count_backslash",
+    "count_parenthesis",
+    "special_char_ratio",
+    "sql_keyword_count",
+    "xss_keyword_count",
+    "sqli_regex_matches",
+    "xss_regex_matches",
+    "path_traversal_matches"
+  ],
+  "hyperparameters": {
+    "n_estimators": 100,
+    "max_samples": 256,
+    "contamination": 0.01,
+    "random_state": 42,
+    "n_jobs": 1
+  },
+  "normalization": {
+    "type": "piecewise_continuous",
+    "inlier_formula": "max(0.0, 30.0 - raw * 300.0)",
+    "outlier_formula": "min(100.0, 30.0 + abs(raw) * 850.0)",
+    "threshold_allow": 30.0,
+    "threshold_monitor": 60.0,
+    "threshold_block": 80.0
+  },
+  "baseline_metrics": {
+    "train_samples": 8000,
+    "val_samples": 2000,
+    "train_inliers": 7942,
+    "train_outliers": 58,
+    "train_inlier_rate": 0.9928,
+    "val_inliers": 1986,
+    "val_outliers": 14,
+    "val_inlier_rate": 0.993,
+    "val_false_alarm_rate": 0.007,
+    "raw_score_stats": {
+      "min": -0.0266,
+      "mean": 0.2141,
+      "median": 0.2403,
+      "max": 0.2904,
+      "std": 0.0722
+    },
+    "risk_score_stats": {
+      "min": 0.0,
+      "mean": 1.99,
+      "median": 0.0,
+      "max": 52.59,
+      "std": 6.68
+    },
+    "avg_latency_ms": 0.00997
+  },
+  "status": "PRODUCTION_READY"
+}

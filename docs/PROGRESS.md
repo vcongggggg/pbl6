@@ -14,8 +14,8 @@ Tài liệu theo dõi trạng thái thực hiện các giai đoạn phát triể
 | **Phase 2B**| **Custom Vulnerable Web API (`vulnerable-api`)** | Tech Lead (Member A) | **COMPLETED ✅** | Tự xây dựng Web API mục tiêu (Bookie Bookstore - 8 kịch bản lỗ hổng chuẩn OWASP Web & API Top 10 + OpenAPI Recon) thay thế Juice Shop theo chỉ đạo của Thầy. |
 | **Phase 3** | **Feature Engineering** | ML/Defense (Member A - `vcongggggg`) | **COMPLETED (100% Tasks 3.1 → 3.5) ✅** | 17 payload features (12 morphological & entropy + 5 keywords/syntax) & 23 HTTP context features (`ml-engine/features/`), 79/79 unit tests pass (PR #74, #76, #77, #79). |
 | **Phase 4** | **Dataset Generation & Lab Traffic** | ML/Defense (Member A - `vcongggggg`) | **COMPLETED (100% Tasks 4.1 → 4.3) ✅** | 20.000 requests cân bằng (10k Benign, 10k Attacks, 60% obfuscation, 22.23% bypass static rule), Stratified 70/15/15 có SHA-256 (PR #73, #75, #78). |
-| **Phase 5** | **Supervised ML — Multi-Model Benchmarking & Random Forest** | ML/Defense (Member A - `vcongggggg`) | **IN PROGRESS 🚀 (Task 5.4 COMPLETED ✅)** | Đối sánh 5 mô hình ứng viên (Logistic, Decision Tree, Linear SVM, Random Forest, XGBoost) trên 20.000 mẫu, chọn Champion Model Random Forest xuất `rf_model.joblib`. Gateway ML Inference Service & Resilient Fallback đã sẵn sàng (Task 5.4 ✅ - PR #70). |
-| **Phase 6** | **Anomaly Detection — Isolation Forest** | ML/Defense (Member A - `vcongggggg`) | **IN PROGRESS (Task 6.4 COMPLETED ✅)** | Training Tasks 6.1-6.3. Gateway Anomaly Hook & Telemetry Logging (Task 6.4 ✅ - PR #71). |
+| **Phase 5** | **Supervised ML — Multi-Model Benchmarking & Random Forest** | ML/Defense (Member A - `vcongggggg`) | **COMPLETED (100% Tasks 5.1 → 5.4) ✅** | Đối sánh 5 mô hình ứng viên (Logistic, Decision Tree, Linear SVM, Random Forest, XGBoost) trên 20.000 mẫu, chọn Champion Model Random Forest xuất `rf_model.joblib`. Gateway ML Inference Service & Resilient Fallback đã sẵn sàng (PR #82, #83, #84, #70). |
+| **Phase 6** | **Anomaly Detection — Isolation Forest** | ML/Defense (Member A - `vcongggggg`) | **IN PROGRESS 🚀 (Task 6.1 READY FOR PR, Task 6.4 COMPLETED ✅)** | Huấn luyện Isolation Forest trên Benign Baseline (Task 6.1 🚀), Score Calibration (Task 6.2), Zero-Day Eval (Task 6.3), Gateway Anomaly Hook & Telemetry Logging (Task 6.4 ✅ - PR #71). |
 | **Phase 7** | **Hybrid Risk Engine & Decision** | Backend / Security (Member A) | **COMPLETED (100% Tasks 7.1 → 7.3) ✅** | Weighted Risk Score (0–100), Thresholds (ALLOW/MONITOR/RATE_LIMIT/BLOCK), Active 403 Blocking (PR #68). |
 | **Phase 8** | **Rate Limiting & Behavior Tracker** | Backend / Security (Member A) | **COMPLETED (100% Tasks 8.1 & 8.2) ✅** | In-Memory Sliding Window 60s trên RAM, HTTP 429 Too Many Requests, Retry-After header (PR #69). |
 | **Phase 9** | **Dashboard UI (Next.js)** | Frontend / Tech Lead (Member A) | **COMPLETED (100% Tasks 9.1 → 9.5) ✅** | SOC Dashboard, 5 KPI cards, Timeline, Distribution, Events table with Client IP origin, Payload Drawer, Quick Simulator, Reset Demo, Detection Explainability Modal (#38). |
@@ -301,6 +301,35 @@ Tài liệu theo dõi trạng thái thực hiện các giai đoạn phát triể
   * `pytest gateway/tests/`: **73/73 tests PASSED (100%)**.
   * `ruff check gateway/`: **0 errors**.
   * `npm.cmd run build`: **Next.js static generation 4/4 passed (0 errors)**.
+
+---
+
+### Phase 6 — Task 6.1: Isolation Forest Training Pipeline on Pure Benign Baseline (READY FOR PR 🚀 - Issue #26)
+
+* **Mục tiêu (Objectives):**
+  * Xây dựng pipeline huấn luyện học máy không giám sát (Unsupervised Anomaly Detection) bằng thuật toán **Isolation Forest** (Liu et al. 2008 ICDM) chỉ trên dữ liệu hợp lệ thuần túy (**Pure Benign Baseline**, $10.000$ mẫu từ `data/synthetic_benign.csv`).
+  * Trích xuất đồng nhất vector 17 đặc trưng hình thái học và cú pháp chuẩn (`CANONICAL_FEATURE_NAMES`) với hiệu năng xử lý batch cực nhanh ($< 0.06\text{ms}$/mẫu).
+  * Tối ưu hóa siêu tham số cách ly bất thường: `n_estimators=100`, `max_samples=256`, `contamination=0.01` (dự phòng $1\%$ nhiễu ngoại lai), `random_state=42`, `n_jobs=1` (đơn luồng CPU tránh nghẽn thread pool trên Uvicorn Gateway).
+  * Đánh giá phân bố điểm bất thường trên tập kiểm định độc lập ($2.000$ mẫu Benign Validation):
+    * Tỷ lệ nhận diện mẫu sạch (Inlier Rate $\ge 0.0$): **$99.30\%$**.
+    * Tỷ lệ báo động nhầm (False Alarm Rate $< 0.0$): **chỉ $0.70\%$** (vượt xa chỉ tiêu $\le 1.5\%$).
+    * Điểm thô trung bình: $+0.2141$ (tương đương Risk Score $1.99 / 100$ - mức an toàn tối đa).
+    * Độ trễ suy luận đơn lẻ: **$0.010\text{ms}$ / mẫu** (chỉ chiếm $0.1\%$ ngân sách $\le 10.0\text{ms}$).
+  * Đóng gói mô hình đạt chuẩn production `ml-engine/artifacts/iforest_model.joblib` (241 KB, quản lý qua ngoại lệ `.gitignore`) kèm siêu dữ liệu và chữ ký băm mật mã học SHA-256 trong `iforest_metadata.json`.
+  * Nâng cấp `gateway/app/security/anomaly.py`: bổ sung đường dẫn ưu tiên nạp artifact thật, cưỡng chế `n_jobs=1` khi nạp, và vector hóa đầu vào bằng NumPy (`np.float32`).
+
+* **Sản phẩm bàn giao (Deliverables):**
+  * `ml-engine/models/train_iforest.py`: Pipeline huấn luyện, đánh giá và xuất artifact Isolation Forest.
+  * `ml-engine/tests/test_train_iforest.py`: 7 bài kiểm thử tự động toàn diện (100% PASS).
+  * `ml-engine/artifacts/iforest_model.joblib`: File nhị phân mô hình (241 KB).
+  * `ml-engine/artifacts/iforest_metadata.json`: Bảng đặc tả metadata kèm mã băm SHA-256 (`14ffdee985408642785ccdbb035bc7fecc0b6921316fb6c7b06ae1f741c08e71`).
+  * `gateway/app/security/anomaly.py`: Tinh chỉnh nạp nóng artifact production, single-threading và vectorization.
+  * `.gitignore`: Bổ sung ngoại lệ `!ml-engine/artifacts/iforest_model.joblib`.
+
+* **Kiểm thử & Xác minh (Tests & Verification):**
+  * `pytest ml-engine/tests/`: **93/93 tests PASSED (100%)**.
+  * `pytest gateway/tests/`: **79/79 tests PASSED (100%)**.
+  * `ruff check ml-engine gateway`: **All checks passed! (0 errors)**.
 
 ---
 

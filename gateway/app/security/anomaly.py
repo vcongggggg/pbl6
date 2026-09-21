@@ -11,6 +11,11 @@ try:
 except ImportError:
     joblib = None
 
+try:
+    import numpy as np
+except ImportError:
+    np = None
+
 logger = logging.getLogger("waf.gateway.security.anomaly")
 
 
@@ -46,8 +51,10 @@ class AnomalyDetector:
     """
 
     DEFAULT_MODEL_PATHS: list[str] = [
+        "ml-engine/artifacts/iforest_model.joblib",
         "ml-engine/models/iforest_model.joblib",
         "gateway/models/iforest_model.joblib",
+        "../ml-engine/artifacts/iforest_model.joblib",
         "../ml-engine/models/iforest_model.joblib",
     ]
 
@@ -118,6 +125,13 @@ class AnomalyDetector:
                 self._is_loaded = False
                 return False
 
+            # Enforce single-thread execution for real-time per-request WAF latency
+            if hasattr(self._model, "n_jobs") and getattr(self._model, "n_jobs", None) != 1:
+                try:
+                    self._model.n_jobs = 1
+                except Exception:
+                    pass
+
             self._model_path = model_file
             self._is_loaded = True
             logger.info(
@@ -183,7 +197,11 @@ class AnomalyDetector:
         try:
             features = MLDetector.extract_features(payload)
             # IsolationForest accepts 2D array [1, 17]
-            raw_scores = self._model.decision_function([features])
+            if np is not None:
+                inp = np.asarray([features], dtype=np.float32)
+            else:
+                inp = [features]
+            raw_scores = self._model.decision_function(inp)
             raw_score = float(raw_scores[0])
             anomaly_score = self.normalize_anomaly_score(raw_score)
             is_anomaly = anomaly_score >= self.anomaly_threshold
