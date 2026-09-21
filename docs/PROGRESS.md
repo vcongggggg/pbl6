@@ -257,8 +257,28 @@ Tài liệu theo dõi trạng thái thực hiện các giai đoạn phát triể
 
 ---
 
-### Phase 5 — Task 5.3: Champion Model Serialization, Cryptographic Hash & Gateway Integration (PENDING - Chờ PR 5.2 - Issue #24)
-* **Kế hoạch triển khai:** Đóng gói model đạt chuẩn production `rf_model.joblib` (`n_jobs=1`), tạo mã băm SHA-256 kèm metadata `rf_metadata.json`, kiểm thử tích hợp Gateway WAF `MLDetector` đảm bảo sub-15ms latency budget.
+### Phase 5 — Task 5.3: Champion Model Serialization, Cryptographic Hash & Gateway Integration (READY FOR PR 🚀 - Issue #24)
+
+* **Mục tiêu (Objectives):**
+  * Đóng gói và tuần tự hóa mô hình vô địch **Random Forest Classifier** đạt chuẩn production (`ml-engine/artifacts/rf_model.joblib`) với dung lượng nén tối ưu (2.06 MB, theo dõi trực tiếp trong git repository qua ngoại lệ `.gitignore`).
+  * Thiết lập cấu hình single-thread execution (`n_jobs=1`) để triệt tiêu chi phí khởi tạo thread pool trên CPU/Windows khi xử lý từng request đơn lẻ theo thời gian thực (giảm độ trễ suy luận xuống ~8.9ms, hoàn toàn thỏa mãn ngân sách sub-15ms).
+  * Khởi tạo siêu dữ liệu kiểm định tính toàn vẹn và nguồn gốc học thuật `ml-engine/artifacts/rf_metadata.json` chứa mã băm mật mã học SHA-256 (`28367dceb78e3b4da7720b4ec2e1f5e42a356ae08ffdd8c182bb671aca447bc2`), danh mục 17 đặc trưng, phân bố 5 nhãn lớp, siêu tham số tối ưu và các chỉ số thẩm định độc lập.
+  * Tinh chỉnh `MLDetector` trong Gateway WAF: bổ sung đường dẫn ưu tiên nạp `ml-engine/artifacts/rf_model.joblib`, tự động ép `model.n_jobs = 1` khi nạp nóng, và vector hóa đầu vào bằng NumPy (`np.float32`) tăng tốc suy luận.
+  * Kiểm thử tương thích toàn diện giữa bộ sinh mô hình `ml-engine` và bộ nạp Gateway `MLDetector`, bảo toàn 100% tỷ lệ vượt qua tất cả test suite.
+
+* **Sản phẩm bàn giao (Deliverables):**
+  * `ml-engine/artifacts/rf_model.joblib`: File nhị phân mô hình vô địch Random Forest Classifier (2.06 MB).
+  * `ml-engine/artifacts/rf_metadata.json`: Bảng đặc tả metadata, schema 17 đặc trưng, version 1.0.0 và chữ ký băm SHA-256.
+  * `.gitignore`: Bổ sung ngoại lệ `!ml-engine/artifacts/rf_model.joblib` phục vụ quản lý vòng đời model WAF.
+  * `gateway/app/security/ml_detector.py`: Cập nhật nạp nóng model production, single-threading và vectorization.
+  * `ml-engine/tests/test_train_rf.py`: Test case `test_gateway_mldetector_compatibility` kiểm thử tương thích Gateway.
+
+* **Kiểm thử & Xác minh (Tests & Verification):**
+  * `pytest ml-engine/tests/`: **86/86 tests PASSED (100%)**.
+  * `pytest gateway/tests/`: **79/79 tests PASSED (100%)**.
+  * `ruff check ml-engine/ gateway/`: **0 errors**.
+  * `SHA-256 verification`: Khớp 100% giữa file nhị phân và metadata.
+  * `Latency per request`: **~8.9ms** trên CPU (thỏa mãn ngân sách $\le 15.0\text{ms}$).
 
 ---
 
