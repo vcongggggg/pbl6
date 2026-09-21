@@ -4,6 +4,10 @@ export interface DashboardStats {
   safe_requests: number;
   safe_request_rate: number;
   avg_threat_score: number;
+  avg_risk_score?: number;
+  blocked_count?: number;
+  rate_limited_count?: number;
+  monitored_count?: number;
   family_counts: Record<string, number>;
   target_status: "ok" | "degraded" | "unreachable";
   target_latency_ms: number;

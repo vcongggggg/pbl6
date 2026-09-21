@@ -30,6 +30,9 @@ export const MetricCards: React.FC<MetricCardsProps> = ({
   const totalRequests = stats?.total_requests ?? 0;
   const attacksDetected = stats?.attacks_detected ?? 0;
   const threatScore = stats?.avg_threat_score ?? 0;
+  const riskScore = stats?.avg_risk_score ?? threatScore;
+  const blockedCount = stats?.blocked_count ?? 0;
+  const rateLimitedCount = stats?.rate_limited_count ?? 0;
   const safeRate = stats?.safe_request_rate ?? 100;
 
   // Derive estimated RPS
@@ -68,7 +71,7 @@ export const MetricCards: React.FC<MetricCardsProps> = ({
             Attacks Detected
           </span>
           <span className="text-[11px] px-2 py-0.5 rounded-full bg-rose-950/60 text-rose-400 border border-rose-800/50 font-mono">
-            Phase 2
+            Defense Active
           </span>
         </div>
         <div className="mt-3">
@@ -76,33 +79,37 @@ export const MetricCards: React.FC<MetricCardsProps> = ({
             <span>{attacksDetected.toLocaleString()}</span>
             <span className="text-xs text-rose-400 font-normal">incidents</span>
           </div>
-          <p className="text-xs text-slate-400 mt-1 truncate">
-            SQLi, XSS, Path, Cmd...
-          </p>
+          <div className="flex items-center gap-2 mt-1 text-[11px] font-mono text-slate-400">
+            <span className="text-rose-400 font-semibold">403 Blocked: {blockedCount}</span>
+            <span>•</span>
+            <span className="text-amber-400 font-semibold">429 Throttled: {rateLimitedCount}</span>
+          </div>
         </div>
       </div>
 
-      {/* 3. THREAT SCORE */}
+      {/* 3. THREAT & RISK SCORE */}
       <div className="bg-slate-900/70 backdrop-blur-md border border-slate-800/80 rounded-xl p-4.5 flex flex-col justify-between hover:border-amber-900/50 transition shadow-lg relative overflow-hidden group">
         <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/5 rounded-full blur-2xl group-hover:bg-amber-500/10 transition"></div>
         <div className="flex items-center justify-between">
           <span className="text-xs font-semibold tracking-wider text-slate-400 uppercase flex items-center gap-1.5 font-mono">
             <ShieldAlert className="w-3.5 h-3.5 text-amber-400" />
-            Threat Score
+            Threat & Risk Score
           </span>
           <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-950/60 text-amber-300 border border-amber-800/50 font-mono">
-            Phase Progression
+            Hybrid Phase 7
           </span>
         </div>
         <div className="mt-3">
           <div className="text-3xl font-extrabold text-white font-mono tracking-tight flex items-baseline gap-2">
-            <span className={threatScore > 50 ? "text-amber-400" : "text-emerald-400"}>
-              {threatScore.toFixed(1)}
+            <span className={riskScore > 50 ? "text-amber-400" : "text-emerald-400"}>
+              {riskScore.toFixed(1)}
             </span>
             <span className="text-xs text-slate-500">/ 100</span>
           </div>
-          <p className="text-[11px] text-slate-400 mt-1 font-mono">
-            Rule Engine Phase 2
+          <p className="text-[11px] text-slate-400 mt-1 font-mono flex items-center gap-1.5">
+            <span>Rule: {threatScore.toFixed(1)}</span>
+            <span>•</span>
+            <span className="text-amber-300">Hybrid Risk: {riskScore.toFixed(1)}</span>
           </p>
         </div>
       </div>

@@ -126,7 +126,8 @@ Tài liệu theo dõi trạng thái thực hiện các giai đoạn phát triể
   * `docs/reports/phase9_dashboard_telemetry_academic.md`: Báo cáo cơ sở khoa học, mô hình toán học time-bucket aggregation, phân tích Big-O và trích dẫn chuẩn Bộ GD&ĐT cho Task 9.1.
   * `gateway/tests/test_dashboard_api.py`: Bộ unit test tự động kiểm thử toàn bộ dashboard endpoints.
   * `dashboard/src/components/Header.tsx`: Target status (`● 12.4ms`), WAF Mode (`MONITOR_ONLY`), Smart Polling (`3s/5s/Off`), Reset Demo.
-  * `dashboard/src/components/MetricCards.tsx`: 4 thẻ chỉ số KPI + Hộp Quick Simulator (SQLi, XSS, Path, Cmd, Benign) (Task 9.2 & 9.5 - #63).
+  * `dashboard/src/components/MetricCards.tsx`: 5 thẻ chỉ số an ninh đo lường được (NIST SP 800-137, ISO/IEC 27004) kèm phân loại 403 Blocked / 429 Throttled, Dual Threat & Risk Score (Phases 2/7/8), và Hộp Quick Attack Simulator (Task 9.2 & 9.5 - #36, #63).
+  * `docs/reports/phase9_kpi_charts_academic.md`: Báo cáo cơ sở khoa học, phân tích toán học chỉ số an ninh và trích dẫn chuẩn Bộ GD&ĐT cho Task 9.2.
   * `dashboard/src/components/ThreatTimelineChart.tsx`: Biểu đồ Area Chart sóng Cyan (Benign) vs sóng Rose (Attacks) (Task 9.2).
   * `dashboard/src/components/AttackDistributionChart.tsx`: Biểu đồ Donut Chart phân bố 4 họ tấn công (Task 9.2).
   * `dashboard/src/components/events/LiveEventsTable.tsx`: Bảng nhật ký sự kiện an ninh thời gian thực hiển thị nguồn Client IP (phân biệt LAN Attacker Máy 2 vs Localhost), tìm kiếm theo Request ID / IP, lọc Severity, Attack Type, reset bộ lọc, nút copy 1-click, phân trang và xuất dữ liệu JSON (Task 9.3).
