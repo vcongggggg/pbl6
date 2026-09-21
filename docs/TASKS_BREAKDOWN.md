@@ -83,8 +83,8 @@ Tài liệu phân rã chi tiết toàn bộ các giai đoạn (Phase 0 → Phase
 
 | Mã Task | Issue ID | Tên Task Chi Tiết | Phụ Trách | Trạng Thái | Đầu Ra (Deliverables) |
 | :--- | :---: | :--- | :---: | :---: | :--- |
-| **`TASK-8.1`** | `#33` | **Bộ Theo Dõi Cửa Sổ Trượt Theo IP (Sliding Window Tracker):** Quản lý bộ đếm request theo IP trong bộ nhớ RAM với thời gian trượt 60 giây ($O(1)$ deque), phân tách quota theo endpoint scoping (`auth`: 10, `admin`: 15, `files`: 20, `global`: 60). | **Thành viên A** | **HOÀN THÀNH ✅** | `gateway/app/security/rate_limiter.py` |
-| **`TASK-8.2`** | `#34` | **Thực Thi Phản Hồi HTTP 429 Too Many Requests:** Tự động chặn tạm thời IP vượt ngưỡng tần suất (RPS limit) kèm header `Retry-After: <sec>`, `X-RateLimit-*`, lưu vết kiểm toán và tích hợp Reverse Proxy. | **Thành viên A** | **HOÀN THÀNH ✅** | `gateway/app/api/proxy.py`, `gateway/app/services/security.py` |
+| **`TASK-8.1`** | `#33` | **Bộ Theo Dõi Cửa Sổ Trượt Theo IP (Sliding Window Tracker):** Quản lý bộ đếm request theo IP trong bộ nhớ RAM với thời gian trượt 60 giây ($O(1)$ deque), phân tách quota theo endpoint scoping (`auth`: 10, `admin`: 15, `files`: 20, `global`: 60), thread-safety, RAM auto-cleanup. | **Thành viên A** | **HOÀN THÀNH ✅** | `gateway/app/security/rate_limiter.py`, `docs/reports/phase8_rate_limiting_academic.md` (PR #92) |
+| **`TASK-8.2`** | `#34` | **Thực Thi Phản Hồi HTTP 429 Too Many Requests:** Tự động chặn IP vượt ngưỡng tần suất với Risk-Adaptive Penalty 50%, chuẩn hóa RFC 7807 Problem Details, headers `Retry-After: <sec>`, `X-RateLimit-*` (RFC 6585), lưu vết kiểm toán SQLite. | **Thành viên A** | **HOÀN THÀNH ✅** | `gateway/app/api/proxy.py`, `gateway/app/services/security.py` (PR #92) |
 
 ---
 

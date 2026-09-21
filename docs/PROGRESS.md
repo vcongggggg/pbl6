@@ -17,7 +17,7 @@ Tài liệu theo dõi trạng thái thực hiện các giai đoạn phát triể
 | **Phase 5** | **Supervised ML — Multi-Model Benchmarking & Random Forest** | ML/Defense (Member A - `vcongggggg`) | **COMPLETED (100% Tasks 5.1 → 5.4) ✅** | Đối sánh 5 mô hình ứng viên (Logistic, Decision Tree, Linear SVM, Random Forest, XGBoost) trên 20.000 mẫu, xác định Quán quân Thực nghiệm XGBoost (F1=99.97%, Latency=0.004ms) cùng Random Forest dự phòng. Gateway ML Inference Service & Resilient Fallback đã sẵn sàng (PR #82, #83, #84, #70). |
 | **Phase 6** | **Anomaly Detection — Isolation Forest** | ML/Defense (Member A - `vcongggggg`) | **IN PROGRESS 🚀 (Task 6.1 READY FOR PR, Task 6.4 COMPLETED ✅)** | Huấn luyện Isolation Forest trên Benign Baseline (Task 6.1 🚀), Score Calibration (Task 6.2), Zero-Day Eval (Task 6.3), Gateway Anomaly Hook & Telemetry Logging (Task 6.4 ✅ - PR #71). |
 | **Phase 7** | **Hybrid Risk Engine & Decision** | Backend / Security (Member A) | **COMPLETED (100% Tasks 7.1 → 7.3) ✅** | Weighted Risk Score (0–100), Thresholds (ALLOW/MONITOR/RATE_LIMIT/BLOCK), Active 403 Blocking (PR #68). |
-| **Phase 8** | **Rate Limiting & Behavior Tracker** | Backend / Security (Member A) | **COMPLETED (100% Tasks 8.1 & 8.2) ✅** | In-Memory Sliding Window 60s trên RAM, HTTP 429 Too Many Requests, Retry-After header (PR #69). |
+| **Phase 8** | **Rate Limiting & Behavior Tracker** | Backend / Security (Member A) | **COMPLETED (100% Tasks 8.1 & 8.2) ✅** | In-Memory Sliding Window 60s trên RAM ($O(1)$ deque), Risk Penalty 50%, HTTP 429 RFC 7807/6585, Thread-safety & RAM cleanup, Chuẩn hóa học thuật IEEE/Elsevier 100% (PR #92, Closes #33, #34). |
 | **Phase 9** | **Dashboard UI (Next.js)** | Frontend / Tech Lead (Member A) | **COMPLETED (100% Tasks 9.1 → 9.5) ✅** | SOC Dashboard, 5 KPI cards, Timeline, Distribution, Events table with Client IP origin, Payload Drawer, Quick Simulator, Reset Demo, Detection Explainability Modal (#38). |
 | **Phase 10** | **Offensive AI — AI Attack Planner & PyTorch RL Model (Máy 2)** | Offensive AI & Red Team (Member B - `naocavang08`) | **NOT STARTED** | AI Attack Planner Agent trên Máy 2: Trinh sát OpenAPI, Môi trường mô phỏng Attack Graph, Mô hình né tránh WAF In-house bằng PyTorch Deep RL DQN (`evasion_agent.pt`), **100% PyTorch, KHÔNG dùng OpenAI API**. |
 | **Phase 11** | **System Evaluation & Comparison** | ML/Data & Red Team (Member B & A) | **NOT STARTED** | So sánh Rule vs ML vs Anomaly vs Hybrid, Evasion test, Benchmark. |
@@ -196,11 +196,14 @@ Tài liệu theo dõi trạng thái thực hiện các giai đoạn phát triể
 
 * **Sản phẩm bàn giao (Deliverables):**
   * `gateway/app/security/rate_limiter.py`: `SlidingWindowRateLimiter` và `RateLimitResult` (Task 8.1 - #33).
-  * `gateway/app/api/proxy.py`: Tích hợp kiểm tra rate limit, ngắt luồng trả về 429 và gắn headers rate limit khi forward (Task 8.2 - #34).
+  * `gateway/app/api/proxy.py`: Tích hợp kiểm tra rate limit, ngắt luồng trả về HTTP 429 (RFC 7807 Problem Details) và gắn headers rate limit (RFC 6585) khi forward (Task 8.2 - #34).
   * `gateway/app/services/security.py`: Phương thức `record_rate_limit` lưu vết kiểm toán an ninh.
+  * `docs/reports/phase8_rate_limiting_academic.md`: Báo cáo học thuật toàn diện về thuật toán Sliding Window Counter, cơ sở lý thuyết toán học, phân tích Big-O và trích dẫn chuẩn Bộ GD&ĐT (Yakhchi et al., IEEE Access 2020; Al-Haija et al., Elsevier 2022).
+  * `docs/PR_PHASE8_REVIEW_REPORT.md`: Báo cáo thẩm định an ninh & code review độc lập đạt 9.9/10 (APPROVE).
   * `docs/ACADEMIC_MAPPING_PHASES.md`: Bảng đối chiếu cơ sở khoa học chi tiết 20 bài báo tham khảo theo từng Phase và từng Task.
   * `gateway/tests/test_rate_limiter.py`: 8 unit tests kiểm thử logic cửa sổ trượt, scoping, expiration, memory cleanup, thread safety.
   * `gateway/tests/test_rate_limit_integration.py`: 2 integration tests kiểm thử chặn 429 trong Active mode và cho phép qua trong Monitor mode.
+  * **Pull Request GitHub:** **[PR #92](https://github.com/vcongggggg/pbl6/pull/92)** (Closes #33, Closes #34).
 
 * **Kiểm thử & Xác minh (Tests & Verification):**
   * `pytest gateway/tests/`: **66/66 tests PASSED (100%)**.

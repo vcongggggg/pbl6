@@ -112,12 +112,22 @@ async def proxy_endpoint(
     except Exception:
         pass
 
-    # 3. Phase 8: In-Memory Sliding Window Rate Limiting (API4:2023, ModSecurity CRS v4.0)
+    # 3. Phase 8: In-Memory Sliding Window Rate Limiting with Session-Aware Fingerprinting & Exponential Backoff
     rate_limit_result = None
     if active_waf_mode != "OFF":
+        user_agent = request.headers.get("user-agent")
+        session_id = None
+        auth_header = request.headers.get("authorization", "")
+        if auth_header.lower().startswith("bearer "):
+            session_id = auth_header[7:].strip()[:32]
+        if not session_id:
+            session_id = request.cookies.get("session_id") or request.cookies.get("token")
+
         rate_limit_result = rate_limiter.check_rate_limit(
             client_ip=client_ip,
             path=f"/{path}",
+            session_id=session_id,
+            user_agent=user_agent,
         )
 
         if rate_limit_result.is_limited:
@@ -145,8 +155,16 @@ async def proxy_endpoint(
                 )
 
                 rate_limit_body = json.dumps({
-                    "blocked": True,
+                    "type": "https://api.bookie.local/errors/rate-limit-exceeded",
+                    "title": "Too Many Requests: Rate Limit Exceeded",
                     "status": 429,
+                    "detail": (
+                        f"Rate limit quota exceeded for scope '{rate_limit_result.scope}' "
+                        f"({rate_limit_result.current_count}/{rate_limit_result.limit} requests per "
+                        f"{int(rate_limit_result.window_seconds)}s). Please retry after {rate_limit_result.retry_after} seconds."
+                    ),
+                    "instance": f"/api/proxy/{path}",
+                    "blocked": True,
                     "error": "RATE_LIMIT_EXCEEDED",
                     "message": "Rate limit exceeded. Temporary access restricted by [SHIELD] WAF.",
                     "request_id": request_id,
