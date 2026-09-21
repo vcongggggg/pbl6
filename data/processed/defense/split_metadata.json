@@ -1,0 +1,169 @@
+{
+  "task": "TASK-4.3",
+  "track": "defense",
+  "description": "Stratified Split 70/15/15 for Defense Model (PBL6 Web API Security Platform)",
+  "random_seed": 42,
+  "total_samples": 20000,
+  "split_sizes": {
+    "train": 14000,
+    "val": 3000,
+    "test": 3000
+  },
+  "hashes_sha256": {
+    "train": "f53ce2abf9029998211eb67484932bf2da089bc7368288fbb3f37533a034b034",
+    "val": "3acf837883cd4fe5708bddb0f77c4fcdab3b718fc49deb3d4d26f76a3a46ebd4",
+    "test": "ca5cb610c373d5dc8a019b623db02f1b0144c2c9496949036eae8bdcfd1973b9"
+  },
+  "full_stats": {
+    "total_samples": 20000,
+    "class_distribution": {
+      "0": {
+        "name": "BENIGN",
+        "count": 10000,
+        "percentage": 50.0
+      },
+      "1": {
+        "name": "SQLI",
+        "count": 2500,
+        "percentage": 12.5
+      },
+      "2": {
+        "name": "XSS",
+        "count": 2500,
+        "percentage": 12.5
+      },
+      "3": {
+        "name": "PATH",
+        "count": 2500,
+        "percentage": 12.5
+      },
+      "4": {
+        "name": "CMD",
+        "count": 2500,
+        "percentage": 12.5
+      }
+    },
+    "methods": {
+      "GET": 13019,
+      "POST": 6981
+    },
+    "has_query_params": 8254,
+    "has_query_pct": 41.27,
+    "has_body": 6981,
+    "has_body_pct": 34.91
+  },
+  "train_stats": {
+    "total_samples": 14000,
+    "class_distribution": {
+      "0": {
+        "name": "BENIGN",
+        "count": 7000,
+        "percentage": 50.0
+      },
+      "1": {
+        "name": "SQLI",
+        "count": 1750,
+        "percentage": 12.5
+      },
+      "2": {
+        "name": "XSS",
+        "count": 1750,
+        "percentage": 12.5
+      },
+      "3": {
+        "name": "PATH",
+        "count": 1750,
+        "percentage": 12.5
+      },
+      "4": {
+        "name": "CMD",
+        "count": 1750,
+        "percentage": 12.5
+      }
+    },
+    "methods": {
+      "GET": 9085,
+      "POST": 4915
+    },
+    "has_query_params": 5790,
+    "has_query_pct": 41.36,
+    "has_body": 4915,
+    "has_body_pct": 35.11
+  },
+  "val_stats": {
+    "total_samples": 3000,
+    "class_distribution": {
+      "0": {
+        "name": "BENIGN",
+        "count": 1500,
+        "percentage": 50.0
+      },
+      "1": {
+        "name": "SQLI",
+        "count": 375,
+        "percentage": 12.5
+      },
+      "2": {
+        "name": "XSS",
+        "count": 375,
+        "percentage": 12.5
+      },
+      "3": {
+        "name": "PATH",
+        "count": 375,
+        "percentage": 12.5
+      },
+      "4": {
+        "name": "CMD",
+        "count": 375,
+        "percentage": 12.5
+      }
+    },
+    "methods": {
+      "GET": 1972,
+      "POST": 1028
+    },
+    "has_query_params": 1247,
+    "has_query_pct": 41.57,
+    "has_body": 1028,
+    "has_body_pct": 34.27
+  },
+  "test_stats": {
+    "total_samples": 3000,
+    "class_distribution": {
+      "0": {
+        "name": "BENIGN",
+        "count": 1500,
+        "percentage": 50.0
+      },
+      "1": {
+        "name": "SQLI",
+        "count": 375,
+        "percentage": 12.5
+      },
+      "2": {
+        "name": "XSS",
+        "count": 375,
+        "percentage": 12.5
+      },
+      "3": {
+        "name": "PATH",
+        "count": 375,
+        "percentage": 12.5
+      },
+      "4": {
+        "name": "CMD",
+        "count": 375,
+        "percentage": 12.5
+      }
+    },
+    "methods": {
+      "POST": 1038,
+      "GET": 1962
+    },
+    "has_query_params": 1217,
+    "has_query_pct": 40.57,
+    "has_body": 1038,
+    "has_body_pct": 34.6
+  }
+}
