@@ -1,13 +1,14 @@
-# Báo Cáo Phân Bổ Tập Dữ Liệu Model Tấn Công (Task 4.3 — Attack Dataset Distribution Report)
+# Báo Cáo Phân Bổ Tập Dữ Liệu Model Tấn Công (Task 4.3 — Offensive Dataset Report)
 
 ## 1. Tổng Quan Phân Chia Dữ Liệu Model Tấn Công (Stratified Split 70/15/15)
 
-- **Tổng số mẫu tấn công:** 10,000 HTTP Attack Requests (10,000 samples)
+- **Mục đích:** Huấn luyện Tác tử AI Tấn Công (AI Attack Planner & Deep RL DQN Evasion Model — Phase 10).
+- **Tổng số mẫu tấn công:** 10,000 HTTP Attack Requests (100% thuần tấn công)
 - **Tập Train (70%):** 7,000 samples
 - **Tập Validation (15%):** 1,500 samples
 - **Tập Test (15%):** 1,500 samples
 - **Cố định ngẫu nhiên (Random Seed):** 42
-- **Phương pháp phân chia:** Phân tầng có giám sát (Stratified Sampling theo 4 họ tấn công)
+- **Bảo đảm cô lập (Zero Benign Contamination):** 0% mẫu Benign (không chứa nhãn 0).
 - **Thư mục lưu trữ Deliverable:** `data/processed/attack/`
 
 ---
