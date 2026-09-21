@@ -151,3 +151,126 @@ def test_rate_limiter_thread_safety():
     assert all(not r.is_limited for r in results)
     final_res = limiter.check_rate_limit(ip, "/concurrent")
     assert final_res.current_count == 51
+
+
+def test_exponential_backoff_after_multiple_violations():
+    """Verifies that repeat offenders trigger exponential backoff (120s, 240s, 480s, max 900s)."""
+    limiter = SlidingWindowRateLimiter(window_seconds=60.0, default_limit=2)
+    ip = "192.168.1.77"
+    base_time = 1000.0
+
+    # Fill quota (2 requests)
+    assert limiter.check_rate_limit(ip, "/api", now=base_time).is_limited is False
+    assert limiter.check_rate_limit(ip, "/api", now=base_time + 1.0).is_limited is False
+
+    # Violation 1: normal retry-after
+    v1 = limiter.check_rate_limit(ip, "/api", now=base_time + 2.0)
+    assert v1.is_limited is True
+    assert v1.violations_count == 1
+    assert v1.retry_after <= 60
+
+    # Violation 2: normal retry-after
+    v2 = limiter.check_rate_limit(ip, "/api", now=base_time + 3.0)
+    assert v2.is_limited is True
+    assert v2.violations_count == 2
+    assert v2.retry_after <= 60
+
+    # Violation 3: 1st tier exponential backoff (120s)
+    v3 = limiter.check_rate_limit(ip, "/api", now=base_time + 4.0)
+    assert v3.is_limited is True
+    assert v3.violations_count == 3
+    assert v3.retry_after >= 120
+
+    # Violation 4: 2nd tier exponential backoff (240s)
+    v4 = limiter.check_rate_limit(ip, "/api", now=base_time + 5.0)
+    assert v4.is_limited is True
+    assert v4.violations_count == 4
+    assert v4.retry_after >= 240
+
+    # Violation 5: 3rd tier exponential backoff (480s)
+    v5 = limiter.check_rate_limit(ip, "/api", now=base_time + 6.0)
+    assert v5.is_limited is True
+    assert v5.violations_count == 5
+    assert v5.retry_after >= 480
+
+    # Violation 6: max penalty cap (900s)
+    v6 = limiter.check_rate_limit(ip, "/api", now=base_time + 7.0)
+    assert v6.is_limited is True
+    assert v6.violations_count == 6
+    assert v6.retry_after == 900
+
+
+def test_session_aware_scoping_separates_clients_on_same_ip():
+    """Verifies that different sessions or user agents on the same NAT IP do not throttle each other."""
+    limiter = SlidingWindowRateLimiter(window_seconds=60.0, default_limit=2)
+    shared_ip = "203.0.113.10"
+    base_time = 2000.0
+
+    # Client Alice with session token
+    assert (
+        limiter.check_rate_limit(
+            shared_ip,
+            "/api",
+            session_id="token_alice",
+            user_agent="Browser-A",
+            now=base_time,
+        ).is_limited
+        is False
+    )
+    assert (
+        limiter.check_rate_limit(
+            shared_ip,
+            "/api",
+            session_id="token_alice",
+            user_agent="Browser-A",
+            now=base_time + 1.0,
+        ).is_limited
+        is False
+    )
+
+    # Alice exceeds quota
+    alice_blocked = limiter.check_rate_limit(
+        shared_ip,
+        "/api",
+        session_id="token_alice",
+        user_agent="Browser-A",
+        now=base_time + 2.0,
+    )
+    assert alice_blocked.is_limited is True
+
+    # Client Bob on SAME IP with different session must NOT be throttled
+    bob_res = limiter.check_rate_limit(
+        shared_ip,
+        "/api",
+        session_id="token_bob",
+        user_agent="Browser-B",
+        now=base_time + 2.5,
+    )
+    assert bob_res.is_limited is False
+    assert bob_res.remaining == 1
+
+    # Client Charlie on SAME IP without session but with distinct User-Agent must NOT be throttled
+    charlie_res = limiter.check_rate_limit(
+        shared_ip,
+        "/api",
+        user_agent="MobileApp-Charlie",
+        now=base_time + 3.0,
+    )
+    assert charlie_res.is_limited is False
+    assert charlie_res.remaining == 1
+
+
+def test_violation_history_cleanup_after_window():
+    """Verifies that expired violation histories (> 600s) are purged during cleanup."""
+    limiter = SlidingWindowRateLimiter(window_seconds=60.0, default_limit=1)
+    ip = "192.168.100.99"
+    now = 10000.0
+
+    # Exceed limit to create violation entry
+    limiter.check_rate_limit(ip, "/api", now=now - 700.0)
+    limiter.check_rate_limit(ip, "/api", now=now - 650.0)
+
+    # Clean up at current time (both violations are > 600s old)
+    removed = limiter.cleanup_expired_records(max_idle_seconds=300.0, now=now)
+    assert removed >= 1
+    assert ip not in limiter._violation_history
