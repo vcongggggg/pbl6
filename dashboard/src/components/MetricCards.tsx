@@ -152,6 +152,7 @@ export const MetricCards: React.FC<MetricCardsProps> = ({
             id="sim-sqli"
             onClick={() => onSimulate("SQLI")}
             disabled={isSimulating}
+            title="Bắn payload SQL Injection thực qua Proxy: ' OR 1=1-- (CWE-89, CAPEC-66, MITRE T1190)"
             className="flex items-center justify-center gap-1 py-1.5 px-2 rounded-lg bg-rose-950/50 hover:bg-rose-900/80 text-rose-300 border border-rose-800/50 transition active:scale-95 disabled:opacity-50 cursor-pointer shadow-sm"
           >
             <Flame className="w-3 h-3 text-rose-400" />
@@ -163,6 +164,7 @@ export const MetricCards: React.FC<MetricCardsProps> = ({
             id="sim-xss"
             onClick={() => onSimulate("XSS")}
             disabled={isSimulating}
+            title="Bắn payload XSS thực vào JSON Body: <script>alert('PBL6')</script> (CWE-79, CAPEC-63, MITRE T1059)"
             className="flex items-center justify-center gap-1 py-1.5 px-2 rounded-lg bg-amber-950/50 hover:bg-amber-900/80 text-amber-300 border border-amber-800/50 transition active:scale-95 disabled:opacity-50 cursor-pointer shadow-sm"
           >
             <Zap className="w-3 h-3 text-amber-400" />
@@ -174,6 +176,7 @@ export const MetricCards: React.FC<MetricCardsProps> = ({
             id="sim-path"
             onClick={() => onSimulate("PATH")}
             disabled={isSimulating}
+            title="Bắn payload Path Traversal / LFI: ../../../../etc/passwd (CWE-22, CAPEC-126, MITRE T1083)"
             className="flex items-center justify-center gap-1 py-1.5 px-2 rounded-lg bg-teal-950/50 hover:bg-teal-900/80 text-teal-300 border border-teal-800/50 transition active:scale-95 disabled:opacity-50 cursor-pointer shadow-sm"
           >
             <FolderTree className="w-3 h-3 text-teal-400" />
@@ -185,6 +188,7 @@ export const MetricCards: React.FC<MetricCardsProps> = ({
             id="sim-cmd"
             onClick={() => onSimulate("CMD")}
             disabled={isSimulating}
+            title="Bắn payload Command Injection (RCE): 127.0.0.1; whoami (CWE-78, CAPEC-88, MITRE T1059)"
             className="flex items-center justify-center gap-1 py-1.5 px-2 rounded-lg bg-indigo-950/50 hover:bg-indigo-900/80 text-indigo-300 border border-indigo-800/50 transition active:scale-95 disabled:opacity-50 cursor-pointer shadow-sm"
           >
             <Terminal className="w-3 h-3 text-indigo-400" />
@@ -197,6 +201,7 @@ export const MetricCards: React.FC<MetricCardsProps> = ({
           id="sim-benign"
           onClick={() => onSimulate("BENIGN")}
           disabled={isSimulating}
+          title="Bắn lưu lượng hợp lệ an toàn: Clean Code Book Search (HTTP 200 OK Safe Traffic)"
           className="mt-1.5 flex items-center justify-center gap-1 py-1.5 px-2 rounded-lg bg-emerald-950/40 hover:bg-emerald-900/70 text-emerald-300 border border-emerald-800/40 text-[11px] font-mono transition active:scale-95 disabled:opacity-50 cursor-pointer shadow-sm w-full"
         >
           <CheckCircle2 className="w-3 h-3 text-emerald-400" />
