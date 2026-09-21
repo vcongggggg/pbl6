@@ -24,7 +24,11 @@ export interface SecurityEventItem {
   attack_type: string;
   severity: "CRITICAL" | "HIGH" | "MEDIUM" | "LOW" | string;
   action: string;
+  risk_score?: number;
   rule_score: number;
+  ml_score?: number | null;
+  anomaly_score?: number | null;
+  behavior_score?: number | null;
   rule_id: string;
   rule_name: string;
   location: string;
