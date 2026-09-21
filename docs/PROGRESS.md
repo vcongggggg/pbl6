@@ -126,7 +126,8 @@ Tài liệu theo dõi trạng thái thực hiện các giai đoạn phát triể
   * `docs/reports/phase9_dashboard_telemetry_academic.md`: Báo cáo cơ sở khoa học, mô hình toán học time-bucket aggregation, phân tích Big-O và trích dẫn chuẩn Bộ GD&ĐT cho Task 9.1.
   * `gateway/tests/test_dashboard_api.py`: Bộ unit test tự động kiểm thử toàn bộ dashboard endpoints.
   * `dashboard/src/components/Header.tsx`: Target status (`● 12.4ms`), WAF Mode (`MONITOR_ONLY`), Smart Polling (`3s/5s/Off`), Reset Demo.
-  * `dashboard/src/components/MetricCards.tsx`: 5 thẻ chỉ số an ninh đo lường được (NIST SP 800-137, ISO/IEC 27004) kèm phân loại 403 Blocked / 429 Throttled, Dual Threat & Risk Score (Phases 2/7/8), và Hộp Quick Attack Simulator (Task 9.2 & 9.5 - #36, #63).
+    * `dashboard/src/components/MetricCards.tsx`: 5 thẻ chỉ số an ninh đo lường được (NIST SP 800-137, ISO/IEC 27004) kèm phân loại 403 Blocked / 429 Throttled, Dual Threat & Risk Scoring (Phases 2/7/8), và Hộp Quick Attack Simulator với 5 nút bắn thử nghiệm (SQLi, XSS, Path, Cmd, Benign) kèm tooltip học thuật (Task 9.2 & 9.5 - #36, #63).
+    * `docs/reports/phase9_demo_simulator_academic.md`: Báo cáo cơ sở khoa học, kiến trúc ASGITransport, mô hình đối sánh hành vi WAF đa chế độ và trích dẫn chuẩn NIST SP 800-115, ISO/IEC 27004 cho Task 9.5.
   * `docs/reports/phase9_kpi_charts_academic.md`: Báo cáo cơ sở khoa học, phân tích toán học chỉ số an ninh và trích dẫn chuẩn Bộ GD&ĐT cho Task 9.2.
   * `dashboard/src/components/ThreatTimelineChart.tsx`: Biểu đồ Area Chart sóng Cyan (Benign) vs sóng Rose (Attacks) (Task 9.2).
   * `dashboard/src/components/AttackDistributionChart.tsx`: Biểu đồ Donut Chart phân bố 4 họ tấn công (Task 9.2).
