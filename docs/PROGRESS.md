@@ -112,7 +112,7 @@ Tài liệu theo dõi trạng thái thực hiện các giai đoạn phát triể
 
 ---
 
-### Phase 9 — Dashboard UI & Real-Time Threat Visualization (COMPLETED Tasks 9.1, 9.2, 9.3, 9.5 ✅ | In Progress: Task 9.4 🚀)
+### Phase 9 — Dashboard UI & Real-Time Threat Visualization (COMPLETED Tasks 9.1, 9.2, 9.3, 9.4, 9.5 ✅)
 
 * **Mục tiêu (Objectives):**
   * Xây dựng trung tâm chỉ huy an ninh trực quan (SOC Command Center) theo phong cách Dark Cyber Glassmorphism.
@@ -134,7 +134,8 @@ Tài liệu theo dõi trạng thái thực hiện các giai đoạn phát triể
   * `dashboard/src/components/events/PayloadEvidenceDrawer.tsx`: Cửa sổ Drawer 2 tab phân tích sâu đối sánh Canonical vs Raw Input, giải thích chi tiết cơ chế tấn công (CWE/CAPEC/MITRE), hiển thị regex pattern và trực quan hóa Vector 17 đặc trưng học máy XAI (Task 9.3 - #37).
   * `docs/reports/phase9_events_inspector_academic.md`: Báo cáo cơ sở khoa học điều tra pháp chứng số (NIST SP 800-92, NIST SP 800-86), cơ chế bóc tách mã hóa né tránh WAF và trích dẫn chuẩn Bộ GD&ĐT cho Task 9.3.
   * `dashboard/src/components/events/index.ts`: Export chuẩn hóa module events theo đúng kiến trúc TASKS_BREAKDOWN.
-  * `dashboard/src/components/explain/DetectionExplainabilityModal.tsx`: Modal giải thích quyết định phòng thủ của WAF: trực quan hóa công thức tính điểm kết hợp Rule (40%) + RF (35%) + IF (25%), thang đo quyết định ALLOW/MONITOR/RATE_LIMIT/BLOCK 403, phân tích bối cảnh an ninh CWE/CAPEC/MITRE, và hỗ trợ xuất báo cáo JSON 1-click (Task 9.4 - #38).
+  * `dashboard/src/components/explain/DetectionExplainabilityModal.tsx`: Modal giải thích quyết định phòng thủ của WAF (XAI & Feature Attribution) theo chuẩn NIST SP 800-137, ISO/IEC 27004, ACM CSUR: phân rã toán học đa tầng Rule (40%) + Supervised ML (35% - Model-Agnostic XGBoost Champion 🏆 / RF Fallback) + Isolation Forest Anomaly (25%), nạp trực tiếp giá trị telemetry thực `ml_score`, `anomaly_score`, `risk_score`, ma trận quyết định 4 mức (ALLOW/MONITOR/RATE_LIMIT/BLOCK 403), bối cảnh an ninh CWE/CAPEC/MITRE, và xuất báo cáo JSON 1-click (Task 9.4 - #38).
+    * `docs/reports/phase9_explainability_modal_academic.md`: Báo cáo cơ sở khoa học và lý thuyết XAI, phân rã toán học đóng góp đa tầng và trích dẫn chuẩn Bộ GD&ĐT cho Task 9.4.
   * `dashboard/src/components/explain/index.ts`: Export chuẩn hóa module explainability.
   * `docs/DASHBOARD_SPEC.md`: Tài liệu đặc tả kỹ thuật toàn diện cho Dashboard.
 
