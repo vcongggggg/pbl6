@@ -1,5 +1,6 @@
 {
   "task": "TASK-4.3",
+  "track": "offensive",
   "description": "Stratified Split 70/15/15 for Attack Model (PBL6 Web API Security Platform)",
   "random_seed": 42,
   "total_samples": 10000,
