@@ -64,6 +64,9 @@ data/processed/*
 !data/processed/attack/
 !data/processed/attack/*.csv
 !data/processed/attack/*.json
+!data/processed/defense/
+!data/processed/defense/*.csv
+!data/processed/defense/*.json
 data/artifacts/*
 !data/artifacts/.gitkeep
 *.joblib
