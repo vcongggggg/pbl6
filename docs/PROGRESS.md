@@ -237,8 +237,23 @@ Tài liệu theo dõi trạng thái thực hiện các giai đoạn phát triể
 
 ---
 
-### Phase 5 — Task 5.2: Champion Random Forest Fine-Tuning, Validation & Feature Importance (PENDING - Chờ PR 5.1 - Issue #23)
-* **Kế hoạch triển khai:** Tối ưu hóa siêu tham số cho Random Forest (`GridSearchCV`), đánh giá chuyên sâu ma trận nhầm lẫn 5 lớp, phân tích tầm quan trọng 17 đặc trưng (Gini Importance), xuất báo cáo khoa học `docs/reports/rf_evaluation.md` và Jupyter Notebook trình diễn `ml-engine/notebooks/01_train_and_benchmark.ipynb`.
+### Phase 5 — Task 5.2: Champion Random Forest Fine-Tuning, Validation & Feature Importance (READY FOR PR 🚀 - Issue #23)
+
+* **Mục tiêu (Objectives):**
+  * Tối ưu hóa siêu tham số (Hyperparameter Tuning) cho mô hình vô địch **Random Forest Classifier** bằng `GridSearchCV` (`n_estimators=100`, `max_depth=15`, `min_samples_split=4`, `class_weight='balanced'`).
+  * Đánh giá chuyên sâu trên tập Test độc lập ($N=3.000$ mẫu) và xây dựng ma trận nhầm lẫn chi tiết (5x5 Confusion Matrix) trên 5 lớp:
+    - `BENIGN`: 1.500/1.500 mẫu phát hiện chính xác ($\text{FPR} = 0.00\%$, không chặn nhầm người dùng hợp lệ).
+    - `SQLI`: 375/375 mẫu phát hiện chính xác ($100.0\%$).
+    - `XSS`: 375/375 mẫu phát hiện chính xác ($100.0\%$).
+    - `PATH_TRAVERSAL`: 373/375 mẫu phát hiện chính xác ($99.47\%$).
+    - `COMMAND_INJECTION`: 375/375 mẫu phát hiện chính xác ($100.0\%$).
+  * Phân tích tầm quan trọng 17 đặc trưng (17-D Gini Feature Importance Ranking theo Torrano-Gimenez et al. 2015 [Ref 08]):
+    - Đứng đầu: `path_traversal_matches` (17.86%), `count_double_quote` (11.66%), `xss_keyword_count` (11.20%), `entropy` (9.59%).
+  * Xây dựng báo cáo khoa học `docs/reports/rf_evaluation.md` và Jupyter Notebook trực quan hóa Seaborn `ml-engine/notebooks/01_train_and_benchmark.ipynb` phục vụ bảo vệ đồ án.
+
+* **Sản phẩm bàn giao (Deliverables):**
+  * `docs/reports/rf_evaluation.md`: Báo cáo đánh giá khoa học chuyên sâu về Champion Random Forest.
+  * `ml-engine/notebooks/01_train_and_benchmark.ipynb`: Jupyter Notebook trực quan hóa Confusion Matrix Heatmap và Feature Importance (đã nhúng sẵn đầy đủ biểu đồ trực quan).
 
 ---
 
