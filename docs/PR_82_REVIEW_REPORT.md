@@ -32,7 +32,8 @@ Tuân thủ nghiêm ngặt chỉ đạo của anh Văn Công: *"Không vội tin
    - Tại dòng 45-53 của `ml-engine/models/evaluate.py` và dòng 280-295 của `train_rf.py`, tác giả đã cài đặt chuẩn xác công thức đánh giá của **OWASP Benchmark Project [Ref 15 & 16]**:
      $$\text{FPR}_{\text{benign}} = \frac{\text{FP}}{\text{FP} + \text{TN}}, \quad J = \text{Recall}_{\text{macro}} - \text{FPR}_{\text{benign}}$$
    - Kết quả thực nghiệm đo lường khách quan trên tập Test độc lập ($N=3.000$ mẫu):
-     * **Random Forest (Champion):** $\text{F1-Macro} = \mathbf{99.93\%}$, $\text{FPR} = \mathbf{0.00\%}$ (Không có bất kỳ mẫu người dùng bình thường nào bị chặn nhầm!), Youden's Index $J = \mathbf{0.9989}$.
+     * **XGBoost (Quán quân Thực nghiệm 🏆):** $\text{F1-Macro} = \mathbf{99.97\%}$, $\text{FPR} = \mathbf{0.00\%}$, Youden's Index $J = \mathbf{0.9995}$, độ trễ CPU chỉ **0.0039 ms/mẫu** (nhanh hơn 9.4 lần so với Random Forest). Căn cứ theo kết quả đo đạc khách quan thực tế, XGBoost là mô hình chiến thắng toàn diện.
+     * **Random Forest (Giải pháp dự phòng):** $\text{F1-Macro} = 99.93\%$, $\text{FPR} = 0.00\%$, đóng vai trò là phương án dự phòng khi môi trường hạn chế thư viện runtime C++.
      * **Độ trễ suy luận trên CPU:** **0.0368 ms / request** (~**27.100 requests/giây** trên CPU đơn nhân), đáp ứng hoàn hảo yêu cầu $< 2\text{ms}$ của WAF Gateway.
 
 3. **Kỹ Thuật Triệt Tiêu Xung Đột Luồng Trong Gateway (`n_jobs = 1`) (10/10):**
@@ -72,8 +73,8 @@ Tuân thủ nghiêm ngặt chỉ đạo của anh Văn Công: *"Không vội tin
 | **Logistic Regression** | Linear Baseline | 97.44% | 0.13% | 0.9643 | 7.153s | 0.0004 ms |
 | **Decision Tree (CART)** | Single Tree | 99.60% | 0.13% | 0.9931 | 0.043s | 0.0003 ms |
 | **Linear SVM (Calibrated)** | Max-Margin | 97.43% | 0.33% | 0.9640 | 1.369s | 0.0048 ms |
-| **Random Forest (Champion) 🏆** | Bagging Ensemble | **99.93%** | **0.00%** | **0.9989** | **0.352s** | **0.0368 ms** |
-| **XGBoost** | Boosting Ensemble | 99.97% | 0.00% | 0.9995 | 0.895s | 0.0039 ms |
+| **Random Forest** | Bagging Ensemble (Fallback) | 99.93% | 0.00% | 0.9989 | 0.352s | 0.0368 ms |
+| **XGBoost (Champion) 🏆** | Boosting Ensemble | **99.97%** | **0.00%** | **0.9995** | **0.895s** | **0.0039 ms** |
 | **MLP (Deep Learning)** | Neural Net | 98.38% | 1.80% | 0.9709 | 18.965s | 0.0020 ms |
 
 ---

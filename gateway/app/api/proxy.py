@@ -209,20 +209,21 @@ async def proxy_endpoint(
     except Exception as sec_err:
         logger.error(f"Security inspection failed for request [{request_id}]: {sec_err}")
 
-    # 5. Task 5.4 & Task 6.4: AI/ML Inference (Random Forest & Isolation Forest)
+    # 5. Task 5.4 & Task 6.4: AI/ML Inference (Supervised ML Classifier & Unsupervised Isolation Forest)
     body_text = body_bytes.decode("utf-8", errors="ignore") if body_bytes else ""
     payload_content = f"/{path} {query_str or ''} {body_text}".strip()
     ml_result = ml_detector.predict(payload_content)
-    rf_score = ml_result.risk_score if ml_result.model_loaded else None
+    ml_score = ml_result.risk_score if ml_result.model_loaded else None
 
     anomaly_result = anomaly_detector.predict(payload_content)
     anomaly_score = anomaly_result.anomaly_score if anomaly_result.model_loaded else None
 
-    # 6. Phase 7: Calculate Weighted Risk Score (Rule 40% + RF 35% + IF 25%)
+    # 6. Phase 7: Calculate Weighted Risk Score (Rule 40% + Supervised ML 35% + Anomaly 25%)
     rule_score = detection_result.rule_risk_score if detection_result else 0.0
     risk_breakdown = risk_engine.calculate_weighted_score(
         rule_score=rule_score,
-        rf_score=rf_score,
+        ml_score=ml_score,
+        rf_score=ml_score,  # Backward compatibility
         anomaly_score=anomaly_score,
     )
 
@@ -250,7 +251,7 @@ async def proxy_endpoint(
             detection_result=detection_result,
             action=action_label,
             risk_score=decision.risk_score,
-            ml_score=risk_breakdown.rf_score,
+            ml_score=risk_breakdown.ml_score,
             anomaly_score=risk_breakdown.anomaly_score,
             details_extra={
                 "decision": decision.action.value,
@@ -272,13 +273,19 @@ async def proxy_endpoint(
         else:
             primary_family = "UNKNOWN"
         block_content = json.dumps({
+            "type": "https://api.bookie.local/errors/waf-forbidden",
+            "title": "Forbidden by Web Application Firewall",
             "blocked": True,
             "status": 403,
             "error": "WAF_ACCESS_DENIED",
             "message": "Access blocked by [SHIELD] Web API Security Platform (WAF).",
+            "detail": decision.reason,
+            "instance": f"/api/proxy/{path}",
             "request_id": request_id,
             "decision": decision.action.value,
+            "action": "BLOCKED",
             "attack_type": primary_family,
+            "risk_score": decision.risk_score,
             "threat_score": decision.risk_score,
             "breakdown": risk_breakdown.to_dict(),
             "reason": decision.reason,

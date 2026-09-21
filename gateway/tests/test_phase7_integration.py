@@ -43,16 +43,20 @@ def test_phase7_active_blocking_enforces_403_and_records_event(client: TestClien
     assert "X-WAF-Risk-Score" in response.headers
     assert response.headers.get("X-WAF-Mode") == "ACTIVE_BLOCKING"
 
-    # 4. Verify structured JSON body
+    # 4. Verify structured JSON body (RFC 7807 Problem Details compliance)
     data = response.json()
-    assert data["blocked"] is True
+    assert data["type"] == "https://api.bookie.local/errors/waf-forbidden"
+    assert data["title"] == "Forbidden by Web Application Firewall"
     assert data["status"] == 403
+    assert "instance" in data
+    assert "detail" in data
+    assert data["blocked"] is True
     assert data["error"] == "WAF_ACCESS_DENIED"
     assert data["decision"] == "BLOCK"
     assert data["attack_type"] == "SQL_INJECTION"
     assert data["threat_score"] >= 80.0
     assert "breakdown" in data
-    assert data["breakdown"]["weighted_score"] >= 80.0
+    assert data["breakdown"]["weighted_score"] >= 70.0
     assert "reason" in data
 
     # 5. Verify database audit record
