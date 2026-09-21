@@ -51,7 +51,7 @@ async def get_dashboard_stats(
     db: Session = Depends(get_db),
     settings: Settings = Depends(get_settings),
 ) -> dict[str, Any]:
-    """Computes genuine real-time statistics directly from SQLite tables."""
+    """Computes genuine real-time telemetry metrics and security KPIs directly from SQLite tables (NIST SP 800-137 & ISO/IEC 27004)."""
     total_requests = db.query(RequestLog).count()
     attacks_detected = db.query(SecurityEvent).count()
     safe_requests = max(0, total_requests - attacks_detected)
@@ -60,8 +60,28 @@ async def get_dashboard_stats(
         round((safe_requests / total_requests) * 100, 1) if total_requests > 0 else 100.0
     )
 
+    # Threat scores: Deterministic Rule Engine score & Comprehensive Hybrid Risk score
     avg_threat_score = (
         db.query(func.avg(SecurityEvent.rule_score)).scalar() or 0.0
+    )
+    avg_risk_score = (
+        db.query(func.avg(SecurityEvent.risk_score)).scalar() or 0.0
+    )
+
+    # Enforcement action counts (Decision Engine & Rate Limiter)
+    blocked_count = (
+        db.query(SecurityEvent).filter(SecurityEvent.action == "BLOCK").count()
+    )
+    rate_limited_count = (
+        db.query(SecurityEvent)
+        .filter(
+            (SecurityEvent.action == "RATE_LIMIT")
+            | (SecurityEvent.attack_type == "RATE_LIMIT_EXCEEDED")
+        )
+        .count()
+    )
+    monitored_count = (
+        db.query(SecurityEvent).filter(SecurityEvent.action == "MONITOR").count()
     )
 
     # Breakdown by attack family
@@ -91,12 +111,16 @@ async def get_dashboard_stats(
         "safe_requests": safe_requests,
         "safe_request_rate": safe_request_rate,
         "avg_threat_score": round(float(avg_threat_score), 1),
+        "avg_risk_score": round(float(avg_risk_score), 1),
+        "blocked_count": blocked_count,
+        "rate_limited_count": rate_limited_count,
+        "monitored_count": monitored_count,
         "family_counts": family_counts,
         "target_status": target_status,
         "target_latency_ms": target_latency_ms,
         "target_url": settings.target_api_url,
         "waf_mode": active_waf_mode,
-        "active_phase": "Phase 2 (Rule Engine Active)",
+        "active_phase": "Phase 2 & Phase 7/8 (Rule + ML + Rate Limiting Active)",
     }
 
 
@@ -189,7 +213,7 @@ def get_dashboard_timeline(
     minutes: int = Query(30, ge=5, le=1440),
 ) -> list[dict[str, Any]]:
     """Gathers real-time request and attack volumes grouped into time buckets."""
-    now = datetime.datetime.utcnow()
+    now = datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
     cutoff = now - datetime.timedelta(minutes=minutes)
 
     # Fetch request counts grouped by minute

@@ -18,7 +18,7 @@ Tài liệu theo dõi trạng thái thực hiện các giai đoạn phát triể
 | **Phase 6** | **Anomaly Detection — Isolation Forest** | ML/Defense (Member A - `vcongggggg`) | **IN PROGRESS 🚀 (Task 6.1 READY FOR PR, Task 6.4 COMPLETED ✅)** | Huấn luyện Isolation Forest trên Benign Baseline (Task 6.1 🚀), Score Calibration (Task 6.2), Zero-Day Eval (Task 6.3), Gateway Anomaly Hook & Telemetry Logging (Task 6.4 ✅ - PR #71). |
 | **Phase 7** | **Hybrid Risk Engine & Decision** | Backend / Security (Member A) | **COMPLETED (100% Tasks 7.1 → 7.3) ✅** | Weighted Risk Score (0–100), Thresholds (ALLOW/MONITOR/RATE_LIMIT/BLOCK), Active 403 Blocking (PR #68). |
 | **Phase 8** | **Rate Limiting & Behavior Tracker** | Backend / Security (Member A) | **COMPLETED (100% Tasks 8.1 & 8.2) ✅** | In-Memory Sliding Window 60s trên RAM ($O(1)$ deque), Risk Penalty 50%, HTTP 429 RFC 7807/6585, Thread-safety & RAM cleanup, Chuẩn hóa học thuật IEEE/Elsevier 100% (PR #92, Closes #33, #34). |
-| **Phase 9** | **Dashboard UI (Next.js)** | Frontend / Tech Lead (Member A) | **COMPLETED (100% Tasks 9.1 → 9.5) ✅** | SOC Dashboard, 5 KPI cards, Timeline, Distribution, Events table with Client IP origin, Payload Drawer, Quick Simulator, Reset Demo, Detection Explainability Modal (#38). |
+| **Phase 9** | **Dashboard UI & Real-Time Telemetry** | Frontend / Tech Lead (Member A) | **COMPLETED (100% Tasks 9.1 → 9.5) ✅** | SOC Dashboard, 5 KPI cards, Timeline, Distribution, Events table with Client IP origin, Payload Drawer, Quick Simulator, Reset Demo, Explainability Modal (#38), Chuẩn hóa học thuật REST Telemetry APIs (Task 9.1 - #35, NIST SP 800-137, ISO/IEC 27004). |
 | **Phase 10** | **Offensive AI — AI Attack Planner & PyTorch RL Model (Máy 2)** | Offensive AI & Red Team (Member B - `naocavang08`) | **NOT STARTED** | AI Attack Planner Agent trên Máy 2: Trinh sát OpenAPI, Môi trường mô phỏng Attack Graph, Mô hình né tránh WAF In-house bằng PyTorch Deep RL DQN (`evasion_agent.pt`), **100% PyTorch, KHÔNG dùng OpenAI API**. |
 | **Phase 11** | **System Evaluation & Comparison** | ML/Data & Red Team (Member B & A) | **NOT STARTED** | So sánh Rule vs ML vs Anomaly vs Hybrid, Evasion test, Benchmark. |
 | **Phase 12** | **Final Hardening & Thesis Report** | Toàn đội (Member A & B) | **NOT STARTED** | Chạy multi-machine lab, audit log, hoàn thiện slide thuyết trình và báo cáo đồ án. |
@@ -122,7 +122,8 @@ Tài liệu theo dõi trạng thái thực hiện các giai đoạn phát triể
   * Tích hợp tính năng Reset Demo Data (`POST /api/dashboard/reset-demo`) chuẩn bị sẵn cho kịch bản báo cáo bảo vệ.
 
 * **Sản phẩm bàn giao (Deliverables):**
-  * `gateway/app/api/dashboard.py`: 6 REST APIs thật (`/api/dashboard/stats`, `/events`, `/timeline`, `/distribution`, `/simulate`, `/reset-demo`).
+  * `gateway/app/api/dashboard.py`: Hệ thống REST APIs viễn trắc an ninh (NIST SP 800-137, ISO/IEC 27004): `/api/dashboard/stats`, `/events`, `/timeline`, `/distribution`, `/simulate`, `/reset-demo`, `/seed-demo`, `/toggle-waf-mode` (Task 9.1 - #35).
+  * `docs/reports/phase9_dashboard_telemetry_academic.md`: Báo cáo cơ sở khoa học, mô hình toán học time-bucket aggregation, phân tích Big-O và trích dẫn chuẩn Bộ GD&ĐT cho Task 9.1.
   * `gateway/tests/test_dashboard_api.py`: Bộ unit test tự động kiểm thử toàn bộ dashboard endpoints.
   * `dashboard/src/components/Header.tsx`: Target status (`● 12.4ms`), WAF Mode (`MONITOR_ONLY`), Smart Polling (`3s/5s/Off`), Reset Demo.
   * `dashboard/src/components/MetricCards.tsx`: 4 thẻ chỉ số KPI + Hộp Quick Simulator (SQLi, XSS, Path, Cmd, Benign) (Task 9.2 & 9.5 - #63).
