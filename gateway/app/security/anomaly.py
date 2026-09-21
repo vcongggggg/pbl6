@@ -86,8 +86,14 @@ class AnomalyDetector:
 
     def _attempt_auto_load(self) -> None:
         """Searches default model directories for pre-trained Isolation Forest artifacts."""
-        for candidate in self.DEFAULT_MODEL_PATHS:
-            p = Path(candidate)
+        repo_root = Path(__file__).resolve().parents[3]
+        extended_candidates = [
+            repo_root / "ml-engine" / "artifacts" / "iforest_model.joblib",
+            repo_root / "ml-engine" / "models" / "iforest_model.joblib",
+            repo_root / "gateway" / "models" / "iforest_model.joblib",
+        ] + [Path(c) for c in self.DEFAULT_MODEL_PATHS]
+
+        for p in extended_candidates:
             if p.exists() and p.is_file():
                 if self.load_model(p):
                     return
@@ -111,6 +117,7 @@ class AnomalyDetector:
 
         # Verify cryptographic SHA-256 hash before loading to prevent CWE-502
         meta_candidates = [
+            model_file.with_name(f"{model_file.stem}_metadata.json"),
             model_file.with_name("iforest_metadata.json"),
             model_file.parent / "artifacts" / "iforest_metadata.json",
         ]

@@ -125,3 +125,31 @@ def test_anomaly_detector_hot_reload() -> None:
     finally:
         if tmp_path.exists():
             tmp_path.unlink()
+
+
+def test_anomaly_detector_production_artifact_sha256_and_latency() -> None:
+    """Verifies that the production Isolation Forest artifact loads with SHA-256 verification and meets sub-10ms latency."""
+    repo_root = Path(__file__).resolve().parents[2]
+    model_path = repo_root / "ml-engine" / "artifacts" / "iforest_model.joblib"
+    if not model_path.exists():
+        pytest.skip("Production artifact iforest_model.joblib not present")
+
+    detector = AnomalyDetector(model_path=model_path)
+    assert detector.is_loaded
+    assert detector.model_path == model_path
+
+    # Normal benign payload -> Inlier risk <= 30.0
+    benign_res = detector.predict("GET /api/v1/users?page=1 HTTP/1.1")
+    assert benign_res.model_loaded
+    assert benign_res.latency_ms < 10.0
+    assert benign_res.anomaly_score is not None
+    assert benign_res.anomaly_score <= 30.0
+
+    # Anomalous payload with heavy structural distortion -> Outlier risk > 60.0
+    anomalous_payload = "/search?q=" + ("%27%22" * 40) + "--!@#$%^&*()_+"
+    anomaly_res = detector.predict(anomalous_payload)
+    assert anomaly_res.model_loaded
+    assert anomaly_res.latency_ms < 10.0
+    assert anomaly_res.anomaly_score is not None
+    assert anomaly_res.anomaly_score > benign_res.anomaly_score
+    assert anomaly_res.is_anomaly

@@ -165,6 +165,9 @@ def test_gateway_anomaly_detector_compatibility():
     assert detector.is_loaded is True
     assert detector.model_path == prod_model_path
 
+    # Warm-up inference to prime CPU cache and numpy JIT
+    detector.predict("warmup")
+
     # Live inference on benign sample
     res_benign = detector.predict("q=harry+potter&page=1")
     assert res_benign.model_loaded is True

@@ -30,7 +30,14 @@ class SecurityEventService:
         details_extra: dict[str, Any] | None = None,
     ) -> SecurityEvent | None:
         """Persists security event record if an attack signature was matched or risk detected."""
-        if not detection_result.is_attack or not detection_result.matches:
+        is_rule_attack = bool(detection_result.is_attack and detection_result.matches)
+        is_elevated_risk = (
+            action in ("BLOCKED", "MONITOR", "RATE_LIMIT")
+            or (risk_score is not None and risk_score >= 50.0)
+            or (anomaly_score is not None and anomaly_score >= 60.0)
+            or (ml_score is not None and ml_score >= 60.0)
+        )
+        if not is_rule_attack and not is_elevated_risk:
             return None
 
         if timestamp is None:
@@ -38,23 +45,32 @@ class SecurityEventService:
 
         event_id = uuid.uuid4().hex
 
-        # Determine dominant attack type & severity
-        primary_attack = (
-            detection_result.attack_families[0].value
-            if detection_result.attack_families
-            else "UNKNOWN"
-        )
-        primary_severity = (
-            detection_result.highest_severity.value
-            if detection_result.highest_severity
-            else "LOW"
-        )
-
         effective_risk_score = (
             risk_score
             if risk_score is not None
             else detection_result.rule_risk_score
         )
+
+        # Determine dominant attack type & severity
+        if detection_result.attack_families:
+            primary_attack = detection_result.attack_families[0].value
+        elif anomaly_score is not None and anomaly_score >= 60.0:
+            primary_attack = "ANOMALY_ZERO_DAY"
+        elif ml_score is not None and ml_score >= 60.0:
+            primary_attack = "ML_PREDICTED_ATTACK"
+        else:
+            primary_attack = "SUSPICIOUS_ANOMALY"
+
+        if detection_result.highest_severity:
+            primary_severity = detection_result.highest_severity.value
+        elif effective_risk_score >= 80.0:
+            primary_severity = "CRITICAL"
+        elif effective_risk_score >= 65.0:
+            primary_severity = "HIGH"
+        elif effective_risk_score >= 50.0:
+            primary_severity = "MEDIUM"
+        else:
+            primary_severity = "LOW"
 
         # Build explainable details payload
         details_dict: dict[str, Any] = {
@@ -75,7 +91,7 @@ class SecurityEventService:
                     "location_key": m.location_key,
                     "evidence": m.evidence,
                 }
-                for m in detection_result.matches
+                for m in (detection_result.matches or [])
             ],
         }
 

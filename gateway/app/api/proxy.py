@@ -263,11 +263,14 @@ async def proxy_endpoint(
 
     # 7. Enforcement: Block with 403 Forbidden or forward to upstream
     if decision.is_blocked and detection_result:
-        primary_family = (
-            detection_result.attack_families[0].value
-            if detection_result.attack_families
-            else "UNKNOWN"
-        )
+        if detection_result.attack_families:
+            primary_family = detection_result.attack_families[0].value
+        elif anomaly_result and anomaly_result.is_anomaly:
+            primary_family = "ANOMALY_ZERO_DAY"
+        elif ml_result and ml_result.is_attack:
+            primary_family = ml_result.attack_type
+        else:
+            primary_family = "UNKNOWN"
         block_content = json.dumps({
             "blocked": True,
             "status": 403,

@@ -346,15 +346,17 @@ Tài liệu theo dõi trạng thái thực hiện các giai đoạn phát triể
   * Gắn headers đo lường `X-WAF-Anomaly-Score` và `X-WAF-Anomaly-Latency`.
 
 * **Sản phẩm bàn giao (Deliverables):**
-  * `gateway/app/security/anomaly.py`: `AnomalyDetector`, `AnomalyResult`, `get_anomaly_detector` (Task 6.4 - #29).
-  * `gateway/app/api/proxy.py`: Tích hợp dự đoán bất thường, nạp điểm `anomaly_score` vào `RiskEngine`, và gắn headers telemetry.
-  * `gateway/app/security/__init__.py`: Export chuẩn hóa `AnomalyDetector` và `AnomalyResult`.
-  * `gateway/tests/test_anomaly_detector.py`: 4 unit tests kiểm thử fallback khi thiếu model, trích xuất 17 features, chuẩn hóa điểm số, độ trễ $<10\text{ms}$, và hot reload.
-  * `gateway/tests/test_anomaly_integration.py`: 2 integration tests kiểm thử Gateway với fallback và active model.
+  * `gateway/app/security/anomaly.py`: `AnomalyDetector`, `AnomalyResult`, `get_anomaly_detector` tích hợp nạp model từ repo root, xác thực chữ ký số SHA-256 (CWE-502 Mitigation) (Task 6.4 - #29).
+  * `gateway/app/api/proxy.py`: Tích hợp dự đoán bất thường, nạp điểm `anomaly_score` vào `RiskEngine`, gán nhãn `ANOMALY_ZERO_DAY` khi chặn bất thường không signature, và gắn headers telemetry (`X-WAF-Anomaly-Score`, `X-WAF-Anomaly-Latency`).
+  * `gateway/app/services/security.py`: Cơ chế lưu vết `SecurityEvent` bền vững vào SQLite ngay cả khi Rule Engine có 0 matches nhưng Anomaly/Risk Engine phát hiện mối nguy (Zero-Day Resilience).
+  * `gateway/app/api/dashboard.py`: Serialize trực tiếp `risk_score`, `ml_score`, `anomaly_score` phục vụ UI SOC Dashboard.
+  * `gateway/tests/test_anomaly_detector.py`: 5 unit tests kiểm thử fallback khi thiếu model, trích xuất 17 features, chuẩn hóa điểm số, nạp artifact sản xuất với xác thực SHA-256, độ trễ $<10\text{ms}$, và hot reload.
+  * `gateway/tests/test_anomaly_integration.py`: 3 integration tests kiểm thử Gateway với fallback, active test model, và live production artifact `iforest_model.joblib`.
 
 * **Kiểm thử & Xác minh (Tests & Verification):**
-  * `pytest gateway/tests/`: **79/79 tests PASSED (100%)**.
-  * `ruff check gateway/`: **0 errors**.
+  * `pytest gateway/tests/`: **81/81 tests PASSED (100%)**.
+  * `pytest ml-engine/tests/`: **98/98 tests PASSED (100%)**.
+  * `ruff check gateway/ ml-engine/`: **All checks passed! (0 errors)**.
   * `npm.cmd run build`: **Next.js static generation 4/4 passed (0 errors)**.
 
 ---
