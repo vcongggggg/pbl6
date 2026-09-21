@@ -339,17 +339,29 @@ export const LiveEventsTable: React.FC<LiveEventsTableProps> = ({
                       {ev.rule_id}
                     </td>
 
-                    {/* Threat Score */}
-                    <td className="py-3 px-3 text-amber-400 font-bold whitespace-nowrap">
-                      {ev.rule_score.toFixed(1)}
+                    {/* Threat Score (Dual Hybrid Risk & Rule) */}
+                    <td className="py-3 px-3 whitespace-nowrap">
+                      <div className="font-bold text-amber-400 font-mono">
+                        {(ev.risk_score ?? ev.rule_score).toFixed(1)}
+                      </div>
+                      {ev.risk_score !== undefined && (
+                        <div className="text-[9px] text-slate-500 font-mono">
+                          Rule: {ev.rule_score.toFixed(0)}
+                        </div>
+                      )}
                     </td>
 
                     {/* View Action Button & Decision Badge */}
                     <td className="py-3 px-3 text-right whitespace-nowrap">
                       <div className="inline-flex items-center gap-1.5 justify-end">
-                        {ev.action === "BLOCKED" && (
+                        {(ev.action === "BLOCKED" || ev.action === "BLOCK") && (
                           <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-950/80 text-rose-300 border border-rose-800 shadow-[0_0_8px_rgba(244,63,94,0.35)] animate-pulse">
                             BLOCKED 403
+                          </span>
+                        )}
+                        {(ev.action === "RATE_LIMIT" || ev.action === "RATE_LIMITED") && (
+                          <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-950/80 text-amber-300 border border-amber-800 shadow-[0_0_8px_rgba(245,158,11,0.35)]">
+                            THROTTLED 429
                           </span>
                         )}
                         {onExplainEvent && (
