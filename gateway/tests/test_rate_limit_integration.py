@@ -62,10 +62,14 @@ def test_rate_limit_active_enforces_429_and_records_event(client: TestClient):
     assert int(blocked_res.headers["Retry-After"]) > 0
     assert blocked_res.headers.get("X-RateLimit-Remaining") == "0"
 
-    # Verify JSON body structure
+    # Verify JSON body structure (RFC 7807 Problem Details compliance)
     data = blocked_res.json()
-    assert data["blocked"] is True
+    assert data["type"] == "https://api.bookie.local/errors/rate-limit-exceeded"
+    assert data["title"] == "Too Many Requests: Rate Limit Exceeded"
     assert data["status"] == 429
+    assert data["instance"] == "/api/proxy/rest/user/login"
+    assert "detail" in data
+    assert data["blocked"] is True
     assert data["error"] == "RATE_LIMIT_EXCEEDED"
     assert data["scope"] == "auth"
     assert data["limit"] == 10
