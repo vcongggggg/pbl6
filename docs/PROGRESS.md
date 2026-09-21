@@ -12,9 +12,9 @@ Tài liệu theo dõi trạng thái thực hiện các giai đoạn phát triể
 | **Phase 1** | **Infrastructure Setup** | Backend / DevOps (Member A) | **COMPLETED** | Reverse Proxy bất đồng bộ, X-Request-ID, lọc Header, ghi log SQLite, bảo vệ Open Proxy / SSRF, Probe Target Health. |
 | **Phase 2** | **Rule Engine / Signature-Based Detection** | Security Engineer (Member A) | **COMPLETED** | 16 rules tất định (SQLi, XSS, Path Traversal, Command Injection), Input Normalizer, Rule Risk Scoring (0-100), Security Event persistence & traceability. |
 | **Phase 2B**| **Custom Vulnerable Web API (`vulnerable-api`)** | Tech Lead (Member A) | **COMPLETED ✅** | Tự xây dựng Web API mục tiêu (Bookie Bookstore - 8 kịch bản lỗ hổng chuẩn OWASP Web & API Top 10 + OpenAPI Recon) thay thế Juice Shop theo chỉ đạo của Thầy. |
-| **Phase 3** | **Feature Engineering** | ML/Defense (Member A - `vcongggggg`) | **IN PROGRESS (Next Up) 🚀** | 17 payload features, HTTP & Context features pipeline (`ml-engine/features/`). |
-| **Phase 4** | **Dataset Generation & Lab Traffic** | ML/Defense (Member A - `vcongggggg`) | **NOT STARTED** | Sinh dữ liệu từ vulnerable-api + SecLists/CSIC 2010. |
-| **Phase 5** | **Supervised ML — Random Forest** | ML/Defense (Member A - `vcongggggg`) | **IN PROGRESS (Task 5.4 COMPLETED ✅)** | Training Tasks 5.1-5.3. Gateway ML Inference Service & Resilient Fallback (Task 5.4 ✅ - PR #70). |
+| **Phase 3** | **Feature Engineering** | ML/Defense (Member A - `vcongggggg`) | **COMPLETED (100% Tasks 3.1 → 3.5) ✅** | 17 payload features (12 morphological & entropy + 5 keywords/syntax) & 23 HTTP context features (`ml-engine/features/`), 79/79 unit tests pass (PR #74, #76, #77, #79). |
+| **Phase 4** | **Dataset Generation & Lab Traffic** | ML/Defense (Member A - `vcongggggg`) | **COMPLETED (100% Tasks 4.1 → 4.3) ✅** | 20.000 requests cân bằng (10k Benign, 10k Attacks, 60% obfuscation, 22.23% bypass static rule), Stratified 70/15/15 có SHA-256 (PR #73, #75, #78). |
+| **Phase 5** | **Supervised ML — Multi-Model Benchmarking & Random Forest** | ML/Defense (Member A - `vcongggggg`) | **IN PROGRESS 🚀 (Task 5.4 COMPLETED ✅)** | Đối sánh 5 mô hình ứng viên (Logistic, Decision Tree, Linear SVM, Random Forest, XGBoost) trên 20.000 mẫu, chọn Champion Model Random Forest xuất `rf_model.joblib`. Gateway ML Inference Service & Resilient Fallback đã sẵn sàng (Task 5.4 ✅ - PR #70). |
 | **Phase 6** | **Anomaly Detection — Isolation Forest** | ML/Defense (Member A - `vcongggggg`) | **IN PROGRESS (Task 6.4 COMPLETED ✅)** | Training Tasks 6.1-6.3. Gateway Anomaly Hook & Telemetry Logging (Task 6.4 ✅ - PR #71). |
 | **Phase 7** | **Hybrid Risk Engine & Decision** | Backend / Security (Member A) | **COMPLETED (100% Tasks 7.1 → 7.3) ✅** | Weighted Risk Score (0–100), Thresholds (ALLOW/MONITOR/RATE_LIMIT/BLOCK), Active 403 Blocking (PR #68). |
 | **Phase 8** | **Rate Limiting & Behavior Tracker** | Backend / Security (Member A) | **COMPLETED (100% Tasks 8.1 & 8.2) ✅** | In-Memory Sliding Window 60s trên RAM, HTTP 429 Too Many Requests, Retry-After header (PR #69). |
@@ -207,6 +207,44 @@ Tài liệu theo dõi trạng thái thực hiện các giai đoạn phát triể
   * `ruff check gateway/`: **0 errors**.
   * `npm.cmd run build`: **Next.js static generation 4/4 passed (0 errors)**.
 
+### Phase 5 — Task 5.1: Multi-Model Candidate Benchmarking & Training Pipeline (READY FOR PR 🚀 - Issue #22)
+
+* **Mục tiêu (Objectives):**
+  * Xây dựng pipeline huấn luyện và đối sánh đồng thời **5 mô hình ứng viên** đại diện 5 trường phái thuật toán máy học trên tập dữ liệu 20.000 mẫu:
+    1. `Logistic Regression (Multinomial)`: Baseline tuyến tính tốc độ cao.
+    2. `Decision Tree (CART)`: Cây quyết định phi tuyến đơn lẻ có tính diễn giải cao.
+    3. `Support Vector Machine (Linear SVM)`: Cực đại hóa lề siêu phẳng ([Ref 08], [Ref 10]).
+    4. `Random Forest`: Tổ hợp đóng bao Bagging ([Ref 08], [Ref 09], [Ref 11]) — Ứng viên Champion.
+    5. `XGBoost / Gradient Boosting`: Tổ hợp tăng cường Boosting ([Ref 09]).
+  * Đo lường đa tiêu chí trên tập Test: Precision, Recall (TPR), F1-Score (Macro & Weighted), False Positive Rate (FPR), Youden's Index $J = \text{TPR} - \text{FPR} \ge 0.90$ ([Ref 15-16]) và Độ trễ suy luận trên CPU ($< 15\text{ms}$).
+  * Xuất bảng dữ liệu kết quả đối sánh `ml-engine/artifacts/benchmark_summary.json`.
+
+* **Sản phẩm bàn giao (Deliverables):**
+  * `ml-engine/models/train_rf.py`: Pipeline huấn luyện và đối sánh 5 mô hình ứng viên.
+  * `ml-engine/models/evaluate.py`: Bộ tính toán đa chỉ số đánh giá phân loại.
+  * `ml-engine/artifacts/benchmark_summary.json`: Bảng số liệu thực nghiệm đa mô hình.
+  * `ml-engine/tests/test_train_rf.py`: Unit tests kiểm thử pipeline và đối sánh benchmark.
+
+* **Kiểm thử & Xác minh (Tests & Verification):**
+  * `pytest ml-engine/tests/`: **86/86 tests PASSED (100%)**.
+  * `ruff check ml-engine/`: **0 errors**.
+  * **Kết quả đối sánh thực nghiệm 5 ứng viên (Test Set N=3,000):**
+    * Logistic Regression: $F_1 = 97.44\%$, $\text{FPR} = 0.13\%$, $J = 0.9643$, Latency $\approx 0.000\text{ms}$
+    * Decision Tree: $F_1 = 99.60\%$, $\text{FPR} = 0.13\%$, $J = 0.9931$, Latency $\approx 0.000\text{ms}$
+    * Linear SVM (Calibrated): $F_1 = 97.43\%$, $\text{FPR} = 0.33\%$, $J = 0.9640$, Latency $\approx 0.005\text{ms}$
+    * **Random Forest (Champion) 🏆:** **$F_1 = 99.93\%$**, **$\text{FPR} = 0.00\%$**, **$J = 0.9989$**, **Latency $\approx 0.037\text{ms}$**
+    * XGBoost: $F_1 = 99.97\%$, $\text{FPR} = 0.00\%$, $J = 0.9995$, Latency $\approx 0.004\text{ms}$
+
+---
+
+### Phase 5 — Task 5.2: Champion Random Forest Fine-Tuning, Validation & Feature Importance (PENDING - Chờ PR 5.1 - Issue #23)
+* **Kế hoạch triển khai:** Tối ưu hóa siêu tham số cho Random Forest (`GridSearchCV`), đánh giá chuyên sâu ma trận nhầm lẫn 5 lớp, phân tích tầm quan trọng 17 đặc trưng (Gini Importance), xuất báo cáo khoa học `docs/reports/rf_evaluation.md` và Jupyter Notebook trình diễn `ml-engine/notebooks/01_train_and_benchmark.ipynb`.
+
+---
+
+### Phase 5 — Task 5.3: Champion Model Serialization, Cryptographic Hash & Gateway Integration (PENDING - Chờ PR 5.2 - Issue #24)
+* **Kế hoạch triển khai:** Đóng gói model đạt chuẩn production `rf_model.joblib` (`n_jobs=1`), tạo mã băm SHA-256 kèm metadata `rf_metadata.json`, kiểm thử tích hợp Gateway WAF `MLDetector` đảm bảo sub-15ms latency budget.
+
 ---
 
 ### Phase 5 — Task 5.4: FastAPI Gateway ML Inference Service Integration (COMPLETED ✅)
@@ -257,11 +295,15 @@ Tài liệu theo dõi trạng thái thực hiện các giai đoạn phát triể
 
 ---
 
-### Phase 3 — Feature Engineering (NOT STARTED)
-- [ ] *(RESERVED FOR ML TEAM)* 17 payload features (chiều dài, entropy, tỷ lệ ký tự đặc biệt, từ khóa SQL/XSS/Path).
-- [ ] *(RESERVED FOR ML TEAM)* HTTP & Behavior metadata features.
+### Phase 3 — Feature Engineering (COMPLETED 100% ✅ — Merged PR #79)
+* Xây dựng bộ trích xuất chuẩn hóa 17 đặc trưng hình thái học (Morphological Features) và không gian đặc trưng mở rộng (Multimodal Features) đạt độ trễ $< 0.08\text{ms}$/sample.
 
 ---
 
-*(Các phase còn lại từ Phase 4 đến Phase 12 giữ nguyên trạng thái theo kế hoạch)*
+### Phase 4 — Data Pipeline & Synthetic Dataset Generation (COMPLETED 100% ✅ — Merged PR #79)
+* Khởi tạo và kiểm định 20.000 mẫu request (10.000 Benign + 10.000 Attack) với tỷ lệ kỹ thuật lẩn tránh WAF (Evasion Techniques) đạt 60.0% và tỷ lệ vượt qua luật tĩnh (Rule Bypass) đạt 22.23%.
+
+---
+
+*(Các phase tiếp theo: Phase 6 - Isolation Forest, Phase 8 - Red Team Autonomous Evasion Agent)*
 
