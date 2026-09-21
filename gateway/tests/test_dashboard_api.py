@@ -22,6 +22,10 @@ def test_dashboard_stats_empty(client: TestClient):
     assert data["safe_requests"] == 0
     assert data["safe_request_rate"] == 100.0
     assert data["avg_threat_score"] == 0.0
+    assert data["avg_risk_score"] == 0.0
+    assert data["blocked_count"] == 0
+    assert data["rate_limited_count"] == 0
+    assert data["monitored_count"] == 0
     assert data["waf_mode"] in ["MONITOR_ONLY", "ACTIVE_BLOCKING", "HYBRID", "OFF"]
     assert "Phase 2" in data["active_phase"]
 
@@ -34,7 +38,7 @@ def test_dashboard_events_and_filters(client: TestClient):
         ev1 = SecurityEvent(
             event_id="evt-sqli-test-1",
             request_id="req-sqli-test-1",
-            timestamp=datetime.datetime.utcnow(),
+            timestamp=datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None),
             client_ip="192.168.1.100",
             attack_type="SQL_INJECTION",
             severity="CRITICAL",
@@ -55,7 +59,7 @@ def test_dashboard_events_and_filters(client: TestClient):
         ev2 = SecurityEvent(
             event_id="evt-xss-test-2",
             request_id="req-xss-test-2",
-            timestamp=datetime.datetime.utcnow(),
+            timestamp=datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None),
             client_ip="192.168.1.200",
             attack_type="XSS",
             severity="HIGH",
