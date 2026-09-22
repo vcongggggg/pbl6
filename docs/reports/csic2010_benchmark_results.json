@@ -1,0 +1,91 @@
+{
+  "metadata": {
+    "task": "TASK-5.4",
+    "benchmark_dataset": "CSIC 2010 HTTP Dataset (Spanish National Research Council)",
+    "model_path": "C:\\Study\\HocKy6\\PBL6\\ml-engine\\artifacts\\rf_model.joblib",
+    "total_samples": 3000,
+    "duration_seconds": 20.45,
+    "throughput_samples_per_sec": 146.7
+  },
+  "metrics": {
+    "tp": 955,
+    "fn": 545,
+    "tn": 1056,
+    "fp": 444,
+    "recall": 63.67,
+    "precision": 68.26,
+    "f1_score": 65.88,
+    "fpr": 29.6,
+    "accuracy": 67.03
+  },
+  "latency": {
+    "mean_ms": 6.689,
+    "p50_ms": 6.403,
+    "p95_ms": 8.937,
+    "p99_ms": 12.893
+  },
+  "categories": {
+    "ANOMALY_TAMPER": {
+      "total": 1181,
+      "blocked": 725,
+      "passed": 456,
+      "success_rate": 61.39
+    },
+    "BENIGN": {
+      "total": 1500,
+      "blocked": 444,
+      "passed": 1056,
+      "success_rate": 70.4
+    },
+    "SQLI": {
+      "total": 254,
+      "blocked": 167,
+      "passed": 87,
+      "success_rate": 65.75
+    },
+    "XSS": {
+      "total": 65,
+      "blocked": 63,
+      "passed": 2,
+      "success_rate": 96.92
+    }
+  },
+  "comparison_with_synthetic": [
+    {
+      "metric": "Accuracy",
+      "synthetic": "99.93%",
+      "csic2010": "67.03%",
+      "variance": "-32.90%"
+    },
+    {
+      "metric": "Precision",
+      "synthetic": "99.97%",
+      "csic2010": "68.26%",
+      "variance": "-31.71%"
+    },
+    {
+      "metric": "Recall",
+      "synthetic": "99.89%",
+      "csic2010": "63.67%",
+      "variance": "-36.22%"
+    },
+    {
+      "metric": "F1-Score",
+      "synthetic": "99.93%",
+      "csic2010": "65.88%",
+      "variance": "-34.05%"
+    },
+    {
+      "metric": "False Positive Rate (FPR)",
+      "synthetic": "0.00%",
+      "csic2010": "29.60%",
+      "variance": "+29.60%"
+    },
+    {
+      "metric": "Avg Inference Latency",
+      "synthetic": "0.037 ms",
+      "csic2010": "6.689 ms",
+      "variance": "+6.652 ms"
+    }
+  ]
+}
