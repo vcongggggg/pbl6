@@ -84,3 +84,12 @@ Thumbs.db
 .vscode/
 *.swp
 *.swo
+# Workspace & temporary
+.agents/
+scratch/
+issue_*_body.txt
+*.tmp
+
+# Benchmark temp datasets
+data/benchmark_*.csv
+data/benchmarks/

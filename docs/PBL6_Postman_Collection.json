@@ -1,0 +1,198 @@
+{
+  "info": {
+    "name": "PBL6 WAF API Gateway - Security Verification Collection",
+    "description": "Comprehensive security testing collection for PBL6 Bookie Bookstore API Gateway (OWASP Top 10 Web & API Security).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "01. SQLi Auth Bypass (CWE-89 / T1190)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"username\": \"admin' OR '1'='1\", \"password\": \"password123\"}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/proxy/api/v1/vulnerable/auth/login/",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "proxy",
+            "api",
+            "v1",
+            "vulnerable",
+            "auth",
+            "login",
+            ""
+          ]
+        }
+      }
+    },
+    {
+      "name": "02. SQLi UNION Search (CWE-89 / T1190)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/proxy/api/v1/vulnerable/books/search/?q=Python' UNION SELECT null,username,password FROM users--",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "proxy",
+            "api",
+            "v1",
+            "vulnerable",
+            "books",
+            "search",
+            ""
+          ],
+          "query": [
+            {
+              "key": "q",
+              "value": "Python' UNION SELECT null,username,password FROM users--"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "03. Stored/Reflected XSS (CWE-79 / T1059)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"book_id\": 1, \"review_text\": \"<script>alert('PBL6-XSS')</script>\", \"rating\": 5}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/proxy/api/v1/vulnerable/reviews/",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "proxy",
+            "api",
+            "v1",
+            "vulnerable",
+            "reviews",
+            ""
+          ]
+        }
+      }
+    },
+    {
+      "name": "04. Path Traversal LFI (CWE-22 / T1083)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/proxy/api/v1/vulnerable/files/download/?file=../../../../etc/passwd",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "proxy",
+            "api",
+            "v1",
+            "vulnerable",
+            "files",
+            "download",
+            ""
+          ],
+          "query": [
+            {
+              "key": "file",
+              "value": "../../../../etc/passwd"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "05. OS Command Injection RCE (CWE-78 / T1059)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"target\": \"127.0.0.1; whoami\"}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/proxy/api/v1/vulnerable/admin/ping/",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "proxy",
+            "api",
+            "v1",
+            "vulnerable",
+            "admin",
+            "ping",
+            ""
+          ]
+        }
+      }
+    },
+    {
+      "name": "06. Legitimate Benign Traffic (RFC 9110 Safe)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/proxy/api/v1/vulnerable/books/search/?q=Clean Code",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "proxy",
+            "api",
+            "v1",
+            "vulnerable",
+            "books",
+            "search",
+            ""
+          ],
+          "query": [
+            {
+              "key": "q",
+              "value": "Clean Code"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}
