@@ -7,7 +7,6 @@ import csv
 import json
 import sys
 from pathlib import Path
-import pytest
 
 # Add project root and gateway to path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
@@ -20,9 +19,8 @@ if str(SCRIPTS_PATH) not in sys.path:
     sys.path.insert(0, str(SCRIPTS_PATH))
 
 # pyrefly: ignore [missing-import]
-from app.security.engine import RuleEngine
 # pyrefly: ignore [missing-import]
-from generate_synthetic_attacks import generate_attack_dataset
+from generate_synthetic_attacks import generate_attack_dataset  # noqa: E402
 
 ATTACK_CSV_PATH = PROJECT_ROOT / "data" / "synthetic_attacks.csv"
 EXPECTED_COLUMNS = [
