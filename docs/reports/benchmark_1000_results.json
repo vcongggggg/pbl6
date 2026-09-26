@@ -1,0 +1,60 @@
+{
+  "metadata": {
+    "timestamp": "2026-09-22 08:50:45",
+    "standard": "NIST SP 800-115 / ISO/IEC 27004:2016",
+    "target": "http://127.0.0.1:8000",
+    "total_samples": 1000,
+    "duration_seconds": 44.17,
+    "throughput_rps": 22.6
+  },
+  "metrics": {
+    "tp": 731,
+    "fn": 69,
+    "tn": 170,
+    "fp": 30,
+    "recall": 91.38,
+    "precision": 96.06,
+    "f1_score": 93.66,
+    "fpr": 15.0,
+    "accuracy": 90.1
+  },
+  "latency": {
+    "mean_ms": 327.41,
+    "p50_ms": 326.34,
+    "p90_ms": 443.82,
+    "p95_ms": 481.05,
+    "p99_ms": 555.63
+  },
+  "categories": {
+    "SQLI": {
+      "total": 200,
+      "blocked": 191,
+      "passed": 9,
+      "success_rate": 95.5
+    },
+    "XSS": {
+      "total": 200,
+      "blocked": 194,
+      "passed": 6,
+      "success_rate": 97.0
+    },
+    "PATH": {
+      "total": 200,
+      "blocked": 173,
+      "passed": 27,
+      "success_rate": 86.5
+    },
+    "CMD": {
+      "total": 200,
+      "blocked": 173,
+      "passed": 27,
+      "success_rate": 86.5
+    },
+    "BENIGN": {
+      "total": 200,
+      "blocked": 30,
+      "passed": 170,
+      "success_rate": 85.0
+    }
+  }
+}
