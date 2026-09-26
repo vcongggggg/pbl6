@@ -123,7 +123,7 @@ graph LR
 ### 2.4. `attack-lab/` (Offensive AI — AI Attack Planner & PyTorch Evasion Model Trên Máy 2)
 * **Vị trí triển khai:** Chạy độc lập trên **MÁY 2 (Red Team — `naocavang08`)**.
 * **Cơ chế hoạt động:**
-  1. **Tự động Trinh sát (Automated Reconnaissance):** Đọc file đặc tả OpenAPI schema từ Máy 1 (`http://192.168.1.X:8000/api/proxy/openapi.json`), lập bản đồ bề mặt tấn công (Attack Surface Mapping).
+  1. **Tự động Trinh sát (Automated Reconnaissance):** Đọc file đặc tả OpenAPI schema từ Máy 1 qua Gateway (`http://192.168.1.X:8000/api/proxy/api/v1/vulnerable/openapi.json`), lập bản đồ bề mặt tấn công (Attack Surface Mapping).
   2. **Attack Graph & Action Space:** Xây dựng môi trường mô phỏng chuỗi tấn công (Kill Chain) với không gian trạng thái 17 đặc trưng payload và không gian hành động biến dị (Mutation operators: URL encoding, comment injection `/**/`, case alternation, keyword substitution).
   3. **Mô Hình AI Tấn Công Né Tránh WAF Tự Huấn Luyện Bằng PyTorch (`evasion_agent.pt`):** Tự xây dựng kiến trúc mạng Deep Reinforcement Learning (DQN / Policy Gradient) bằng **PyTorch nội bộ**, tự học chính sách biến đổi payload tối ưu dựa trên phản hồi Reward/Penalty từ WAF Gateway (Chặn `403` $\rightarrow$ Phạt $-1$, Vượt rào $\rightarrow$ Thưởng $+10$). **Hoàn toàn 100% In-house PyTorch, KHÔNG sử dụng OpenAI API hoặc Ollama.**
   4. **AI Arena Runner:** CLI runner điều phối các đợt bắn payload qua mạng LAN và ghi nhận telemetry đối kháng.
