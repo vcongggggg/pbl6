@@ -33,3 +33,13 @@ Tài liệu này định nghĩa các ràng buộc hành vi bắt buộc cho AI A
   - `http://localhost:8000`: **WAF Gateway** (FastAPI Reverse Proxy).
   - `http://localhost:5000`: **Target Web API** (`vulnerable-api` Bookie Bookstore).
   - *Cảnh báo*: Tuyệt đối không nhầm lẫn port 3000 của Dashboard với Juice Shop ngày xưa, và không để Gateway trỏ nhầm sang Juice Shop.
+
+## 7. Quy tắc Kiểm toán Nguy cơ Tiềm ẩn & Hoài nghi Khoa học (Dành cho @reviewer)
+- **Luôn tự hỏi khi kết quả "quá hoàn hảo"**: Khi chỉ số đo kiểm quá tốt (độ trễ siêu thấp, F1-score 100%, 0 false positive, RAM nhẹ), BẮT BUỘC phải đào sâu:
+  * *Kết quả tốt này do đâu? Có phải do dữ liệu mock, do chưa test trường hợp tải thực, do bỏ qua bước I/O nặng hay thiếu tác vụ nền?*
+  * *Có nguy cơ rò rỉ / phình to bộ nhớ (Memory Bloat/Leak) khi chạy 24/7 với hàng triệu IP/User-Agent giả mạo không? (Ví dụ: hàm cleanup đã viết nhưng chưa đăng ký chạy định kỳ).*
+  * *Có nguy cơ nghẽn I/O Database (Lock Contention) khi gặp bão lưu lượng (Burst Traffic $> 1.000\text{ req/s}$) không? (Ví dụ: SQLite single-writer lock).*
+  * *Có nguy cơ Bypass qua các định dạng payload phức tạp (Multipart boundaries, nested encoding, chunked transfer) không?*
+- **Cơ chế Dispatch tự động cho Coder (@pbl6)**:
+  * Khi phát hiện lỗi hoặc nguy cơ tiềm ẩn, Reviewer cập nhật ngay `docs/REVIEW_FEEDBACK.md` với danh sách checklist `- [ ]` và giải pháp code mẫu.
+  * Tự động gửi dispatch thông báo sang cho Coder (`@pbl6`) để Coder tiếp nhận, sửa code và chạy test nghiệm thu lại.
