@@ -21,7 +21,7 @@ Tài liệu theo dõi trạng thái thực hiện các giai đoạn phát triể
 | **Phase 9** | **Dashboard UI & Real-Time Telemetry** | Frontend / Tech Lead (Member A) | **COMPLETED (100% Tasks 9.1 → 9.5) ✅** | SOC Dashboard, 5 KPI cards, Timeline, Distribution, Events table with Client IP origin, Payload Drawer, Quick Simulator, Reset Demo, Explainability Modal (#38), Chuẩn hóa học thuật REST Telemetry APIs (Task 9.1 - #35, NIST SP 800-137, ISO/IEC 27004). |
 | **Phase 10** | **Offensive AI — AI Attack Planner & PyTorch RL Model (Máy 2)** | Offensive AI & Red Team (Member B - `naocavang08`) | **NOT STARTED** | AI Attack Planner Agent trên Máy 2: Trinh sát OpenAPI, Môi trường mô phỏng Attack Graph, Mô hình né tránh WAF In-house bằng PyTorch Deep RL DQN (`evasion_agent.pt`), **100% PyTorch, KHÔNG dùng OpenAI API**. |
 | **Phase 11** | **System Evaluation & Comparison** | ML/Data & Red Team (Member B & A) | **IN PROGRESS 🚀 (Task 11.3 COMPLETED ✅)** | Đối sánh hiệu năng toàn diện: Baseline vs WAF Protected, đo kiểm độ trễ nano-giây từng micro-component của Pipeline AI ($243.55\ \mu\text{s} \ll 15.0\text{ms}$ SLA), phân tích tải đồng thời $C \in [1, 100]$, ISO/IEC 25010 & ISO/IEC 27004:2016 (Issue #45, PR #100 Merged). |
-| **Phase 12** | **Final Hardening & Thesis Report** | Toàn đội (Member A & B) | **IN PROGRESS 🚀 (Tasks 12.1 & 12.2 COMPLETED ✅, Báo Cáo 5 Chương COMPLETED ✅)** | Hoàn thiện Báo cáo Đồ án tốt nghiệp DUT chuẩn 5 Chương (Chương 1 → 5 và Master File `.docx`), Thực hiện 3 Hardening Tasks (Task 12.1), và Kiểm thử sạch cụm Docker Compose 3 containers đồng bộ (Task 12.2 - Issue #48). |
+| **Phase 12** | **Final Hardening & Thesis Report** | Toàn đội (Member A & B) | **IN PROGRESS 🚀 (Tasks 12.1, 12.2 & 12.3 COMPLETED ✅, Báo Cáo 5 Chương COMPLETED ✅)** | Hoàn thiện Báo cáo Đồ án tốt nghiệp DUT chuẩn 5 Chương (Chương 1 → 5 và Master File `.docx`), Thực hiện 3 Hardening Tasks (Task 12.1), Kiểm thử sạch cụm Docker Compose 3 containers (Task 12.2), và Kịch bản diễn tập 10 phút demo thực chiến trước Hội đồng (Task 12.3 - Issue #49). |
 
 > **🔔 ĐIỀU CHỈNH CHIẾN LƯỢC THEO CHỈ ĐẠO CỦA GIẢNG VIÊN HƯỚNG DẪN:**
 > * Không sử dụng OWASP Juice Shop vì là sản phẩm bên thứ ba có sẵn; nhóm tự xây dựng service **`vulnerable-api`** (FastAPI) để làm chủ 100% mã nguồn và logic lỗ hổng.
@@ -458,4 +458,23 @@ Tài liệu theo dõi trạng thái thực hiện các giai đoạn phát triể
 * **Kiểm thử & Xác minh (Tests & Verification):**
   * `docker compose config`: **100% PASS (0 syntax errors)**.
   * `python scripts/verify_docker_compose.py`: **ALL 6/6 CHECKS PASSED**.
+  * `pytest gateway/tests`: **88/88 tests PASSED (100%)**.
+
+---
+
+### Phase 12 — Task 12.3: End-to-End Live Rehearsal Script & 10-Minute Demo Scenario (COMPLETED ✅ — Issue #49)
+
+* **Mục tiêu (Objectives):**
+  * Xây dựng kịch bản diễn tập thực chiến (Live Interactive Rehearsal) kéo dài 10 phút phục vụ bảo vệ đồ án tốt nghiệp trước Hội đồng.
+  * Tự động hóa điều phối 4 phân cảnh thực nghiệm an ninh:
+    1. **Giai đoạn 1 (0:00 - 2:00) — Baseline Traffic:** 100% requests duyệt sách an toàn chuyển tiếp thành công (HTTP 200 OK, Threat Score = 0).
+    2. **Giai đoạn 2 (2:00 - 5:00) — OWASP Attacks (Monitor-Only):** Phát hiện 4 họ tấn công kinh điển (SQLi, XSS, LFI, RCE), tính điểm nguy cơ $95/100$, lưu log SQLite và nhấp nháy cảnh báo đỏ trên Next.js Dashboard.
+    3. **Giai đoạn 3 (5:00 - 7:30) — Active Blocking (Fast-Path 403):** Chuyển WAF sang `ACTIVE_BLOCK`, ngắt kết nối lập tức bằng Fast-Path HTTP 403 Forbidden trong $< 2\text{ ms}$, bảo vệ tuyệt đối ứng dụng mục tiêu Bookie Bookstore.
+    4. **Giai đoạn 4 (7:30 - 10:00) — Rate Limiting & Scoreboard:** Khống chế tấn công Brute-force mật khẩu (ngưỡng 10 req/phút), phạt HTTP 429 kèm Exponential Backoff (`Retry-After: 60s`).
+* **Sản phẩm bàn giao (Deliverables):**
+  * `scripts/demo_rehearsal.py`: Script CLI điều khiển tương tác trực quan với màu sắc ANSI, hỗ trợ 2 chế độ `--interactive` (bấm Enter chuyển từng cảnh) và `--auto` (tự động chạy kèm nhịp thuyết trình).
+  * `docs/reports/demo_rehearsal_guide.md`: Cẩm nang hướng dẫn kịch bản lời thoại chi tiết từng phút cho người thuyết trình trước Hội đồng.
+  * Đóng thành công GitHub Issue #49 qua Pull Request #103.
+* **Kiểm thử & Xác minh (Tests & Verification):**
+  * Chạy thực nghiệm live 4/4 giai đoạn thành công 100% với Gateway (:8000) và Bookie Bookstore (:5000).
   * `pytest gateway/tests`: **88/88 tests PASSED (100%)**.
