@@ -17,9 +17,12 @@ if settings.database_url.startswith("sqlite"):
     if "/" in db_path or "\\" in db_path:
         os.makedirs(os.path.dirname(os.path.abspath(db_path)), exist_ok=True)
 
+from sqlalchemy.pool import NullPool
+
 engine = create_engine(
     settings.database_url,
     connect_args=connect_args,
+    poolclass=NullPool if settings.database_url.startswith("sqlite") else None,
     echo=(settings.log_level.upper() == "DEBUG"),
 )
 
