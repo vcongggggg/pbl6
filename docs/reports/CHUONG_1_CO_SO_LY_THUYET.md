@@ -2,39 +2,35 @@
 # CHƯƠNG 1: CƠ SỞ LÝ THUYẾT VÀ TỔNG QUAN CÔNG TRÌNH NGHIÊN CỨU
 
 > **Đề tài:** Nền tảng Giám sát, Phát hiện và Ngăn chặn Tấn công Web API dựa trên AI/ML kết hợp Môi trường Thao trường Mạng (Cyber Range) Phân tán  
-> **(Web API Security Platform & Autonomous Red Teaming on Distributed Cyber Range)**  
-> **Sinh viên thực hiện:** Thành viên A (Tech Lead & Defense ML) - Thành viên B (Offensive AI & PyTorch RL)  
-> **Đơn vị đào tạo:** Khoa Công nghệ Thông tin - Bộ môn An toàn Thông tin, Trường Đại học Bách khoa - Đại học Đà Nẵng  
-> **Tài liệu tham khảo học thuật:** 20 công trình khoa học và tiêu chuẩn quốc tế (USENIX Security, IEEE, ACM, MDPI, NIST, OWASP, MITRE)  
+> **Sinh viên thực hiện:** Ngô Văn Công  
+> **Cơ sở khoa học tham chiếu:** 20 công trình và giáo trình kinh điển quốc tế (Prentice Hall, CRC Press, Sybex/Wiley, O'Reilly, IEEE, ACM, Elsevier, MDPI, NIST, OWASP, MITRE).
 
 ---
 
 ## 1.1. TỔNG QUAN VỀ BẢO MẬT WEB API VÀ CÁC THÁCH THỨC AN NINH HIỆN ĐẠI
 
 ### 1.1.1. Xu hướng kiến trúc Microservices và sự bùng nổ của Web API
-Trong kỷ nguyên chuyển đổi số và điện toán đám mây, kiến trúc phần mềm đã trải qua sự chuyển dịch mạnh mẽ từ các ứng dụng nguyên khối (Monolithic Architecture) sang kiến trúc hướng dịch vụ phân tán và vi dịch vụ (Microservices Architecture). Trong mô hình này, giao diện lập trình ứng dụng web (Web API), đặc biệt là chuẩn RESTful API truyền tải dữ liệu qua giao thức HTTP/HTTPS với định dạng JSON, đã trở thành xương sống kết nối toàn bộ hệ sinh thái dịch vụ: từ ứng dụng Single Page Application (SPA), ứng dụng di động (Mobile Apps), hệ thống Internet vạn vật (IoT) cho đến các cổng thanh toán tài chính liên ngân hàng.
+Trong kỷ nguyên chuyển đổi số và điện toán đám mây, kiến trúc phần mềm đã trải qua sự chuyển dịch mang tính nền tảng từ các hệ thống nguyên khối (Monolithic Architecture) sang kiến trúc phân tán và vi dịch vụ (Microservices Architecture). Trong mô hình này, giao diện lập trình ứng dụng web (Web API), đặc biệt là chuẩn RESTful API truyền tải dữ liệu qua giao thức HTTP/HTTPS với định dạng JSON, đã trở thành huyết mạch kết nối toàn bộ hệ sinh thái dịch vụ số: từ ứng dụng Single Page Application (SPA), ứng dụng di động (Mobile Apps), hệ thống Internet vạn vật (IoT) cho đến các cổng thanh toán tài chính liên ngân hàng.
 
-Tuy nhiên, sự bùng nổ về số lượng và tính phức tạp của Web API đã làm mở rộng đáng kể bề mặt tấn công (Attack Surface). Không giống như các ứng dụng web truyền thống hiển thị giao diện người dùng qua HTML/CSS, Web API phơi bày trực tiếp logic nghiệp vụ, các tham số truy vấn cơ sở dữ liệu và cấu trúc dữ liệu nhạy cảm. Kẻ tấn công có thể dễ dàng sử dụng các công cụ phân tích tự động, phân tích cú pháp OpenAPI/Swagger specification để lập bản đồ các endpoint và thực hiện tấn công hàng loạt mà không bị cản trở bởi lớp giao diện người dùng.
+Tuy nhiên, sự bùng nổ về số lượng và tính phức tạp của Web API đã làm mở rộng đáng kể bề mặt tấn công (Attack Surface). Không giống như các ứng dụng web truyền thống hiển thị giao diện qua HTML/CSS, Web API phơi bày trực tiếp logic nghiệp vụ, các tham số truy vấn cơ sở dữ liệu và cấu trúc dữ liệu nhạy cảm. Kẻ tấn công có thể dễ dàng sử dụng các công cụ phân tích tự động, bóc tách tài liệu OpenAPI/Swagger specification để lập bản đồ các endpoint và thực hiện tấn công hàng loạt mà không bị cản trở bởi lớp giao diện người dùng **[Ref 04]**.
 
 ### 1.1.2. Phân tích các mối đe dọa hàng đầu theo OWASP Top 10 API Security Risks (2023)
-Theo công bố chính thức từ tổ chức bảo mật uy tín toàn cầu OWASP trong tài liệu *OWASP Top 10 API Security Risks 2023* **[Ref 13]**, các cuộc tấn công nhắm vào Web API ngày càng trở nên tinh vi và có chủ đích. Dưới đây là phân tích chi tiết các lớp hiểm họa trọng tâm mà hệ thống phòng thủ cần giải quyết:
+Theo công bố chính thức từ tổ chức an toàn thông tin uy tín thế giới OWASP trong tài liệu *OWASP Top 10 API Security Risks 2023* **[Ref 06]**, các cuộc tấn công nhắm vào Web API ngày càng trở nên tinh vi và có tổ chức. Đồ án tập trung nghiên cứu và xây dựng giải pháp phòng thủ cho 4 nhóm hiểm họa nghiêm trọng nhất:
 
 #### 1. Các lỗ hổng tiêm mã độc (Injection Vulnerabilities)
-- **SQL Injection (SQLi):** Xảy ra khi dữ liệu đầu vào không tin cậy từ người dùng (qua URL path, Query string, Headers hoặc JSON body) được ghép trực tiếp vào câu lệnh truy vấn SQL gửi xuống hệ quản trị cơ sở dữ liệu (RDBMS) mà không qua cơ chế kiểm tra (sanitization) hoặc tham số hóa (parameterization). Kẻ tấn công có thể thay đổi logic truy vấn, trích xuất toàn bộ dữ liệu bí mật (In-band SQLi), kích hoạt ngoại lệ hệ thống để đọc cấu trúc bảng (Error-based SQLi), suy luận thông tin qua phản hồi boolean hoặc độ trễ thời gian thực thi (Inferential/Time-based Blind SQLi), hoặc thực thi mã lệnh cấp hệ điều hành qua các thủ tục lưu sẵn (Out-of-band SQLi) **[Ref 10]**.
-- **OS Command Injection:** Xuất hiện khi API gọi trực tiếp các lệnh shell của hệ điều hành (ví dụ: `os.system()`, `subprocess.Popen()` trong Python hoặc `exec()` trong PHP) với dữ liệu đầu vào chưa được kiểm duyệt. Kẻ tấn công lợi dụng các ký tự phân tách lệnh như `;`, `&&`, `|`, `$(...)`, `` `...` `` để thực thi các lệnh nhạy cảm như đọc `/etc/passwd`, tạo reverse shell kết nối về máy chủ tấn công (C2 Server), chiếm toàn quyền kiểm soát máy chủ web.
-- **Path Traversal (Directory Traversal):** Khai thác sự thiếu sót trong việc kiểm tra đường dẫn tệp tin khi API xử lý yêu cầu đọc/ghi dữ liệu từ hệ thống tệp cục bộ. Bằng việc chèn chuỗi `../` (hoặc các biến thể mã hóa `%2e%2e%2f`), kẻ tấn công có thể thoát khỏi thư mục gốc của ứng dụng (Document Root) để truy cập các tệp tin cấu hình nhạy cảm (`config.env`, `settings.py`, database files).
+Bao gồm SQL Injection (In-band, Error-based, Time-based Blind SQLi **[Ref 10]**), OS Command Injection thực thi shellcode trực tiếp, và Path Traversal đọc tệp tin cấu hình nhạy cảm. Kẻ tấn công lợi dụng dữ liệu đầu vào chưa được kiểm duyệt để thay đổi logic truy vấn hoặc chiếm toàn quyền điều khiển hệ điều hành máy chủ.
 
 #### 2. Tấn công Cross-Site Scripting (XSS)
-Mặc dù Web API chủ yếu trả về dữ liệu dạng JSON thô, nhưng các trường dữ liệu do API phản hồi thường được render trực tiếp lên trình duyệt của người dùng cuối trong các ứng dụng SPA (React, Vue, Angular). Khi kẻ tấn công gửi thành công các payload chứa mã script nguy hại (`<script>`, `<img src=x onerror=...>`, JavaScript pseudo-protocols `javascript:alert(1)`) lưu trữ vào cơ sở dữ liệu qua API (Stored XSS) hoặc phản xạ ngay lập tức (Reflected XSS), mã độc sẽ thực thi trong ngữ cảnh phiên người dùng nạn nhân, dẫn đến nguy cơ đánh cắp token xác thực (JWT, Session Cookies) hoặc chiếm quyền điều khiển tài khoản (Account Takeover) **[Ref 12]**.
+Mặc dù API chủ yếu trả về dữ liệu JSON, nhưng các trường dữ liệu do API phản hồi thường được render trực tiếp lên trình duyệt của người dùng cuối trong các ứng dụng SPA (React, Vue, Next.js). Khi kẻ tấn công chèn thành công các payload chứa mã JavaScript nguy hại (`<script>`, `<img onerror=...>`) qua API, mã độc sẽ thực thi trong ngữ cảnh phiên nạn nhân, dẫn đến nguy cơ đánh cắp token JWT, session cookies hoặc chiếm đoạt tài khoản.
 
-#### 3. Phá vỡ kiểm soát phân quyền mức đối tượng (Broken Object Level Authorization - BOLA / IDOR)
-Chiếm vị trí số 1 trong danh mục OWASP API Top 10 (API1:2023). Lỗ hổng này phát sinh do máy chủ API không thực hiện xác thực quyền hạn truy cập của người dùng đối với đối tượng dữ liệu cụ thể được định danh trong URL (ví dụ: `GET /api/v1/orders/{order_id}`). Người dùng hợp lệ A chỉ cần thay đổi `order_id` sang mã của người dùng B là có thể xem hoặc chỉnh sửa dữ liệu trái phép. Đây là một lỗ hổng logic nghiệp vụ mà các bộ lọc chữ ký regex truyền thống hoàn toàn bất lực trong việc nhận diện.
+#### 3. Phá vỡ kiểm soát phân quyền mức đối tượng (Broken Object Level Authorization - BOLA / IDOR - API1:2023)
+Lỗ hổng logic nghiệp vụ đứng số 1 về mức độ phổ biến, xảy ra khi máy chủ API không kiểm tra xem người dùng hiện tại có quyền thao tác trên mã đối tượng trong URL hay không (ví dụ: đổi `/orders/1` thành `/orders/2`). Các bộ lọc chữ ký regex truyền thống hoàn toàn bất lực trước loại lỗ hổng logic này **[Ref 06]**.
 
 #### 4. Tiêu thụ tài nguyên không hạn chế (Unrestricted Resource Consumption - API4:2023)
-Web API thường xuyên phải đối mặt với các cuộc tấn công tự động dò quét mật khẩu (Credential Stuffing, Password Brute-force) hoặc tấn công từ chối dịch vụ (Denial of Service - DoS) ở tầng ứng dụng (Layer 7). Khi không có cơ chế giới hạn tần suất (Rate Limiting) hiệu quả dựa trên địa chỉ IP hoặc định danh tài khoản, máy chủ API sẽ nhanh chóng bị vét cạn tài nguyên CPU, bộ nhớ RAM, kết nối cơ sở dữ liệu và băng thông mạng, dẫn đến tê liệt toàn bộ hệ thống dịch vụ **[Ref 11]**.
+Web API thường xuyên phải đối mặt với các cuộc tấn công tự động dò quét mật khẩu (Credential Stuffing, Password Brute-force) hoặc tấn công từ chối dịch vụ (Denial of Service - DoS) ở tầng ứng dụng (Layer 7). Khi không có cơ chế giới hạn tần suất (Rate Limiting) hiệu quả dựa trên địa chỉ IP hoặc định danh tài khoản, máy chủ API sẽ nhanh chóng bị vét cạn tài nguyên CPU, bộ nhớ RAM, kết nối cơ sở dữ liệu và băng thông mạng, dẫn đến tê liệt toàn bộ hệ thống dịch vụ **[Ref 05, Ref 06]**.
 
 ### 1.1.3. Các kỹ thuật làm mờ payload và né tránh tường lửa (WAF Evasion & Obfuscation Techniques)
-Trong bối cảnh các hệ thống tường lửa ứng dụng web truyền thống phụ thuộc nặng nề vào các tập luật kiểm tra mẫu chuỗi (Regex Pattern Matching), kẻ tấn công hiện đại — đặc biệt khi có sự hỗ trợ của các tác tử AI tấn công tự động — đã áp dụng các kỹ thuật làm mờ payload (Obfuscation) cực kỳ phức tạp để vượt rào (WAF Evasion) **[Ref 04]**:
+Theo giáo trình kiểm thử xâm nhập chuẩn quốc tế *CompTIA PenTest+ Study Guide* **[Ref 04]**, trong bối cảnh các hệ thống tường lửa ứng dụng web truyền thống phụ thuộc nặng nề vào các tập luật kiểm tra mẫu chuỗi (Regex Pattern Matching), kẻ tấn công hiện đại — đặc biệt khi có sự hỗ trợ của các tác tử AI tấn công tự động — đã áp dụng các kỹ thuật làm mờ payload (Obfuscation) cực kỳ phức tạp để vượt rào (WAF Evasion):
 
 | Kỹ Thuật Né Tránh | Cơ Chế Bản Chất | Ví Dụ Minh Họa | Hậu Quả Đối Với WAF Truyền Thống |
 | :--- | :--- | :--- | :--- |
@@ -49,14 +45,19 @@ Trong bối cảnh các hệ thống tường lửa ứng dụng web truyền th
 
 ## 1.2. CƠ CHẾ HOẠT ĐỘNG CỦA TƯỜNG LỬA ỨNG DỤNG WEB (WAF) VÀ GIỚI HẠN CỦA PHƯƠNG PHÁP TRUYỀN THỐNG
 
-### 1.2.1. Nguyên lý hoạt động của WAF dựa trên luật (Signature-Based Inspection)
-Tường lửa ứng dụng web (WAF) đóng vai trò là một lớp Reverse Proxy bảo vệ đứng trung gian giữa mạng Internet công cộng và máy chủ ứng dụng nội bộ. Khi một yêu cầu HTTP gửi đến, WAF thực hiện các bước phân tích:
-1. **Phân tích cú pháp giao thức HTTP (HTTP Parsing):** Bóc tách các thành phần URL Path, Query Parameters, HTTP Headers (User-Agent, Cookie, Authorization, Referer) và Request Body (JSON, Form-data, XML).
-2. **Chuẩn hóa đầu vào (Input Normalization/Canonicalization):** Chuyển đổi chuỗi đầu vào về dạng chuẩn (URL decoding, Unicode normalization, lowercase conversion) để tránh sự sai lệch mã hóa.
-3. **So khớp mẫu chữ ký (Pattern Matching):** So khớp nội dung đã chuẩn hóa với tập hợp các biểu thức chính quy (Regular Expressions) đại diện cho các mẫu tấn công đã biết. Đại diện tiêu biểu nhất cho trường phái này là bộ luật nguồn mở chuẩn công nghiệp **OWASP ModSecurity Core Rule Set (CRS v4.0)** **[Ref 14]**.
+### 1.2.1. Phân loại thế hệ Tường lửa và Nguyên lý Cổng tầng ứng dụng (Application-Level Gateway)
+Trong công trình giáo trình kinh điển *Cryptography and Network Security: Principles and Practice* (Chương 20: Firewalls) **[Ref 01]**, Giáo sư William Stallings đã hệ thống hóa tường lửa thành ba thế hệ công nghệ tiến hóa:
+1. **Bộ lọc gói tin (Packet Filtering Firewall):** Hoạt động ở tầng Mạng và Vận chuyển (Layer 3 & 4), chỉ kiểm tra địa chỉ IP nguồn/đích, cổng TCP/UDP mà hoàn toàn không có khả năng thấu hiểu nội dung dữ liệu ứng dụng.
+2. **Bộ lọc trạng thái (Stateful Inspection Firewall):** Theo dõi trạng thái kết nối TCP (SYN, ACK, ESTABLISHED) nhằm ngăn chặn các gói tin giả mạo phiên.
+3. **Cổng tầng ứng dụng (Application-Level Gateway / Reverse Proxy WAF):** Là thế hệ tường lửa tiên tiến nhất, hoạt động như một thực thể trung gian (Relay/Proxy) ở tầng Ứng dụng (Layer 7). Cổng ứng dụng tiếp nhận toàn bộ kết nối TCP từ máy khách, phân giải và tái cấu trúc hoàn chỉnh giao thức HTTP/HTTPS, kiểm tra toàn diện dữ liệu tải trọng (Payload) trước khi quyết định chuyển tiếp yêu cầu đến máy chủ nội bộ.
+
+Theo kiến trúc điều phối lưu lượng trong cuốn *NGINX Cookbook* **[Ref 05]**, cơ chế Reverse Proxy WAF mang lại những lợi ích bảo mật vượt trội:
+- **Ẩn giấu máy chủ gốc (Origin Cloaking):** Toàn bộ địa chỉ IP và kiến trúc nội bộ của máy chủ Web API được bảo vệ hoàn toàn phía sau Gateway.
+- **Khử trùng tiêu đề giao thức (Hop-by-hop Headers Sanitization):** Loại bỏ các tiêu đề nhạy cảm hoặc có nguy cơ gây ô nhiễm giao thức (HTTP Request Smuggling, Open Proxy abuse).
+- **Phân luồng kiểm tra chuyên sâu:** Cho phép tích hợp các bộ tiền xử lý (Input Normalizer), bộ kiểm tra luật (Rule Engine), bộ suy luận học máy (ML Detector) và bộ giới hạn tần suất (Rate Limiter) trên cùng một đường ống tuần tự.
 
 ### 1.2.2. Cơ chế chấm điểm bất thường lũy tiến (Anomaly Scoring System)
-Khác với các cơ chế tường lửa cũ áp dụng phương thức chặn tức thời khi khớp một luật duy nhất (Traditional Disruptive Action / Single-Rule Blocking), chuẩn OWASP ModSecurity CRS v4.0 áp dụng kiến trúc **Anomaly Scoring System** **[Ref 14]**:
+Khác với các cơ chế tường lửa cũ áp dụng phương thức chặn tức thời khi khớp một luật duy nhất (Traditional Disruptive Action / Single-Rule Blocking), chuẩn công nghiệp hiện đại **OWASP ModSecurity Core Rule Set (CRS v4.0)** **[Ref 07]** áp dụng kiến trúc **Collaborative Anomaly Scoring System**:
 - Mỗi quy tắc phát hiện khi kích hoạt sẽ không chặn ngay request mà gán một trọng số bất thường dựa trên mức độ nghiêm trọng:
   - `CRITICAL`: +5 điểm (khớp trực tiếp cú pháp khai thác SQLi, OS Command Injection).
   - `HIGH`: +4 điểm (phát hiện hành vi quét lỗ hổng, traversal).
@@ -67,7 +68,7 @@ Khác với các cơ chế tường lửa cũ áp dụng phương thức chặn 
 - Chỉ khi $S_{\text{anomaly}} \ge \text{Anomaly Threshold}$ (thường mặc định là 5 điểm), WAF mới thực hiện ngắt kết nối và trả về mã lỗi `HTTP 403 Forbidden`. Mô hình này giảm thiểu đáng kể tỷ lệ chặn nhầm các yêu cầu hợp lệ có chứa một vài ký tự đặc biệt ngẫu nhiên.
 
 ### 1.2.3. Những giới hạn cốt tử của phương pháp dựa trên luật tĩnh
-Mặc dù đóng vai trò là hàng rào lọc thô không thể thiếu nhờ tốc độ xử lý nhanh, WAF dựa trên luật tĩnh bộc lộ những khiếm khuyết nội tại không thể khắc phục trong môi trường tác chiến hiện đại:
+Mặc dù đóng vai trò là hàng rào lọc thô không thể thiếu nhờ tốc độ xử lý nhanh, WAF dựa trên luật tĩnh bộc lộ những khiếm khuyết nội tại không thể khắc phục trong môi trường tác chiến hiện đại theo phân tích của William Stallings **[Ref 01]**:
 1. **Bất lực trước biến thể mới và tấn công chưa từng biết (Zero-day Attacks):** Luật chữ ký chỉ có thể phát hiện những gì đã được định nghĩa trước. Khi kẻ tấn công sử dụng cú pháp mới lạ, kỹ thuật zero-day hoặc chuỗi khai thác logic phức tạp, luật tĩnh hoàn toàn bị mù.
 2. **Nghịch lý giữa Tỷ lệ báo động giả (False Positive) và Bỏ lọt mối đe dọa (False Negative):**
    - Nếu viết biểu thức chính quy quá chặt chẽ (strict), WAF sẽ chặn nhầm các yêu cầu nghiệp vụ hợp lệ chứa ký tự toán học, dấu nháy trong văn bản tiếng Việt/tiếng Anh hoặc mã định danh người dùng (False Positive cao), gây gián đoạn trải nghiệm người dùng.
@@ -78,65 +79,63 @@ Mặc dù đóng vai trò là hàng rào lọc thô không thể thiếu nhờ t
 
 ## 1.3. CƠ SỞ LÝ THUYẾT VỀ TRÍCH XUẤT ĐẶC TRƯNG VÀ HỌC MÁY TRONG PHÁT HIỆN TẤN CÔNG WEB
 
-Nhằm khắc phục những giới hạn của phương pháp chữ ký tĩnh, việc ứng dụng Trí tuệ nhân tạo và Học máy (Machine Learning) vào giám sát an toàn thông tin là xu hướng tất yếu. Thay vì so khớp chuỗi cứng nhắc, mô hình học máy học các phân phối thống kê, cấu trúc hình thái và tính dị biệt của luồng dữ liệu để tổng quát hóa (generalize) khả năng nhận diện.
-
 ### 1.3.1. Phương pháp trích xuất đặc trưng hình thái học và thống kê chuỗi HTTP
-Dựa trên công trình nghiên cứu kinh điển của C. Torrano-Gimenez et al. (Wiley Security and Communication Networks 2015) **[Ref 08]**, thay vì phân tích cú pháp toàn bộ payload bằng các mô hình xử lý ngôn ngữ tự nhiên nặng nề (như Transformer/BERT tiêu tốn 50–150ms phần cứng GPU), ta có thể vector hóa yêu cầu HTTP thành các đặc trưng hình thái học (Morphological Features) và số liệu thống kê với chi phí thời gian siêu thấp ($< 0.5\text{ms}$ trên CPU thông thường).
+Để giải quyết bài toán phân loại chuỗi ký tự HTTP bất kỳ mà không phụ thuộc vào từ điển chữ ký cố định, hệ thống chuyển đổi payload văn bản thành một vector đặc trưng số học nhiều chiều.
 
 #### 1. Cơ sở toán học của độ hỗn loạn thông tin Shannon Entropy
-Độ hỗn loạn thông tin Shannon Entropy được áp dụng để đo lường mức độ ngẫu nhiên và phân tán của các ký tự xuất hiện trong chuỗi payload $S$ có độ dài $N$:
-$$H(S) = -\sum_{i=1}^{K} p(c_i) \log_2 p(c_i)$$
-Trong đó:
-- $K$ là số lượng ký tự phân biệt xuất hiện trong chuỗi $S$.
-- $p(c_i) = \frac{f(c_i)}{N}$ là xác suất xuất hiện của ký tự $c_i$, với $f(c_i)$ là tần suất xuất hiện của $c_i$ trong chuỗi.
+Theo giáo trình kinh điển *Cryptography: Theory and Practice* của Douglas R. Stinson và Maura B. Paterson (Chương 2: Information Theory) **[Ref 02]**, độ hỗn loạn thông tin (Shannon Entropy) là thước đo định lượng toán học về tính ngẫu nhiên, độ bất định và lượng thông tin trung bình chứa trong một biến ngẫu nhiên rời rạc.
 
-**Ý nghĩa an ninh mạng:**
-- Chuỗi văn bản thông thường (tiếng Anh hoặc tiếng Việt không dấu) có entropy thấp và ổn định ($2.0 \le H(S) \le 3.5$) do tần suất xuất hiện của các nguyên âm và phụ âm tuân theo phân phối tự nhiên.
-- Chuỗi chứa payload tấn công bị làm mờ (mã hóa Base64, Hex, URL encoding kép) hoặc chứa shellcode/ký tự ngẫu nhiên có độ hỗn loạn ký tự rất cao, đẩy entropy lên ngưỡng cao đột biến ($H(S) > 4.5$). Đây là một chỉ dấu cực kỳ mạnh để phát hiện hành vi mã hóa che giấu mã độc.
+Cho một chuỗi ký tự payload $S$ có độ dài $L$, tập các ký tự phân biệt xuất hiện trong chuỗi là $\Sigma = \{c_1, c_2, \dots, c_k\}$. Xác suất xuất hiện $p(c_i)$ của ký tự $c_i$ được ước lượng bằng tần suất tương đối:
+$$p(c_i) = \frac{\text{count}(c_i)}{L}$$
+Độ hỗn loạn Shannon Entropy $H(S)$ (tính theo đơn vị bit) được định nghĩa theo công thức chuẩn:
+$$H(S) = - \sum_{i=1}^{k} p(c_i) \log_2 p(c_i)$$
+
+**Ý nghĩa vật lý và an ninh thông tin của $H(S)$:**
+- **Văn bản tự nhiên / Tham số hợp lệ:** Chứa các từ ngữ ngữ pháp thông thường, có tính lặp lại cao về mặt ngôn ngữ (nguyên âm, phụ âm, từ vựng thông dụng), giá trị entropy thường dao động ở mức vừa phải: $2.0 \le H(S) \le 3.5$.
+- **Payload tấn công / Mã độc làm mờ (Obfuscated Payloads):** Kẻ tấn công sử dụng các hàm băm, mã hóa Base64, mã hóa Hex, chèn ký tự ngẫu nhiên hoặc các toán tử đặc biệt nhằm phá vỡ cấu trúc cú pháp thông thường. Phân phối ký tự trở nên phân tán đều, khiến độ bất định tăng vọt, đẩy giá trị entropy lên rất cao: $H(S) \ge 3.8 - 4.5$.
+- Do đó, Shannon Entropy đóng vai trò là một đặc trưng hình thái học cực kỳ nhạy cảm để phát hiện dấu hiệu bất thường mà không cần quan tâm đến ngữ nghĩa cụ thể của chuỗi.
 
 #### 2. Không gian 17 đặc trưng hình thái chuẩn tắc (Canonical 17-D Feature Vector)
-Hệ thống chuẩn hóa không gian vector đặc trưng thành 17 chiều độc lập, bao quát toàn diện các khía cạnh cú pháp của một yêu cầu web:
-
-| STT | Tên Đặc Trưng | Ký Hiệu Toán Học / Công Thức | Ý Nghĩa An Ninh Mạng |
-| :---: | :--- | :--- | :--- |
-| 1 | `payload_length` | $L = |S|$ | Đo độ dài chuỗi; các cuộc tấn công SQLi dạng UNION hoặc buffer overflow thường có độ dài vượt trội. |
-| 2 | `entropy` | $H(S) = -\sum p_i \log_2 p_i$ | Đo lường độ ngẫu nhiên/hỗn loạn; phát hiện chuỗi mã hóa, băm mật mã và obfuscation. |
-| 3 | `special_char_ratio` | $R_{\text{spec}} = \frac{N_{\text{spec}}}{L}$ | Tỷ lệ ký tự đặc biệt (`!@#$%^&*()_+-=[]{}...`); payload tấn công luôn có mật độ ký tự đặc biệt cao. |
-| 4 | `digit_ratio` | $R_{\text{digit}} = \frac{N_{\text{digit}}}{L}$ | Tỷ lệ chữ số; phát hiện các đòn brute force ID, số liệu nhị phân hoặc chuỗi hex. |
-| 5 | `uppercase_ratio` | $R_{\text{upper}} = \frac{N_{\text{upper}}}{L}$ | Tỷ lệ chữ hoa; nhận diện kỹ thuật né tránh đổi hoa thường xen kẽ (Mixed-case Evasion). |
-| 6 | `single_quote_count` | $C_{\text{sq}} = \text{count}(')$ | Số lượng dấu nháy đơn; chỉ dấu cơ bản của SQL Injection đóng chuỗi. |
-| 7 | `double_quote_count` | $C_{\text{dq}} = \text{count}(")$ | Số lượng dấu nháy kép; chỉ dấu của XSS attribute injection và SQLi. |
-| 8 | `parentheses_count` | $C_{\text{paren}} = \text{count}('(') + \text{count}(')')$ | Số lượng dấu ngoặc tròn; phát hiện lời gọi hàm SQL (`CONCAT`, `VERSION`, `SLEEP`) hoặc hàm JavaScript (`alert`, `eval`). |
-| 9 | `angle_bracket_count` | $C_{\text{angle}} = \text{count}('<') + \text{count}('>')$ | Số lượng dấu đóng/mở thẻ; chỉ dấu trực tiếp của việc tiêm mã thẻ HTML/XSS. |
-| 10 | `semicolon_count` | $C_{\text{semi}} = \text{count}(';')$ | Số lượng dấu chấm phẩy; chỉ dấu của kỹ thuật xếp chồng câu lệnh SQL (Stacked Queries) hoặc ngắt lệnh Shell. |
-| 11 | `whitespace_count` | $C_{\text{ws}} = \text{count}(\text{space}, \text{tab}, \text{newline})$ | Số lượng khoảng trắng; phân tích cấu trúc cú pháp câu lệnh. |
-| 12 | `null_byte_count` | $C_{\text{null}} = \text{count}('\x00') + \text{count}('%00')$ | Số lượng byte rỗng; phát hiện kỹ thuật cắt chuỗi tệp tin và vượt rào kiểm tra. |
-| 13 | `sqli_keyword_count` | $K_{\text{sqli}} = \sum \mathbb{I}(\text{kw} \in S)$ | Mật độ từ khóa SQL kinh điển (`SELECT`, `UNION`, `DROP`, `INFORMATION_SCHEMA`, `SLEEP`, `BENCHMARK`). |
-| 14 | `xss_keyword_count` | $K_{\text{xss}} = \sum \mathbb{I}(\text{kw} \in S)$ | Mật độ từ khóa/thuộc tính XSS nguy hiểm (`SCRIPT`, `ONERROR`, `ONLOAD`, `JAVASCRIPT:`, `EVAL`, `FETCH`). |
-| 15 | `cmdi_keyword_count` | $K_{\text{cmdi}} = \sum \mathbb{I}(\text{kw} \in S)$ | Mật độ từ khóa lệnh hệ thống (`ETC/PASSWD`, `BIN/SH`, `CMD.EXE`, `POWERSHELL`, `WHOAMI`, `CURL`, `WGET`). |
-| 16 | `path_keyword_count` | $K_{\text{path}} = \sum \mathbb{I}(\text{kw} \in S)$ | Mật độ mẫu duyệt đường dẫn (`..`, `WEB-INF`, `BOOT.INI`, `ENV`, `WIN.INI`). |
-| 17 | `syntax_pattern_count` | $K_{\text{syn}} = \sum \mathbb{I}(\text{regex} \in S)$ | Mật độ các cấu trúc toán tử logic đặc trưng (`OR 1=1`, `AND 1=1`, `/*`, `--`, `#`, `\|\|`, `&&`). |
+Kế thừa và chuẩn hóa công trình nghiên cứu nền tảng của C. Torrano-Gimenez et al. (Wiley Security and Communication Networks 2015) **[Ref 08]** và bài báo tổng quan SQLi của M. Hasan et al. (IEEE Access 2023) **[Ref 10]**, đồ án xây dựng một vector đặc trưng chuẩn tắc 17 chiều:
+- **Nhóm 1: Thống kê hình thái học & Entropy (12 đặc trưng):**
+  1. `length`: Độ dài ký tự của payload.
+  2. `entropy`: Độ hỗn loạn Shannon Entropy.
+  3. `count_single_quote`: Số lượng dấu nháy đơn `'` (chỉ thị tiêm SQLi).
+  4. `count_double_quote`: Số lượng dấu nháy kép `"` (chỉ thị tiêm SQLi/XSS).
+  5. `count_less_than`: Số lượng dấu nhỏ hơn `<` (chỉ thị mở thẻ HTML/XSS).
+  6. `count_greater_than`: Số lượng dấu lớn hơn `>` (chỉ thị đóng thẻ HTML/XSS).
+  7. `count_semicolon`: Số lượng dấu chấm phẩy `;` (chỉ thị kết thúc lệnh SQL/Shell).
+  8. `count_hyphen`: Số lượng dấu gạch nối `-` (chỉ thị chuỗi comment SQL `--`).
+  9. `count_slash`: Số lượng dấu gạch chéo `/` (chỉ thị Path Traversal/Comment).
+  10. `count_backslash`: Số lượng dấu gạch chéo ngược `\` (chỉ thị Path Traversal Windows/Escape).
+  11. `count_parenthesis`: Số lượng dấu đóng/mở ngoặc đơn `(` và `)`.
+  12. `special_char_ratio`: Tỷ lệ ký tự đặc biệt trên tổng độ dài chuỗi:
+      $$\text{special\_char\_ratio} = \frac{\sum \text{ký tự không phải alnum và khoảng trắng}}{\max(1, \text{length})}$$
+- **Nhóm 2: Mật độ từ khóa và cú pháp tấn công (5 đặc trưng):**
+  13. `sql_keyword_count`: Tần suất xuất hiện các từ khóa SQL (SELECT, UNION, DROP, WHERE, EXEC...).
+  14. `xss_keyword_count`: Tần suất xuất hiện các từ khóa JavaScript/DOM (script, alert, onerror, eval...).
+  15. `sqli_regex_matches`: Số lượng mẫu cú pháp SQLi điển hình khớp (`UNION SELECT`, `OR 1=1`, `'--`).
+  16. `xss_regex_matches`: Số lượng mẫu thực thi XSS khớp (`<script>`, `javascript:`, `on*=`...).
+  17. `path_traversal_matches`: Số lượng mẫu duyệt thư mục khớp (`../`, `..\`, `/etc/passwd`...).
 
 ### 1.3.2. Thuật toán học máy có giám sát (Supervised Learning) — Rừng ngẫu nhiên (Random Forest)
-Mô hình học máy có giám sát được giao nhiệm vụ phân loại đa lớp (Multiclass Classification) để xác định chính xác danh tính của cuộc tấn công trong tập nhãn: $\mathcal{Y} = \{\text{BENIGN: 0, SQLI: 1, XSS: 2, PATH\_TRAVERSAL: 3, COMMAND\_INJECTION: 4}\}$.
-
 #### 1. Cơ sở lý thuyết của Random Forest
-Random Forest là một thuật toán học tăng cường tập hợp (Ensemble Learning) kết hợp nhiều cây quyết định (Decision Trees) đơn lẻ thông qua kỹ thuật **Bootstrap Aggregating (Bagging)** và **Random Feature Subspace Selection**:
-- Với tập dữ liệu huấn luyện $\mathcal{D}$ gồm $N$ mẫu, thuật toán tạo ra $B$ tập dữ liệu con $\mathcal{D}_b$ bằng cách lấy mẫu ngẫu nhiên có lặp lại (Bootstrap Sampling).
-- Tại mỗi nút của mỗi cây quyết định $T_b$, thay vì tìm điểm phân tách tối ưu trên toàn bộ $M$ đặc trưng ($M=17$), thuật toán chỉ chọn ngẫu nhiên một tập con gồm $m$ đặc trưng ($m = \sqrt{M} \approx 4$). Điểm phân tách được xác định bằng cách tối đa hóa độ giảm độ bất thuần Gini (Gini Impurity):
-  $$I_G(p) = 1 - \sum_{k=1}^{C} p_k^2$$
-  $$\Delta I_G = I_{G}(\text{Parent}) - \left( \frac{N_{\text{Left}}}{N_{\text{Total}}} I_G(\text{Left}) + \frac{N_{\text{Right}}}{N_{\text{Total}}} I_G(\text{Right}) \right)$$
-- Dự đoán cuối cùng của mô hình cho vector đầu vào $\mathbf{x}$ là sự biểu quyết đa số (Majority Voting) hoặc trung bình cộng vector phân bố xác suất:
-  $$\hat{p}_k(\mathbf{x}) = \frac{1}{B} \sum_{b=1}^{B} P_{T_b}(y = k \mid \mathbf{x})$$
+Random Forest là một thuật toán học máy kết hợp (Ensemble Learning) dựa trên kỹ thuật **Bootstrap Aggregating (Bagging)** và chọn lọc đặc trưng ngẫu nhiên (Random Subspace Method) do Leo Breiman đề xuất năm 2001:
+- Huấn luyện một tập hợp $B$ cây quyết định độc lập $\{T_1, T_2, \dots, T_B\}$.
+- Mỗi cây được huấn luyện trên một tập dữ liệu con được rút mẫu có hoàn lại (bootstrap sample) từ tập huấn luyện gốc.
+- Tại mỗi nút phân nhánh của cây, thuật toán chỉ chọn ngẫu nhiên một tập con gồm $m \approx \sqrt{p}$ đặc trưng (với $p=17$) để tìm điểm phân tách tối ưu theo chỉ số Gini Impurity:
+  $$\text{Gini}(D) = 1 - \sum_{i=1}^{C} p_i^2$$
+- Kết quả phân loại cuối cùng của toàn bộ rừng được xác định bằng cơ chế bỏ phiếu đa số (Majority Voting) hoặc trung bình xác suất có trọng số:
+  $$\hat{y} = \arg\max_{c} \frac{1}{B} \sum_{b=1}^{B} P_{T_b}(y = c \mid \mathbf{x})$$
 
 #### 2. Động lực lựa chọn Random Forest thay vì Deep Learning / Transformers
-Theo kết quả khảo sát thực nghiệm chuyên sâu được công bố trên *IEEE Access* (2024) **[Ref 09]** và *MDPI Electronics* (2025) **[Ref 11]**, việc ứng dụng các mạng nơ-ron sâu phức tạp (CNN, Bi-LSTM) hoặc Transformers (BERT) vào tầng WAF Gateway gặp phải các trở ngại bất khả thi trong môi trường sản xuất thực tế:
-1. **Ngân sách độ trễ (Inference Latency):** Random Forest chỉ tiêu tốn từ $1.2\text{ms}$ đến $3.5\text{ms}$ trên CPU đơn lõi thông thường để hoàn thành phân loại một request. Trong khi đó, các mô hình ngôn ngữ như DistilBERT cần từ $60\text{ms}$ đến $150\text{ms}$ (kể cả khi chạy trên GPU), gây nghẽn nghiêm trọng thông lượng mạng.
-2. **Khả năng diễn giải (Explainability & Interpretability):** Random Forest cho phép tính toán chỉ số tầm quan trọng của đặc trưng (Feature Importance), giúp các kỹ sư bảo mật SOC hiểu rõ lý do mô hình đưa ra kết luận (ví dụ: `single_quote_count` và `entropy` đóng góp 75% vào quyết định phân loại SQLi).
+Theo kết quả khảo sát thực nghiệm chuyên sâu được công bố trên *IEEE Access* (2024) **[Ref 12]** và *MDPI Electronics* (2025) **[Ref 11]**, việc ứng dụng các mạng nơ-ron sâu phức tạp (CNN, Bi-LSTM) hoặc Transformers (BERT) vào tầng WAF Gateway gặp phải các trở ngại bất khả thi trong môi trường sản xuất thực tế:
+1. **Ngân sách độ trễ (Inference Latency):** Random Forest chỉ tiêu tốn từ $0.02\text{ms}$ đến $0.05\text{ms}$ trên CPU đơn lõi thông thường để hoàn thành phân loại một request. Trong khi đó, các mô hình ngôn ngữ như DistilBERT cần từ $60\text{ms}$ đến $150\text{ms}$ (kể cả khi chạy trên GPU), gây nghẽn nghiêm trọng thông lượng mạng.
+2. **Khả năng diễn giải (Explainability & Interpretability):** Random Forest cho phép tính toán chỉ số tầm quan trọng của đặc trưng (Feature Importance), giúp các kỹ sư bảo mật SOC hiểu rõ lý do mô hình đưa ra kết luận (ví dụ: `count_single_quote` và `entropy` đóng góp 75% vào quyết định phân loại SQLi).
 3. **Độ bền vững và khả năng chống quá khớp (Anti-overfitting):** Nhờ cơ chế lấy mẫu ngẫu nhiên hai tầng, Random Forest có khả năng chống nhiễu cực tốt khi gặp phải các payload có biến đổi nhỏ về hình thái.
 
 ### 1.3.3. Thuật toán học máy không giám sát (Unsupervised Learning) — Rừng cô lập (Isolation Forest)
-Để đối phó với các cuộc tấn công Zero-day hoặc các mẫu biến dị payload mà tập huấn luyện có giám sát chưa từng gặp, hệ thống tích hợp mô hình phát hiện bất thường không giám sát **Isolation Forest (iForest)**.
+Để đối phó với các cuộc tấn công Zero-day hoặc các mẫu biến dị payload mà tập huấn luyện có giám sát chưa từng gặp, hệ thống tích hợp mô hình phát hiện bất thường không giám sát **Isolation Forest (iForest)** (Liu et al. ICDM 2008).
 
 #### 1. Nguyên lý cô lập dữ liệu (Isolation Principle)
 Thuật toán dựa trên hai quan sát thực tế trong an ninh mạng:
@@ -173,7 +172,7 @@ Với các trọng số được tối ưu hóa qua thực nghiệm:
 - $w_2 = 0.35$ (Tỷ trọng 35% cho mô hình có giám sát Random Forest phân loại hành vi tấn công).
 - $w_3 = 0.25$ (Tỷ trọng 25% cho mô hình không giám sát Isolation Forest bắt bất thường và Zero-day).
 
-Hệ thống ra quyết định phòng thủ đa ngưỡng (**Multi-Threshold Policy Matrix**) phân tầng theo chuẩn MITRE ATT&CK Mitigation **[Ref 17]**:
+Hệ thống ra quyết định phòng thủ đa ngưỡng (**Multi-Threshold Policy Matrix**) phân tầng theo chuẩn MITRE ATT&CK Mitigation **[Ref 16]**:
 - $\text{Risk Score} < 30$: `ALLOW` (Cho phép yêu cầu đi tiếp đến backend API).
 - $30 \le \text{Risk Score} < 60$: `MONITOR` (Cho phép đi qua nhưng ghi log kiểm toán chuyên sâu để phân tích).
 - $60 \le \text{Risk Score} < 80$: `RATE_LIMIT` (Áp đặt hình phạt cắt giảm 50% hạn ngạch truy cập và trì hoãn phản hồi).
@@ -184,7 +183,7 @@ Hệ thống ra quyết định phòng thủ đa ngưỡng (**Multi-Threshold Po
 ## 1.4. CƠ SỞ LÝ THUYẾT VỀ THAO TRƯỜNG MẠNG (CYBER RANGE) VÀ TÁC TỬ TẤN CÔNG TỰ ĐỘNG (OFFENSIVE AI)
 
 ### 1.4.1. Khung kiến trúc Thao trường mạng phân tán tiêu chuẩn quốc tế
-Theo định nghĩa chuẩn mực từ công trình nghiên cứu toàn diện của M. Yamin et al. công bố trên tạp chí quốc tế *Elsevier Computers & Security* (2020) **[Ref 17]**, một nền tảng Thao trường mạng (Cyber Range) tiêu chuẩn phải bao gồm tối thiểu 3 phân hệ chức năng độc lập:
+Theo định nghĩa chuẩn mực từ công trình nghiên cứu toàn diện của M. Yamin et al. công bố trên tạp chí quốc tế *Elsevier Computers & Security* (2020) **[Ref 14]**, một nền tảng Thao trường mạng (Cyber Range) tiêu chuẩn phải bao gồm tối thiểu 3 phân hệ chức năng độc lập:
 
 ```
 +-----------------------------------------------------------------------------------+
@@ -193,39 +192,56 @@ Theo định nghĩa chuẩn mực từ công trình nghiên cứu toàn diện c
 |                                                                                   |
 |  [PHÂN HỆ 1: TARGET ENVIRONMENT]          [PHÂN HỆ 2: ATTACK SIMULATION ENGINE]  |
 |  • Máy chủ Web API dễ bị tổn thương       • Tác tử tấn công tự động (Red Team)    |
-|  • Chứa các điểm yếu OWASP Top 10         • Trinh sát OpenAPI & Fuzzing phụ thuộc|
+|  • Chứa các điểm yếu OWASP Top 10         • Trinh sát OpenAPI & Fuzzing phụ thuộc |
 |  • Cơ sở dữ liệu SQLite/PostgreSQL        • Đột biến Payload né tránh WAF         |
 |  • Môi trường Docker cô lập               • Huấn luyện Deep RL (DQN Evasion)      |
 |               ^                                           |                       |
 |               |              VẬT LÝ QUA MẠNG LAN          |                       |
-|               +===========================================+                       |
-|                                     |                                             |
-|                                     v                                             |
-|                 [PHÂN HỆ 3: MONITORING & SCORING SUBSYSTEM]                       |
-|                 • API Gateway WAF (Máy 1 - Blue Team)                             |
-|                 • Thu thập Telemetry & Độ trễ mạng (Network RTT)                  |
-|                 • Đánh giá hiệu quả phòng thủ: Precision, Recall, Youden's J      |
-|                 • Trực quan hóa trung tâm chỉ huy SOC Dashboard (Next.js 14)      |
+|               +--------------------+----------------------+                       |
+|                                    |                                              |
+|                                    v                                              |
+|                    [PHÂN HỆ 3: SCORING & MONITORING WAF]                          |
+|                    • Cổng bảo vệ WAF Gateway (Reverse Proxy)                      |
+|                    • Động cơ đa tầng: Rule + RF + Isolation Forest                |
+|                    • Chấm điểm rủi ro thời gian thực (0 - 100)                    |
+|                    • SOC Telemetry Dashboard (Next.js 14)                         |
+|                                                                                   |
 +-----------------------------------------------------------------------------------+
 ```
 
-Khác biệt cốt lõi của đồ án PBL6 là triển khai mô hình **mạng phân tán thực tế trên 2 máy tính vật lý độc lập kết nối qua hạ tầng mạng LAN/Switch** (Máy 1: Blue Team WAF Gateway & Target API; Máy 2: Red Team Autonomous Agent) thay vì chạy cục bộ mô phỏng trên cùng một máy (localhost). Thiết kế này bám sát kết luận của nghiên cứu *Incalmo* (Carnegie Mellon University & SEI, 2024) **[Ref 03]**, khẳng định rằng việc triển khai đa máy trạm phân tán đem lại độ trễ mạng thực (Network RTT), hiện tượng phân mảnh gói tin và tính chân thực cao hơn 85% so với môi trường giả lập cục bộ.
+### 1.4.2. Cơ sở lý thuyết về Trò chơi an ninh đối kháng (Adversarial Security Game)
+Để thiết lập nền tảng lý thuyết toán học vững chắc cho cuộc đối đầu giữa Red Team và Blue Team trong Thao trường mạng, đồ án vận dụng mô hình hóa hình thức từ giáo trình kinh điển *Introduction to Modern Cryptography* của Jonathan Katz và Yehuda Lindell (Chương 3: Adversarial Models) **[Ref 03]**.
 
-### 1.4.2. Tác tử tấn công tự động (Offensive AI & Autonomous Red Teaming)
-Trong môi trường an ninh hiện đại, các cuộc tấn công không còn là những xung lực đơn lẻ của con người mà đã được tự động hóa bằng các tác tử AI có khả năng thích ứng. Dựa trên các công trình nghiên cứu hàng đầu tại *USENIX Security 2024* (PentestGPT) **[Ref 01]**, *arXiv 2024* (AutoAttacker) **[Ref 02]**, và *IEEE/ACM ICSE 2019* (RESTler) **[Ref 06]**, tác tử tấn công tự động (Red Team Agent) được xây dựng theo kiến trúc 3 module tự điều phối:
-1. **Module Lập kế hoạch (Attack Planner):** Tự động phân tích tài liệu đặc tả OpenAPI 3.0 (`/api/schema/`) của hệ thống mục tiêu, xây dựng đồ thị phụ thuộc (API Dependency Graph) để duy trì ngữ cảnh phiên làm việc (Session/JWT Authentication Tokens) cho các bước tấn công tiếp theo.
-2. **Module Thực thi (HTTP Executor):** Bắn các gói tin HTTP chứa payload thử nghiệm qua giao thức mạng đến địa chỉ IP của Gateway phòng thủ.
-3. **Module Phân tích phản hồi (Response Analyzer & Feedback Loop):** Khi nhận phản hồi từ WAF:
-   - Nếu nhận mã lỗi `403 Forbidden`, tác tử nhận diện rằng đòn tấn công đã bị WAF phát hiện. Vòng lặp phản hồi kích hoạt bộ đột biến payload (Payload Mutator) để áp dụng các kỹ thuật mã hóa làm mờ (Double URL encoding, comment insertion, hex) và bắn lại.
-   - Nếu nhận mã lỗi `200 OK` hoặc `500 Internal Server Error` (kèm dữ liệu trích xuất nhạy cảm), tác tử ghi nhận khai thác thành công và leo thang sang bước tiếp theo của chuỗi tấn công.
+Bài toán vượt rào WAF được hình thức hóa dưới dạng một **Trò chơi an ninh đối kháng (Security Game)** giữa Bên tấn công (Adversary $\mathcal{A}$) và Bên phòng thủ (Defender/Challenger $\mathcal{C}$):
+1. **Thiết lập (Setup):** Bên phòng thủ $\mathcal{C}$ thiết lập hệ thống phòng thủ WAF với tập tham số $\Pi = \{\text{Rules}, \mathbf{w}_{\text{RF}}, \theta_{\text{iForest}}, \tau_{\text{threshold}}\}$.
+2. **Truy vấn Oracle (Oracle Query):** Bên tấn công $\mathcal{A}$ gửi một chuỗi các yêu cầu thử nghiệm $x_1, x_2, \dots, x_m$ đến cổng phòng thủ và quan sát phản hồi từ Oracle $\mathcal{O}_{\mathcal{C}}(x) \to (\text{Status}, \text{Latency}, \text{Blocked})$.
+3. **Mục tiêu tấn công:** Bên tấn công chiến thắng trò chơi nếu tìm ra được một biến thể payload $x^*$ sao cho:
+   - $x^*$ khai thác thành công lỗ hổng trên ứng dụng mục tiêu: $\text{Exploit}(x^*) = 1$.
+   - Đồng thời $x^*$ qua mặt được bộ lọc phòng thủ: $\text{WAF}(x^*) = \text{ALLOW}$.
+4. **Hàm lợi thế tấn công (Adversarial Advantage):**
+   $$\mathbf{Adv}(\mathcal{A}) = \left| \Pr[\mathcal{A} \text{ bypasses WAF}] - \Pr[\text{Random Guess bypasses WAF}] \right|$$
 
-Toàn bộ các kỹ thuật tấn công được ánh xạ chuẩn tắc theo danh mục **MITRE ATT&CK Enterprise Matrix** **[Ref 19-20]**:
+Hệ thống phòng thủ đạt độ an toàn vững chắc khi và chỉ khi với mọi tác tử tấn công $\mathcal{A}$ bị giới hạn về ngân sách tài nguyên tính toán trong thời gian đa thức (Probabilistic Polynomial-Time - PPT), hàm lợi thế $\mathbf{Adv}(\mathcal{A})$ là một hàm không đáng kể (negligible function) đối với các lỗ hổng đã biết.
+
+### 1.4.3. Quy trình trinh sát và Tác tử tấn công tự động (Offensive AI & Red Teaming)
+Theo phương pháp luận kiểm thử xâm nhập của giáo trình *CompTIA PenTest+* **[Ref 04]**, tác tử Red Team (Máy 2) được thiết kế vận hành theo chu trình 3 bước:
+1. **Trinh sát tự động (Reconnaissance & OpenAPI Parsing):**
+   - Tác tử tự động gửi yêu cầu đọc tài liệu OpenAPI Specification (`/openapi.json` hoặc `/docs`).
+   - Bóc tách toàn bộ danh sách endpoint, phương thức HTTP (GET, POST, PUT, DELETE), cấu trúc dữ liệu schema JSON, và kiểu dữ liệu tham số.
+2. **Kiểm thử tự động phụ thuộc trạng thái (Stateful REST API Fuzzing):**
+   - Vận dụng nguyên lý của công cụ khoa học hàng đầu **RESTler** (IEEE ICSE 2019) **[Ref 17]**, tác tử xây dựng đồ thị phụ thuộc (Producer-Consumer Dependency Graph): ví dụ tạo đơn hàng trước để lấy `order_id`, sau đó dùng `order_id` này để fuzzing các endpoint khai thác BOLA/IDOR hoặc SQLi.
+3. **Kiểm thử xác minh lỗ hổng (Exploitation & Verification):**
+   - Bơm các payload độc hại được đột biến có chủ đích vào từng tham số.
+   - Giám sát mã phản hồi HTTP: nếu nhận mã lỗi `200 OK` hoặc `500 Internal Server Error` kèm dữ liệu trích xuất nhạy cảm, tác tử ghi nhận khai thác thành công.
+
+Toàn bộ các kỹ thuật tấn công được ánh xạ chuẩn tắc theo danh mục **MITRE ATT&CK Enterprise Matrix** **[Ref 16]**:
 - **T1190 (Exploit Public-Facing Application):** Khai thác lỗ hổng Web API (SQLi, Command Injection).
 - **T1059 (Command and Scripting Interpreter):** Thực thi lệnh shell qua OS Command Injection.
 - **T1083 (File and Directory Discovery):** Dò quét cấu trúc thư mục hệ thống qua Path Traversal.
+- **T1595 (Active Scanning):** Quét dò endpoint và trinh sát OpenAPI tự động.
 
-### 1.4.3. Mô hình Học tăng cường sâu (Deep Reinforcement Learning - DQN) trong né tránh phòng thủ
-Để mô hình hóa hành vi né tránh WAF một cách tối ưu và hoàn toàn độc lập với các dịch vụ đám mây thương mại (100% In-house PyTorch), bài toán vượt WAF được phát biểu dưới dạng **Quy trình quyết định Markov (Markov Decision Process - MDP)**:
+### 1.4.4. Mô hình Học tăng cường sâu (Deep Reinforcement Learning - DQN) trong né tránh phòng thủ
+Để mô hình hóa hành vi né tránh WAF một cách tối ưu và hoàn toàn độc lập với các dịch vụ đám mây thương mại (100% In-house PyTorch) theo khuyến nghị từ các nghiên cứu khảo sát tác tử AI **[Ref 19, Ref 20]**, bài toán vượt WAF được phát biểu dưới dạng **Quy trình quyết định Markov (Markov Decision Process - MDP)**:
 - **Không gian trạng thái (State Space $\mathcal{S}$):** Vector biểu diễn đặc trưng của payload hiện tại và thông tin phản hồi từ Gateway (Mã trạng thái HTTP: 200, 403, 429, 500; Điểm rủi ro trả về trong Header `X-WAF-Risk-Score`).
 - **Không gian hành động (Action Space $\mathcal{A}$):** Tập hợp các toán tử đột biến payload:
   $$\mathcal{A} = \{\text{Double URL Encode, Inline Comment, Mixed-case, Null-byte, Base64 Wrap, Subshell Expansion}\}$$
@@ -239,7 +255,7 @@ Thông qua hàng nghìn vòng lặp huấn luyện đối kháng đối đầu t
 
 ## 1.5. CÁC THƯỚC ĐO VÀ TIÊU CHUẨN ĐÁNH GIÁ HIỆU NĂNG KHOA HỌC (EVALUATION METRICS & BENCHMARKS)
 
-Để loại bỏ các đánh giá mang tính cảm tính và đảm bảo tính chặt chẽ về mặt phương pháp luận khoa học, việc đánh giá hiệu năng của hệ thống WAF phòng thủ và mô hình Machine Learning được quy chuẩn hóa theo các tiêu chuẩn đo lường của **OWASP Benchmark Project** **[Ref 15-16]** và lý thuyết học máy thống kê:
+Để loại bỏ các đánh giá mang tính cảm tính và đảm bảo tính chặt chẽ về mặt phương pháp luận khoa học, việc đánh giá hiệu năng của hệ thống WAF phòng thủ và mô hình Machine Learning được quy chuẩn hóa theo các tiêu chuẩn đo lường của **OWASP Benchmark Project** **[Ref 13]**, hướng dẫn đánh giá an ninh của **NIST SP 800-115** **[Ref 15]** và lý thuyết học máy thống kê:
 
 ### 1.5.1. Ma trận nhầm lẫn (Confusion Matrix)
 | Thực tế \ Dự đoán | Dự đoán là TẤN CÔNG (Positive) | Dự đoán là AN TOÀN (Negative) |
@@ -260,7 +276,7 @@ Thông qua hàng nghìn vòng lặp huấn luyện đối kháng đối đầu t
    $$\text{F1-Score} = 2 \times \frac{\text{Precision} \times \text{Recall}}{\text{Precision} + \text{Recall}} = \frac{2\text{TP}}{2\text{TP} + \text{FP} + \text{FN}}$$
 
 ### 1.5.3. Thước đo Youden's Index ($J$) theo chuẩn OWASP Benchmark Project
-Theo tiêu chuẩn đánh giá WAF của tổ chức OWASP (**OWASP Benchmark Score Metric**) **[Ref 15-16]**, một hệ thống tường lửa thương mại chỉ được coi là đạt chất lượng khi vừa tối đa hóa tỷ lệ bắt tấn công (TPR), vừa triệt tiêu tối đa tỷ lệ báo động giả gây gián đoạn kinh doanh (FPR). Thước đo khoa học **Youden's Index $J$** được định nghĩa:
+Theo tiêu chuẩn đánh giá WAF của tổ chức OWASP (**OWASP Benchmark Score Metric**) **[Ref 13]**, một hệ thống tường lửa thương mại chỉ được coi là đạt chất lượng khi vừa tối đa hóa tỷ lệ bắt tấn công (TPR), vừa triệt tiêu tối đa tỷ lệ báo động giả gây gián đoạn kinh doanh (FPR). Thước đo khoa học **Youden's Index $J$** được định nghĩa:
 $$J = \text{TPR} - \text{FPR} = \frac{\text{TP}}{\text{TP} + \text{FN}} - \frac{\text{FP}}{\text{FP} + \text{TN}}$$
 - Thang đo Youden's $J \in [-1.0, 1.0]$.
 - $J = 1.0$: Hệ thống lý tưởng tuyệt đối ($\text{TPR} = 100\%$, $\text{FPR} = 0\%$).
@@ -269,7 +285,7 @@ $$J = \text{TPR} - \text{FPR} = \frac{\text{TP}}{\text{TP} + \text{FN}} - \frac{
 - **Mục tiêu của đồ án PBL6:** Đạt chỉ số $J \ge 0.90$ trên tập dữ liệu kiểm thử thực nghiệm đa dạng.
 
 ### 1.5.4. Các chỉ số về hiệu năng mạng và độ trễ hệ thống (Latency Budget & Throughput)
-Ngoài độ chính xác an ninh, một hệ thống WAF bảo vệ ứng dụng Web API bắt buộc phải tuân thủ nghiêm ngặt các yêu cầu phi chức năng về hiệu năng vận hành:
+Theo tiêu chuẩn vận hành kiến trúc Reverse Proxy hiệu năng cao trong *NGINX Cookbook* **[Ref 05]**, một hệ thống WAF bảo vệ ứng dụng Web API bắt buộc phải tuân thủ nghiêm ngặt các yêu cầu phi chức năng về hiệu năng vận hành:
 1. **Ngân sách độ trễ gia tăng (Proxy Overhead Latency Budget):**
    $$\Delta t = t_{\text{with WAF}} - t_{\text{direct}}$$
    Hệ thống đặt mục tiêu $\Delta t \le 15\text{ms}$ cho quy trình hoàn chỉnh (Fast Path Regex + Feature Extraction + RF Inference + Isolation Forest + Decision Engine).
@@ -279,9 +295,9 @@ Ngoài độ chính xác an ninh, một hệ thống WAF bảo vệ ứng dụng
 
 ## 1.6. TỔNG KẾT CHƯƠNG 1
 
-Chương 1 đã thiết lập một nền tảng cơ sở lý thuyết toàn diện và vững chắc cho toàn bộ đồ án PBL6:
-1. Phân tích bản chất kỹ thuật của các lỗ hổng Web API nguy hiểm hàng đầu theo chuẩn OWASP Top 10 API Security Risks (2023) và bóc tách các cơ chế làm mờ payload vượt WAF tinh vi.
-2. Chỉ ra nguyên lý hoạt động của WAF dựa trên luật tĩnh ModSecurity CRS v4.0 cùng những giới hạn cố hữu về tấn công Zero-day, chi phí bảo trì regex và tỷ lệ cảnh báo sai lệch.
-3. Luận chứng khoa học về việc kết hợp trích xuất 17 đặc trưng hình thái học HTTP theo chuẩn Wiley 2015 cùng thuật toán Random Forest và Isolation Forest, hình thành kiến trúc WAF Hybrid cân bằng hoàn hảo giữa độ trễ microsecond và độ chính xác phân loại.
-4. Đặt nền móng cho thao trường mạng đối kháng phân tán trên 2 máy trạm vật lý theo chuẩn Elsevier 2020, kết hợp tác tử tấn công tự động và mô hình Deep Reinforcement Learning (PyTorch DQN).
-5. Thiết lập hệ thống thước đo hiệu năng định lượng khách quan (Confusion Matrix, Youden's Index $J$, Latency Budget) làm kim chỉ nam kiểm chứng thực nghiệm cho các giai đoạn tiếp theo của đồ án.
+Chương 1 đã thiết lập một nền tảng cơ sở lý thuyết toàn diện và vững chắc cho toàn bộ đồ án PBL6 dựa trên mô hình Kiềng ba chân học thuật:
+1. **Giáo trình kinh điển:** Vận dụng lý thuyết Cổng tầng ứng dụng của William Stallings, cơ sở toán học về Shannon Entropy của Douglas Stinson, mô hình Trò chơi an ninh đối kháng của Jonathan Katz & Yehuda Lindell, phương pháp luận kiểm thử của CompTIA PenTest+, và kiến trúc Reverse Proxy từ NGINX Cookbook.
+2. **Tiêu chuẩn công nghiệp:** Bám sát bộ rủi ro OWASP Top 10 API Security Risks (2023), kiến trúc Anomaly Scoring của OWASP ModSecurity CRS v4.0, quy trình đánh giá NIST SP 800-115, và ma trận kỹ thuật MITRE ATT&CK.
+3. **Công trình khoa học thực nghiệm:** Triển khai không gian 17 đặc trưng hình thái chuẩn Torrano-Gimenez (Wiley 2015), bộ dữ liệu chuẩn quốc tế CSIC 2010, khảo sát SQLi của IEEE Access (2023), kiến trúc Hybrid WAF của MDPI Electronics (2025), và mô hình Thao trường mạng chuẩn Elsevier (2020).
+
+Hệ thống lý thuyết này định hình trực tiếp toàn bộ thiết kế kiến trúc, thuật toán và phương pháp luận thực nghiệm sẽ được trình bày chi tiết trong các chương tiếp theo của đồ án.
