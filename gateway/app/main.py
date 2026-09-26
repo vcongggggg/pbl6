@@ -1,3 +1,4 @@
+import asyncio
 from contextlib import asynccontextmanager
 
 import httpx
@@ -5,6 +6,7 @@ from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 
+from app.api.proxy import get_rate_limiter
 from app.api.router import api_router
 from app.core.config import get_settings
 from app.core.errors import register_error_handlers
@@ -51,6 +53,23 @@ async def lifespan(app: FastAPI):
     )
     logger.info(f"Reverse proxy HTTP client initialized targeting: {settings.target_api_url}")
 
+    # Register periodic background task for in-memory rate limiter cleanup (Anti-RAM bloat)
+    async def periodic_rate_limiter_cleanup():
+        limiter = get_rate_limiter()
+        while True:
+            try:
+                await asyncio.sleep(300)  # Runs every 5 minutes
+                removed = limiter.cleanup_expired_records(max_idle_seconds=300.0)
+                if removed > 0:
+                    logger.info(f"RateLimiter periodic cleanup: evicted {removed} stale client records.")
+            except asyncio.CancelledError:
+                break
+            except Exception as exc:
+                logger.error(f"Error during rate limiter periodic cleanup: {exc}")
+
+    cleanup_task = asyncio.create_task(periodic_rate_limiter_cleanup())
+    logger.info("Periodic RateLimiter memory cleanup task registered (5-minute interval).")
+
     yield
 
     # Cleanly close HTTP client on shutdown
@@ -58,6 +77,14 @@ async def lifespan(app: FastAPI):
     if hasattr(app.state, "http_client") and app.state.http_client is not None:
         await app.state.http_client.aclose()
         logger.info("Reverse proxy HTTP client closed.")
+
+    # Gracefully cancel periodic rate limiter cleanup task
+    cleanup_task.cancel()
+    try:
+        await cleanup_task
+    except asyncio.CancelledError:
+        pass
+    logger.info("Periodic RateLimiter cleanup task cancelled cleanly.")
 
 
 def create_application() -> FastAPI:

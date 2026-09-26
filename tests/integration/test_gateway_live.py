@@ -37,7 +37,7 @@ def test_live_gateway_proxy_to_vulnerable_api():
     custom_request_id = "integration-test-req-001"
 
     response = client.get(
-        f"{GATEWAY_URL}/api/proxy/api/v1/vulnerable/books/search",
+        f"{GATEWAY_URL}/api/proxy/api/v1/vulnerable/books/search/",
         params={"q": "Security"},
         headers={"X-Request-ID": custom_request_id},
     )

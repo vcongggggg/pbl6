@@ -15,13 +15,13 @@ Tài liệu theo dõi trạng thái thực hiện các giai đoạn phát triể
 | **Phase 3** | **Feature Engineering** | ML/Defense (Member A - `vcongggggg`) | **COMPLETED (100% Tasks 3.1 → 3.5) ✅** | 17 payload features (12 morphological & entropy + 5 keywords/syntax) & 23 HTTP context features (`ml-engine/features/`), 79/79 unit tests pass (PR #74, #76, #77, #79). |
 | **Phase 4** | **Dataset Generation & Lab Traffic** | ML/Defense (Member A - `vcongggggg`) | **COMPLETED (100% Tasks 4.1 → 4.3) ✅** | 20.000 requests cân bằng (10k Benign, 10k Attacks, 60% obfuscation, 22.23% bypass static rule), Stratified 70/15/15 có SHA-256 (PR #73, #75, #78). |
 | **Phase 5** | **Supervised ML — Multi-Model Benchmarking & Random Forest** | ML/Defense (Member A - `vcongggggg`) | **COMPLETED (100% Tasks 5.1 → 5.4) ✅** | Đối sánh 5 mô hình ứng viên (Logistic, Decision Tree, Linear SVM, Random Forest, XGBoost) trên 20.000 mẫu, xác định Quán quân Thực nghiệm XGBoost (F1=99.97%, Latency=0.004ms) cùng Random Forest dự phòng. Gateway ML Inference Service & Resilient Fallback đã sẵn sàng (PR #82, #83, #84, #70). |
-| **Phase 6** | **Anomaly Detection — Isolation Forest** | ML/Defense (Member A - `vcongggggg`) | **IN PROGRESS 🚀 (Task 6.1 READY FOR PR, Task 6.4 COMPLETED ✅)** | Huấn luyện Isolation Forest trên Benign Baseline (Task 6.1 🚀), Score Calibration (Task 6.2), Zero-Day Eval (Task 6.3), Gateway Anomaly Hook & Telemetry Logging (Task 6.4 ✅ - PR #71). |
+| **Phase 6** | **Anomaly Detection — Isolation Forest** | ML/Defense (Member A - `vcongggggg`) | **COMPLETED (100% Tasks 6.1 → 6.4) ✅** | Huấn luyện Isolation Forest trên Benign Baseline (Task 6.1 ✅), Score Calibration (Task 6.2 ✅), Zero-Day Eval (Task 6.3 ✅), Gateway Anomaly Hook & Telemetry Logging (Task 6.4 ✅ - PR #71, PR #85). |
 | **Phase 7** | **Hybrid Risk Engine & Decision** | Backend / Security (Member A) | **COMPLETED (100% Tasks 7.1 → 7.3) ✅** | Weighted Risk Score (0–100), Thresholds (ALLOW/MONITOR/RATE_LIMIT/BLOCK), Active 403 Blocking (PR #68). |
 | **Phase 8** | **Rate Limiting & Behavior Tracker** | Backend / Security (Member A) | **COMPLETED (100% Tasks 8.1 & 8.2) ✅** | In-Memory Sliding Window 60s trên RAM ($O(1)$ deque), Risk Penalty 50%, HTTP 429 RFC 7807/6585, Thread-safety & RAM cleanup, Chuẩn hóa học thuật IEEE/Elsevier 100% (PR #92, Closes #33, #34). |
 | **Phase 9** | **Dashboard UI & Real-Time Telemetry** | Frontend / Tech Lead (Member A) | **COMPLETED (100% Tasks 9.1 → 9.5) ✅** | SOC Dashboard, 5 KPI cards, Timeline, Distribution, Events table with Client IP origin, Payload Drawer, Quick Simulator, Reset Demo, Explainability Modal (#38), Chuẩn hóa học thuật REST Telemetry APIs (Task 9.1 - #35, NIST SP 800-137, ISO/IEC 27004). |
 | **Phase 10** | **Offensive AI — AI Attack Planner & PyTorch RL Model (Máy 2)** | Offensive AI & Red Team (Member B - `naocavang08`) | **NOT STARTED** | AI Attack Planner Agent trên Máy 2: Trinh sát OpenAPI, Môi trường mô phỏng Attack Graph, Mô hình né tránh WAF In-house bằng PyTorch Deep RL DQN (`evasion_agent.pt`), **100% PyTorch, KHÔNG dùng OpenAI API**. |
-| **Phase 11** | **System Evaluation & Comparison** | ML/Data & Red Team (Member B & A) | **NOT STARTED** | So sánh Rule vs ML vs Anomaly vs Hybrid, Evasion test, Benchmark. |
-| **Phase 12** | **Final Hardening & Thesis Report** | Toàn đội (Member A & B) | **NOT STARTED** | Chạy multi-machine lab, audit log, hoàn thiện slide thuyết trình và báo cáo đồ án. |
+| **Phase 11** | **System Evaluation & Comparison** | ML/Data & Red Team (Member B & A) | **IN PROGRESS 🚀 (Task 11.3 COMPLETED ✅)** | Đối sánh hiệu năng toàn diện: Baseline vs WAF Protected, đo kiểm độ trễ nano-giây từng micro-component của Pipeline AI ($243.55\ \mu\text{s} \ll 15.0\text{ms}$ SLA), phân tích tải đồng thời $C \in [1, 100]$, ISO/IEC 25010 & ISO/IEC 27004:2016 (Issue #45, PR #100 Merged). |
+| **Phase 12** | **Final Hardening & Thesis Report** | Toàn đội (Member A & B) | **IN PROGRESS 🚀 (Task 12.1 COMPLETED ✅, Báo Cáo 5 Chương COMPLETED ✅)** | Hoàn thiện Báo cáo Đồ án tốt nghiệp DUT chuẩn 5 Chương (Chương 1 → 5 và Master File `.docx`), Thực hiện 3 Hardening Tasks gia cố WAF Gateway (SQLite WAL mode, Rate Limiter Periodic RAM cleanup, URL Trailing Slash fix) 88/88 tests PASS 100%. |
 
 > **🔔 ĐIỀU CHỈNH CHIẾN LƯỢC THEO CHỈ ĐẠO CỦA GIẢNG VIÊN HƯỚNG DẪN:**
 > * Không sử dụng OWASP Juice Shop vì là sản phẩm bên thứ ba có sẵn; nhóm tự xây dựng service **`vulnerable-api`** (FastAPI) để làm chủ 100% mã nguồn và logic lỗ hổng.
@@ -381,3 +381,62 @@ Tài liệu theo dõi trạng thái thực hiện các giai đoạn phát triể
 
 *(Các phase tiếp theo: Phase 6 - Isolation Forest, Phase 8 - Red Team Autonomous Evasion Agent)*
 
+
+---
+
+### Phase 11 — Task 11.3: Gateway Performance & Latency Overhead Profiling under Load (COMPLETED ✅ — Merged PR #100)
+
+* **Mục tiêu (Objectives):**
+  * Đo kiểm định lượng độ trễ nano-giây phát sinh của từng micro-component trong Pipeline AI bảo vệ WAF Gateway theo chuẩn ISO/IEC 25010, ISO/IEC 27004:2016 và RFC 2544.
+  * Phân tích đối chứng giữa kịch bản Baseline (Request trực tiếp tới Target API) và Protected WAF Gateway.
+  * Đánh giá khả năng chịu tải đồng thời $C \in \{1, 10, 25, 50, 100\}$ và đo lường mức độ tiêu thụ tài nguyên phần cứng (CPU, RAM RSS).
+* **Kết quả đo kiểm thực nghiệm nổi bật:**
+  * Độ trễ xử lý Pipeline AI nội tại (Pure AI Pipeline): **$243.55\ \mu\text{s}$ ($0.2436\text{ ms}$)** $\rightarrow$ **Nhanh gấp 61 lần** so với cam kết SLA $\le 15.0\text{ ms}$!
+  * Chi tiết độ trễ từng tầng:
+    * Input Normalization: $12.27\ \mu\text{s}$
+    * 16 Regex Rules Engine: $1.48\ \mu\text{s}$
+    * 17-D Feature Extractor: $33.79\ \mu\text{s}$
+    * Random Forest Inference: $24.50\ \mu\text{s}$
+    * Isolation Forest Inference: $11.80\ \mu\text{s}$
+    * Hybrid Risk Scoring: $0.14\ \mu\text{s}$
+    * Sliding Window Rate Limiter: $159.59\ \mu\text{s}$
+  * Tốc độ phản hồi chặn tấn công Fast-Path (HTTP 403): **$1.85\text{ ms}$** (nhanh hơn cả upstream target).
+  * Bộ nhớ RAM RSS của Gateway cực kỳ nhẹ: **$73.80\text{ MB}$**, tăng trưởng ổn định $0.00\text{ MB}$ sau 1.000 requests.
+* **Sản phẩm bàn giao (Deliverables):**
+  * `scripts/run_gateway_profiling.py`: Script tự động đo kiểm tải đa tầng, profiling từng component và xuất file dữ liệu.
+  * `docs/reports/performance_profile.md`: Báo cáo học thuật chuẩn mực trích dẫn ISO/IEC 25010 và ISO/IEC 27004.
+  * `docs/reports/performance_profile_results.json`: Tập dữ liệu có cấu trúc chứa toàn bộ thông số đo kiểm.
+  * PR #100 được Reviewer thẩm định đạt **9.8/10** và đã squash-merge vào nhánh `main` (commit `9bf1372`). Issue #45 đóng thành công.
+
+---
+
+### Phase 12 — Task 12.1: Gateway Architecture Hardening & Latency Optimization (COMPLETED ✅)
+
+* **Mục tiêu (Objectives):**
+  * Thực hiện khuyến nghị từ Báo cáo rà soát nguy cơ tiềm ẩn của Reviewer (@reviewer) tại `docs/REVIEW_FEEDBACK.md`.
+  * Khắc phục 3 điểm nghẽn tiềm ẩn về tài nguyên RAM, khóa cơ sở dữ liệu SQLite và độ trễ định tuyến HTTP:
+    1. **Task Hardening 1 (Nguy cơ RAM Bloat):** Đăng ký background task định kỳ chạy `SlidingWindowRateLimiter.cleanup_expired_records(max_idle_seconds=300)` mỗi 5 phút trong FastAPI `lifespan` (`gateway/app/main.py`) để chống tràn RAM khi bị botnet tấn công với hàng triệu IP giả mạo.
+    2. **Task Hardening 2 (Nguy cơ SQLite Single-Writer Lock):** Kích hoạt chế độ `PRAGMA journal_mode=WAL;` và `PRAGMA synchronous=NORMAL;` trong `gateway/app/db/session.py` cho phép Concurrent Readers + Single Writer đồng thời mà không bị block lẫn nhau khi tải cao.
+    3. **Task Hardening 3 (Triệt tiêu 301/307 Redirect RTT):** Bổ sung dấu gạch chéo cuối `/` vào URL trong `tests/integration/test_gateway_live.py` (`/api/v1/vulnerable/books/search/`).
+* **Sản phẩm bàn giao (Deliverables):**
+  * `gateway/app/main.py`: Tích hợp `asyncio.create_task` chạy dọn dẹp định kỳ 5 phút và graceful shutdown trong `lifespan`.
+  * `gateway/app/db/session.py`: Bổ sung `@event.listens_for(engine, "connect")` tự động thiết lập WAL mode và synchronous NORMAL.
+  * `tests/integration/test_gateway_live.py`: Chuẩn hóa URL `/api/v1/vulnerable/books/search/`.
+  * `docs/REVIEW_FEEDBACK.md`: Cập nhật checklist nghiệm thu hoàn thành 3/3 tasks.
+* **Kiểm thử & Xác minh (Tests & Verification):**
+  * `pytest gateway/tests`: **88/88 tests PASSED (100%)**.
+  * `pytest tests/integration/test_gateway_live.py`: **1/1 test PASSED (100%)**.
+  * Xác nhận runtime: SQLite `WAL mode = wal`, `Synchronous = 1 (NORMAL)`.
+
+---
+
+### Toàn Văn Báo Cáo Đồ Án Tốt Nghiệp PBL6 Chuẩn Mực 5 Chương (COMPLETED ✅)
+
+* **Địa điểm lưu trữ:** Thư mục `docs/reports/`
+* **Danh mục các file tài liệu đã xây dựng hoàn chỉnh:**
+  1. **Chương 1:** `docs/reports/CHUONG_1_CO_SO_LY_THUYET.md` & `PBL6_Bao_Cao_Chuong_1_Co_So_Ly_Thuyet.docx` (48.5 KB) — Cơ sở lý thuyết toàn diện, 20 tài liệu tham khảo chuẩn IEEE/ACM/MDPI/NIST/ISO.
+  2. **Chương 2:** `docs/reports/CHUONG_2_THIET_KE_KIEN_TRUC.md` & `PBL6_Bao_Cao_Chuong_2_Thiet_Ke_Kien_Truc.docx` (54.4 KB) — Kiến trúc Thao trường An ninh Đối kháng (Cyber Range), WAF Hybrid đa tầng, sơ đồ luồng dữ liệu DFD.
+  3. **Chương 3:** `docs/reports/CHUONG_3_CAI_DAT_HIEN_THUC_HOA.md` & `PBL6_Bao_Cao_Chuong_3_Cai_Dat_Hien_Thuc_Hoa.docx` (43.7 KB) — Hiện thực hóa Reverse Proxy, 16 Rules Engine, 17-D Features, Dual-ML (RF + IF), Sliding Window Rate Limiter.
+  4. **Chương 4:** `docs/reports/CHUONG_4_THUC_NGHIEM_DANH_GIA.md` & `PBL6_Bao_Cao_Chuong_4_Thuc_Nghiem_Danh_Gia.docx` (45.5 KB) — Thực nghiệm định lượng, độ trễ $243.55\ \mu\text{s}$, CSIC 2010 Cross-Dataset Benchmark, ma trận nhầm lẫn.
+  5. **Chương 5:** `docs/reports/CHUONG_5_KET_LUAN_HUONG_PHAT_TRIEN.md` & `PBL6_Bao_Cao_Chuong_5_Ket_Luan_Huong_Phat_Trien.docx` (41.5 KB) — Kết luận tổng kết, đóng góp đồ án và định hướng phát triển tương lai.
+  6. **Toàn văn Hợp nhất (Master Document):** `docs/reports/PBL6_Bao_Cao_Tong_Hop_Toan_Van.docx` (83.8 KB) — Sẵn sàng nộp bảo vệ đồ án trước Hội đồng.
