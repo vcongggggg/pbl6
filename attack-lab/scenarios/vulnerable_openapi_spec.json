@@ -1,0 +1,327 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Bookie Bookstore Vulnerable API",
+    "version": "1.0.0",
+    "description": "Target Web API with intentional OWASP Top 10 vulnerabilities for PBL6 Cyber Range."
+  },
+  "servers": [
+    {
+      "url": "/api/proxy",
+      "description": "WAF Gateway Proxy URL (Machine 1)"
+    },
+    {
+      "url": "/",
+      "description": "Direct Target URL"
+    }
+  ],
+  "paths": {
+    "/api/v1/vulnerable/auth/login/": {
+      "post": {
+        "summary": "User & Admin Authentication",
+        "description": "Vulnerable to SQL Injection Auth Bypass and Brute Force.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "username": {
+                    "type": "string",
+                    "example": "admin' OR '1'='1"
+                  },
+                  "password": {
+                    "type": "string",
+                    "example": "password123"
+                  }
+                },
+                "required": [
+                  "username",
+                  "password"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Authenticated successfully"
+          },
+          "401": {
+            "description": "Invalid credentials"
+          }
+        }
+      }
+    },
+    "/api/v1/vulnerable/books/search/": {
+      "get": {
+        "summary": "Search Books Catalog",
+        "description": "Vulnerable to SQL Injection UNION-based data extraction.",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "python' UNION SELECT id, username, email, password FROM auth_user --"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Book search results"
+          }
+        }
+      }
+    },
+    "/api/v1/vulnerable/reviews/": {
+      "get": {
+        "summary": "Get Book Reviews",
+        "description": "Returns reviews containing stored XSS payloads.",
+        "parameters": [
+          {
+            "name": "book_id",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "example": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of reviews"
+          }
+        }
+      },
+      "post": {
+        "summary": "Submit Book Review",
+        "description": "Vulnerable to Stored XSS.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "book_id": {
+                    "type": "integer",
+                    "example": 1
+                  },
+                  "author": {
+                    "type": "string",
+                    "example": "Attacker"
+                  },
+                  "comment": {
+                    "type": "string",
+                    "example": "<script>alert('PBL6_XSS')</script>"
+                  }
+                },
+                "required": [
+                  "author",
+                  "comment"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Review created"
+          }
+        }
+      }
+    },
+    "/api/v1/vulnerable/files/download/": {
+      "get": {
+        "summary": "Download System Document / Sample Chapter",
+        "description": "Vulnerable to Path Traversal / Local File Inclusion.",
+        "parameters": [
+          {
+            "name": "file",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "../../bookstore/settings/base.py"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "File contents returned"
+          },
+          "404": {
+            "description": "File not found"
+          }
+        }
+      }
+    },
+    "/api/v1/vulnerable/admin/ping/": {
+      "post": {
+        "summary": "Network Diagnostics Tool",
+        "description": "Vulnerable to Command Injection (RCE).",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "host": {
+                    "type": "string",
+                    "example": "127.0.0.1; whoami"
+                  }
+                },
+                "required": [
+                  "host"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Ping diagnostic output"
+          }
+        }
+      }
+    },
+    "/api/v1/vulnerable/orders/{order_id}/": {
+      "get": {
+        "summary": "Order Detail (BOLA / IDOR)",
+        "description": "Vulnerable to Broken Object Level Authorization (OWASP API1:2023).",
+        "parameters": [
+          {
+            "name": "order_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "example": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Order details with customer info"
+          }
+        }
+      },
+      "patch": {
+        "summary": "Modify Order without Ownership Check (BOLA / IDOR)",
+        "description": "Allows unauthorized modification of order status and shipping address.",
+        "parameters": [
+          {
+            "name": "order_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "example": 1
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "example": "cancelled"
+                  },
+                  "shipping_address": {
+                    "type": "string",
+                    "example": "Hacked Address 404"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Order modified"
+          }
+        }
+      }
+    },
+    "/api/v1/vulnerable/books/fetch-cover/": {
+      "get": {
+        "summary": "Fetch Book Cover from Remote URL (SSRF)",
+        "description": "Vulnerable to Server-Side Request Forgery (OWASP API7:2023).",
+        "parameters": [
+          {
+            "name": "url",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "http://127.0.0.1:8000/api/dashboard/stats"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Remote content returned"
+          }
+        }
+      }
+    },
+    "/api/v1/vulnerable/users/profile/update/": {
+      "post": {
+        "summary": "Update Profile (Mass Assignment / Privilege Escalation)",
+        "description": "Vulnerable to Mass Assignment (OWASP API6:2023). Attacker can self-assign admin roles.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "user_id": {
+                    "type": "integer",
+                    "example": 1
+                  },
+                  "is_staff": {
+                    "type": "boolean",
+                    "example": true
+                  },
+                  "is_superuser": {
+                    "type": "boolean",
+                    "example": true
+                  },
+                  "role": {
+                    "type": "string",
+                    "example": "admin"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Profile updated with escalated roles"
+          }
+        }
+      }
+    },
+    "/api/v1/vulnerable/users/list/": {
+      "get": {
+        "summary": "User Directory (Excessive Data Exposure)",
+        "description": "Vulnerable to Excessive Data Exposure (OWASP API3:2023). Dumps password hashes.",
+        "responses": {
+          "200": {
+            "description": "List of users with sensitive fields"
+          }
+        }
+      }
+    }
+  }
+}

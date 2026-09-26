@@ -1,6 +1,7 @@
 import os
-import pytest
+
 import httpx
+import pytest
 
 GATEWAY_URL = os.environ.get("GATEWAY_URL", "http://localhost:8000")
 TARGET_URL = os.environ.get("TARGET_API_URL", "http://localhost:5000")

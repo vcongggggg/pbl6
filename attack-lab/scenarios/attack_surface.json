@@ -1,0 +1,567 @@
+{
+  "target_url": "http://127.0.0.1:8000",
+  "spec_source": "C:\\Minh\\TLSVBK\\PBL6\\pbl6\\attack-lab\\scenarios\\vulnerable_openapi_spec.json",
+  "scanned_at": "2026-09-26T07:05:01.390590+00:00",
+  "openapi_version": "3.0.3",
+  "api_title": "Bookie Bookstore Vulnerable API",
+  "api_version": "1.0.0",
+  "summary": {
+    "total_paths": 9,
+    "total_endpoints": 11,
+    "vulnerability_breakdown": {
+      "AUTH_BYPASS": 1,
+      "SQL_INJECTION": 2,
+      "MASS_ASSIGNMENT": 2,
+      "XSS": 1,
+      "PATH_TRAVERSAL": 1,
+      "COMMAND_INJECTION": 1,
+      "BOLA_IDOR": 4,
+      "SSRF": 1
+    },
+    "category_breakdown": {
+      "AUTH_BYPASS": 1,
+      "SQL_INJECTION": 1,
+      "INFORMATIONAL": 2,
+      "XSS": 1,
+      "PATH_TRAVERSAL": 1,
+      "COMMAND_INJECTION": 1,
+      "BOLA_IDOR": 2,
+      "SSRF": 1,
+      "MASS_ASSIGNMENT": 1
+    },
+    "endpoints_requiring_auth": 0,
+    "endpoints_with_body": 5
+  },
+  "endpoints": [
+    {
+      "path": "/api/v1/vulnerable/auth/login/",
+      "method": "POST",
+      "summary": "User & Admin Authentication",
+      "description": "Vulnerable to SQL Injection Auth Bypass and Brute Force.",
+      "tags": [],
+      "requires_auth": false,
+      "parameters": [],
+      "request_body": {
+        "content_type": "application/json",
+        "required": true,
+        "fields": [
+          {
+            "name": "username",
+            "field_type": "string",
+            "required": true,
+            "example": "admin' OR '1'='1",
+            "description": ""
+          },
+          {
+            "name": "password",
+            "field_type": "string",
+            "required": true,
+            "example": "password123",
+            "description": ""
+          }
+        ],
+        "raw_schema": {
+          "type": "object",
+          "properties": {
+            "username": {
+              "type": "string",
+              "example": "admin' OR '1'='1"
+            },
+            "password": {
+              "type": "string",
+              "example": "password123"
+            }
+          },
+          "required": [
+            "username",
+            "password"
+          ]
+        }
+      },
+      "responses": {
+        "200": "Authenticated successfully",
+        "401": "Invalid credentials"
+      },
+      "potential_vulnerabilities": [
+        {
+          "vuln_type": "AUTH_BYPASS",
+          "confidence": "HIGH",
+          "reason": "Authentication gateway processing user credentials; susceptible to auth bypass and brute-force.",
+          "target_params": [
+            "username",
+            "password"
+          ]
+        },
+        {
+          "vuln_type": "SQL_INJECTION",
+          "confidence": "HIGH",
+          "reason": "Accepts query/filter input parameters commonly susceptible to SQL syntax manipulation.",
+          "target_params": []
+        },
+        {
+          "vuln_type": "MASS_ASSIGNMENT",
+          "confidence": "MEDIUM",
+          "reason": "Updates entity/profile states via multi-field payload, susceptible to unvalidated attribute binding.",
+          "target_params": [
+            "username",
+            "password"
+          ]
+        }
+      ],
+      "primary_category": "AUTH_BYPASS"
+    },
+    {
+      "path": "/api/v1/vulnerable/books/search/",
+      "method": "GET",
+      "summary": "Search Books Catalog",
+      "description": "Vulnerable to SQL Injection UNION-based data extraction.",
+      "tags": [],
+      "requires_auth": false,
+      "parameters": [
+        {
+          "name": "q",
+          "location": "query",
+          "param_type": "string",
+          "required": true,
+          "description": "",
+          "example": "python' UNION SELECT id, username, email, password FROM auth_user --"
+        }
+      ],
+      "request_body": null,
+      "responses": {
+        "200": "Book search results"
+      },
+      "potential_vulnerabilities": [
+        {
+          "vuln_type": "SQL_INJECTION",
+          "confidence": "HIGH",
+          "reason": "Accepts query/filter input parameters commonly susceptible to SQL syntax manipulation.",
+          "target_params": [
+            "q"
+          ]
+        }
+      ],
+      "primary_category": "SQL_INJECTION"
+    },
+    {
+      "path": "/api/v1/vulnerable/reviews/",
+      "method": "GET",
+      "summary": "Get Book Reviews",
+      "description": "Returns reviews containing stored XSS payloads.",
+      "tags": [],
+      "requires_auth": false,
+      "parameters": [
+        {
+          "name": "book_id",
+          "location": "query",
+          "param_type": "integer",
+          "required": false,
+          "description": "",
+          "example": 1
+        }
+      ],
+      "request_body": null,
+      "responses": {
+        "200": "List of reviews"
+      },
+      "potential_vulnerabilities": [],
+      "primary_category": "INFORMATIONAL"
+    },
+    {
+      "path": "/api/v1/vulnerable/reviews/",
+      "method": "POST",
+      "summary": "Submit Book Review",
+      "description": "Vulnerable to Stored XSS.",
+      "tags": [],
+      "requires_auth": false,
+      "parameters": [],
+      "request_body": {
+        "content_type": "application/json",
+        "required": true,
+        "fields": [
+          {
+            "name": "book_id",
+            "field_type": "integer",
+            "required": false,
+            "example": 1,
+            "description": ""
+          },
+          {
+            "name": "author",
+            "field_type": "string",
+            "required": true,
+            "example": "Attacker",
+            "description": ""
+          },
+          {
+            "name": "comment",
+            "field_type": "string",
+            "required": true,
+            "example": "<script>alert('PBL6_XSS')</script>",
+            "description": ""
+          }
+        ],
+        "raw_schema": {
+          "type": "object",
+          "properties": {
+            "book_id": {
+              "type": "integer",
+              "example": 1
+            },
+            "author": {
+              "type": "string",
+              "example": "Attacker"
+            },
+            "comment": {
+              "type": "string",
+              "example": "<script>alert('PBL6_XSS')</script>"
+            }
+          },
+          "required": [
+            "author",
+            "comment"
+          ]
+        }
+      },
+      "responses": {
+        "201": "Review created"
+      },
+      "potential_vulnerabilities": [
+        {
+          "vuln_type": "XSS",
+          "confidence": "HIGH",
+          "reason": "Accepts text input rendered or stored within application views.",
+          "target_params": [
+            "comment"
+          ]
+        }
+      ],
+      "primary_category": "XSS"
+    },
+    {
+      "path": "/api/v1/vulnerable/files/download/",
+      "method": "GET",
+      "summary": "Download System Document / Sample Chapter",
+      "description": "Vulnerable to Path Traversal / Local File Inclusion.",
+      "tags": [],
+      "requires_auth": false,
+      "parameters": [
+        {
+          "name": "file",
+          "location": "query",
+          "param_type": "string",
+          "required": true,
+          "description": "",
+          "example": "../../bookstore/settings/base.py"
+        }
+      ],
+      "request_body": null,
+      "responses": {
+        "200": "File contents returned",
+        "404": "File not found"
+      },
+      "potential_vulnerabilities": [
+        {
+          "vuln_type": "PATH_TRAVERSAL",
+          "confidence": "HIGH",
+          "reason": "File retrieval mechanism accepting path/filename identifiers.",
+          "target_params": [
+            "file"
+          ]
+        }
+      ],
+      "primary_category": "PATH_TRAVERSAL"
+    },
+    {
+      "path": "/api/v1/vulnerable/admin/ping/",
+      "method": "POST",
+      "summary": "Network Diagnostics Tool",
+      "description": "Vulnerable to Command Injection (RCE).",
+      "tags": [],
+      "requires_auth": false,
+      "parameters": [],
+      "request_body": {
+        "content_type": "application/json",
+        "required": true,
+        "fields": [
+          {
+            "name": "host",
+            "field_type": "string",
+            "required": true,
+            "example": "127.0.0.1; whoami",
+            "description": ""
+          }
+        ],
+        "raw_schema": {
+          "type": "object",
+          "properties": {
+            "host": {
+              "type": "string",
+              "example": "127.0.0.1; whoami"
+            }
+          },
+          "required": [
+            "host"
+          ]
+        }
+      },
+      "responses": {
+        "200": "Ping diagnostic output"
+      },
+      "potential_vulnerabilities": [
+        {
+          "vuln_type": "COMMAND_INJECTION",
+          "confidence": "HIGH",
+          "reason": "Executes diagnostic or system-level routines utilizing user parameters.",
+          "target_params": [
+            "host"
+          ]
+        }
+      ],
+      "primary_category": "COMMAND_INJECTION"
+    },
+    {
+      "path": "/api/v1/vulnerable/orders/{order_id}/",
+      "method": "GET",
+      "summary": "Order Detail (BOLA / IDOR)",
+      "description": "Vulnerable to Broken Object Level Authorization (OWASP API1:2023).",
+      "tags": [],
+      "requires_auth": false,
+      "parameters": [
+        {
+          "name": "order_id",
+          "location": "path",
+          "param_type": "integer",
+          "required": true,
+          "description": "",
+          "example": 1
+        }
+      ],
+      "request_body": null,
+      "responses": {
+        "200": "Order details with customer info"
+      },
+      "potential_vulnerabilities": [
+        {
+          "vuln_type": "BOLA_IDOR",
+          "confidence": "HIGH",
+          "reason": "Direct reference to object/record identifier via URI path parameter without verified ACL.",
+          "target_params": [
+            "order_id"
+          ]
+        },
+        {
+          "vuln_type": "BOLA_IDOR",
+          "confidence": "HIGH",
+          "reason": "Direct reference to object/record identifier via URI path parameter without verified ACL.",
+          "target_params": [
+            "order_id"
+          ]
+        }
+      ],
+      "primary_category": "BOLA_IDOR"
+    },
+    {
+      "path": "/api/v1/vulnerable/orders/{order_id}/",
+      "method": "PATCH",
+      "summary": "Modify Order without Ownership Check (BOLA / IDOR)",
+      "description": "Allows unauthorized modification of order status and shipping address.",
+      "tags": [],
+      "requires_auth": false,
+      "parameters": [
+        {
+          "name": "order_id",
+          "location": "path",
+          "param_type": "integer",
+          "required": true,
+          "description": "",
+          "example": 1
+        }
+      ],
+      "request_body": {
+        "content_type": "application/json",
+        "required": true,
+        "fields": [
+          {
+            "name": "status",
+            "field_type": "string",
+            "required": false,
+            "example": "cancelled",
+            "description": ""
+          },
+          {
+            "name": "shipping_address",
+            "field_type": "string",
+            "required": false,
+            "example": "Hacked Address 404",
+            "description": ""
+          }
+        ],
+        "raw_schema": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "string",
+              "example": "cancelled"
+            },
+            "shipping_address": {
+              "type": "string",
+              "example": "Hacked Address 404"
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": "Order modified"
+      },
+      "potential_vulnerabilities": [
+        {
+          "vuln_type": "BOLA_IDOR",
+          "confidence": "HIGH",
+          "reason": "Direct reference to object/record identifier via URI path parameter without verified ACL.",
+          "target_params": [
+            "order_id"
+          ]
+        },
+        {
+          "vuln_type": "BOLA_IDOR",
+          "confidence": "HIGH",
+          "reason": "Direct reference to object/record identifier via URI path parameter without verified ACL.",
+          "target_params": [
+            "order_id"
+          ]
+        }
+      ],
+      "primary_category": "BOLA_IDOR"
+    },
+    {
+      "path": "/api/v1/vulnerable/books/fetch-cover/",
+      "method": "GET",
+      "summary": "Fetch Book Cover from Remote URL (SSRF)",
+      "description": "Vulnerable to Server-Side Request Forgery (OWASP API7:2023).",
+      "tags": [],
+      "requires_auth": false,
+      "parameters": [
+        {
+          "name": "url",
+          "location": "query",
+          "param_type": "string",
+          "required": true,
+          "description": "",
+          "example": "http://127.0.0.1:8000/api/dashboard/stats"
+        }
+      ],
+      "request_body": null,
+      "responses": {
+        "200": "Remote content returned"
+      },
+      "potential_vulnerabilities": [
+        {
+          "vuln_type": "SSRF",
+          "confidence": "HIGH",
+          "reason": "Processes remote resource locators (URLs), susceptible to server-side request forgery.",
+          "target_params": [
+            "url"
+          ]
+        }
+      ],
+      "primary_category": "SSRF"
+    },
+    {
+      "path": "/api/v1/vulnerable/users/profile/update/",
+      "method": "POST",
+      "summary": "Update Profile (Mass Assignment / Privilege Escalation)",
+      "description": "Vulnerable to Mass Assignment (OWASP API6:2023). Attacker can self-assign admin roles.",
+      "tags": [],
+      "requires_auth": false,
+      "parameters": [],
+      "request_body": {
+        "content_type": "application/json",
+        "required": true,
+        "fields": [
+          {
+            "name": "user_id",
+            "field_type": "integer",
+            "required": false,
+            "example": 1,
+            "description": ""
+          },
+          {
+            "name": "is_staff",
+            "field_type": "boolean",
+            "required": false,
+            "example": true,
+            "description": ""
+          },
+          {
+            "name": "is_superuser",
+            "field_type": "boolean",
+            "required": false,
+            "example": true,
+            "description": ""
+          },
+          {
+            "name": "role",
+            "field_type": "string",
+            "required": false,
+            "example": "admin",
+            "description": ""
+          }
+        ],
+        "raw_schema": {
+          "type": "object",
+          "properties": {
+            "user_id": {
+              "type": "integer",
+              "example": 1
+            },
+            "is_staff": {
+              "type": "boolean",
+              "example": true
+            },
+            "is_superuser": {
+              "type": "boolean",
+              "example": true
+            },
+            "role": {
+              "type": "string",
+              "example": "admin"
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": "Profile updated with escalated roles"
+      },
+      "potential_vulnerabilities": [
+        {
+          "vuln_type": "MASS_ASSIGNMENT",
+          "confidence": "MEDIUM",
+          "reason": "Updates entity/profile states via multi-field payload, susceptible to unvalidated attribute binding.",
+          "target_params": [
+            "user_id",
+            "is_staff",
+            "is_superuser",
+            "role"
+          ]
+        }
+      ],
+      "primary_category": "MASS_ASSIGNMENT"
+    },
+    {
+      "path": "/api/v1/vulnerable/users/list/",
+      "method": "GET",
+      "summary": "User Directory (Excessive Data Exposure)",
+      "description": "Vulnerable to Excessive Data Exposure (OWASP API3:2023). Dumps password hashes.",
+      "tags": [],
+      "requires_auth": false,
+      "parameters": [],
+      "request_body": null,
+      "responses": {
+        "200": "List of users with sensitive fields"
+      },
+      "potential_vulnerabilities": [],
+      "primary_category": "INFORMATIONAL"
+    }
+  ]
+}
