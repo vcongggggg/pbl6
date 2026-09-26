@@ -7,7 +7,6 @@ import csv
 import json
 import sys
 from pathlib import Path
-import pytest
 
 # Add project root and gateway to path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
@@ -20,9 +19,10 @@ if str(SCRIPTS_PATH) not in sys.path:
     sys.path.insert(0, str(SCRIPTS_PATH))
 
 # pyrefly: ignore [missing-import]
-from app.security.engine import RuleEngine
+from app.security.engine import RuleEngine  # noqa: E402
+
 # pyrefly: ignore [missing-import]
-from generate_synthetic_benign import generate_benign_dataset
+from generate_synthetic_benign import generate_benign_dataset  # noqa: E402
 
 BENIGN_CSV_PATH = PROJECT_ROOT / "data" / "synthetic_benign.csv"
 EXPECTED_COLUMNS = [

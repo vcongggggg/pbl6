@@ -3,6 +3,7 @@ from typing import Generator
 
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.pool import NullPool
 
 from app.core.config import get_settings
 from app.db.base import Base
@@ -16,8 +17,6 @@ if settings.database_url.startswith("sqlite"):
     db_path = settings.database_url.replace("sqlite:///", "")
     if "/" in db_path or "\\" in db_path:
         os.makedirs(os.path.dirname(os.path.abspath(db_path)), exist_ok=True)
-
-from sqlalchemy.pool import NullPool
 
 engine = create_engine(
     settings.database_url,
