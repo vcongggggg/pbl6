@@ -21,7 +21,7 @@ Tài liệu theo dõi trạng thái thực hiện các giai đoạn phát triể
 | **Phase 9** | **Dashboard UI & Real-Time Telemetry** | Frontend / Tech Lead (Member A) | **COMPLETED (100% Tasks 9.1 → 9.5) ✅** | SOC Dashboard, 5 KPI cards, Timeline, Distribution, Events table with Client IP origin, Payload Drawer, Quick Simulator, Reset Demo, Explainability Modal (#38), Chuẩn hóa học thuật REST Telemetry APIs (Task 9.1 - #35, NIST SP 800-137, ISO/IEC 27004). |
 | **Phase 10** | **Offensive AI — AI Attack Planner & PyTorch RL Model (Máy 2)** | Offensive AI & Red Team (Member B - `naocavang08`) | **NOT STARTED** | AI Attack Planner Agent trên Máy 2: Trinh sát OpenAPI, Môi trường mô phỏng Attack Graph, Mô hình né tránh WAF In-house bằng PyTorch Deep RL DQN (`evasion_agent.pt`), **100% PyTorch, KHÔNG dùng OpenAI API**. |
 | **Phase 11** | **System Evaluation & Comparison** | ML/Data & Red Team (Member B & A) | **IN PROGRESS 🚀 (Task 11.3 COMPLETED ✅)** | Đối sánh hiệu năng toàn diện: Baseline vs WAF Protected, đo kiểm độ trễ nano-giây từng micro-component của Pipeline AI ($243.55\ \mu\text{s} \ll 15.0\text{ms}$ SLA), phân tích tải đồng thời $C \in [1, 100]$, ISO/IEC 25010 & ISO/IEC 27004:2016 (Issue #45, PR #100 Merged). |
-| **Phase 12** | **Final Hardening & Thesis Report** | Toàn đội (Member A & B) | **IN PROGRESS 🚀 (Task 12.1 COMPLETED ✅, Báo Cáo 5 Chương COMPLETED ✅)** | Hoàn thiện Báo cáo Đồ án tốt nghiệp DUT chuẩn 5 Chương (Chương 1 → 5 và Master File `.docx`), Thực hiện 3 Hardening Tasks gia cố WAF Gateway (SQLite WAL mode, Rate Limiter Periodic RAM cleanup, URL Trailing Slash fix) 88/88 tests PASS 100%. |
+| **Phase 12** | **Final Hardening & Thesis Report** | Toàn đội (Member A & B) | **IN PROGRESS 🚀 (Tasks 12.1 & 12.2 COMPLETED ✅, Báo Cáo 5 Chương COMPLETED ✅)** | Hoàn thiện Báo cáo Đồ án tốt nghiệp DUT chuẩn 5 Chương (Chương 1 → 5 và Master File `.docx`), Thực hiện 3 Hardening Tasks (Task 12.1), và Kiểm thử sạch cụm Docker Compose 3 containers đồng bộ (Task 12.2 - Issue #48). |
 
 > **🔔 ĐIỀU CHỈNH CHIẾN LƯỢC THEO CHỈ ĐẠO CỦA GIẢNG VIÊN HƯỚNG DẪN:**
 > * Không sử dụng OWASP Juice Shop vì là sản phẩm bên thứ ba có sẵn; nhóm tự xây dựng service **`vulnerable-api`** (FastAPI) để làm chủ 100% mã nguồn và logic lỗ hổng.
@@ -440,3 +440,22 @@ Tài liệu theo dõi trạng thái thực hiện các giai đoạn phát triể
   4. **Chương 4:** `docs/reports/CHUONG_4_THUC_NGHIEM_DANH_GIA.md` & `PBL6_Bao_Cao_Chuong_4_Thuc_Nghiem_Danh_Gia.docx` (45.5 KB) — Thực nghiệm định lượng, độ trễ $243.55\ \mu\text{s}$, CSIC 2010 Cross-Dataset Benchmark, ma trận nhầm lẫn.
   5. **Chương 5:** `docs/reports/CHUONG_5_KET_LUAN_HUONG_PHAT_TRIEN.md` & `PBL6_Bao_Cao_Chuong_5_Ket_Luan_Huong_Phat_Trien.docx` (41.5 KB) — Kết luận tổng kết, đóng góp đồ án và định hướng phát triển tương lai.
   6. **Toàn văn Hợp nhất (Master Document):** `docs/reports/PBL6_Bao_Cao_Tong_Hop_Toan_Van.docx` (83.8 KB) — Sẵn sàng nộp bảo vệ đồ án trước Hội đồng.
+
+---
+
+### Phase 12 — Task 12.2: Kiểm Thử Sạch Cụm Docker Compose Multi-Container (COMPLETED ✅ — Issue #48)
+
+* **Mục tiêu (Objectives):**
+  * Khởi động ổn định toàn bộ cụm 3 dịch vụ trên Máy 1 (`vulnerable-api`, `gateway`, `dashboard`) bằng 1 lệnh duy nhất `docker compose up --build -d`.
+  * Khắc phục hiện tượng khởi động lệch pha (Race Condition) bằng cơ chế Ordered Startup dựa trên `condition: service_healthy`.
+  * Nạp trực tiếp mô hình AI sản xuất bằng volume bind-mount Read-Only (`./ml-engine/artifacts:/app/ml-engine/artifacts:ro`).
+* **Sản phẩm bàn giao (Deliverables):**
+  * `docker-compose.yml`: Cấu hình production-ready, phân định mạng cô lập `pbl6-network`, healthchecks cho từng container và volume chia sẻ.
+  * `vulnerable-api/Dockerfile`: Tối ưu hóa cài đặt curl và healthcheck trực tiếp endpoint OpenAPI.
+  * `scripts/verify_docker_compose.py`: Bộ script tự động kiểm toán toàn diện cấu hình, Dockerfile, networks và volumes.
+  * `docs/reports/docker_compose_verification.md`: Báo cáo thẩm định kỹ thuật kiểm thử sạch 100% PASS.
+  * Đóng thành công GitHub Issue #48 qua Pull Request #102.
+* **Kiểm thử & Xác minh (Tests & Verification):**
+  * `docker compose config`: **100% PASS (0 syntax errors)**.
+  * `python scripts/verify_docker_compose.py`: **ALL 6/6 CHECKS PASSED**.
+  * `pytest gateway/tests`: **88/88 tests PASSED (100%)**.

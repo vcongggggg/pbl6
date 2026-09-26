@@ -13,6 +13,12 @@ services:
       - DEBUG=True
       - ALLOWED_HOSTS=*
       - PORT=5000
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/api/v1/vulnerable/openapi.json')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     networks:
       - pbl6-network
 
@@ -36,8 +42,16 @@ services:
       - ADMIN_API_KEY=dev-admin-secret-key-change-me
     volumes:
       - ./data:/app/data
+      - ./ml-engine/artifacts:/app/ml-engine/artifacts:ro
     depends_on:
-      - vulnerable-api
+      vulnerable-api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
     networks:
       - pbl6-network
 
@@ -53,10 +67,12 @@ services:
     environment:
       - NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
     depends_on:
-      - gateway
+      gateway:
+        condition: service_healthy
     networks:
       - pbl6-network
 
 networks:
   pbl6-network:
+    name: pbl6-network
     driver: bridge
