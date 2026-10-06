@@ -50,6 +50,8 @@ class SecurityEvent(Base):
     anomaly_score: Mapped[float | None] = mapped_column(Float, nullable=True)
     behavior_score: Mapped[float | None] = mapped_column(Float, nullable=True)
     details: Mapped[str | None] = mapped_column(Text, nullable=True)
+    session_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    kill_chain_stage: Mapped[str | None] = mapped_column(String(50), nullable=True, index=True)
 
 
 class AuditLog(Base):

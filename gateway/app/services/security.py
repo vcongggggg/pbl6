@@ -1,4 +1,5 @@
 import datetime
+import hashlib
 import json
 import logging
 import uuid
@@ -10,6 +11,37 @@ from app.db.models import SecurityEvent
 from app.security.models import DetectionResult
 
 logger = logging.getLogger("waf.gateway.security_service")
+
+
+def derive_session_id(client_ip: str, timestamp: datetime.datetime | None = None) -> str:
+    """Derives a deterministic 15-minute attack session ID based on client IP (Master Plan B4)."""
+    ts = timestamp or datetime.datetime.now(datetime.timezone.utc)
+    window_slot = int(ts.timestamp() // 900)  # 15 minutes = 900s
+    digest = hashlib.sha256(f"{client_ip}:{window_slot}".encode()).hexdigest()[:12]
+    return f"sess_{digest}"
+
+
+def map_to_kill_chain_stage(
+    attack_type: str,
+    matched_rules: list[str] | None = None,
+    details_extra: dict[str, Any] | None = None,
+) -> str:
+    """Maps attack characteristics to Cyber Kill Chain stages (Master Plan B4)."""
+    at = attack_type.upper()
+    rules_text = " ".join(matched_rules or []).upper()
+
+    if "EVASION" in at or "OBFUSCAT" in rules_text or "BYPASS" in rules_text:
+        return "EVASION"
+    if "RECON" in at or "PROBE" in at or "SCHEMA_VIOLATION" in at or "SCAN" in rules_text:
+        return "RECONNAISSANCE"
+    if any(k in at for k in ["SQLI", "XSS", "CMD", "COMMAND_INJECTION", "RCE"]):
+        return "EXPLOITATION"
+    if any(k in at for k in ["BOLA", "IDOR", "AUTH", "BRUTE_FORCE", "RATE_LIMIT", "PRIVILEGE"]):
+        return "PRIVILEGE_ABUSE"
+    if any(k in at for k in ["TRAVERSAL", "LFI", "SSRF", "DOWNLOAD", "EXFILTRATION"]):
+        return "EXFILTRATION"
+
+    return "EXPLOITATION"
 
 
 class SecurityEventService:
@@ -102,6 +134,10 @@ class SecurityEventService:
         if details_extra:
             details_dict.update(details_extra)
 
+        session_id = derive_session_id(client_ip, timestamp)
+        matched_rules = [m.rule_id for m in (detection_result.matches or [])] if detection_result else []
+        kill_chain_stage = map_to_kill_chain_stage(primary_attack, matched_rules, details_extra)
+
         event_record = SecurityEvent(
             event_id=event_id,
             request_id=request_id,
@@ -116,6 +152,8 @@ class SecurityEventService:
             anomaly_score=anomaly_score,
             behavior_score=behavior_score,
             details=json.dumps(details_dict),
+            session_id=session_id,
+            kill_chain_stage=kill_chain_stage,
         )
 
         try:
