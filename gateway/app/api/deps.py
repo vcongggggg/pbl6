@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import logging
 import secrets
+
 from fastapi import Header, HTTPException, status
+
 from app.core.config import get_settings
 
 logger = logging.getLogger("waf.gateway.deps")

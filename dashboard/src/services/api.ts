@@ -19,7 +19,7 @@ export async function getRuntimeConfig(): Promise<{ backendUrl: string; adminApi
   }
 
   let backendUrl = config.apiBaseUrl.replace(/\/$/, "");
-  let adminApiKey = config.adminApiKey;
+  const adminApiKey = config.adminApiKey;
 
   if (typeof window !== "undefined") {
     try {
@@ -28,9 +28,6 @@ export async function getRuntimeConfig(): Promise<{ backendUrl: string; adminApi
         const data = await res.json();
         if (data.backendUrl) {
           backendUrl = data.backendUrl.replace(/\/$/, "");
-        }
-        if (data.adminApiKey) {
-          adminApiKey = data.adminApiKey;
         }
       }
     } catch (err) {

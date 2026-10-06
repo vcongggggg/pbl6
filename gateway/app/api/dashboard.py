@@ -9,9 +9,9 @@ from pydantic import BaseModel, Field
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
+from app.api.deps import require_admin
 from app.core.config import Settings, get_settings
 from app.db.models import RequestLog, SecurityEvent, WafConfigModel
-from app.api.deps import require_admin
 from app.db.session import get_db
 
 router = APIRouter(prefix="/dashboard", tags=["Dashboard"])
