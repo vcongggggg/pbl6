@@ -18,47 +18,26 @@ except ImportError:
 
 logger = logging.getLogger("waf.gateway.security.ml_detector")
 
-FEATURE_NAMES: list[str] = [
-    "length",
-    "entropy",
-    "count_single_quote",
-    "count_double_quote",
-    "count_less_than",
-    "count_greater_than",
-    "count_semicolon",
-    "count_hyphen",
-    "count_slash",
-    "count_backslash",
-    "count_parenthesis",
-    "special_char_ratio",
-    "sql_keyword_count",
-    "xss_keyword_count",
-    "sqli_regex_matches",
-    "xss_regex_matches",
-    "path_traversal_matches",
-]
+import sys
 
-_SQL_KEYWORDS = re.compile(
-    r"\b(select|union|insert|update|delete|drop|from|where|having|order by|group by|exec|waitfor|benchmark)\b",
-    re.IGNORECASE,
-)
-_XSS_KEYWORDS = re.compile(
-    r"\b(script|onerror|onload|alert|iframe|javascript|eval|prompt|confirm|document\.cookie)\b",
-    re.IGNORECASE,
-)
-_SQLI_PATTERNS = re.compile(
-    r"(\bunion\b.*\bselect\b|'--|--\s*$|/\*.*\*/|'\s*(or|and)\s*['\d=]|;\s*drop)",
-    re.IGNORECASE,
-)
-_XSS_PATTERNS = re.compile(
-    r"(<script|javascript:|on\w+\s*=|<img\s+src=|<svg|<iframe)",
-    re.IGNORECASE,
-)
-_PATH_TRAVERSAL_PATTERNS = re.compile(
-    r"(\.\./|\.\.\\|%2e%2e|/etc/passwd|c:\\windows)",
-    re.IGNORECASE,
-)
+# Ensure ml-engine is accessible for unified feature extraction (Master Plan A5)
+for candidate in [
+    Path(__file__).resolve().parents[3] / 'ml-engine',
+    Path(__file__).resolve().parents[2] / 'ml-engine',
+    Path('/app/ml-engine'),
+    Path('ml-engine'),
+]:
+    if candidate.exists() and str(candidate) not in sys.path:
+        sys.path.insert(0, str(candidate))
 
+from features.extractor import (
+    CANONICAL_FEATURE_NAMES,
+    extract_17_vector,
+    extract_batch_vectors,
+)
+from features.payload import calculate_entropy
+
+FEATURE_NAMES: list[str] = CANONICAL_FEATURE_NAMES
 
 @dataclass
 class MLPredictionResult:
@@ -142,66 +121,13 @@ class MLDetector:
 
     @staticmethod
     def calculate_shannon_entropy(text: str) -> float:
-        """Calculates Shannon entropy for string randomness measurement."""
-        if not text:
-            return 0.0
-        length = len(text)
-        frequencies: dict[str, int] = {}
-        for char in text:
-            frequencies[char] = frequencies.get(char, 0) + 1
-
-        entropy = 0.0
-        for count in frequencies.values():
-            p = count / length
-            entropy -= p * math.log2(p)
-        return round(entropy, 4)
+        """Calculates Shannon entropy for string randomness measurement via unified extractor."""
+        return calculate_entropy(text)
 
     @classmethod
     def extract_features(cls, payload: str) -> list[float]:
-        """Extracts 17 morphological and keyword features from request payload (< 0.1ms)."""
-        if not payload:
-            return [0.0] * len(FEATURE_NAMES)
-
-        length = float(len(payload))
-        entropy = cls.calculate_shannon_entropy(payload)
-        count_single_quote = float(payload.count("'"))
-        count_double_quote = float(payload.count('"'))
-        count_less_than = float(payload.count("<"))
-        count_greater_than = float(payload.count(">"))
-        count_semicolon = float(payload.count(";"))
-        count_hyphen = float(payload.count("-"))
-        count_slash = float(payload.count("/"))
-        count_backslash = float(payload.count("\\"))
-        count_parenthesis = float(payload.count("(") + payload.count(")"))
-
-        special_chars = sum(1 for c in payload if not c.isalnum() and not c.isspace())
-        special_char_ratio = round(special_chars / max(1.0, length), 4)
-
-        sql_keyword_count = float(len(_SQL_KEYWORDS.findall(payload)))
-        xss_keyword_count = float(len(_XSS_KEYWORDS.findall(payload)))
-        sqli_regex_matches = float(len(_SQLI_PATTERNS.findall(payload)))
-        xss_regex_matches = float(len(_XSS_PATTERNS.findall(payload)))
-        path_traversal_matches = float(len(_PATH_TRAVERSAL_PATTERNS.findall(payload)))
-
-        return [
-            length,
-            entropy,
-            count_single_quote,
-            count_double_quote,
-            count_less_than,
-            count_greater_than,
-            count_semicolon,
-            count_hyphen,
-            count_slash,
-            count_backslash,
-            count_parenthesis,
-            special_char_ratio,
-            sql_keyword_count,
-            xss_keyword_count,
-            sqli_regex_matches,
-            xss_regex_matches,
-            path_traversal_matches,
-        ]
+        """Extracts canonical 17 features using unified ML Engine extractor (Master Plan A5)."""
+        return extract_17_vector(payload, normalize=False).tolist()
 
     def _attempt_auto_load(self) -> None:
         """Searches default locations for a serialized Random Forest model."""

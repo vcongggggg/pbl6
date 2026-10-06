@@ -41,9 +41,11 @@ services:
       - TARGET_API_URL=http://vulnerable-api:5000
       - WAF_MODE=MONITOR_ONLY
       - ADMIN_API_KEY=${ADMIN_API_KEY}
+      - PYTHONPATH=/app:/app/ml-engine
     volumes:
       - ./data:/app/data
       - ./ml-engine/artifacts:/app/ml-engine/artifacts:ro
+      - ./ml-engine/features:/app/ml-engine/features:ro
     depends_on:
       vulnerable-api:
         condition: service_healthy
