@@ -47,6 +47,11 @@ class Settings(BaseSettings):
     # ML Fail-Safe & Resilience (Master Plan A3)
     ml_unavailable_risk_penalty: float = 15.0
 
+    # Positive Security Model (Master Plan B1)
+    schema_validation_enabled: bool = False
+    schema_strict_mode: bool = False
+    schema_violation_penalty: float = 25.0
+
     # Risk & Rate Limit Thresholds (Baseline parameters)
     rate_limit_per_minute: int = 60
     risk_block_threshold: int = 80
