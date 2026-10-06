@@ -131,6 +131,11 @@ class MLDetector:
         return self._is_loaded
 
     @property
+    def ml_available(self) -> bool:
+        """Indicates whether the ML model is available and operational for inference (Master Plan A3)."""
+        return self._is_loaded and self._model is not None
+
+    @property
     def model_path(self) -> Path | None:
         """Returns the filesystem path of the loaded model, if any."""
         return self._model_path
@@ -287,8 +292,9 @@ class MLDetector:
         """
         start_time = time.perf_counter()
 
-        # 1. Graceful Fallback if model is not loaded (Member B hasn't finished training)
+        # 1. Graceful Fallback if model is not loaded (Master Plan A3: Fail-Safe)
         if not self._is_loaded or self._model is None:
+            logger.error("ML model is unavailable or failed to load. Operating in Fail-Safe mode.")
             latency_ms = (time.perf_counter() - start_time) * 1000
             return MLPredictionResult(
                 is_attack=False,
@@ -352,5 +358,5 @@ class MLDetector:
                 risk_score=None,
                 probabilities={},
                 latency_ms=round(latency_ms, 3),
-                model_loaded=True,
+                model_loaded=False,
             )

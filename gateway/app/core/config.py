@@ -1,6 +1,6 @@
 import logging
 from functools import lru_cache
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -21,7 +21,7 @@ class Settings(BaseSettings):
     # Security
     admin_api_key: str = "dev-admin-secret-key-change-me"
     allowed_hosts: list[str] = ["*"]
-    cors_origins: list[str] = ["*"]
+    cors_origins: list[str] = ["http://localhost:3000", "http://127.0.0.1:3000"]
 
     # Database
     database_url: str = "sqlite:///./data/waf_security.db"
@@ -44,6 +44,9 @@ class Settings(BaseSettings):
     anomaly_enabled: bool = False
     rate_limit_enabled: bool = False
 
+    # ML Fail-Safe & Resilience (Master Plan A3)
+    ml_unavailable_risk_penalty: float = 15.0
+
     # Risk & Rate Limit Thresholds (Baseline parameters)
     rate_limit_per_minute: int = 60
     risk_block_threshold: int = 80
@@ -56,18 +59,35 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
+    @model_validator(mode="before")
+    @classmethod
+    def parse_cors_origins(cls, data: Any) -> Any:
+        if isinstance(data, dict) and "cors_origins" in data:
+            val = data["cors_origins"]
+            if isinstance(val, str):
+                data["cors_origins"] = [o.strip() for o in val.split(",") if o.strip()]
+        return data
+
     @model_validator(mode="after")
-    def validate_admin_security(self) -> "Settings":
+    def validate_security_settings(self) -> "Settings":
         if self.app_env == "production":
             if not self.admin_api_key or self.admin_api_key == "dev-admin-secret-key-change-me":
                 raise ValueError(
                     "In production mode, ADMIN_API_KEY must be set to a strong custom secret."
                 )
-        elif self.admin_api_key == "dev-admin-secret-key-change-me":
-            logger.warning(
-                "SECURITY WARNING: Using default dev-admin-secret-key-change-me API key in %s environment.",
-                self.app_env,
-            )
+            if "*" in self.cors_origins:
+                raise ValueError("In production mode, CORS origins must not include wildcard '*'.")
+        else:
+            if self.admin_api_key == "dev-admin-secret-key-change-me":
+                logger.warning(
+                    "SECURITY WARNING: Using default dev-admin-secret-key-change-me API key in %s environment.",
+                    self.app_env,
+                )
+            if "*" in self.cors_origins:
+                logger.warning(
+                    "CORS WARNING: Wildcard origin '*' is configured in %s environment.",
+                    self.app_env,
+                )
         return self
 
 

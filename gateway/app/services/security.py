@@ -28,6 +28,7 @@ class SecurityEventService:
         anomaly_score: float | None = None,
         behavior_score: float | None = None,
         details_extra: dict[str, Any] | None = None,
+        attack_type_override: str | None = None,
     ) -> SecurityEvent | None:
         """Persists security event record if an attack signature was matched or risk detected."""
         is_rule_attack = bool(detection_result.is_attack and detection_result.matches)
@@ -36,6 +37,7 @@ class SecurityEventService:
             or (risk_score is not None and risk_score >= 50.0)
             or (anomaly_score is not None and anomaly_score >= 60.0)
             or (ml_score is not None and ml_score >= 60.0)
+            or (attack_type_override is not None)
         )
         if not is_rule_attack and not is_elevated_risk:
             return None
@@ -52,7 +54,9 @@ class SecurityEventService:
         )
 
         # Determine dominant attack type & severity
-        if detection_result.attack_families:
+        if attack_type_override:
+            primary_attack = attack_type_override
+        elif detection_result.attack_families:
             primary_attack = detection_result.attack_families[0].value
         elif anomaly_score is not None and anomaly_score >= 60.0:
             primary_attack = "ANOMALY_ZERO_DAY"

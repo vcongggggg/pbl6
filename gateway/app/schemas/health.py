@@ -8,6 +8,7 @@ class HealthResponse(BaseModel):
     app: str = Field(default="Web API Security Platform Gateway", description="Application name")
     environment: str = Field(default="development", description="Current operating environment")
     version: str = Field(default="0.1.0", description="Application version")
+    ml_status: str = Field(default="available", description="Machine learning model availability status (Master Plan A3)")
 
 
 class TargetHealthResponse(BaseModel):
