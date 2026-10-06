@@ -1,0 +1,76 @@
+{
+  "metadata": {
+    "dataset": "benchmark_1000_diverse.csv",
+    "total_samples": 1000,
+    "benign_samples": 200,
+    "attack_samples": 800,
+    "timestamp": "2026-10-07 00:17:10",
+    "device": "Machine 1 (Blue Team Host)"
+  },
+  "modes": {
+    "rules_only": {
+      "mode_name": "rules_only",
+      "display_name": "1. Rules Only (Tất định)",
+      "accuracy_pct": 54.8,
+      "precision_pct": 100.0,
+      "recall_pct": 43.5,
+      "f1_score_pct": 60.63,
+      "fpr_pct": 0.0,
+      "avg_latency_ms": 26.156,
+      "confusion_matrix": {
+        "tp": 348,
+        "fp": 0,
+        "tn": 200,
+        "fn": 452
+      }
+    },
+    "ml_only": {
+      "mode_name": "ml_only",
+      "display_name": "2. ML Only (Random Forest)",
+      "accuracy_pct": 95.9,
+      "precision_pct": 100.0,
+      "recall_pct": 94.88,
+      "f1_score_pct": 97.37,
+      "fpr_pct": 0.0,
+      "avg_latency_ms": 21.854,
+      "confusion_matrix": {
+        "tp": 759,
+        "fp": 0,
+        "tn": 200,
+        "fn": 41
+      }
+    },
+    "anomaly_only": {
+      "mode_name": "anomaly_only",
+      "display_name": "3. Anomaly Only (Isolation Forest)",
+      "accuracy_pct": 24.7,
+      "precision_pct": 100.0,
+      "recall_pct": 5.88,
+      "f1_score_pct": 11.1,
+      "fpr_pct": 0.0,
+      "avg_latency_ms": 21.547,
+      "confusion_matrix": {
+        "tp": 47,
+        "fp": 0,
+        "tn": 200,
+        "fn": 753
+      }
+    },
+    "hybrid": {
+      "mode_name": "hybrid",
+      "display_name": "4. Hybrid Defense (Toàn diện)",
+      "accuracy_pct": 96.2,
+      "precision_pct": 100.0,
+      "recall_pct": 95.25,
+      "f1_score_pct": 97.57,
+      "fpr_pct": 0.0,
+      "avg_latency_ms": 17.763,
+      "confusion_matrix": {
+        "tp": 762,
+        "fp": 0,
+        "tn": 200,
+        "fn": 38
+      }
+    }
+  }
+}
