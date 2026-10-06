@@ -317,6 +317,7 @@ async def proxy_endpoint(
         ml_score=ml_score,
         rf_score=ml_score,  # Backward compatibility
         anomaly_score=anomaly_score,
+        ablation_mode=settings.ablation_mode,
     )
 
     if not ml_is_available:

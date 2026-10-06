@@ -23,6 +23,7 @@ class RiskScoreBreakdown:
     active_weights: dict[str, float] = field(default_factory=dict)
     normalized_weights: dict[str, float] = field(default_factory=dict)
     is_fully_evaluated: bool = False
+    ablation_mode: str | None = None
 
     def __post_init__(self) -> None:
         """Synchronizes ml_score and rf_score aliases."""
@@ -51,6 +52,7 @@ class RiskScoreBreakdown:
             "active_weights": self.active_weights,
             "normalized_weights": self.normalized_weights,
             "is_fully_evaluated": self.is_fully_evaluated,
+            "ablation_mode": self.ablation_mode,
         }
 
 
@@ -94,16 +96,78 @@ class RiskEngine:
         rf_score: float | None = None,
         anomaly_score: float | None = None,
         ml_score: float | None = None,
+        ablation_mode: str | None = None,
     ) -> RiskScoreBreakdown:
-        """Calculates normalized weighted risk score (0.0 to 100.0).
+        """Calculates normalized weighted risk score (0.0 to 100.0) with Ablation Mode support (Master Plan B3).
 
-        When all 3 pillars are provided:
-            Score = (0.40 * Rule) + (0.35 * ML) + (0.25 * Anomaly)
-
-        When ML/Anomaly are None (e.g. before models are loaded or during transition),
-        the engine dynamically normalizes active weights so detection remains calibrated.
+        Ablation modes:
+        - 'rules_only': isolates deterministic signature rule engine (weight 100%).
+        - 'ml_only': isolates supervised ML classifier (weight 100%).
+        - 'anomaly_only': isolates unsupervised Isolation Forest (weight 100%).
+        - 'hybrid' (default): multi-pillar defense (Rule 40% + ML 35% + Anomaly 25%).
         """
         effective_ml_score = ml_score if ml_score is not None else rf_score
+
+        # 1. Ablation Mode: Rules Only
+        if ablation_mode == "rules_only":
+            clamped_rule = min(100.0, max(0.0, float(rule_score)))
+            return RiskScoreBreakdown(
+                weighted_score=round(clamped_rule, 2),
+                rule_score=clamped_rule,
+                ml_score=None,
+                rf_score=None,
+                anomaly_score=None,
+                rule_contribution=round(clamped_rule, 2),
+                ml_contribution=0.0,
+                rf_contribution=0.0,
+                anomaly_contribution=0.0,
+                active_weights={"rule": 1.0},
+                normalized_weights={"rule": 1.0},
+                is_fully_evaluated=True,
+                ablation_mode="rules_only",
+            )
+
+        # 2. Ablation Mode: ML Only
+        if ablation_mode == "ml_only":
+            clamped_ml = (
+                min(100.0, max(0.0, float(effective_ml_score))) if effective_ml_score is not None else 0.0
+            )
+            return RiskScoreBreakdown(
+                weighted_score=round(clamped_ml, 2),
+                rule_score=0.0,
+                ml_score=clamped_ml,
+                rf_score=clamped_ml,
+                anomaly_score=None,
+                rule_contribution=0.0,
+                ml_contribution=round(clamped_ml, 2),
+                rf_contribution=round(clamped_ml, 2),
+                anomaly_contribution=0.0,
+                active_weights={"ml": 1.0, "rf": 1.0},
+                normalized_weights={"ml": 1.0, "rf": 1.0},
+                is_fully_evaluated=True,
+                ablation_mode="ml_only",
+            )
+
+        # 3. Ablation Mode: Anomaly Only
+        if ablation_mode == "anomaly_only":
+            clamped_anomaly = (
+                min(100.0, max(0.0, float(anomaly_score))) if anomaly_score is not None else 0.0
+            )
+            return RiskScoreBreakdown(
+                weighted_score=round(clamped_anomaly, 2),
+                rule_score=0.0,
+                ml_score=None,
+                rf_score=None,
+                anomaly_score=clamped_anomaly,
+                rule_contribution=0.0,
+                ml_contribution=0.0,
+                rf_contribution=0.0,
+                anomaly_contribution=round(clamped_anomaly, 2),
+                active_weights={"anomaly": 1.0},
+                normalized_weights={"anomaly": 1.0},
+                is_fully_evaluated=True,
+                ablation_mode="anomaly_only",
+            )
 
         # Clamp inputs between 0.0 and 100.0
         clamped_rule = min(100.0, max(0.0, float(rule_score)))
@@ -171,4 +235,5 @@ class RiskEngine:
             active_weights=active_weights,
             normalized_weights=normalized_weights,
             is_fully_evaluated=is_fully_evaluated,
+            ablation_mode=ablation_mode or "hybrid",
         )

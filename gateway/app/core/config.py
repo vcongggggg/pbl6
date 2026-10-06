@@ -52,6 +52,9 @@ class Settings(BaseSettings):
     schema_strict_mode: bool = False
     schema_violation_penalty: float = 25.0
 
+    # Ablation Study Controls (Master Plan B3)
+    ablation_mode: Literal["hybrid", "rules_only", "ml_only", "anomaly_only"] = "hybrid"
+
     # Risk & Rate Limit Thresholds (Baseline parameters)
     rate_limit_per_minute: int = 60
     risk_block_threshold: int = 80
