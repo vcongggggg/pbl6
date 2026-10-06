@@ -231,7 +231,12 @@ async def proxy_endpoint(
     body_text = body_bytes.decode("utf-8", errors="ignore") if body_bytes else ""
     payload_content = f"/{path} {query_str or ''} {body_text}".strip()
     ml_result = ml_detector.predict(payload_content)
-    ml_score = ml_result.risk_score if ml_result.model_loaded else None
+
+    # ML Fail-Safe Handling (Master Plan A3):
+    # If ML model is unavailable/failed to load, do NOT fail-open (treat as 0% risk).
+    # Request continues with Rule + Anomaly, with normalized weights plus configured fail-safe risk penalty (+15).
+    ml_is_available = bool(ml_result.model_loaded and ml_detector.ml_available)
+    ml_score = ml_result.risk_score if ml_is_available else None
 
     anomaly_result = anomaly_detector.predict(payload_content)
     anomaly_score = anomaly_result.anomaly_score if anomaly_result.model_loaded else None
@@ -245,6 +250,15 @@ async def proxy_endpoint(
         anomaly_score=anomaly_score,
     )
 
+    if not ml_is_available:
+        logger.warning(
+            f"ML model unavailable for request [{request_id}]. Applying fail-safe risk penalty: +{settings.ml_unavailable_risk_penalty}"
+        )
+        risk_breakdown.weighted_score = min(
+            100.0,
+            round(risk_breakdown.weighted_score + float(settings.ml_unavailable_risk_penalty), 2),
+        )
+
     # 7. Phase 7: Evaluate Multi-Threshold Policy Decision
     decision = decision_engine.evaluate(
         risk_breakdown=risk_breakdown,
@@ -252,7 +266,12 @@ async def proxy_endpoint(
     )
 
     # 8. Persist security event if attacks were detected or elevated risk observed
-    if detection_result and (detection_result.is_attack or decision.action != PolicyAction.ALLOW):
+    # Also record security event if ML model was unavailable (Master Plan A3)
+    # Only record security events for attacks or elevated risk (do not record for clean ALLOWed traffic)
+    record_security_event = (
+        detection_result and (detection_result.is_attack or decision.action != PolicyAction.ALLOW)
+    )
+    if record_security_event:
         action_label = (
             "BLOCKED"
             if decision.is_blocked
@@ -262,6 +281,10 @@ async def proxy_endpoint(
                 else decision.action.value
             )
         )
+        override_type = None
+        if not ml_is_available and (not detection_result or not detection_result.is_attack):
+            override_type = "ML_UNAVAILABLE"
+
         SecurityEventService.record_detection(
             db=db,
             request_id=request_id,
@@ -275,9 +298,11 @@ async def proxy_endpoint(
                 "decision": decision.action.value,
                 "reason": decision.reason,
                 "breakdown": risk_breakdown.to_dict(),
-                "ml_inference": ml_result.to_dict() if ml_result.model_loaded else None,
+                "ml_inference": ml_result.to_dict() if ml_result.model_loaded else {"status": "unavailable", "fail_safe_penalty": settings.ml_unavailable_risk_penalty},
                 "anomaly_inference": anomaly_result.to_dict() if anomaly_result.model_loaded else None,
+                "ml_available": ml_is_available,
             },
+            attack_type_override=override_type,
         )
 
     # 7. Enforcement: Block with 403 Forbidden or forward to upstream

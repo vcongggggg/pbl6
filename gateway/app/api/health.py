@@ -15,13 +15,19 @@ router = APIRouter(tags=["Health"])
     summary="Health check endpoint",
     description="Returns the current operating status and environment metadata of the Gateway.",
 )
-async def get_health(settings: Settings = Depends(get_settings)) -> HealthResponse:
-    """Returns gateway application health status."""
+async def get_health(
+    settings: Settings = Depends(get_settings),
+) -> HealthResponse:
+    """Returns gateway application health status including ML model availability."""
+    from app.api.proxy import get_ml_detector
+    detector = get_ml_detector()
+    ml_status = "available" if (detector and detector.ml_available) else "unavailable"
     return HealthResponse(
         status="ok",
         app=settings.app_name,
         environment=settings.app_env,
         version="0.1.0",
+        ml_status=ml_status,
     )
 
 

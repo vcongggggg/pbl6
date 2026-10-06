@@ -102,12 +102,19 @@ def create_application() -> FastAPI:
     # Register Request Context Middleware
     application.add_middleware(RequestContextMiddleware)
 
-    # Configure CORS Middleware
+    # Configure CORS Middleware (Master Plan A4)
+    # Per W3C spec, allow_credentials=True MUST NOT be used with allow_origins=["*"]
+    allow_credentials = "*" not in settings.cors_origins
+    if "*" in settings.cors_origins:
+        logger.warning(
+            "CORS allows wildcard origin '*'. Disabling allow_credentials for compliance."
+        )
+
     application.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins,
-        allow_credentials=True,
-        allow_methods=["*"],
+        allow_credentials=allow_credentials,
+        allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"],
         allow_headers=["*"],
     )
 
