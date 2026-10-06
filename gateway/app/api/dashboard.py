@@ -454,3 +454,104 @@ def toggle_waf_mode_endpoint(
     }
 
 
+
+
+@router.get("/sessions", summary="Get aggregated attack sessions correlated by kill chain")
+def get_attack_sessions(
+    db: Session = Depends(get_db),
+    page: int = Query(1, ge=1),
+    limit: int = Query(10, ge=1, le=50),
+    client_ip: str | None = None,
+    stage: str | None = None,
+) -> dict[str, Any]:
+    """Returns aggregated attack sessions correlated across time windows and kill-chain stages (Master Plan B4)."""
+    base_query = db.query(SecurityEvent).filter(SecurityEvent.session_id.isnot(None))
+
+    if client_ip and client_ip.strip():
+        base_query = base_query.filter(SecurityEvent.client_ip == client_ip.strip())
+
+    if stage and stage.strip() and stage.upper() != "ALL":
+        base_query = base_query.filter(SecurityEvent.kill_chain_stage == stage.strip().upper())
+
+    # Get distinct session IDs ordered by latest activity
+    session_rows = (
+        base_query.with_entities(
+            SecurityEvent.session_id,
+            SecurityEvent.client_ip,
+            func.min(SecurityEvent.timestamp).label("start_time"),
+            func.max(SecurityEvent.timestamp).label("end_time"),
+            func.count(SecurityEvent.id).label("total_events"),
+            func.max(SecurityEvent.risk_score).label("max_risk"),
+        )
+        .group_by(SecurityEvent.session_id, SecurityEvent.client_ip)
+        .order_by(func.max(SecurityEvent.timestamp).desc())
+        .offset((page - 1) * limit)
+        .limit(limit)
+        .all()
+    )
+
+    total_sessions_count = (
+        base_query.with_entities(SecurityEvent.session_id)
+        .distinct()
+        .count()
+    )
+
+    items = []
+    for row in session_rows:
+        sess_id = row.session_id
+        # Fetch events in this session
+        sess_events = (
+            db.query(SecurityEvent)
+            .filter(SecurityEvent.session_id == sess_id)
+            .order_by(SecurityEvent.timestamp.asc())
+            .all()
+        )
+
+        stages_seen = []
+        attack_types_seen = set()
+        has_blocked = False
+
+        event_summaries = []
+        for ev in sess_events:
+            stage_name = ev.kill_chain_stage or "EXPLOITATION"
+            if stage_name not in stages_seen:
+                stages_seen.append(stage_name)
+            attack_types_seen.add(ev.attack_type)
+            if ev.action == "BLOCKED":
+                has_blocked = True
+
+            event_summaries.append({
+                "event_id": ev.event_id,
+                "request_id": ev.request_id,
+                "timestamp": ev.timestamp.isoformat(),
+                "attack_type": ev.attack_type,
+                "severity": ev.severity,
+                "action": ev.action,
+                "risk_score": ev.risk_score,
+                "kill_chain_stage": stage_name,
+            })
+
+        duration_sec = 0.0
+        if row.start_time and row.end_time:
+            duration_sec = max(0.0, (row.end_time - row.start_time).total_seconds())
+
+        items.append({
+            "session_id": sess_id,
+            "client_ip": row.client_ip,
+            "start_time": row.start_time.isoformat() if row.start_time else None,
+            "end_time": row.end_time.isoformat() if row.end_time else None,
+            "duration_seconds": round(duration_sec, 1),
+            "total_events": row.total_events,
+            "max_risk_score": row.max_risk or 0.0,
+            "kill_chain_stages": stages_seen,
+            "attack_types": sorted(list(attack_types_seen)),
+            "has_blocked": has_blocked,
+            "events": event_summaries,
+        })
+
+    return {
+        "total": total_sessions_count,
+        "page": page,
+        "limit": limit,
+        "items": items,
+    }

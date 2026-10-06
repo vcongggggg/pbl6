@@ -40,11 +40,25 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
 def init_db() -> None:
-    """Initialize database tables."""
+    """Initialize database tables and run lightweight schema migrations."""
     # Import models so Base metadata is populated
     import app.db.models  # noqa: F401
 
     Base.metadata.create_all(bind=engine)
+
+    if settings.database_url.startswith("sqlite"):
+        try:
+            from sqlalchemy import text
+            with engine.connect() as conn:
+                cursor = conn.execute(text("PRAGMA table_info(security_events)"))
+                existing_cols = [row[1] for row in cursor.fetchall()]
+                if "session_id" not in existing_cols:
+                    conn.execute(text("ALTER TABLE security_events ADD COLUMN session_id VARCHAR(64)"))
+                if "kill_chain_stage" not in existing_cols:
+                    conn.execute(text("ALTER TABLE security_events ADD COLUMN kill_chain_stage VARCHAR(50)"))
+                conn.commit()
+        except Exception:
+            pass
 
 
 def get_db() -> Generator[Session, None, None]:
