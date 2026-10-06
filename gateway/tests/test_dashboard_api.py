@@ -1,3 +1,5 @@
+ADMIN_HEADERS = {'X-API-Key': 'dev-admin-secret-key-change-me'}
+
 import datetime
 import json
 
@@ -12,7 +14,7 @@ from app.db.session import SessionLocal
 def test_dashboard_stats_empty(client: TestClient):
     """Verifies stats endpoint on empty or baseline database."""
     # Reset first
-    client.post("/dashboard/reset-demo")
+    client.post("/dashboard/reset-demo", headers=ADMIN_HEADERS)
 
     res = client.get("/dashboard/stats")
     assert res.status_code == 200
@@ -146,22 +148,22 @@ def test_dashboard_simulate_and_reset(client: TestClient):
     ).mock(return_value=Response(200, json={"status": "success"}))
 
     # Test simulate SQLI
-    res_sqli = client.post("/dashboard/simulate", json={"attack_type": "SQLI"})
+    res_sqli = client.post("/dashboard/simulate", json={"attack_type": "SQLI"}, headers=ADMIN_HEADERS)
     assert res_sqli.status_code == 200
     assert res_sqli.json()["simulated"] == "SQL_INJECTION"
 
     # Test simulate XSS
-    res_xss = client.post("/dashboard/simulate", json={"attack_type": "XSS"})
+    res_xss = client.post("/dashboard/simulate", json={"attack_type": "XSS"}, headers=ADMIN_HEADERS)
     assert res_xss.status_code == 200
     assert res_xss.json()["simulated"] == "XSS"
 
     # Test simulate BENIGN
-    res_benign = client.post("/dashboard/simulate", json={"attack_type": "BENIGN"})
+    res_benign = client.post("/dashboard/simulate", json={"attack_type": "BENIGN"}, headers=ADMIN_HEADERS)
     assert res_benign.status_code == 200
     assert res_benign.json()["simulated"] == "BENIGN"
 
     # Verify reset-demo
-    res_reset = client.post("/dashboard/reset-demo")
+    res_reset = client.post("/dashboard/reset-demo", headers=ADMIN_HEADERS)
     assert res_reset.status_code == 200
     assert res_reset.json()["status"] == "ok"
 
@@ -176,7 +178,7 @@ def test_dashboard_simulate_and_reset(client: TestClient):
 
 def test_dashboard_seed_demo(client: TestClient):
     """Verifies seed-demo populates realistic records and can be queried."""
-    res = client.post("/dashboard/seed-demo")
+    res = client.post("/dashboard/seed-demo", headers=ADMIN_HEADERS)
     assert res.status_code == 200
     data = res.json()
     assert data["status"] == "success"
@@ -198,7 +200,7 @@ def test_dashboard_seed_demo(client: TestClient):
 def test_dashboard_toggle_waf_mode(client: TestClient):
     """Verifies toggle-waf-mode switches between MONITOR_ONLY and ACTIVE_BLOCKING."""
     # First toggle -> changes to ACTIVE_BLOCKING (or opposite of current)
-    res = client.post("/dashboard/toggle-waf-mode")
+    res = client.post("/dashboard/toggle-waf-mode", headers=ADMIN_HEADERS)
     assert res.status_code == 200
     mode1 = res.json()["waf_mode"]
     assert mode1 in ("ACTIVE_BLOCKING", "MONITOR_ONLY")
@@ -208,7 +210,7 @@ def test_dashboard_toggle_waf_mode(client: TestClient):
     assert stats1["waf_mode"] == mode1
 
     # Second toggle -> flips back
-    res2 = client.post("/dashboard/toggle-waf-mode")
+    res2 = client.post("/dashboard/toggle-waf-mode", headers=ADMIN_HEADERS)
     assert res2.status_code == 200
     mode2 = res2.json()["waf_mode"]
     assert mode2 != mode1
