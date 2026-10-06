@@ -6,8 +6,9 @@ services:
       dockerfile: Dockerfile
     container_name: pbl6-vulnerable-api
     restart: unless-stopped
+    # Restrict to loopback interface so external LAN clients cannot bypass WAF
     ports:
-      - "5000:5000"
+      - "127.0.0.1:5000:5000"
     environment:
       - DJANGO_ENV=development
       - DEBUG=True
@@ -39,7 +40,7 @@ services:
       - DATABASE_URL=sqlite:////app/data/waf_security.db
       - TARGET_API_URL=http://vulnerable-api:5000
       - WAF_MODE=MONITOR_ONLY
-      - ADMIN_API_KEY=dev-admin-secret-key-change-me
+      - ADMIN_API_KEY=${ADMIN_API_KEY}
     volumes:
       - ./data:/app/data
       - ./ml-engine/artifacts:/app/ml-engine/artifacts:ro
@@ -66,6 +67,7 @@ services:
       - "3000:3000"
     environment:
       - NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
+      - NEXT_PUBLIC_ADMIN_API_KEY=${ADMIN_API_KEY}
     depends_on:
       gateway:
         condition: service_healthy
