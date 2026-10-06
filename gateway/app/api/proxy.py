@@ -14,6 +14,7 @@ from app.security.engine import RuleEngine
 from app.security.ml_detector import MLDetector
 from app.security.rate_limiter import SlidingWindowRateLimiter
 from app.security.risk_engine import RiskEngine
+from app.security.schema_validator import SchemaValidator, SchemaViolation
 from app.services.proxy import ProxyService
 from app.services.security import SecurityEventService
 from app.services.traffic import TrafficService
@@ -29,6 +30,12 @@ _decision_engine = DecisionEngine()
 _rate_limiter = SlidingWindowRateLimiter()
 _ml_detector = MLDetector()
 _anomaly_detector = get_anomaly_detector()
+_schema_validator = SchemaValidator()
+
+
+def get_schema_validator() -> SchemaValidator:
+    """Dependency injecting the OpenAPI schema validator instance."""
+    return _schema_validator
 
 
 def get_proxy_service(
@@ -91,6 +98,7 @@ async def proxy_endpoint(
     rate_limiter: SlidingWindowRateLimiter = Depends(get_rate_limiter),
     ml_detector: MLDetector = Depends(get_ml_detector),
     anomaly_detector: AnomalyDetector = Depends(get_anomaly_detector_dep),
+    schema_validator: SchemaValidator = Depends(get_schema_validator),
     settings: Settings = Depends(get_settings),
 ) -> Response:
     """Handles signature inspection, reverse proxying, and DB persistence (non-blocking)."""
@@ -227,6 +235,67 @@ async def proxy_endpoint(
     except Exception as sec_err:
         logger.error(f"Security inspection failed for request [{request_id}]: {sec_err}")
 
+    # 4.1 Positive Security Model: OpenAPI Schema Validation (Master Plan B1)
+    schema_violations: list[SchemaViolation] = []
+    if settings.schema_validation_enabled:
+        content_type = request.headers.get("content-type")
+        schema_violations = schema_validator.validate_request(
+            method=request.method,
+            path=f"/{path}",
+            query_params=query_str,
+            body_bytes=body_bytes,
+            content_type=content_type,
+        )
+        if schema_violations:
+            logger.warning(
+                f"Positive security violations [{request_id}]: {[v.to_dict() for v in schema_violations]}"
+            )
+            if settings.schema_strict_mode:
+                violation_details = [v.to_dict() for v in schema_violations]
+                body_resp = json.dumps({
+                    "type": "https://api.bookie.local/errors/schema-validation-failed",
+                    "title": "Positive Security Model: Schema Validation Failed",
+                    "status": 400,
+                    "detail": "Request payload violated target OpenAPI schema contract.",
+                    "instance": f"/api/proxy/{path}",
+                    "blocked": True,
+                    "violations": violation_details,
+                    "request_id": request_id,
+                }).encode("utf-8")
+
+                try:
+                    TrafficService.record_traffic(
+                        db=db,
+                        request_id=request_id,
+                        client_ip=client_ip,
+                        user_agent=user_agent,
+                        method=request.method,
+                        url=str(request.url),
+                        path=f"/{path}",
+                        headers=dict(request.headers),
+                        query_params=query_str,
+                        body_bytes=body_bytes,
+                        response_status=400,
+                        response_time_ms=1.0,
+                        response_size=len(body_resp),
+                    )
+                except Exception as err:
+                    logger.error(f"Failed to record schema violation traffic [{request_id}]: {err}")
+
+                return Response(
+                    content=body_resp,
+                    status_code=400,
+                    media_type="application/json",
+                    headers={
+                        "X-Request-ID": request_id,
+                        "X-WAF-Action": "BLOCKED",
+                        "X-WAF-Decision": "BLOCK",
+                        "X-WAF-Risk-Score": "100.0",
+                        "X-WAF-Mode": active_waf_mode,
+                        "X-WAF-Schema-Violation": str(len(schema_violations)),
+                    },
+                )
+
     # 5. Task 5.4 & Task 6.4: AI/ML Inference (Supervised ML Classifier & Unsupervised Isolation Forest)
     body_text = body_bytes.decode("utf-8", errors="ignore") if body_bytes else ""
     payload_content = f"/{path} {query_str or ''} {body_text}".strip()
@@ -259,6 +328,15 @@ async def proxy_endpoint(
             round(risk_breakdown.weighted_score + float(settings.ml_unavailable_risk_penalty), 2),
         )
 
+    if settings.schema_validation_enabled and schema_violations:
+        logger.info(
+            f"Applying Positive Security risk penalty: +{settings.schema_violation_penalty} to request [{request_id}]"
+        )
+        risk_breakdown.weighted_score = min(
+            100.0,
+            round(risk_breakdown.weighted_score + float(settings.schema_violation_penalty), 2),
+        )
+
     # 7. Phase 7: Evaluate Multi-Threshold Policy Decision
     decision = decision_engine.evaluate(
         risk_breakdown=risk_breakdown,
@@ -269,7 +347,8 @@ async def proxy_endpoint(
     # Also record security event if ML model was unavailable (Master Plan A3)
     # Only record security events for attacks or elevated risk (do not record for clean ALLOWed traffic)
     record_security_event = (
-        detection_result and (detection_result.is_attack or decision.action != PolicyAction.ALLOW)
+        (detection_result and (detection_result.is_attack or decision.action != PolicyAction.ALLOW))
+        or bool(settings.schema_validation_enabled and schema_violations)
     )
     if record_security_event:
         action_label = (
@@ -282,8 +361,11 @@ async def proxy_endpoint(
             )
         )
         override_type = None
-        if not ml_is_available and (not detection_result or not detection_result.is_attack):
-            override_type = "ML_UNAVAILABLE"
+        if not detection_result or not detection_result.is_attack:
+            if settings.schema_validation_enabled and schema_violations:
+                override_type = "SCHEMA_VIOLATION"
+            elif not ml_is_available:
+                override_type = "ML_UNAVAILABLE"
 
         SecurityEventService.record_detection(
             db=db,
@@ -297,6 +379,7 @@ async def proxy_endpoint(
             details_extra={
                 "decision": decision.action.value,
                 "reason": decision.reason,
+                "schema_violations": [v.to_dict() for v in schema_violations] if schema_violations else [],
                 "breakdown": risk_breakdown.to_dict(),
                 "ml_inference": ml_result.to_dict() if ml_result.model_loaded else {"status": "unavailable", "fail_safe_penalty": settings.ml_unavailable_risk_penalty},
                 "anomaly_inference": anomaly_result.to_dict() if anomaly_result.model_loaded else None,
