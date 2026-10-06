@@ -1,6 +1,6 @@
 import sys
 from pathlib import Path
-import pytest
+
 import numpy as np
 
 # Ensure ml-engine is accessible
@@ -11,8 +11,9 @@ for candidate in [
     if candidate.exists() and str(candidate) not in sys.path:
         sys.path.insert(0, str(candidate))
 
-from features.extractor import CANONICAL_FEATURE_NAMES, extract_17_vector
-from app.security.ml_detector import MLDetector, FEATURE_NAMES
+from features.extractor import CANONICAL_FEATURE_NAMES, extract_17_vector  # noqa: E402
+
+from app.security.ml_detector import FEATURE_NAMES, MLDetector  # noqa: E402
 
 SAMPLE_PAYLOADS = [
     "GET /api/v1/books HTTP/1.1",

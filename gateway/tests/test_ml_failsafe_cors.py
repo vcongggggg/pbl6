@@ -1,7 +1,7 @@
-import pytest
 from fastapi.testclient import TestClient
+
 from app.api.proxy import get_ml_detector
-from app.core.config import get_settings
+
 
 def test_health_ml_status(client: TestClient):
     """Verifies that GET /health returns ml_status field."""
@@ -10,6 +10,7 @@ def test_health_ml_status(client: TestClient):
     data = res.json()
     assert "ml_status" in data
     assert data["ml_status"] in ("available", "unavailable")
+
 
 def test_ml_failsafe_when_unloaded(client: TestClient):
     """Verifies fail-safe behavior when ML model is unloaded."""
@@ -21,7 +22,7 @@ def test_ml_failsafe_when_unloaded(client: TestClient):
     try:
         detector.unload()
         assert not detector.ml_available
-        
+
         # Check /health reflects unavailable
         res_health = client.get("/health")
         assert res_health.status_code == 200
@@ -36,6 +37,7 @@ def test_ml_failsafe_when_unloaded(client: TestClient):
         detector._classes = orig_classes
         detector._model_path = orig_path
         detector._is_loaded = orig_is_loaded
+
 
 def test_cors_configuration(client: TestClient):
     """Verifies strict CORS origin validation (Master Plan A4)."""

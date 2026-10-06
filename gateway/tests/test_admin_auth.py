@@ -1,6 +1,7 @@
-import pytest
 from fastapi.testclient import TestClient
+
 from app.core.config import get_settings
+
 
 def test_admin_endpoints_require_auth(client: TestClient):
     endpoints = [
@@ -9,7 +10,7 @@ def test_admin_endpoints_require_auth(client: TestClient):
         ('/dashboard/toggle-waf-mode', None),
         ('/dashboard/simulate', {'attack_type': 'SQLI'}),
     ]
-    
+
     # 1. Missing header -> 401
     for ep, payload in endpoints:
         res = client.post(ep, json=payload)

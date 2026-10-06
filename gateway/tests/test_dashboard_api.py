@@ -1,5 +1,3 @@
-ADMIN_HEADERS = {'X-API-Key': 'dev-admin-secret-key-change-me'}
-
 import datetime
 import json
 
@@ -9,6 +7,8 @@ from httpx import Response
 
 from app.db.models import RequestLog, SecurityEvent
 from app.db.session import SessionLocal
+
+ADMIN_HEADERS = {'X-API-Key': 'dev-admin-secret-key-change-me'}
 
 
 def test_dashboard_stats_empty(client: TestClient):

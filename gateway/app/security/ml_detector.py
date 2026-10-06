@@ -1,6 +1,5 @@
 import logging
-import math
-import re
+import sys
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -18,8 +17,6 @@ except ImportError:
 
 logger = logging.getLogger("waf.gateway.security.ml_detector")
 
-import sys
-
 # Ensure ml-engine is accessible for unified feature extraction (Master Plan A5)
 for candidate in [
     Path(__file__).resolve().parents[3] / 'ml-engine',
@@ -30,12 +27,8 @@ for candidate in [
     if candidate.exists() and str(candidate) not in sys.path:
         sys.path.insert(0, str(candidate))
 
-from features.extractor import (
-    CANONICAL_FEATURE_NAMES,
-    extract_17_vector,
-    extract_batch_vectors,
-)
-from features.payload import calculate_entropy
+from features.extractor import CANONICAL_FEATURE_NAMES, extract_17_vector  # noqa: E402
+from features.payload import calculate_entropy  # noqa: E402
 
 FEATURE_NAMES: list[str] = CANONICAL_FEATURE_NAMES
 
