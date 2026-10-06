@@ -1,7 +1,11 @@
+import logging
 from functools import lru_cache
 from typing import Literal
 
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+logger = logging.getLogger("waf.gateway.config")
 
 
 class Settings(BaseSettings):
@@ -51,6 +55,20 @@ class Settings(BaseSettings):
         case_sensitive=False,
         extra="ignore",
     )
+
+    @model_validator(mode="after")
+    def validate_admin_security(self) -> "Settings":
+        if self.app_env == "production":
+            if not self.admin_api_key or self.admin_api_key == "dev-admin-secret-key-change-me":
+                raise ValueError(
+                    "In production mode, ADMIN_API_KEY must be set to a strong custom secret."
+                )
+        elif self.admin_api_key == "dev-admin-secret-key-change-me":
+            logger.warning(
+                "SECURITY WARNING: Using default dev-admin-secret-key-change-me API key in %s environment.",
+                self.app_env,
+            )
+        return self
 
 
 @lru_cache

@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import Settings, get_settings
 from app.db.models import RequestLog, SecurityEvent, WafConfigModel
+from app.api.deps import require_admin
 from app.db.session import get_db
 
 router = APIRouter(prefix="/dashboard", tags=["Dashboard"])
@@ -335,7 +336,7 @@ def get_dashboard_distribution(
     return result
 
 
-@router.post("/simulate", summary="Execute real test request through proxy")
+@router.post("/simulate", summary="Execute real test request through proxy", dependencies=[Depends(require_admin)])
 async def simulate_attack_request(
     request: Request,
     payload: SimulateRequest,
@@ -409,7 +410,7 @@ async def simulate_attack_request(
             }
 
 
-@router.post("/reset-demo", summary="Reset lab demonstration records")
+@router.post("/reset-demo", summary="Reset lab demonstration records", dependencies=[Depends(require_admin)])
 def reset_demo_data(db: Session = Depends(get_db)) -> dict[str, str]:
     """Cleans test records from SQLite database to prepare for a fresh presentation."""
     db.query(SecurityEvent).delete()
@@ -421,7 +422,7 @@ def reset_demo_data(db: Session = Depends(get_db)) -> dict[str, str]:
     }
 
 
-@router.post("/seed-demo", summary="Seed rich demo traffic and security incidents")
+@router.post("/seed-demo", summary="Seed rich demo traffic and security incidents", dependencies=[Depends(require_admin)])
 def seed_demo_data_endpoint(db: Session = Depends(get_db)) -> dict[str, Any]:
     """Populates ~125 realistic HTTP requests and 36 security incidents spanning the last 60 minutes."""
     from app.services.seeder import seed_demo_dataset
@@ -429,7 +430,7 @@ def seed_demo_data_endpoint(db: Session = Depends(get_db)) -> dict[str, Any]:
     return seed_demo_dataset(db)
 
 
-@router.post("/toggle-waf-mode", summary="Toggle WAF mode between MONITOR_ONLY and ACTIVE_BLOCKING")
+@router.post("/toggle-waf-mode", summary="Toggle WAF mode between MONITOR_ONLY and ACTIVE_BLOCKING", dependencies=[Depends(require_admin)])
 def toggle_waf_mode_endpoint(
     db: Session = Depends(get_db),
     settings: Settings = Depends(get_settings),

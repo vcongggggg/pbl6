@@ -61,10 +61,18 @@ export async function fetchDashboardDistribution(): Promise<AttackDistributionIt
   return res.json();
 }
 
+function getAdminHeaders(): HeadersInit {
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (config.adminApiKey) {
+    headers["X-API-Key"] = config.adminApiKey;
+  }
+  return headers;
+}
+
 export async function triggerSimulation(attackType: string): Promise<SimulateResult> {
   const res = await fetch(`${API_BASE}/api/dashboard/simulate`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: getAdminHeaders(),
     body: JSON.stringify({ attack_type: attackType }),
   });
   if (!res.ok) {
@@ -76,6 +84,7 @@ export async function triggerSimulation(attackType: string): Promise<SimulateRes
 export async function resetDemoData(): Promise<{ status: string; message: string }> {
   const res = await fetch(`${API_BASE}/api/dashboard/reset-demo`, {
     method: "POST",
+    headers: getAdminHeaders(),
   });
   if (!res.ok) {
     throw new Error(`Failed to reset demo: HTTP ${res.status}`);
@@ -86,6 +95,7 @@ export async function resetDemoData(): Promise<{ status: string; message: string
 export async function seedDemoData(): Promise<{ status: string; message: string }> {
   const res = await fetch(`${API_BASE}/api/dashboard/seed-demo`, {
     method: "POST",
+    headers: getAdminHeaders(),
   });
   if (!res.ok) {
     throw new Error(`Failed to seed demo data: HTTP ${res.status}`);
@@ -96,6 +106,7 @@ export async function seedDemoData(): Promise<{ status: string; message: string 
 export async function toggleWafMode(): Promise<{ status: string; waf_mode: string; message: string }> {
   const res = await fetch(`${API_BASE}/api/dashboard/toggle-waf-mode`, {
     method: "POST",
+    headers: getAdminHeaders(),
   });
   if (!res.ok) {
     throw new Error(`Failed to toggle WAF mode: HTTP ${res.status}`);
