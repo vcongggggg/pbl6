@@ -37,33 +37,24 @@ Mặc dù đã đạt được nhiều kết quả tích cực, nhóm nghiên c�
 
 ## 5.3. Hướng Phát Triển và Mở Rộng Trong Tương Lai (Future Work)
 
-Dựa trên các nền tảng kỹ thuật đã hoàn thiện và những hạn chế đã chỉ ra, nhóm nghiên cứu đề xuất các hướng phát triển chiến lược trong tương lai:
+Dựa trên kết quả thực nghiệm và các định hướng tối ưu hóa kỹ thuật (được cụ thể hóa từ các phân mục kỹ thuật hoãn lại trong Master Plan giai đoạn C2–C4), nhóm nghiên cứu đề xuất 4 hướng phát triển trọng tâm cho hệ thống:
 
-### 5.3.1. Nâng cấp bộ lọc tầng nhân Linux với công nghệ eBPF / XDP
-- Chuyển giao một phần cơ chế đối sánh luật chữ ký tĩnh và giới hạn tần suất từ không gian người dùng (User Space - Python) xuống trực tiếp tầng nhân hệ điều hành Linux (Kernel Space) thông qua công nghệ **eBPF (Extended Berkeley Packet Filter)** và **XDP (eXpress Data Path)**.
-- Giải pháp này giúp loại bỏ hoàn toàn chi phí sao chép gói tin qua socket (Zero-Copy), cho phép WAF ngắt kết nối các cuộc tấn công DoS/Brute Force ngay tại tầng cạc mạng (NIC Driver Level) với thông lượng hàng triệu gói tin/giây mà không tiêu tốn tài nguyên CPU.
+### 5.3.1. Nâng cao độ phủ kiểm thử tự động (Test Coverage $\ge 80\%$) và Kiểm thử Hỗn loạn (Chaos Engineering) (Định hướng Task C2)
+- **Mở rộng Unit & Integration Test:** Tiếp tục mở rộng bộ test suite từ 112 tests hiện tại lên độ bao phủ mã nguồn $\ge 80\%$, tập trung vào các trường hợp biên của pipeline Reverse Proxy khi truyền tải dữ liệu kích thước lớn (large body payloads, multipart form-data).
+- **Kiểm thử Hỗn loạn (Chaos Engineering):** Tích hợp công cụ kiểm thử hỗn loạn nhằm mô phỏng các sự cố mạng LAN đột ngột, ngắt kết nối giữa Proxy Gateway và Machine Learning Engine, kiểm định khả năng tự phục hồi (Self-Healing) và xác nhận tính ổn định của cơ chế Degraded Safe Mode.
 
----
+### 5.3.2. Làm cứng mô hình Trí tuệ nhân tạo (ML & Anomaly Hardening) (Định hướng Task C3)
+- **Bổ sung đặc trưng ngữ nghĩa cho Command Injection:** Tích hợp bộ quy tắc biểu thức chính quy ngữ nghĩa `_CMD_KEYWORDS_REGEX` vào vector đặc trưng chuẩn, giúp mô hình Random Forest nhận diện nhạy bén hơn các lệnh hệ điều hành Unix/Windows dạng pipe (`|`), redirection (`>`), backtick và sub-shell.
+- **Tự động hóa hiệu chuẩn ngưỡng dị thường (Dynamic Calibration):** Thay thế ngưỡng cố định thủ công $0.50$ của mô hình Isolation Forest bằng thuật toán tự động tính toán phân vị ngưỡng rủi ro (Percentile Thresholding) dựa trên phân phối thực tế của lưu lượng sạch được học trong môi trường production.
+- **Tái huấn luyện với mẫu tấn công đối kháng (Adversarial Retraining Loop):** Thiết lập cơ chế tự động nạp các payload né tránh sinh ra từ Red Team Evasion Engine vào tập huấn luyện của Random Forest, giúp mô hình tăng khả năng miễn dịch trước các đòn tấn công biến dị tinh vi.
 
-### 5.3.2. Đóng gói thành Kubernetes Ingress Controller và Envoy Wasm Plugin
-- Mở rộng phạm vi triển khai của Cổng WAF Gateway sang môi trường đám mây vi dịch vụ (Cloud-Native Microservices).
-- Đóng gói logic phân loại đa tầng thành một **Kubernetes Ingress Controller** hoặc một **Envoy WebAssembly (Wasm) Plugin** tích hợp trực tiếp vào kiến trúc Service Mesh (Istio), cho phép bảo vệ phân tán cho toàn bộ hệ thống các API nội bộ mà không làm phát sinh thêm chặng chuyển tiếp mạng (Network Hop).
+### 5.3.3. Tối ưu hóa hạ tầng DevOps Container hóa cấp Doanh nghiệp (Định hướng Task C4)
+- **Kiến trúc Container bảo mật cao (Non-root Multi-stage Build):** Tái cấu trúc Dockerfile của Gateway và API mục tiêu theo kiến trúc Multi-Stage Build, loại bỏ hoàn toàn các công cụ biên dịch thừa ở image runtime và thực thi dưới quyền người dùng không có đặc quyền root (`non-root user`, UID 10001) để giảm thiểu rủi ro Container Escape.
+- **Quản trị bí mật tập trung (Enterprise Secrets Management):** Thay thế việc nạp biến môi trường cục bộ `.env` bằng việc tích hợp các giải pháp quản lý khóa bí mật chuyên dụng cấp doanh nghiệp (như HashiCorp Vault hoặc AWS Secrets Manager), hỗ trợ tự động xoay vòng khóa API (Secret Rotation) theo định kỳ.
 
----
-
-### 5.3.3. Ứng dụng Mô hình Ngôn ngữ Nhỏ Chuyên biệt (Security SLMs)
-- Tích hợp các mô hình ngôn ngữ nhỏ được tinh chỉnh chuyên biệt cho an ninh mạng (Domain-Specific Security Small Language Models) đã được lượng tử hóa (Quantized 4-bit) để chạy cục bộ trên máy chủ biên.
-- SLM sẽ được kích hoạt ở chế độ phân tích chuyên sâu (Deep Inspection) cho các request bị đánh dấu `MONITOR`, giúp phân tích sâu ngữ nghĩa câu lệnh và luồng dữ liệu nghiệp vụ, giải quyết triệt để bài toán phát hiện lỗ hổng BOLA/IDOR và Broken Function Level Authorization.
-
----
-
-### 5.3.4. Vận hành Chu trình Đối kháng Học liên tục (Continuous Adversarial Red Teaming)
-- Tự động hóa hoàn toàn chu trình khép kín giữa Red Team và Blue Team:
-  1. Tác tử Tấn công PyTorch DQN liên tục tìm kiếm các biến thể payload mới né tránh được WAF.
-  2. Khi phát hiện một mẫu vượt rào thành công, hệ thống tự động lưu mẫu vào kho lưu trữ đối kháng (Adversarial Data Store).
-  3. Hệ thống WAF tự động trích xuất đặc trưng mới, cập nhật bổ sung luật chữ ký và kích hoạt tái huấn luyện liên tục mô hình học máy (Online Continual Retraining) mà không cần can thiệp thủ công từ con người.
-
----
+### 5.3.4. Nâng cấp bộ lọc tầng nhân Linux với eBPF/XDP và Deception Technology
+- **Bộ lọc Fast-Path eBPF/XDP:** Tích hợp công nghệ eBPF vào tầng nhân Linux của Gateway để lọc và loại bỏ các gói tin tấn công DoS/DDoS và IP vi phạm ngay tại tầng Network Driver (trước khi gói tin đến tầng người dùng của FastAPI), đạt tốc độ xử lý hàng triệu gói tin mỗi giây.
+- **Công nghệ Đánh lừa an ninh (Deception Technology):** Cài cắm các endpoint bẫy ảo (Honeytokens / Decoy APIs) trong hệ thống để dụ kẻ tấn công tương tác, qua đó tự động thu thập dấu hiệu nhận diện và khóa vĩnh viễn IP của kẻ tấn công ngay từ giai đoạn Thăm dò (Reconnaissance).
 
 ## 5.4. Lời Kết
 
