@@ -5,7 +5,7 @@ import { Header } from "@/components/Header";
 import { MetricCards } from "@/components/MetricCards";
 import { ThreatTimelineChart } from "@/components/ThreatTimelineChart";
 import { AttackDistributionChart } from "@/components/AttackDistributionChart";
-import { LiveEventsTable, PayloadEvidenceDrawer } from "@/components/events";
+import { LiveEventsTable, PayloadEvidenceDrawer, AttackSessionsModal } from "@/components/events";
 import { DetectionExplainabilityModal } from "@/components/explain";
 import {
   fetchDashboardStats,
@@ -41,6 +41,8 @@ export default function SOCDashboard() {
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [selectedEvent, setSelectedEvent] = useState<SecurityEventItem | null>(null);
   const [explainingEvent, setExplainingEvent] = useState<SecurityEventItem | null>(null);
+  const [isAttackSessionsOpen, setIsAttackSessionsOpen] = useState<boolean>(false);
+  const [sessionIpFilter, setSessionIpFilter] = useState<string>("");
 
   // Operation states
   const [pollingInterval, setPollingInterval] = useState<number>(3); // 3s default
@@ -211,6 +213,7 @@ export default function SOCDashboard() {
         isResetting={isResetting}
         isSeeding={isSeeding}
         isTogglingWaf={isTogglingWaf}
+        onOpenAttackSessions={() => { setSessionIpFilter(""); setIsAttackSessionsOpen(true); }}
       />
 
       {/* 2. Main Dashboard Content Container */}
@@ -257,6 +260,7 @@ export default function SOCDashboard() {
         event={selectedEvent}
         onClose={() => setSelectedEvent(null)}
         onOpenExplainModal={(ev) => setExplainingEvent(ev)}
+        onOpenSessionTimeline={(ip) => { setSessionIpFilter(ip); setIsAttackSessionsOpen(true); }}
       />
 
       {/* 4. Detection Explainability Modal (Task 9.4) */}
@@ -264,6 +268,14 @@ export default function SOCDashboard() {
         event={explainingEvent}
         onClose={() => setExplainingEvent(null)}
       />
+
+      {/* 5. Attack Session Correlation Modal (Master Plan B4) */}
+      <AttackSessionsModal
+        isOpen={isAttackSessionsOpen}
+        onClose={() => setIsAttackSessionsOpen(false)}
+        initialIpFilter={sessionIpFilter}
+      />
+
 
       {/* 4. Footer Status Bar */}
       <footer className="w-full border-t border-slate-900 bg-slate-950/60 px-6 py-2.5 text-[11px] font-mono text-slate-500 flex flex-wrap items-center justify-between gap-2">

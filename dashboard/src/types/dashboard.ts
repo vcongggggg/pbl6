@@ -33,6 +33,8 @@ export interface SecurityEventItem {
   rule_name: string;
   location: string;
   evidence: string;
+  session_id?: string | null;
+  kill_chain_stage?: string | null;
   details?: Record<string, any>;
 }
 
@@ -64,4 +66,36 @@ export interface SimulateResult {
   status_code?: number;
   request_id?: string;
   message: string;
+}
+
+export interface SessionEventItem {
+  event_id: string;
+  request_id: string;
+  timestamp: string;
+  attack_type: string;
+  severity: string;
+  action: string;
+  risk_score: number;
+  kill_chain_stage: string;
+}
+
+export interface AttackSessionItem {
+  session_id: string;
+  client_ip: string;
+  start_time: string | null;
+  end_time: string | null;
+  duration_seconds: number;
+  total_events: number;
+  max_risk_score: number;
+  kill_chain_stages: string[];
+  attack_types: string[];
+  has_blocked: boolean;
+  events: SessionEventItem[];
+}
+
+export interface AttackSessionsResponse {
+  total: number;
+  page: number;
+  limit: number;
+  items: AttackSessionItem[];
 }
