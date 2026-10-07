@@ -4,19 +4,20 @@
     "total_samples": 1000,
     "benign_samples": 200,
     "attack_samples": 800,
-    "timestamp": "2026-10-07 00:17:10",
-    "device": "Machine 1 (Blue Team Host)"
+    "timestamp": "2026-10-07 07:57:09",
+    "device": "Machine 1 (Blue Team Host)",
+    "methodology_note": "Each mode measures ONLY its active detector latency. Hybrid executes all 3 detectors in pipeline."
   },
   "modes": {
     "rules_only": {
       "mode_name": "rules_only",
-      "display_name": "1. Rules Only (Tất định)",
+      "display_name": "1. Rules Only (Signature-based)",
       "accuracy_pct": 54.8,
       "precision_pct": 100.0,
       "recall_pct": 43.5,
       "f1_score_pct": 60.63,
       "fpr_pct": 0.0,
-      "avg_latency_ms": 26.156,
+      "avg_latency_ms": 0.14,
       "confusion_matrix": {
         "tp": 348,
         "fp": 0,
@@ -32,7 +33,7 @@
       "recall_pct": 94.88,
       "f1_score_pct": 97.37,
       "fpr_pct": 0.0,
-      "avg_latency_ms": 21.854,
+      "avg_latency_ms": 8.397,
       "confusion_matrix": {
         "tp": 759,
         "fp": 0,
@@ -48,7 +49,7 @@
       "recall_pct": 5.88,
       "f1_score_pct": 11.1,
       "fpr_pct": 0.0,
-      "avg_latency_ms": 21.547,
+      "avg_latency_ms": 9.489,
       "confusion_matrix": {
         "tp": 47,
         "fp": 0,
@@ -58,13 +59,13 @@
     },
     "hybrid": {
       "mode_name": "hybrid",
-      "display_name": "4. Hybrid Defense (Toàn diện)",
+      "display_name": "4. Hybrid Defense (Rule + ML + Anomaly)",
       "accuracy_pct": 96.2,
       "precision_pct": 100.0,
       "recall_pct": 95.25,
       "f1_score_pct": 97.57,
       "fpr_pct": 0.0,
-      "avg_latency_ms": 17.763,
+      "avg_latency_ms": 16.098,
       "confusion_matrix": {
         "tp": 762,
         "fp": 0,

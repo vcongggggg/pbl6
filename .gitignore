@@ -92,4 +92,5 @@ issue_*_body.txt
 
 # Benchmark temp datasets
 data/benchmark_*.csv
+!data/benchmark_1000_diverse.csv
 data/benchmarks/
