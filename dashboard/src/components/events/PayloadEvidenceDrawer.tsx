@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import {
   X,
+  Layers,
   ShieldAlert,
   Code2,
   Binary,
@@ -22,12 +23,14 @@ interface PayloadEvidenceDrawerProps {
   event: SecurityEventItem | null;
   onClose: () => void;
   onOpenExplainModal?: (event: SecurityEventItem) => void;
+  onOpenSessionTimeline?: (clientIp: string) => void;
 }
 
 export const PayloadEvidenceDrawer: React.FC<PayloadEvidenceDrawerProps> = ({
   event,
   onClose,
   onOpenExplainModal,
+  onOpenSessionTimeline,
 }) => {
   const [activeTab, setActiveTab] = useState<"rule" | "vector">("rule");
   const [copiedKey, setCopiedKey] = useState<string | null>(null);

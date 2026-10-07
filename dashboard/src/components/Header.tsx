@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Shield, RefreshCw, Trash2, Activity, Sparkles } from "lucide-react";
+import { Shield, RefreshCw, Trash2, Activity, Sparkles, Layers } from "lucide-react";
 import { DashboardStats } from "@/types/dashboard";
 
 interface HeaderProps {
@@ -16,6 +16,7 @@ interface HeaderProps {
   isResetting: boolean;
   isSeeding: boolean;
   isTogglingWaf: boolean;
+  onOpenAttackSessions?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -30,6 +31,7 @@ export const Header: React.FC<HeaderProps> = ({
   isResetting,
   isSeeding,
   isTogglingWaf,
+  onOpenAttackSessions,
 }) => {
   const targetReachable = stats?.target_status === "ok";
 
@@ -101,6 +103,19 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* Header Actions & Smart Polling Controls */}
       <div className="flex items-center gap-3">
+        {/* Attack Sessions Correlation Trigger (Master Plan B4) */}
+        {onOpenAttackSessions && (
+          <button
+            id="btn-attack-sessions"
+            onClick={onOpenAttackSessions}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-950/60 hover:bg-red-900/70 border border-red-700/60 text-red-200 text-xs font-mono font-semibold shadow-[0_0_15px_rgba(239,68,68,0.2)] transition active:scale-95 cursor-pointer"
+            title="Xem chuỗi sự kiện phiên tấn công theo Kill Chain (Master Plan B4)"
+          >
+            <Layers className="w-3.5 h-3.5 text-red-400 animate-pulse" />
+            <span>Attack Sessions</span>
+          </button>
+        )}
+
         {/* Manual Refresh */}
         <button
           id="btn-refresh"

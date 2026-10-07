@@ -5,6 +5,7 @@ import {
   EventsResponse,
   SimulateResult,
   TimelinePoint,
+  AttackSessionsResponse,
 } from "@/types/dashboard";
 
 let cachedRuntimeConfig: { backendUrl: string; adminApiKey: string } | null = null;
@@ -158,6 +159,29 @@ export async function toggleWafMode(): Promise<{ status: string; waf_mode: strin
   });
   if (!res.ok) {
     throw new Error(`Failed to toggle WAF mode: HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
+
+export async function fetchAttackSessions(params: {
+  page?: number;
+  limit?: number;
+  client_ip?: string;
+  stage?: string;
+} = {}): Promise<AttackSessionsResponse> {
+  const apiBase = await getApiBase();
+  const query = new URLSearchParams();
+  if (params.page) query.set("page", params.page.toString());
+  if (params.limit) query.set("limit", params.limit.toString());
+  if (params.client_ip && params.client_ip.trim()) query.set("client_ip", params.client_ip.trim());
+  if (params.stage && params.stage !== "ALL") query.set("stage", params.stage);
+
+  const res = await fetch(`${apiBase}/api/dashboard/sessions?${query.toString()}`, {
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    throw new Error(`Failed to fetch attack sessions: HTTP ${res.status}`);
   }
   return res.json();
 }
