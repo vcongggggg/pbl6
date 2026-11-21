@@ -65,3 +65,39 @@ export interface SimulateResult {
   request_id?: string;
   message: string;
 }
+
+export interface ArenaRound {
+  round_num: number;
+  attack_type: string;
+  endpoint: string;
+  technique: string;
+  payload: string;
+  original_payload?: string;
+  response_status: number;
+  waf_threat_score: number;
+  waf_decision: string;
+  latency_ms: number;
+  winner: "RED_TEAM" | "BLUE_TEAM";
+  evasion_score?: number;
+  details?: Record<string, any>;
+}
+
+export interface ArenaBattleResult {
+  battle_id: string;
+  timestamp: string;
+  campaign: string;
+  total_rounds: number;
+  blocked_count: number;
+  bypass_count: number;
+  winner: string;
+  avg_threat_score: number;
+  rounds: ArenaRound[];
+}
+
+export interface ArenaHistoryResponse {
+  total_battles: number;
+  red_wins: number;
+  blue_wins: number;
+  battles: ArenaBattleResult[];
+}
+

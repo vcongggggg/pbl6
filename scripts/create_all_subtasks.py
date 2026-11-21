@@ -170,7 +170,7 @@ ALL_SUBTASKS = [
     },
     {
         "title": "[Task 10.4] Attack Campaign Runner CLI & AI Arena Visualization",
-        "body": "### Mục tiêu\nCLI runner chạy chiến dịch kiểm thử tự động và màn hình đối kháng trực tiếp trên Dashboard.\n\n### Phân công\n- **Phụ trách:** Thành viên B & A\n- **Deliverable:** `attack-lab/runner.py`, `dashboard/src/app/arena/page.tsx`",
+        "body": "### Bối cảnh & Mục tiêu\nXây dựng CLI runner điều phối chiến dịch kiểm thử tự động (tích hợp AttackPlanner và EvasionEngine) và màn hình đối kháng trực tiếp AI Arena trên Dashboard để trực quan hóa luồng tấn công vs phòng thủ thời gian thực.\n\n### Phân công & Deliverables\n- **Phụ trách:** Thành viên B (Runner CLI & Chiến dịch) & Thành viên A (Giao diện AI Arena)\n- **Deliverables:** `attack-lab/runner.py`, `dashboard/src/app/arena/page.tsx`\n- **Parent Issue:** #11 (Phase 10)",
         "labels": ["phase-10", "attack-lab", "offensive-ai", "member-b", "member-a"]
     },
 

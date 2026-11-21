@@ -106,8 +106,8 @@ Tài liệu phân rã chi tiết toàn bộ các giai đoạn (Phase 0 → Phase
 | :--- | :---: | :--- | :---: | :--- |
 | **`TASK-10.1`**| `#39` | **Module Thăm Dò Cấu Trúc API (Reconnaissance):** Tác nhân tự động đọc OpenAPI spec của vulnerable-api (Máy 1) qua mạng LAN để lập danh sách endpoint và tham số mục tiêu. | **Thành viên B** | `attack-lab/agent/recon.py` |
 | **`TASK-10.2`**| `#40` | **Môi Trường Mô Phỏng Tấn Công & Lập Kế Hoạch Chuỗi (Attack Graph / RL Environment):** Dựng đồ thị tấn công API (State Space, Action Space, Reward Function) phục vụ tác nhân AI đối kháng WAF. | **Thành viên B** | `attack-lab/agent/planner.py`, `attack-lab/environment/` |
-| **`TASK-10.3`**| `#41` | **Huấn Luyện Mô Hình Né Tránh WAF Bằng PyTorch (Deep RL DQN / Evasion Model):** Tự xây dựng & huấn luyện mạng nơ-ron bằng **PyTorch** tự học chính sách biến dị payload khi bị WAF chặn 403, xuất `evasion_agent.pt`. **100% In-house, KHÔNG dùng OpenAI API.** | **Thành viên B** | `attack-lab/models/evasion_agent.pt`, `attack-lab/agent/evasion.py` |
-| **`TASK-10.4`**| `#42` | **Giao Diện Đấu Trường AI (AI Arena) & Runner:** CLI runner chạy chiến dịch kiểm thử tự động từ Máy 2 và màn hình đối kháng trực tiếp trên Dashboard. | **Thành viên B & A** | `attack-lab/runner.py`, `dashboard/src/components/arena/` |
+| **`TASK-10.3`**| `#41` | **Tác Tử Né Tránh Tích Hợp Công Cụ & Biến Dị Payload (Tool-Augmented Evasion Engine):** Xây dựng tác tử Red Team điều phối công cụ DAST (`sqlmapapi`, HTTP Dispatcher) và động cơ biến dị cú pháp (URL Double Encode, Inline Comment `/**/`, Case Randomization) tự động thích ứng khi bị WAF chặn 403. | **Thành viên B** | `attack-lab/agent/tools.py`, `attack-lab/agent/evasion.py` |
+| **`TASK-10.4`**| `#42` | **Giao Diện Đấu Trường AI (AI Arena) & Runner:** CLI runner chạy chiến dịch kiểm thử tự động (kết hợp Planner & Evasion) từ Máy 2 và màn hình đối kháng trực quan thời gian thực AI Arena trên Dashboard. | **Thành viên B & A** | `attack-lab/runner.py`, `dashboard/src/components/arena/` |
 
 ---
 
