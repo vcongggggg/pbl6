@@ -60,6 +60,56 @@ export interface AttackDistributionItem {
   color: string;
 }
 
+export interface ProtocolDistributionItem {
+  name: string;
+  key: string;
+  count: number;
+  percentage: number;
+  color: string;
+  description?: string;
+}
+
+export interface CyberRangeTopology {
+  red_team: {
+    name: string;
+    ip: string;
+    role: string;
+    status: string;
+    agent_model: string;
+    attacks_generated: number;
+  };
+  network: {
+    type: string;
+    subnet: string;
+    rtt_latency_ms: number;
+    jitter_ms: number;
+    packet_loss_pct: number;
+    status: string;
+  };
+  blue_team: {
+    name: string;
+    ip: string;
+    waf_port: number;
+    mode: string;
+    pipeline: string;
+    inspected_count: number;
+    blocked_count: number;
+  };
+  target_api: {
+    name: string;
+    port: number;
+    url: string;
+    status: string;
+    flaws_monitored: string[];
+  };
+  soc_monitoring: {
+    name: string;
+    port: number;
+    url: string;
+    status: string;
+  };
+}
+
 export interface SimulateResult {
   status: string;
   simulated: string;

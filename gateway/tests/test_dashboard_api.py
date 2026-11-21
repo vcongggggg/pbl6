@@ -16,7 +16,7 @@ def test_dashboard_stats_empty(client: TestClient):
     # Reset first
     client.post("/dashboard/reset-demo", headers=ADMIN_HEADERS)
 
-    res = client.get("/dashboard/stats")
+    res = client.get("/dashboard/stats", headers=ADMIN_HEADERS)
     assert res.status_code == 200
     data = res.json()
     assert data["total_requests"] == 0
@@ -86,26 +86,26 @@ def test_dashboard_events_and_filters(client: TestClient):
         db.close()
 
     # List all
-    res = client.get("/dashboard/events")
+    res = client.get("/dashboard/events", headers=ADMIN_HEADERS)
     assert res.status_code == 200
     data = res.json()
     assert data["total"] >= 2
     assert len(data["items"]) >= 2
 
     # Filter severity CRITICAL
-    res_crit = client.get("/dashboard/events?severity=CRITICAL")
+    res_crit = client.get("/dashboard/events?severity=CRITICAL", headers=ADMIN_HEADERS)
     assert res_crit.status_code == 200
     data_crit = res_crit.json()
     assert all(item["severity"] == "CRITICAL" for item in data_crit["items"])
 
     # Filter attack_type XSS
-    res_xss = client.get("/dashboard/events?attack_type=XSS")
+    res_xss = client.get("/dashboard/events?attack_type=XSS", headers=ADMIN_HEADERS)
     assert res_xss.status_code == 200
     data_xss = res_xss.json()
     assert all(item["attack_type"] == "XSS" for item in data_xss["items"])
 
     # Search query
-    res_q = client.get("/dashboard/events?q=192.168.1.100")
+    res_q = client.get("/dashboard/events?q=192.168.1.100", headers=ADMIN_HEADERS)
     assert res_q.status_code == 200
     data_q = res_q.json()
     assert any(item["client_ip"] == "192.168.1.100" for item in data_q["items"])
@@ -113,7 +113,7 @@ def test_dashboard_events_and_filters(client: TestClient):
 
 def test_dashboard_timeline(client: TestClient):
     """Verifies timeline endpoint returns formatted list."""
-    res = client.get("/dashboard/timeline?minutes=60")
+    res = client.get("/dashboard/timeline?minutes=60", headers=ADMIN_HEADERS)
     assert res.status_code == 200
     data = res.json()
     assert isinstance(data, list)
@@ -121,7 +121,7 @@ def test_dashboard_timeline(client: TestClient):
 
 def test_dashboard_distribution(client: TestClient):
     """Verifies distribution endpoint returns all 4 attack families."""
-    res = client.get("/dashboard/distribution")
+    res = client.get("/dashboard/distribution", headers=ADMIN_HEADERS)
     assert res.status_code == 200
     data = res.json()
     assert isinstance(data, list)
@@ -190,7 +190,7 @@ def test_dashboard_seed_demo(client: TestClient):
     assert data["family_breakdown"]["COMMAND_INJECTION"] > 0
 
     # Verify stats reflect seeded data
-    res_stats = client.get("/dashboard/stats")
+    res_stats = client.get("/dashboard/stats", headers=ADMIN_HEADERS)
     assert res_stats.status_code == 200
     stats = res_stats.json()
     assert stats["attacks_detected"] == 36
@@ -206,7 +206,7 @@ def test_dashboard_toggle_waf_mode(client: TestClient):
     assert mode1 in ("ACTIVE_BLOCKING", "MONITOR_ONLY")
 
     # Verify reflected in stats
-    stats1 = client.get("/dashboard/stats").json()
+    stats1 = client.get("/dashboard/stats", headers=ADMIN_HEADERS).json()
     assert stats1["waf_mode"] == mode1
 
     # Second toggle -> flips back
@@ -215,5 +215,52 @@ def test_dashboard_toggle_waf_mode(client: TestClient):
     mode2 = res2.json()["waf_mode"]
     assert mode2 != mode1
     assert mode2 in ("ACTIVE_BLOCKING", "MONITOR_ONLY")
+
+
+def test_dashboard_protocols_distribution(client: TestClient):
+    """Verifies protocols endpoint returns all 5 canonical API protocols."""
+    res = client.get("/dashboard/protocols", headers=ADMIN_HEADERS)
+    assert res.status_code == 200
+    data = res.json()
+    assert isinstance(data, list)
+    assert len(data) == 5
+    keys = {d["key"] for d in data}
+    assert "REST" in keys
+    assert "GRAPHQL" in keys
+    assert "SOAP_XML" in keys
+    assert "JSON_RPC" in keys
+    assert "GENERIC_WEB" in keys
+
+
+def test_dashboard_cyber_range_topology(client: TestClient):
+    """Verifies cyber range topology endpoint returns complete Ref 17 node structure."""
+    res = client.get("/dashboard/topology", headers=ADMIN_HEADERS)
+    assert res.status_code == 200
+    data = res.json()
+    assert "red_team" in data
+    assert "network" in data
+    assert "blue_team" in data
+    assert "target_api" in data
+    assert data["network"]["rtt_latency_ms"] > 0.0
+    assert data["red_team"]["ip"] == "192.168.1.50"
+    assert data["blue_team"]["ip"] == "192.168.1.10"
+
+
+def test_dashboard_unauthenticated_requests_return_401(client: TestClient):
+    """Verifies all GET dashboard endpoints require admin authentication (SEC-PBL6-004)."""
+    endpoints = [
+        "/dashboard/stats",
+        "/dashboard/events",
+        "/dashboard/timeline?minutes=60",
+        "/dashboard/distribution",
+        "/dashboard/protocols",
+        "/dashboard/topology",
+        "/dashboard/sessions",
+    ]
+    for ep in endpoints:
+        res = client.get(ep)
+        assert res.status_code == 401, f"Expected 401 for unauthenticated GET {ep}, got {res.status_code}"
+
+
 
 

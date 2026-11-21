@@ -13,9 +13,9 @@ def get_command_injection_rules() -> list[RegexRule]:
             description="Shell Metacharacter Command Chaining",
             rationale=(
                 "Detects shell metacharacters (; | && ||) chained with core OS utilities "
-                "(whoami, id, uname, cat, etc.)."
+                "(whoami, id, uname, cat, env, printenv, ls, dir, head, tail, sh, bash, python, etc.)."
             ),
-            pattern=r"""(?i)(?:[;&|`]\s*(?:whoami|id|uname\s+-a|cat\s+[/\\]etc|netstat|ifconfig|ipconfig|hostname)\b)""",
+            pattern=r"""(?i)(?:[;&|`]\s*(?:whoami|id|uname(?:\s+-a)?|cat(?:\s+[/\\]etc)?|netstat|ifconfig|ipconfig|hostname|env|printenv|ls|dir|head|tail|sh|bash|python|python3|perl|php|ruby|awk|sed|sleep|curl|wget|base64)\b)""",
         ),
         RegexRule(
             rule_id="CMD-002",
@@ -24,7 +24,7 @@ def get_command_injection_rules() -> list[RegexRule]:
             confidence=0.95,
             description="Subshell and Backtick Command Substitution",
             rationale="Detects $() or backtick command substitution evaluating shell binaries.",
-            pattern=r"""(?i)(?:\$\((?:whoami|id|cat|uname|ls|dir|pwd|curl|wget)\b|`\s*(?:whoami|id|cat|uname|ls|dir|pwd|curl|wget)\b[^`]*`)""",
+            pattern=r"""(?i)(?:\$\((?:whoami|id|cat|uname|ls|dir|pwd|curl|wget|env|printenv|head|tail|sh|bash|python|python3|perl|php|ruby|awk|sed|sleep|base64)\b|`\s*(?:whoami|id|cat|uname|ls|dir|pwd|curl|wget|env|printenv|head|tail|sh|bash|python|python3|perl|php|ruby|awk|sed|sleep|base64)\b[^`]*`)""",
         ),
         RegexRule(
             rule_id="CMD-003",

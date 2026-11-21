@@ -12,6 +12,11 @@ from app.security.anomaly import AnomalyDetector, get_anomaly_detector
 from app.security.decision import DecisionEngine, PolicyAction
 from app.security.engine import RuleEngine
 from app.security.ml_detector import MLDetector
+from app.security.models import DetectionResult
+from app.security.protocol_detector import (
+    ApiProtocolDetector,
+    UniversalPayloadExtractor,
+)
 from app.security.rate_limiter import SlidingWindowRateLimiter
 from app.security.risk_engine import RiskEngine
 from app.security.schema_validator import SchemaValidator, SchemaViolation
@@ -108,7 +113,60 @@ async def proxy_endpoint(
     )
     client_ip = request.client.host if request.client else "127.0.0.1"
     user_agent = request.headers.get("user-agent")
-    body_bytes = await request.body()
+    # SEC-PBL6-002: Check Content-Length and stream body with cumulative byte counter
+    # Defends against chunked transfer-encoding OOM attacks without Content-Length
+    content_length_header = request.headers.get("content-length")
+    if content_length_header:
+        try:
+            content_length = int(content_length_header)
+            if content_length > settings.max_request_body_bytes:
+                body_resp = json.dumps({
+                    "type": "https://tools.ietf.org/html/rfc7231#section-6.5.11",
+                    "title": "Payload Too Large",
+                    "status": 413,
+                    "detail": f"Request body size exceeds maximum limit of {settings.max_request_body_bytes} bytes",
+                    "request_id": request_id,
+                }).encode("utf-8")
+                return Response(
+                    content=body_resp,
+                    status_code=413,
+                    media_type="application/problem+json",
+                    headers={
+                        "X-Request-ID": request_id,
+                        "X-WAF-Decision": "BLOCK",
+                        "X-WAF-Block-Reason": "BODY_TOO_LARGE",
+                    },
+                )
+        except ValueError:
+            pass
+
+    body_chunks: list[bytes] = []
+    total_bytes = 0
+    max_bytes = settings.max_request_body_bytes
+
+    async for chunk in request.stream():
+        total_bytes += len(chunk)
+        if total_bytes > max_bytes:
+            body_resp = json.dumps({
+                "type": "https://tools.ietf.org/html/rfc7231#section-6.5.11",
+                "title": "Payload Too Large",
+                "status": 413,
+                "detail": f"Request body size exceeds maximum limit of {max_bytes} bytes",
+                "request_id": request_id,
+            }).encode("utf-8")
+            return Response(
+                content=body_resp,
+                status_code=413,
+                media_type="application/problem+json",
+                headers={
+                    "X-Request-ID": request_id,
+                    "X-WAF-Decision": "BLOCK",
+                    "X-WAF-Block-Reason": "BODY_TOO_LARGE",
+                },
+            )
+        body_chunks.append(chunk)
+
+    body_bytes = b"".join(body_chunks)
     query_str = str(request.url.query) if request.url.query else None
 
     # 2. Check active runtime WAF Mode (persisted in SQLite, fallback to env)
@@ -222,7 +280,8 @@ async def proxy_endpoint(
 
                 return response
 
-    detection_result = None
+    detection_result = DetectionResult()
+    rule_failed = False
 
     # 4. Inspect request through signature Rule Engine
     try:
@@ -233,6 +292,7 @@ async def proxy_endpoint(
             body_bytes=body_bytes,
         )
     except Exception as sec_err:
+        rule_failed = True
         logger.error(f"Security inspection failed for request [{request_id}]: {sec_err}")
 
     # 4.1 Positive Security Model: OpenAPI Schema Validation (Master Plan B1)
@@ -296,9 +356,21 @@ async def proxy_endpoint(
                     },
                 )
 
-    # 5. Task 5.4 & Task 6.4: AI/ML Inference (Supervised ML Classifier & Unsupervised Isolation Forest)
-    body_text = body_bytes.decode("utf-8", errors="ignore") if body_bytes else ""
-    payload_content = f"/{path} {query_str or ''} {body_text}".strip()
+    # 5. Task 5.4 & Task 6.4: Multi-Protocol Web API Sniffer & Protocol-Specific Decapsulation (REST / GraphQL / SOAP / JSON-RPC)
+    api_protocol = ApiProtocolDetector.classify_protocol(
+        path=f"/{path}",
+        headers=dict(request.headers),
+        body_bytes=body_bytes,
+        query_params=query_str,
+    )
+    extracted_api = UniversalPayloadExtractor.extract(
+        protocol=api_protocol,
+        path=f"/{path}",
+        query_params=query_str,
+        headers=dict(request.headers),
+        body_bytes=body_bytes,
+    )
+    payload_content = extracted_api.canonical_payload or f"/{path}"
     ml_result = ml_detector.predict(payload_content)
 
     # ML Fail-Safe Handling (Master Plan A3):
@@ -329,6 +401,15 @@ async def proxy_endpoint(
             round(risk_breakdown.weighted_score + float(settings.ml_unavailable_risk_penalty), 2),
         )
 
+    if rule_failed:
+        logger.warning(
+            f"Rule engine inspection failed for request [{request_id}]. Applying fail-closed risk penalty: +25.0"
+        )
+        risk_breakdown.weighted_score = min(
+            100.0,
+            round(risk_breakdown.weighted_score + 25.0, 2),
+        )
+
     if settings.schema_validation_enabled and schema_violations:
         logger.info(
             f"Applying Positive Security risk penalty: +{settings.schema_violation_penalty} to request [{request_id}]"
@@ -337,6 +418,12 @@ async def proxy_endpoint(
             100.0,
             round(risk_breakdown.weighted_score + float(settings.schema_violation_penalty), 2),
         )
+
+    if extracted_api.is_protocol_anomaly:
+        logger.warning(
+            f"Protocol anomaly flagged on [{api_protocol.value}]: {extracted_api.protocol_alert} for request [{request_id}]"
+        )
+        risk_breakdown.weighted_score = max(risk_breakdown.weighted_score, 88.0)
 
     # 7. Phase 7: Evaluate Multi-Threshold Policy Decision
     decision = decision_engine.evaluate(
@@ -380,6 +467,9 @@ async def proxy_endpoint(
             details_extra={
                 "decision": decision.action.value,
                 "reason": decision.reason,
+                "api_protocol": api_protocol.value,
+                "protocol_alert": extracted_api.protocol_alert,
+                "is_protocol_anomaly": extracted_api.is_protocol_anomaly,
                 "schema_violations": [v.to_dict() for v in schema_violations] if schema_violations else [],
                 "breakdown": risk_breakdown.to_dict(),
                 "ml_inference": ml_result.to_dict() if ml_result.model_loaded else {"status": "unavailable", "fail_safe_penalty": settings.ml_unavailable_risk_penalty},
@@ -390,7 +480,7 @@ async def proxy_endpoint(
         )
 
     # 7. Enforcement: Block with 403 Forbidden or forward to upstream
-    if decision.is_blocked and detection_result:
+    if decision.is_blocked:
         if detection_result.attack_families:
             primary_family = detection_result.attack_families[0].value
         elif anomaly_result and anomaly_result.is_anomaly:
@@ -424,6 +514,7 @@ async def proxy_endpoint(
             "X-WAF-Decision": decision.action.value,
             "X-WAF-Risk-Score": str(decision.risk_score),
             "X-WAF-Mode": active_waf_mode,
+            "X-WAF-API-Protocol": api_protocol.value,
         }
         if ml_result and ml_result.model_loaded:
             block_headers["X-WAF-ML-Score"] = str(ml_result.risk_score)
@@ -453,6 +544,7 @@ async def proxy_endpoint(
         response.headers["X-WAF-Action"] = decision.action.value
         response.headers["X-WAF-Decision"] = decision.action.value
         response.headers["X-WAF-Risk-Score"] = str(decision.risk_score)
+        response.headers["X-WAF-API-Protocol"] = api_protocol.value
         if rate_limit_result:
             response.headers["X-RateLimit-Limit"] = str(rate_limit_result.limit)
             response.headers["X-RateLimit-Remaining"] = str(rate_limit_result.remaining)

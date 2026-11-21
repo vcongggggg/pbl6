@@ -2,7 +2,7 @@ import hashlib
 import math
 import threading
 import time
-from collections import defaultdict, deque
+from collections import OrderedDict, deque
 from dataclasses import dataclass
 from typing import Any
 
@@ -48,6 +48,7 @@ class SlidingWindowRateLimiter:
       - NIST SP 800-115 Automated Attack Mitigation & HTTP 429 Retry-After
       - Repeat Offender Defense: Exponential Backoff Throttling (600s cycle)
       - Anti-NAT Collision Defense: Fingerprint & Session-Aware Composite Scoping
+      - Hardened Dual-Tier Limiting: IP-level Hard Cap + Fingerprint LRU (SEC-PBL6-001)
     """
 
     DEFAULT_WINDOW_SECONDS: float = 60.0
@@ -60,6 +61,7 @@ class SlidingWindowRateLimiter:
     VIOLATION_WINDOW_SECONDS: float = 600.0  # 10 minutes tracking window for repeat offenders
     BASE_BACKOFF_RETRY_AFTER: int = 120      # Base backoff for 3rd violation (seconds)
     MAX_BACKOFF_RETRY_AFTER: int = 900       # Maximum backoff penalty cap (15 minutes)
+    MAX_TRACKED_KEYS: int = 50000            # LRU bound to eliminate unbounded memory DoS
 
     def __init__(
         self,
@@ -73,8 +75,8 @@ class SlidingWindowRateLimiter:
         self.sensitive_limits = (
             dict(sensitive_limits) if sensitive_limits is not None else dict(self.DEFAULT_SENSITIVE_LIMITS)
         )
-        self._records: dict[str, deque[float]] = defaultdict(deque)
-        self._violation_history: dict[str, deque[float]] = defaultdict(deque)
+        self._records: OrderedDict[str, deque[float]] = OrderedDict()
+        self._violation_history: OrderedDict[str, deque[float]] = OrderedDict()
         self._lock = threading.Lock()
 
     def resolve_scope(self, path: str) -> str:
@@ -118,15 +120,9 @@ class SlidingWindowRateLimiter:
     ) -> RateLimitResult:
         """Checks whether the client IP / fingerprint has exceeded the allowed request frequency.
 
-        Args:
-            client_ip: Client's remote IP address.
-            path: Target request path.
-            risk_penalty: If True (e.g. from Phase 7 RATE_LIMIT score 60-80),
-                          applies 50% stricter quota to the client.
-            custom_limit: Optional override for rate limit quota.
-            now: Optional timestamp override for deterministic testing.
-            session_id: Optional authenticated session ID or Bearer token hash.
-            user_agent: Optional Client User-Agent string for device fingerprinting.
+        Enforces a hardened 2-tier check (SEC-PBL6-001):
+          Tier 1: IP-level Hard Cap (effective_limit for auth; 3 * effective_limit for others)
+          Tier 2: Composite Session/Fingerprint key limit
         """
         if now is None:
             now = time.time()
@@ -134,40 +130,67 @@ class SlidingWindowRateLimiter:
         scope = self.resolve_scope(path)
         base_limit = custom_limit if custom_limit is not None else self.sensitive_limits.get(scope, self.default_limit)
 
-        # Apply risk penalty if flagged by Decision Engine
         if risk_penalty:
             effective_limit = max(1, base_limit // 2)
         else:
             effective_limit = max(1, base_limit)
 
-        key = self.generate_tracking_key(client_ip, scope, session_id, user_agent)
+        ip_cap = effective_limit if scope == "auth" else effective_limit * 3
+        ip_key = f"{client_ip}::__ip_cap__::{scope}"
+        fp_key = self.generate_tracking_key(client_ip, scope, session_id, user_agent)
         window_start = now - self.window_seconds
 
         with self._lock:
-            timestamps = self._records[key]
+            # 1. IP Hard Cap evaluation
+            ip_timestamps = self._records.get(ip_key)
+            if ip_timestamps is not None:
+                while ip_timestamps and ip_timestamps[0] <= window_start:
+                    ip_timestamps.popleft()
+                ip_count = len(ip_timestamps)
+            else:
+                ip_count = 0
 
-            # 1. Evict expired timestamps older than window_start
-            while timestamps and timestamps[0] <= window_start:
-                timestamps.popleft()
+            # 2. Fingerprint evaluation
+            if fp_key != ip_key:
+                fp_timestamps = self._records.get(fp_key)
+                if fp_timestamps is not None:
+                    while fp_timestamps and fp_timestamps[0] <= window_start:
+                        fp_timestamps.popleft()
+                    fp_count = len(fp_timestamps)
+                else:
+                    fp_count = 0
+            else:
+                fp_timestamps = ip_timestamps
+                fp_count = ip_count
 
-            current_count = len(timestamps)
+            is_ip_limited = ip_count >= ip_cap
+            is_fp_limited = fp_count >= effective_limit
 
-            # 2. Check threshold
-            if current_count >= effective_limit:
+            if is_ip_limited or is_fp_limited:
                 # Record violation in IP repeat offender tracking history
+                if client_ip not in self._violation_history:
+                    if len(self._violation_history) >= self.MAX_TRACKED_KEYS:
+                        self._violation_history.popitem(last=False)
+                    self._violation_history[client_ip] = deque()
                 viol_deq = self._violation_history[client_ip]
-                # Evict violations older than 10-minute violation window
+                self._violation_history.move_to_end(client_ip)
+
                 while viol_deq and viol_deq[0] <= (now - self.VIOLATION_WINDOW_SECONDS):
                     viol_deq.popleft()
                 viol_deq.append(now)
-
                 num_violations = len(viol_deq)
 
-                # Base retry-after based on oldest timestamp in sliding window
-                oldest = timestamps[0]
-                base_retry_after = max(1, math.ceil(oldest + self.window_seconds - now))
+                active_key = ip_key if is_ip_limited else fp_key
+                active_limit = ip_cap if is_ip_limited else effective_limit
+                active_count = ip_count if is_ip_limited else fp_count
+                ts_to_check = ip_timestamps if is_ip_limited else fp_timestamps
 
-                # Apply Exponential Backoff if >= 3 violations within 10 minutes
+                if ts_to_check and len(ts_to_check) > 0:
+                    oldest = ts_to_check[0]
+                    base_retry_after = max(1, math.ceil(oldest + self.window_seconds - now))
+                else:
+                    base_retry_after = max(1, math.ceil(self.window_seconds))
+
                 if num_violations >= 3:
                     multiplier = 2 ** (num_violations - 3)
                     backoff = min(self.MAX_BACKOFF_RETRY_AFTER, self.BASE_BACKOFF_RETRY_AFTER * multiplier)
@@ -177,22 +200,37 @@ class SlidingWindowRateLimiter:
 
                 return RateLimitResult(
                     is_limited=True,
-                    current_count=current_count,
-                    limit=effective_limit,
+                    current_count=active_count,
+                    limit=active_limit,
                     remaining=0,
                     retry_after=retry_after,
                     window_seconds=self.window_seconds,
                     scope=scope,
                     client_ip=client_ip,
-                    tracking_key=key,
+                    tracking_key=active_key,
                     violations_count=num_violations,
                 )
 
-            # 3. Allow request: record current timestamp
-            timestamps.append(now)
-            remaining = max(0, effective_limit - len(timestamps))
+            # Request allowed: update both keys in LRU order
+            if ip_key not in self._records:
+                if len(self._records) >= self.MAX_TRACKED_KEYS:
+                    self._records.popitem(last=False)
+                self._records[ip_key] = deque()
+            self._records[ip_key].append(now)
+            self._records.move_to_end(ip_key)
 
-            # Evict expired violations for current IP if any
+            if fp_key != ip_key:
+                if fp_key not in self._records:
+                    if len(self._records) >= self.MAX_TRACKED_KEYS:
+                        self._records.popitem(last=False)
+                    self._records[fp_key] = deque()
+                self._records[fp_key].append(now)
+                self._records.move_to_end(fp_key)
+
+            remaining_fp = max(0, effective_limit - len(self._records[fp_key]))
+            remaining_ip = max(0, ip_cap - len(self._records[ip_key]))
+            remaining = min(remaining_fp, remaining_ip)
+
             if client_ip in self._violation_history:
                 viol_deq = self._violation_history[client_ip]
                 while viol_deq and viol_deq[0] <= (now - self.VIOLATION_WINDOW_SECONDS):
@@ -200,14 +238,14 @@ class SlidingWindowRateLimiter:
 
             return RateLimitResult(
                 is_limited=False,
-                current_count=len(timestamps),
+                current_count=len(self._records[fp_key]),
                 limit=effective_limit,
                 remaining=remaining,
                 retry_after=0,
                 window_seconds=self.window_seconds,
                 scope=scope,
                 client_ip=client_ip,
-                tracking_key=key,
+                tracking_key=fp_key,
                 violations_count=len(self._violation_history.get(client_ip, [])),
             )
 
@@ -235,9 +273,8 @@ class SlidingWindowRateLimiter:
         removed_count = 0
 
         with self._lock:
-            # 1. Clean sliding window records
             keys_to_delete = []
-            for key, timestamps in self._records.items():
+            for key, timestamps in list(self._records.items()):
                 while timestamps and timestamps[0] <= (now - self.window_seconds):
                     timestamps.popleft()
                 if not timestamps or timestamps[-1] < expiry_boundary:
@@ -247,9 +284,8 @@ class SlidingWindowRateLimiter:
                 del self._records[key]
                 removed_count += 1
 
-            # 2. Clean repeat offender violation histories
             viol_keys_to_delete = []
-            for ip, viol_deq in self._violation_history.items():
+            for ip, viol_deq in list(self._violation_history.items()):
                 while viol_deq and viol_deq[0] <= viol_boundary:
                     viol_deq.popleft()
                 if not viol_deq:

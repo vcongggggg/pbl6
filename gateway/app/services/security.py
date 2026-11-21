@@ -52,7 +52,7 @@ class SecurityEventService:
         db: Session,
         request_id: str,
         client_ip: str,
-        detection_result: DetectionResult,
+        detection_result: DetectionResult | None = None,
         timestamp: datetime.datetime | None = None,
         action: str = "DETECTED",
         risk_score: float | None = None,
@@ -63,6 +63,7 @@ class SecurityEventService:
         attack_type_override: str | None = None,
     ) -> SecurityEvent | None:
         """Persists security event record if an attack signature was matched or risk detected."""
+        detection_result = detection_result or DetectionResult()
         is_rule_attack = bool(detection_result.is_attack and detection_result.matches)
         is_elevated_risk = (
             action in ("BLOCKED", "MONITOR", "RATE_LIMIT")

@@ -1,6 +1,8 @@
 ﻿import { config } from "@/config/env";
 import {
   AttackDistributionItem,
+  ProtocolDistributionItem,
+  CyberRangeTopology,
   DashboardStats,
   EventsResponse,
   SimulateResult,
@@ -8,35 +10,20 @@ import {
   AttackSessionsResponse,
 } from "@/types/dashboard";
 
-let cachedRuntimeConfig: { backendUrl: string; adminApiKey: string } | null = null;
+let cachedRuntimeConfig: { backendUrl: string } | null = null;
 
 /**
- * Resolves API Gateway backend URL and admin key at runtime (Master Plan A6).
- * Caches result in module memory for subsequent calls.
+ * Resolves API Gateway backend URL at runtime (Master Plan A6 / SEC-PBL6-004).
+ * In the browser, all dashboard requests route through the Next.js Server-Side BFF
+ * proxy (/api/gateway) which attaches administrative credentials server-side,
+ * eliminating client-side API key leakage.
  */
-export async function getRuntimeConfig(): Promise<{ backendUrl: string; adminApiKey: string }> {
+export async function getRuntimeConfig(): Promise<{ backendUrl: string }> {
   if (cachedRuntimeConfig) {
     return cachedRuntimeConfig;
   }
 
-  let backendUrl = config.apiBaseUrl.replace(/\/$/, "");
-  const adminApiKey = config.adminApiKey;
-
-  if (typeof window !== "undefined") {
-    try {
-      const res = await fetch("/api/config", { cache: "no-store" });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.backendUrl) {
-          backendUrl = data.backendUrl.replace(/\/$/, "");
-        }
-      }
-    } catch (err) {
-      console.warn("Failed to fetch /api/config, falling back to build-time config", err);
-    }
-  }
-
-  cachedRuntimeConfig = { backendUrl, adminApiKey };
+  cachedRuntimeConfig = { backendUrl: "/api/gateway" };
   return cachedRuntimeConfig;
 }
 
@@ -46,12 +33,7 @@ export async function getApiBase(): Promise<string> {
 }
 
 async function getAdminHeaders(): Promise<HeadersInit> {
-  const conf = await getRuntimeConfig();
-  const headers: Record<string, string> = { "Content-Type": "application/json" };
-  if (conf.adminApiKey) {
-    headers["X-API-Key"] = conf.adminApiKey;
-  }
-  return headers;
+  return { "Content-Type": "application/json" };
 }
 
 export async function fetchDashboardStats(): Promise<DashboardStats> {
@@ -106,6 +88,28 @@ export async function fetchDashboardDistribution(): Promise<AttackDistributionIt
   });
   if (!res.ok) {
     throw new Error(`Failed to fetch distribution: HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function fetchDashboardProtocols(): Promise<ProtocolDistributionItem[]> {
+  const apiBase = await getApiBase();
+  const res = await fetch(`${apiBase}/api/dashboard/protocols`, {
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    throw new Error(`Failed to fetch protocol distribution: HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function fetchCyberRangeTopology(): Promise<CyberRangeTopology> {
+  const apiBase = await getApiBase();
+  const res = await fetch(`${apiBase}/api/dashboard/topology`, {
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    throw new Error(`Failed to fetch cyber range topology: HTTP ${res.status}`);
   }
   return res.json();
 }

@@ -285,10 +285,12 @@ def main():
     parser = argparse.ArgumentParser(description="PBL6 10-Minute Live Defense Rehearsal CLI")
     parser.add_argument("--gateway-url", default="http://localhost:8000", help="URL of WAF Gateway")
     parser.add_argument("--auto", action="store_true", help="Run rehearsal automatically without prompt pauses")
+    parser.add_argument("--interactive", action="store_true", help="Run rehearsal interactively with Enter pauses (default)")
     parser.add_argument("--interval", type=float, default=1.5, help="Pause interval in seconds for auto mode")
     args = parser.parse_args()
 
-    runner = DemoRunner(gateway_url=args.gateway_url, auto_mode=args.auto, interval=args.interval)
+    auto_mode = args.auto and not args.interactive
+    runner = DemoRunner(gateway_url=args.gateway_url, auto_mode=auto_mode, interval=args.interval)
     runner.run()
 
 

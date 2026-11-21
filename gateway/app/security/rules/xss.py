@@ -21,10 +21,10 @@ def get_xss_rules() -> list[RegexRule]:
             confidence=0.90,
             description="Inline HTML Event Handler Injection",
             rationale=(
-                "Detects event attributes like onerror, onload, onclick attached to HTML tags "
-                "(e.g. <img src=x onerror=alert(1)>)."
+                "Detects event attributes like onerror, onload, onclick, ontoggle attached to HTML tags "
+                "(e.g. <img src=x onerror=alert(1)>). Hardened against ReDoS with [^<>]* (PERF-PBL6-001)."
             ),
-            pattern=r"""(?i)<\s*\w+\b[^>]*\b(?:on(?:error|load|click|mouseover|focus|blur|submit|change|keydown|keyup))\s*=\s*[\'\"]?[^>]*>""",
+            pattern=r"""(?i)<\s*\w+\b[^<>]*\b(?:on[a-z]{3,20})\s*=\s*['"]?[^<>]*>?""",
         ),
         RegexRule(
             rule_id="XSS-003",

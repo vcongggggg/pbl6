@@ -5,6 +5,8 @@ import { Header } from "@/components/Header";
 import { MetricCards } from "@/components/MetricCards";
 import { ThreatTimelineChart } from "@/components/ThreatTimelineChart";
 import { AttackDistributionChart } from "@/components/AttackDistributionChart";
+import { ProtocolDistributionChart } from "@/components/ProtocolDistributionChart";
+import { NetworkTopologyMap } from "@/components/NetworkTopologyMap";
 import { LiveEventsTable, PayloadEvidenceDrawer, AttackSessionsModal } from "@/components/events";
 import { DetectionExplainabilityModal } from "@/components/explain";
 import {
@@ -12,6 +14,8 @@ import {
   fetchDashboardEvents,
   fetchDashboardTimeline,
   fetchDashboardDistribution,
+  fetchDashboardProtocols,
+  fetchCyberRangeTopology,
   triggerSimulation,
   resetDemoData,
   seedDemoData,
@@ -19,6 +23,8 @@ import {
 } from "@/services/api";
 import {
   AttackDistributionItem,
+  ProtocolDistributionItem,
+  CyberRangeTopology,
   DashboardStats,
   SecurityEventItem,
   TimelinePoint,
@@ -32,6 +38,8 @@ export default function SOCDashboard() {
   const [totalEvents, setTotalEvents] = useState<number>(0);
   const [timeline, setTimeline] = useState<TimelinePoint[]>([]);
   const [distribution, setDistribution] = useState<AttackDistributionItem[]>([]);
+  const [protocols, setProtocols] = useState<ProtocolDistributionItem[]>([]);
+  const [topology, setTopology] = useState<CyberRangeTopology | null>(null);
 
   // UI & Table filter states
   const [page, setPage] = useState<number>(1);
@@ -70,7 +78,7 @@ export default function SOCDashboard() {
   const loadData = useCallback(async (showLoadingSpinner: boolean = false) => {
     if (showLoadingSpinner) setIsRefreshing(true);
     try {
-      const [statsData, eventsData, timelineData, distData] = await Promise.all([
+      const [statsData, eventsData, timelineData, distData, protoData, topoData] = await Promise.all([
         fetchDashboardStats().catch(() => null),
         fetchDashboardEvents({
           page,
@@ -81,6 +89,8 @@ export default function SOCDashboard() {
         }).catch(() => ({ items: [], total: 0, page: 1, limit })),
         fetchDashboardTimeline(60).catch(() => []),
         fetchDashboardDistribution().catch(() => []),
+        fetchDashboardProtocols().catch(() => []),
+        fetchCyberRangeTopology().catch(() => null),
       ]);
 
       if (statsData) setStats(statsData);
@@ -88,6 +98,8 @@ export default function SOCDashboard() {
       setTotalEvents(eventsData.total);
       setTimeline(timelineData);
       setDistribution(distData);
+      setProtocols(protoData);
+      if (topoData) setTopology(topoData);
     } catch (err: any) {
       console.error("Dashboard data load error:", err);
     } finally {
@@ -226,13 +238,19 @@ export default function SOCDashboard() {
           activeSimulation={activeSimulation}
         />
 
-        {/* 2.2. Charts Row: Timeline (65%) + Distribution (35%) */}
+        {/* 2.2. Distributed Cyber Range Physical Network Topology (Ref 17 Elsevier 2020) */}
+        <NetworkTopologyMap topology={topology} />
+
+        {/* 2.3. Analytics & Telemetry Charts Row: Timeline (50%) + Attack Distribution (25%) + Protocol Taxonomy (25%) */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          <div className="lg:col-span-8">
+          <div className="lg:col-span-6">
             <ThreatTimelineChart data={timeline} />
           </div>
-          <div className="lg:col-span-4">
+          <div className="lg:col-span-3">
             <AttackDistributionChart data={distribution} />
+          </div>
+          <div className="lg:col-span-3">
+            <ProtocolDistributionChart data={protocols} />
           </div>
         </div>
 
