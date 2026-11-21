@@ -57,7 +57,7 @@ def test_ml_proxy_integration_with_active_model(client: TestClient):
         joblib.dump(clf, model_path)
 
         detector = get_ml_detector()
-        loaded = detector.load_model(model_path)
+        loaded = detector.load_model(model_path, allow_unverified=True)
         assert loaded is True
 
         # Ensure ACTIVE_BLOCKING mode

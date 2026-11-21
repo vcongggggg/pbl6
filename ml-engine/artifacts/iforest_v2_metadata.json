@@ -1,0 +1,71 @@
+{
+  "model_name": "Zero-Pickle Calibrated IsolationForest v2.0",
+  "model_file": "iforest_v2.npz",
+  "model_version": "2.0.0",
+  "sha256_hash": "12e15cd999270a2f70a773206cec5572075f69e689742966614db913f99a2536",
+  "feature_count": 26,
+  "feature_names": [
+    "length",
+    "entropy",
+    "count_single_quote",
+    "count_double_quote",
+    "count_less_than",
+    "count_greater_than",
+    "count_semicolon",
+    "count_hyphen",
+    "count_slash",
+    "count_backslash",
+    "count_parenthesis",
+    "special_char_ratio",
+    "sql_keyword_count",
+    "xss_keyword_count",
+    "sqli_regex_matches",
+    "xss_regex_matches",
+    "path_traversal_matches",
+    "cmd_keyword_count",
+    "cmd_regex_matches",
+    "encoding_layer_depth",
+    "sql_comment_and_func_score",
+    "param_value_entropy_ratio",
+    "numeric_anomaly_flag",
+    "natural_text_ratio",
+    "safe_structured_ratio",
+    "protocol_complexity_score"
+  ],
+  "hyperparameters": {
+    "n_estimators": 100,
+    "max_samples": 512,
+    "contamination": 0.04,
+    "random_state": 42,
+    "n_jobs": 1
+  },
+  "percentiles": {
+    "p01": -0.17862,
+    "p05": 0.02224,
+    "p10": 0.06329,
+    "p25": 0.10102,
+    "p50": 0.12617,
+    "p95": 0.14697
+  },
+  "benchmark_1000_diverse_eval": {
+    "at_60": {
+      "threshold": 60.0,
+      "total_attacks": 800,
+      "detected_anomalies": 462,
+      "recall": 0.5775,
+      "false_positives": 8,
+      "fpr": 0.04,
+      "recall_target_met": true,
+      "fpr_target_met": true
+    },
+    "at_30": {
+      "threshold": 30.0,
+      "total_attacks": 800,
+      "detected_anomalies": 687,
+      "recall": 0.8588,
+      "false_positives": 57,
+      "fpr": 0.285,
+      "recall_target_met": true
+    }
+  }
+}

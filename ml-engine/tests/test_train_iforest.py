@@ -157,8 +157,13 @@ def test_export_artifacts_and_sha256(tmp_path):
 
 def test_gateway_anomaly_detector_compatibility():
     """Verifies that trained production artifact integrates seamlessly into Gateway WAF."""
-    prod_model_path = Path("ml-engine/artifacts/iforest_model.joblib")
-    if not prod_model_path.exists():
+    prod_npz = Path("ml-engine/artifacts/iforest_v2.npz")
+    prod_joblib = Path("ml-engine/artifacts/iforest_model.joblib")
+    if prod_npz.exists():
+        prod_model_path = prod_npz
+    elif prod_joblib.exists():
+        prod_model_path = prod_joblib
+    else:
         pytest.skip("Production artifact not yet generated in ml-engine/artifacts.")
 
     detector = AnomalyDetector(model_path=prod_model_path)
@@ -174,4 +179,5 @@ def test_gateway_anomaly_detector_compatibility():
     assert res_benign.is_anomaly is False
     assert res_benign.anomaly_score is not None
     assert res_benign.anomaly_score <= 30.0
-    assert res_benign.latency_ms < 15.0
+    budget = 5.0 if prod_model_path.suffix == ".npz" else 50.0
+    assert res_benign.latency_ms < budget

@@ -7,7 +7,7 @@ Tests verification of:
 4. Protocol-specific anomaly flagging (GraphQL Recursive DoS & XML XXE injections)
 """
 
-from app.security.ml_detector import MLDetector
+from app.security.ml_detector import MLDetector, extract_26_from_http
 from app.security.protocol_detector import (
     ApiProtocol,
     ApiProtocolDetector,
@@ -118,6 +118,13 @@ def test_graphql_sqli_payload_decapsulation_and_ml_detection():
         assert res.attack_type in ("SQLI", "SQL_INJECTION")
         assert res.confidence > 0.80
 
+        # Also verify with end-to-end 26-D HTTP feature extraction
+        fv = extract_26_from_http(path="/api/v1/graphql", query_params=None, body=graphql_sqli)
+        res_http = detector.predict(extracted.canonical_payload, feature_vector=fv.tolist())
+        assert res_http.is_attack is True
+        assert res_http.attack_type in ("SQLI", "SQL_INJECTION")
+        assert res_http.confidence > 0.80
+
 
 def test_soap_xss_payload_decapsulation_and_ml_detection():
     # Attacker injects XSS into SOAP body element inside full HTTP POST request context
@@ -150,6 +157,13 @@ def test_soap_xss_payload_decapsulation_and_ml_detection():
         assert res.is_attack is True
         assert res.attack_type in ("XSS", "XSS_ATTACK")
         assert res.confidence > 0.80
+
+        # Also verify with end-to-end 26-D HTTP feature extraction
+        fv_soap = extract_26_from_http(path="/ws/CommentService", query_params=None, body=soap_xss)
+        res_http = detector.predict(extracted.canonical_payload, feature_vector=fv_soap.tolist())
+        assert res_http.is_attack is True
+        assert res_http.attack_type in ("XSS", "XSS_ATTACK")
+        assert res_http.confidence > 0.80
 
 
 def test_graphql_deep_recursion_dos_anomaly():

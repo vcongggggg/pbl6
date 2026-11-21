@@ -59,7 +59,7 @@ def test_anomaly_proxy_integration_with_active_model(client: TestClient):
         joblib.dump(model, model_path)
 
         detector = get_anomaly_detector()
-        loaded = detector.load_model(model_path)
+        loaded = detector.load_model(model_path, allow_unverified=True)
         assert loaded is True
 
         try:

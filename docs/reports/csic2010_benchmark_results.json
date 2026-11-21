@@ -2,90 +2,128 @@
   "metadata": {
     "task": "TASK-5.4",
     "benchmark_dataset": "CSIC 2010 HTTP Dataset (Spanish National Research Council)",
-    "model_path": "C:\\Study\\HocKy6\\PBL6\\ml-engine\\artifacts\\rf_model.joblib",
+    "model_path": "C:\\Study\\HocKy6\\PBL6\\ml-engine\\artifacts\\xgb_v2.ubj",
+    "anomaly_path": "C:\\Study\\HocKy6\\PBL6\\ml-engine\\artifacts\\iforest_v2.npz",
     "total_samples": 3000,
-    "duration_seconds": 20.45,
-    "throughput_samples_per_sec": 146.7
+    "duration_seconds": 12.31,
+    "throughput_samples_per_sec": 243.8
   },
-  "metrics": {
-    "tp": 955,
-    "fn": 545,
-    "tn": 1056,
-    "fp": 444,
-    "recall": 63.67,
-    "precision": 68.26,
-    "f1_score": 65.88,
-    "fpr": 29.6,
-    "accuracy": 67.03
+  "standalone_xgboost_v2": {
+    "tp": 174,
+    "fn": 1326,
+    "tn": 1500,
+    "fp": 0,
+    "recall": 11.6,
+    "precision": 100.0,
+    "f1_score": 20.79,
+    "fpr": 0.0,
+    "accuracy": 55.8
+  },
+  "hybrid_defense_in_depth": {
+    "tp": 256,
+    "fn": 1244,
+    "tn": 1500,
+    "fp": 0,
+    "recall": 17.07,
+    "precision": 100.0,
+    "f1_score": 29.16,
+    "fpr": 0.0,
+    "accuracy": 58.53
   },
   "latency": {
-    "mean_ms": 6.689,
-    "p50_ms": 6.403,
-    "p95_ms": 8.937,
-    "p99_ms": 12.893
+    "mean_ms": 2.962,
+    "p50_ms": 2.679,
+    "p95_ms": 5.536,
+    "p99_ms": 9.393
   },
-  "categories": {
+  "categories_ml": {
     "ANOMALY_TAMPER": {
       "total": 1181,
-      "blocked": 725,
-      "passed": 456,
-      "success_rate": 61.39
+      "blocked": 24,
+      "passed": 1157,
+      "success_rate": 2.03
     },
     "BENIGN": {
       "total": 1500,
-      "blocked": 444,
-      "passed": 1056,
-      "success_rate": 70.4
+      "blocked": 0,
+      "passed": 1500,
+      "success_rate": 100.0
     },
     "SQLI": {
       "total": 254,
-      "blocked": 167,
-      "passed": 87,
-      "success_rate": 65.75
+      "blocked": 88,
+      "passed": 166,
+      "success_rate": 34.65
     },
     "XSS": {
       "total": 65,
-      "blocked": 63,
-      "passed": 2,
-      "success_rate": 96.92
+      "blocked": 62,
+      "passed": 3,
+      "success_rate": 95.38
     }
   },
-  "comparison_with_synthetic": [
+  "categories_hybrid": {
+    "ANOMALY_TAMPER": {
+      "total": 1181,
+      "blocked": 65,
+      "passed": 1116,
+      "success_rate": 5.5
+    },
+    "BENIGN": {
+      "total": 1500,
+      "blocked": 0,
+      "passed": 1500,
+      "success_rate": 100.0
+    },
+    "SQLI": {
+      "total": 254,
+      "blocked": 126,
+      "passed": 128,
+      "success_rate": 49.61
+    },
+    "XSS": {
+      "total": 65,
+      "blocked": 65,
+      "passed": 0,
+      "success_rate": 100.0
+    }
+  },
+  "comparison_with_in_domain": [
     {
       "metric": "Accuracy",
-      "synthetic": "99.93%",
-      "csic2010": "67.03%",
-      "variance": "-32.90%"
+      "in_domain": "99.15%",
+      "csic_ml": "55.80%",
+      "csic_hybrid": "58.53%"
     },
     {
       "metric": "Precision",
-      "synthetic": "99.97%",
-      "csic2010": "68.26%",
-      "variance": "-31.71%"
+      "in_domain": "98.71%",
+      "csic_ml": "100.00%",
+      "csic_hybrid": "100.00%"
     },
     {
       "metric": "Recall",
-      "synthetic": "99.89%",
-      "csic2010": "63.67%",
-      "variance": "-36.22%"
+      "in_domain": "98.74%",
+      "csic_ml": "11.60%",
+      "csic_hybrid": "17.07%"
     },
     {
       "metric": "F1-Score",
-      "synthetic": "99.93%",
-      "csic2010": "65.88%",
-      "variance": "-34.05%"
+      "in_domain": "98.72%",
+      "csic_ml": "20.79%",
+      "csic_hybrid": "29.16%"
     },
     {
       "metric": "False Positive Rate (FPR)",
-      "synthetic": "0.00%",
-      "csic2010": "29.60%",
-      "variance": "+29.60%"
+      "in_domain": "0.05%",
+      "csic_ml": "0.00%",
+      "csic_hybrid": "0.00%"
     },
     {
       "metric": "Avg Inference Latency",
-      "synthetic": "0.037 ms",
-      "csic2010": "6.689 ms",
-      "variance": "+6.652 ms"
+      "in_domain": "2.225 ms",
+      "csic_ml": "2.962 ms",
+      "csic_hybrid": "2.962 ms"
     }
   ]
 }

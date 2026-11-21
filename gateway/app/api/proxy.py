@@ -11,7 +11,7 @@ from app.db.session import get_db
 from app.security.anomaly import AnomalyDetector, get_anomaly_detector
 from app.security.decision import DecisionEngine, PolicyAction
 from app.security.engine import RuleEngine
-from app.security.ml_detector import MLDetector
+from app.security.ml_detector import MLDetector, extract_26_from_http
 from app.security.models import DetectionResult
 from app.security.protocol_detector import (
     ApiProtocolDetector,
@@ -371,7 +371,18 @@ async def proxy_endpoint(
         body_bytes=body_bytes,
     )
     payload_content = extracted_api.canonical_payload or f"/{path}"
-    ml_result = ml_detector.predict(payload_content)
+    # Single-pass 26-D feature extraction shared across ML and Anomaly detectors (SCI-PBL6-001)
+    try:
+        path_norm = f"/{path}" if not path.startswith("/") else path
+        feature_vector_26 = extract_26_from_http(
+            path=path_norm,
+            query_params=query_str,
+            body=body_bytes,
+        ).tolist()
+    except Exception:
+        feature_vector_26 = None
+
+    ml_result = ml_detector.predict(payload_content, feature_vector=feature_vector_26)
 
     # ML Fail-Safe Handling (Master Plan A3):
     # If ML model is unavailable/failed to load, do NOT fail-open (treat as 0% risk).
@@ -379,7 +390,7 @@ async def proxy_endpoint(
     ml_is_available = bool(ml_result.model_loaded and ml_detector.ml_available)
     ml_score = ml_result.risk_score if ml_is_available else None
 
-    anomaly_result = anomaly_detector.predict(payload_content)
+    anomaly_result = anomaly_detector.predict(payload_content, feature_vector=feature_vector_26)
     anomaly_score = anomaly_result.anomaly_score if anomaly_result.model_loaded else None
 
     # 6. Phase 7: Calculate Weighted Risk Score (Rule 40% + Supervised ML 35% + Anomaly 25%)

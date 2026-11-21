@@ -75,7 +75,7 @@ async def get_dashboard_stats(
 
     # Enforcement action counts (Decision Engine & Rate Limiter)
     blocked_count = (
-        db.query(SecurityEvent).filter(SecurityEvent.action == "BLOCK").count()
+        db.query(SecurityEvent).filter(SecurityEvent.action.in_(["BLOCK", "BLOCKED"])).count()
     )
     rate_limited_count = (
         db.query(SecurityEvent)
@@ -86,7 +86,7 @@ async def get_dashboard_stats(
         .count()
     )
     monitored_count = (
-        db.query(SecurityEvent).filter(SecurityEvent.action == "MONITOR").count()
+        db.query(SecurityEvent).filter(SecurityEvent.action.in_(["MONITOR", "DETECTED"])).count()
     )
 
     # Breakdown by attack family
@@ -368,15 +368,6 @@ def get_dashboard_protocol_distribution(
                 protocol_counts["REST"] += 1
 
     total = sum(protocol_counts.values())
-    if total == 0:
-        protocol_counts = {
-            "REST": 68,
-            "GRAPHQL": 18,
-            "SOAP_XML": 8,
-            "JSON_RPC": 4,
-            "GENERIC_WEB": 2,
-        }
-        total = 100
 
     meta = {
         "REST": {"name": "RESTful API", "color": "#3b82f6", "description": "JSON / OpenAPI 3.0 endpoints"},
@@ -389,7 +380,7 @@ def get_dashboard_protocol_distribution(
     result = []
     for key, info in meta.items():
         cnt = protocol_counts.get(key, 0)
-        pct = round((cnt / total) * 100, 1)
+        pct = round((cnt / total) * 100, 1) if total > 0 else 0.0
         result.append({
             "name": info["name"],
             "key": key,
@@ -407,7 +398,7 @@ def get_cyber_range_topology(
 ) -> dict[str, Any]:
     """Returns real-time distributed Cyber Range network topology conforming to Ref 17 (Elsevier)."""
     total_events = db.query(func.count(SecurityEvent.id)).scalar() or 0
-    blocked_events = db.query(func.count(SecurityEvent.id)).filter(SecurityEvent.action == "BLOCK").scalar() or 0
+    blocked_events = db.query(func.count(SecurityEvent.id)).filter(SecurityEvent.action.in_(["BLOCK", "BLOCKED"])).scalar() or 0
 
     return {
         "red_team": {

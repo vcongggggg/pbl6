@@ -100,3 +100,4 @@ export const ProtocolDistributionChart: React.FC<ProtocolDistributionChartProps>
     </div>
   );
 };
+
