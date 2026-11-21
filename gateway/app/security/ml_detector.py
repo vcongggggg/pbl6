@@ -1,5 +1,6 @@
 import logging
 import sys
+import threading
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -266,7 +267,7 @@ class MLDetector:
                 booster.load_model(str(resolved))
                 booster.set_param({"nthread": 1})
                 self._model = booster
-                self._input_buf = np.zeros((1, 26), dtype=np.float32) if np is not None else None
+                self._thread_local = threading.local()
                 self._is_ubj = True
                 self._feature_dim = meta_info.get("feature_count", 26)
                 self._classes = meta_info.get(
@@ -359,9 +360,17 @@ class MLDetector:
 
         try:
             if getattr(self, "_is_ubj", False):
-                if getattr(self, "_input_buf", None) is not None:
-                    self._input_buf[0, :] = feat
-                    proba_array = self._model.inplace_predict(self._input_buf)[0]
+                if np is not None:
+                    tl = getattr(self, "_thread_local", None)
+                    if tl is None:
+                        tl = threading.local()
+                        self._thread_local = tl
+                    buf = getattr(tl, "input_buf", None)
+                    if buf is None or buf.shape[1] != len(feat):
+                        buf = np.zeros((1, len(feat)), dtype=np.float32)
+                        tl.input_buf = buf
+                    buf[0, :] = feat
+                    proba_array = self._model.inplace_predict(buf)[0]
                 else:
                     inp = np.asarray([feat], dtype=np.float32)
                     proba_array = self._model.inplace_predict(inp)[0]

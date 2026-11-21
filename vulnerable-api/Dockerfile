@@ -20,8 +20,13 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-# Run collectstatic safely
-RUN python manage.py collectstatic --noinput || true
+# Run collectstatic safely and drop privileges to non-root user (INFRA-PBL6-001)
+RUN python manage.py collectstatic --noinput || true \
+    && groupadd --system --gid 1001 appuser \
+    && useradd --system --uid 1001 --gid appuser --home-dir /app --shell /sbin/nologin appuser \
+    && chown -R appuser:appuser /app
+
+USER appuser
 
 EXPOSE 5000
 

@@ -64,7 +64,7 @@ Tài liệu thiết kế chi tiết kiến trúc, thành phần giao diện, lu�
 ```text
 ┌──────────────────────────────────────────────────────────────────────────────────────────────────┐
 │ [SHIELD] Web API Security Platform — SOC Command Center                             [● LIVE 3s]  │
-│ Target: http://juice-shop:3000 (● 12ms) | Mode: [MONITOR_ONLY] | [🔄 Refresh] [🧹 Reset Demo]   │
+│ Target: http://vulnerable-api:5000 (● 12ms) | Mode: [ACTIVE_BLOCKING] | [🔄 Refresh] [🧹 Reset Demo] │
 ├──────────────────────────────────────────────────────────────────────────────────────────────────┤
 │ ┌────────────────┐ ┌────────────────┐ ┌────────────────┐ ┌────────────────┐ ┌──────────────────┐ │
 │ │ TOTAL TRAFFIC  │ │ATTACKS DETECTED│ │ THREAT SCORE   │ │SAFE REQUEST RAT│ │ QUICK SIMULATOR  │ │
@@ -95,7 +95,7 @@ Tài liệu thiết kế chi tiết kiến trúc, thành phần giao diện, lu�
 
 ### 4.1. Top Header Bar (Thanh Điều Hướng & Trạng Thái)
 * **Logo & Tiêu đề:** Biểu tượng khiên bảo mật phát sáng ánh tím neon kèm chữ `Web API Security Platform`.
-* **Trạng thái Upstream (Juice Shop Health):**
+* **Trạng thái Upstream (Bookie Bookstore Target API Health):**
   * `● Connected (12.4ms)` màu xanh lá nếu Target phản hồi `200 OK`.
   * `● Unreachable` màu đỏ rực nếu Target mất kết nối kèm cảnh báo.
 * **Chế độ Gateway (WAF Mode):**

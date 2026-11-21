@@ -32,7 +32,7 @@ Feature Extraction (Payload 17 features + HTTP metadata + Behavior time-window)
    +------------------------+------------------------+
    |                                                 |
    v (nếu vi phạm: Block / Rate Limit)               v (nếu hợp lệ / Monitor Only)
-HTTP 403 Forbidden / 429 Too Many Requests      Proxy tới Target Web API (Juice Shop)
+HTTP 403 Forbidden / 429 Too Many Requests      Proxy tới Bookie Bookstore Target API
    |                                                 |
    +------------------------+------------------------+
                             ↓
@@ -49,7 +49,7 @@ Sau khi dọn sạch mã nguồn thử nghiệm ban đầu, dự án đang ở t
 
 | Hạng mục | Yêu cầu trong Plan | Kế hoạch triển khai kỹ thuật |
 | :--- | :--- | :--- |
-| **Hạ tầng (Phase 1)** | Docker Compose phối hợp 3 services (`gateway`, `dashboard`, `juice-shop`) với SQLite DB. | Cấu hình mạng bridge `pbl6-network`, chuẩn hóa file `.env.example`, Dockerfiles cho Gateway và Dashboard. |
+| **Hạ tầng (Phase 1)** | Docker Compose phối hợp 3 services (`gateway`, `dashboard`, `vulnerable-api`) với SQLite DB. | Cấu hình mạng bridge `pbl6-network`, chuẩn hóa file `.env.example`, Dockerfiles cho Gateway và Dashboard. |
 | **Rule Engine (Phase 2)** | Phát hiện SQLi, XSS, Path Traversal, Command Injection, Brute Force, API Abuse. | Xây dựng các lớp Regex chuẩn, module hóa trong `gateway/app/detection/rules.py` trả về `detected`, `attack_type`, `score`, `matched_rules`. |
 | **Feature Extraction (Phase 3)** | 17 payload features + HTTP metadata + Behavior features theo time-window 10s/60s. | *(ML/Data Team)* Viết module `features.py` dùng chung duy nhất cho cả Training và Runtime Inference. |
 | **Dataset Strategy (Phase 4)** | Synthetic đa dạng (obfuscation, comments) + Benign edge-cases + Lab traffic log. | *(ML/Data Team)* Tạo script sinh dataset cân bằng và các cơ chế chia tập (Stratified, Unseen payload, Attack family). |

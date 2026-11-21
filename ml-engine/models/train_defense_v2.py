@@ -190,7 +190,6 @@ def train_champion_xgboost(
 
     # Evaluate on Test Set
     y_test_pred = clf.predict(X_test)
-    y_test_proba = clf.predict_proba(X_test)
 
     test_acc = accuracy_score(y_test, y_test_pred)
     test_prec = precision_score(y_test, y_test_pred, average="macro", zero_division=0)

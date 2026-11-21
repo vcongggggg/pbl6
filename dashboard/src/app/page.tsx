@@ -300,9 +300,9 @@ export default function SOCDashboard() {
         <div className="flex items-center gap-3">
           <span>PBL6 — Web API Security Platform</span>
           <span>•</span>
-          <span className="text-purple-400">Phase 2: Deterministic Rule Engine</span>
+          <span className="text-purple-400">Blue Team v2.0: Rule + XGBoost v2.0 + Isolation Forest v2.0</span>
           <span>•</span>
-          <span className="text-slate-400">Team: vcongggggg & naocavang08</span>
+          <span className="text-slate-400">Team: vcongggggg &amp; naocavang08</span>
         </div>
         <div>
           <span>Engine Status: <span className="text-emerald-400 font-bold">ONLINE</span></span>

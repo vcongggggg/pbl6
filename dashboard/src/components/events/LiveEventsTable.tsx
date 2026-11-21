@@ -96,13 +96,16 @@ export const LiveEventsTable: React.FC<LiveEventsTableProps> = ({
   };
 
   const isLanAttacker = (ip: string) => {
-    return (
-      ip.startsWith("192.168.") ||
-      ip.startsWith("10.") ||
-      ip.startsWith("172.16.") ||
-      ip.startsWith("172.2") ||
-      ip.startsWith("172.3")
-    );
+    if (!ip) return false;
+    if (ip.startsWith("10.") || ip.startsWith("192.168.")) return true;
+    if (ip.startsWith("172.")) {
+      const octets = ip.split(".");
+      if (octets.length >= 2) {
+        const second = parseInt(octets[1], 10);
+        return !Number.isNaN(second) && second >= 16 && second <= 31;
+      }
+    }
+    return false;
   };
 
   const exportToJson = () => {

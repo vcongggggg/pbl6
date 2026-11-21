@@ -111,7 +111,6 @@ def run_csic2010_evaluation() -> None:
         pred_ml_label = 1 if pred_ml.is_attack else 0
 
         # Hybrid Decision: Rule Match OR Supervised ML Attack OR Anomaly Alert (>=60.0)
-        rule_matched = bool(rules_eval.is_attack or rules_eval.matches)
         rule_score = rules_eval.rule_risk_score
         anom_alert = bool(pred_anom.anomaly_score is not None and pred_anom.anomaly_score >= 60.0)
 
@@ -254,11 +253,11 @@ def run_csic2010_evaluation() -> None:
 
     md_content = f"""# Báo Cáo Đánh Giá Khả Năng Tổng Quát Hóa Liên Tập Dữ Liệu (Task 5.4 - CSIC 2010 Benchmark)
 
-**Chuẩn mực khoa học:** NIST SP 800-115, ISO/IEC 27004:2016, Liu et al. (IEEE ICDM 2008), Torrano-Gimenez et al. (Wiley SCN 2015)  
-**Tập dữ liệu kiểm định chéo:** CSIC 2010 HTTP Dataset (Viện Nghiên cứu CSIC, Tây Ban Nha)  
-**Quy mô mẫu kiểm định:** {total_samples} requests (1.500 Benign và 1.500 Attacks)  
-**Mô hình được đánh giá:** Champion Cost-Sensitive XGBoost v2 (Zero-Pickle UBJSON, 26 chiều) + Calibrated Isolation Forest v2 (.npz) + Rule Engine  
-**Thời gian thực thi:** {total_duration:.2f} giây | **Tốc độ suy luận:** {rps:.1f} requests/giây  
+**Chuẩn mực khoa học:** NIST SP 800-115, ISO/IEC 27004:2016, Liu et al. (IEEE ICDM 2008), Torrano-Gimenez et al. (Wiley SCN 2015)
+**Tập dữ liệu kiểm định chéo:** CSIC 2010 HTTP Dataset (Viện Nghiên cứu CSIC, Tây Ban Nha)
+**Quy mô mẫu kiểm định:** {total_samples} requests (1.500 Benign và 1.500 Attacks)
+**Mô hình được đánh giá:** Champion Cost-Sensitive XGBoost v2 (Zero-Pickle UBJSON, 26 chiều) + Calibrated Isolation Forest v2 (.npz) + Rule Engine
+**Thời gian thực thi:** {total_duration:.2f} giây | **Tốc độ suy luận:** {rps:.1f} requests/giây
 
 ---
 

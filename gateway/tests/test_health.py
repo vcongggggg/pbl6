@@ -29,7 +29,7 @@ def test_root_ping_endpoint(client: TestClient):
 @respx.mock
 def test_target_health_reachable(client: TestClient):
     """Verifies that GET /health/target returns ok when target is reachable."""
-    respx.get("http://vulnerable-api:5000").mock(return_value=Response(200, text="Juice Shop OK"))
+    respx.get("http://vulnerable-api:5000").mock(return_value=Response(200, text="Bookie Bookstore Target API OK"))
 
     response = client.get("/health/target")
     assert response.status_code == status.HTTP_200_OK

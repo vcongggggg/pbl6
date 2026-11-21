@@ -41,7 +41,7 @@ async def get_target_health(
     request: Request,
     settings: Settings = Depends(get_settings),
 ) -> TargetHealthResponse:
-    """Probes the configured Target Web API (Juice Shop) to verify reachability."""
+    """Probes the configured Target Web API (Bookie Bookstore Target API) to verify reachability."""
     target_url = settings.target_api_url.rstrip("/")
     client = getattr(request.app.state, "http_client", None)
 

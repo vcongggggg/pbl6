@@ -2,9 +2,8 @@ import asyncio
 from contextlib import asynccontextmanager
 
 import httpx
-from fastapi import FastAPI, Request, Response
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.api.proxy import get_rate_limiter
 from app.api.router import api_router
@@ -12,23 +11,45 @@ from app.core.config import get_settings
 from app.core.errors import register_error_handlers
 from app.core.logging import setup_logging
 from app.core.request_id import resolve_request_id
-from app.db.session import init_db
+from app.db.session import engine, init_db
 
 settings = get_settings()
 logger = setup_logging(settings.log_level)
 
 
-class RequestContextMiddleware(BaseHTTPMiddleware):
-    """Middleware ensuring every request and response has a validated X-Request-ID."""
+class RequestContextMiddleware:
+    """Pure ASGI middleware ensuring every HTTP request/response has a validated X-Request-ID (PERF-PBL6-001)."""
 
-    async def dispatch(self, request: Request, call_next) -> Response:
-        incoming_rid = request.headers.get("x-request-id")
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        incoming_rid = None
+        for key, val in scope.get("headers", ()):
+            if key == b"x-request-id":
+                incoming_rid = val.decode("latin-1", errors="ignore")
+                break
+
         request_id = resolve_request_id(incoming_rid)
-        request.state.request_id = request_id
+        scope.setdefault("state", {})["request_id"] = request_id
+        rid_bytes = request_id.encode("latin-1")
 
-        response = await call_next(request)
-        response.headers["X-Request-ID"] = request_id
-        return response
+        async def send_with_request_id(message):
+            if message["type"] == "http.response.start":
+                headers = [
+                    (k, v)
+                    for k, v in message.get("headers", [])
+                    if k.lower() != b"x-request-id"
+                ]
+                headers.append((b"x-request-id", rid_bytes))
+                message = {**message, "headers": headers}
+            await send(message)
+
+        await self.app(scope, receive, send_with_request_id)
 
 
 @asynccontextmanager
@@ -84,6 +105,7 @@ async def lifespan(app: FastAPI):
         await cleanup_task
     except asyncio.CancelledError:
         pass
+    engine.dispose()
     logger.info("Periodic RateLimiter cleanup task cancelled cleanly.")
 
 

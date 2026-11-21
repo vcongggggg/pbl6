@@ -63,6 +63,7 @@ class SecurityEventService:
         behavior_score: float | None = None,
         details_extra: dict[str, Any] | None = None,
         attack_type_override: str | None = None,
+        commit: bool = True,
     ) -> SecurityEvent | None:
         """Persists security event record if an attack signature was matched or risk detected."""
         detection_result = detection_result or DetectionResult()
@@ -140,6 +141,8 @@ class SecurityEventService:
         session_id = derive_session_id(client_ip, timestamp)
         matched_rules = [m.rule_id for m in (detection_result.matches or [])] if detection_result else []
         kill_chain_stage = map_to_kill_chain_stage(primary_attack, matched_rules, details_extra)
+        raw_proto = (details_extra or {}).get("api_protocol") or (details_extra or {}).get("protocol")
+        api_protocol_val = str(raw_proto).upper()[:32] if raw_proto else None
 
         event_record = SecurityEvent(
             event_id=event_id,
@@ -157,19 +160,22 @@ class SecurityEventService:
             details=json.dumps(details_dict),
             session_id=session_id,
             kill_chain_stage=kill_chain_stage,
+            api_protocol=api_protocol_val,
         )
 
         try:
             db.add(event_record)
-            db.commit()
-            db.refresh(event_record)
+            if commit:
+                db.commit()
+                db.refresh(event_record)
             logger.info(
                 f"Security event recorded [{event_id}] for request [{request_id}]: "
                 f"type={primary_attack} score={detection_result.rule_risk_score}"
             )
             return event_record
         except Exception as err:
-            db.rollback()
+            if commit:
+                db.rollback()
             logger.error(
                 f"Failed to persist security event for request [{request_id}]: {err}"
             )
@@ -189,6 +195,7 @@ class SecurityEventService:
         severity: str = "HIGH",
         risk_score: float = 75.0,
         details_extra: dict[str, Any] | None = None,
+        commit: bool = True,
     ) -> SecurityEvent | None:
         """Persists a rate limit violation event into the database."""
         if timestamp is None:
@@ -206,6 +213,9 @@ class SecurityEventService:
         if details_extra:
             details_dict.update(details_extra)
 
+        raw_proto = (details_extra or {}).get("api_protocol") or (details_extra or {}).get("protocol")
+        api_protocol_val = str(raw_proto).upper()[:32] if raw_proto else "REST"
+
         event_record = SecurityEvent(
             event_id=event_id,
             request_id=request_id,
@@ -222,19 +232,22 @@ class SecurityEventService:
             details=json.dumps(details_dict),
             session_id=derive_session_id(client_ip, timestamp),
             kill_chain_stage=map_to_kill_chain_stage("RATE_LIMIT_EXCEEDED"),
+            api_protocol=api_protocol_val,
         )
 
         try:
             db.add(event_record)
-            db.commit()
-            db.refresh(event_record)
+            if commit:
+                db.commit()
+                db.refresh(event_record)
             logger.info(
                 f"Rate limit event recorded [{event_id}] for request [{request_id}]: "
                 f"IP={client_ip} scope={scope} count={current_count}/{limit}"
             )
             return event_record
         except Exception as err:
-            db.rollback()
+            if commit:
+                db.rollback()
             logger.error(
                 f"Failed to persist rate limit event for request [{request_id}]: {err}"
             )

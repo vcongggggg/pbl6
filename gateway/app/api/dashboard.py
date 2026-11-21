@@ -354,8 +354,7 @@ def get_dashboard_distribution(
 def get_dashboard_protocol_distribution(
     db: Session = Depends(get_db),
 ) -> list[dict[str, Any]]:
-    """Calculates percentage and count distribution across the 5 canonical API protocols."""
-    events = db.query(SecurityEvent.details).filter(SecurityEvent.details.isnot(None)).all()
+    """Calculates percentage and count distribution across the 5 canonical API protocols using SQL GROUP BY."""
     protocol_counts: dict[str, int] = {
         "REST": 0,
         "GRAPHQL": 0,
@@ -363,14 +362,33 @@ def get_dashboard_protocol_distribution(
         "JSON_RPC": 0,
         "GENERIC_WEB": 0,
     }
-    for (details_str,) in events:
+
+    # Fast indexed SQL aggregation for events with populated api_protocol column (PERF-PBL6-002)
+    grouped_rows = (
+        db.query(SecurityEvent.api_protocol, func.count(SecurityEvent.id))
+        .filter(SecurityEvent.api_protocol.isnot(None))
+        .group_by(SecurityEvent.api_protocol)
+        .all()
+    )
+    for proto_key, cnt in grouped_rows:
+        norm = str(proto_key).upper() if proto_key else "REST"
+        if norm in protocol_counts:
+            protocol_counts[norm] += int(cnt)
+        else:
+            protocol_counts["REST"] += int(cnt)
+
+    # Legacy fallback strictly for historical rows where api_protocol IS NULL
+    legacy_rows = (
+        db.query(SecurityEvent.details)
+        .filter(SecurityEvent.api_protocol.is_(None), SecurityEvent.details.isnot(None))
+        .all()
+    )
+    for (details_str,) in legacy_rows:
         if details_str:
             try:
                 data = json.loads(details_str)
                 proto = data.get("api_protocol") or data.get("protocol")
-                if proto and proto in protocol_counts:
-                    protocol_counts[proto] += 1
-                elif proto and proto.upper() in protocol_counts:
+                if proto and proto.upper() in protocol_counts:
                     protocol_counts[proto.upper()] += 1
                 else:
                     protocol_counts["REST"] += 1
@@ -569,9 +587,24 @@ async def simulate_attack_request(
 @router.post("/reset-demo", summary="Reset lab demonstration records", dependencies=[Depends(require_admin)])
 def reset_demo_data(db: Session = Depends(get_db)) -> dict[str, str]:
     """Cleans test records from SQLite database to prepare for a fresh presentation."""
+    from app.api.proxy import invalidate_waf_mode_cache
+    from app.db.models import AuditLog
+
+    prev_events = db.query(func.count(SecurityEvent.id)).scalar() or 0
+    prev_requests = db.query(func.count(RequestLog.id)).scalar() or 0
     db.query(SecurityEvent).delete()
     db.query(RequestLog).delete()
+    db.add(
+        AuditLog(
+            actor="admin",
+            action="RESET_DEMO",
+            key="demo_data",
+            old_value=f"events={prev_events},requests={prev_requests}",
+            new_value="events=0,requests=0",
+        )
+    )
     db.commit()
+    invalidate_waf_mode_cache()
     return {
         "status": "ok",
         "message": "Security events and request logs reset successfully for clean demonstration.",
@@ -581,9 +614,21 @@ def reset_demo_data(db: Session = Depends(get_db)) -> dict[str, str]:
 @router.post("/seed-demo", summary="Seed rich demo traffic and security incidents", dependencies=[Depends(require_admin)])
 def seed_demo_data_endpoint(db: Session = Depends(get_db)) -> dict[str, Any]:
     """Populates ~125 realistic HTTP requests and 36 security incidents spanning the last 60 minutes."""
+    from app.db.models import AuditLog
     from app.services.seeder import seed_demo_dataset
 
-    return seed_demo_dataset(db)
+    result = seed_demo_dataset(db)
+    db.add(
+        AuditLog(
+            actor="admin",
+            action="SEED_DEMO",
+            key="demo_data",
+            old_value=None,
+            new_value=f"requests={result.get('total_requests', 0)},events={result.get('total_events', 0)}",
+        )
+    )
+    db.commit()
+    return result
 
 
 @router.post("/toggle-waf-mode", summary="Toggle WAF mode between MONITOR_ONLY and ACTIVE_BLOCKING", dependencies=[Depends(require_admin)])
@@ -592,6 +637,9 @@ def toggle_waf_mode_endpoint(
     settings: Settings = Depends(get_settings),
 ) -> dict[str, Any]:
     """Toggles runtime WAF operational mode between MONITOR_ONLY and ACTIVE_BLOCKING."""
+    from app.api.proxy import invalidate_waf_mode_cache
+    from app.db.models import AuditLog
+
     cfg = db.query(WafConfigModel).filter(WafConfigModel.key == "waf_mode").first()
     current_mode = cfg.value if (cfg and cfg.value) else settings.waf_mode
     new_mode = "ACTIVE_BLOCKING" if current_mode == "MONITOR_ONLY" else "MONITOR_ONLY"
@@ -601,7 +649,17 @@ def toggle_waf_mode_endpoint(
     else:
         cfg = WafConfigModel(key="waf_mode", value=new_mode)
         db.add(cfg)
+    db.add(
+        AuditLog(
+            actor="admin",
+            action="TOGGLE_WAF_MODE",
+            key="waf_mode",
+            old_value=current_mode,
+            new_value=new_mode,
+        )
+    )
     db.commit()
+    invalidate_waf_mode_cache()
 
     return {
         "status": "success",
