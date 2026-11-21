@@ -7,12 +7,9 @@ import {
   Shield,
   Radio,
   Zap,
-  Globe,
-  Database,
   ArrowRight,
   Terminal,
   Activity,
-  CheckCircle2,
 } from "lucide-react";
 
 interface NetworkTopologyMapProps {
@@ -20,41 +17,28 @@ interface NetworkTopologyMapProps {
 }
 
 export const NetworkTopologyMap: React.FC<NetworkTopologyMapProps> = ({ topology }) => {
-  const redTeam = topology?.red_team || {
-    name: "Red Team Host (Máy 2)",
-    ip: "192.168.1.50",
-    role: "Autonomous Offensive AI Agent",
-    status: "active",
-    agent_model: "PyTorch DQN + OpenAPI Recon Parser",
-    attacks_generated: 1240,
-  };
+  if (!topology) {
+    return (
+      <div className="bg-slate-900/70 backdrop-blur-md border border-slate-800/80 rounded-xl p-6 shadow-lg flex flex-col items-center justify-center min-h-[160px] text-center space-y-2">
+        <Radio className="w-5 h-5 text-cyan-400 animate-pulse" />
+        <h3 className="text-xs font-bold font-mono text-slate-300 uppercase tracking-wider">
+          Connecting to Distributed Cyber Range Topology...
+        </h3>
+        <p className="text-[11px] text-slate-500 font-mono">
+          Probing physical LAN route: Máy 2 (Red Team) ➔ Mạng LAN (RTT) ➔ Máy 1 (WAF :8000) ➔ Target API (:5000)
+        </p>
+      </div>
+    );
+  }
 
-  const network = topology?.network || {
-    type: "Physical LAN Boundary (802.3 / 802.11)",
-    subnet: "192.168.1.0/24",
-    rtt_latency_ms: 1.84,
-    jitter_ms: 0.32,
-    packet_loss_pct: 0.0,
-    status: "optimal",
-  };
+  const redTeam = topology.red_team;
+  const network = topology.network;
+  const blueTeam = topology.blue_team;
+  const targetApp = topology.target_api;
 
-  const blueTeam = topology?.blue_team || {
-    name: "Blue Team Host (Máy 1)",
-    ip: "192.168.1.10",
-    waf_port: 8000,
-    mode: "ACTIVE_DEFENSE",
-    pipeline: "Dual-Stage Fast Path + Deep ML Inference",
-    inspected_count: 1240,
-    blocked_count: 982,
-  };
-
-  const targetApp = topology?.target_api || {
-    name: "Bookie Bookstore (Target API)",
-    port: 5000,
-    url: "http://192.168.1.10:5000",
-    status: "healthy",
-    flaws_monitored: ["SQLi", "XSS", "Path Traversal", "Command Injection", "BOLA"],
-  };
+  const isUpstreamHealthy = targetApp.status === "ok" || targetApp.status === "healthy";
+  const rttDisplay = network.rtt_latency_ms != null ? network.rtt_latency_ms.toFixed(2) : "N/A";
+  const lossDisplay = network.packet_loss_pct != null ? network.packet_loss_pct.toFixed(1) : "N/A";
 
   return (
     <div className="bg-slate-900/70 backdrop-blur-md border border-slate-800/80 rounded-xl p-5 shadow-lg flex flex-col space-y-4">
@@ -83,11 +67,15 @@ export const NetworkTopologyMap: React.FC<NetworkTopologyMapProps> = ({ topology
           <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-800/60 border border-slate-700/50 text-slate-300">
             <Activity className="w-3.5 h-3.5 text-emerald-400" />
             <span>RTT:</span>
-            <span className="font-bold text-emerald-300">{network.rtt_latency_ms.toFixed(2)} ms</span>
+            <span className="font-bold text-emerald-300">
+              {rttDisplay === "N/A" ? "N/A" : `${rttDisplay} ms`}
+            </span>
           </div>
           <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-800/60 border border-slate-700/50 text-slate-300">
             <span>Loss:</span>
-            <span className="font-bold text-emerald-400">{network.packet_loss_pct}%</span>
+            <span className="font-bold text-emerald-400">
+              {lossDisplay === "N/A" ? "N/A" : `${lossDisplay}%`}
+            </span>
           </div>
         </div>
       </div>
@@ -102,14 +90,18 @@ export const NetworkTopologyMap: React.FC<NetworkTopologyMapProps> = ({ topology
               <Terminal className="w-3 h-3 text-rose-400" />
               MÁY 2 (RED TEAM)
             </span>
-            <span className="text-[11px] font-mono text-slate-400">{redTeam.ip}</span>
+            <span className="text-[11px] font-mono text-slate-400 truncate max-w-[130px]">{redTeam.ip}</span>
           </div>
           <h3 className="text-xs font-bold text-slate-100 font-mono tracking-tight">{redTeam.name}</h3>
           <p className="text-[11px] text-slate-400 font-sans mt-0.5 line-clamp-1">{redTeam.role}</p>
 
           <div className="mt-3 pt-2.5 border-t border-slate-800/80 flex items-center justify-between text-[11px] font-mono">
-            <span className="text-slate-400">Agent: PyTorch DQN</span>
-            <span className="text-rose-400 font-semibold">{redTeam.attacks_generated.toLocaleString()} attacks</span>
+            <span className="text-slate-400 truncate max-w-[140px]" title={redTeam.agent_model}>
+              Agent: {redTeam.agent_model || "N/A"}
+            </span>
+            <span className="text-rose-400 font-semibold shrink-0 ml-1">
+              {(redTeam.attacks_generated ?? 0).toLocaleString()} attacks
+            </span>
           </div>
         </div>
 
@@ -121,11 +113,11 @@ export const NetworkTopologyMap: React.FC<NetworkTopologyMapProps> = ({ topology
             </div>
             <div className="md:hidden flex items-center gap-1 text-slate-500 my-1">
               <Zap className="w-3.5 h-3.5 text-cyan-400" />
-              <span className="text-[10px] font-mono">Physical LAN (192.168.1.0/24)</span>
+              <span className="text-[10px] font-mono">LAN ({network.subnet || "N/A"})</span>
             </div>
           </div>
           <span className="hidden md:block text-[9px] font-mono text-cyan-400 font-bold mt-1 tracking-tighter">
-            LAN RTT 1.8ms
+            {rttDisplay === "N/A" ? "LAN RTT N/A" : `LAN RTT ${rttDisplay}ms`}
           </span>
         </div>
 
@@ -137,19 +129,26 @@ export const NetworkTopologyMap: React.FC<NetworkTopologyMapProps> = ({ topology
               <Shield className="w-3 h-3 text-blue-400" />
               MÁY 1 (BLUE TEAM WAF)
             </span>
-            <span className="text-[11px] font-mono text-cyan-300 font-bold">{blueTeam.ip}:{blueTeam.waf_port}</span>
+            <span className="text-[11px] font-mono text-cyan-300 font-bold">
+              {blueTeam.ip}:{blueTeam.waf_port}
+            </span>
           </div>
-          <h3 className="text-xs font-bold text-slate-100 font-mono tracking-tight">{blueTeam.name}</h3>
+          <div className="flex items-center justify-between gap-2">
+            <h3 className="text-xs font-bold text-slate-100 font-mono tracking-tight truncate">{blueTeam.name}</h3>
+            <span className="px-1.5 py-0.5 rounded text-[9px] font-mono bg-slate-800 text-cyan-300 border border-slate-700 shrink-0">
+              {blueTeam.mode || "UNKNOWN"}
+            </span>
+          </div>
           <p className="text-[11px] text-slate-400 font-sans mt-0.5">{blueTeam.pipeline}</p>
 
           <div className="mt-3 pt-2.5 border-t border-slate-800/80 grid grid-cols-2 gap-2 text-[11px] font-mono">
             <div>
               <span className="text-slate-400">Inspected: </span>
-              <span className="text-white font-bold">{blueTeam.inspected_count.toLocaleString()}</span>
+              <span className="text-white font-bold">{(blueTeam.inspected_count ?? 0).toLocaleString()}</span>
             </div>
             <div className="text-right">
               <span className="text-slate-400">Blocked: </span>
-              <span className="text-rose-400 font-bold">{blueTeam.blocked_count.toLocaleString()}</span>
+              <span className="text-rose-400 font-bold">{(blueTeam.blocked_count ?? 0).toLocaleString()}</span>
             </div>
           </div>
         </div>
@@ -163,29 +162,34 @@ export const NetworkTopologyMap: React.FC<NetworkTopologyMapProps> = ({ topology
             <ArrowRight className="md:hidden w-4 h-4 text-emerald-400 my-1" />
           </div>
           <span className="hidden md:block text-[9px] font-mono text-emerald-400 font-semibold mt-1">
-            200 OK
+            {isUpstreamHealthy ? "200 OK" : "DEGRADED"}
           </span>
         </div>
 
-        {/* Node 3: Target API & SOC - 2 cols */}
+        {/* Node 3: Target API & Upstream - 2 cols */}
         <div className="md:col-span-2 bg-slate-950/70 border border-emerald-900/40 hover:border-emerald-700/60 transition-all rounded-lg p-3.5 relative overflow-hidden group">
           <div className="flex items-center justify-between mb-2">
             <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
               <Server className="w-3 h-3 text-emerald-400" />
               UPSTREAM
             </span>
-            <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_6px_#34d399]" />
+            {isUpstreamHealthy ? (
+              <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_6px_#34d399]" />
+            ) : (
+              <span className="w-2 h-2 rounded-full bg-rose-400 shadow-[0_0_6px_#f43f5e]" />
+            )}
           </div>
           <h3 className="text-xs font-bold text-slate-100 font-mono truncate">{targetApp.name}</h3>
-          <p className="text-[10px] font-mono text-emerald-400 mt-0.5">Port {targetApp.port} (Bookstore)</p>
+          <p className="text-[10px] font-mono text-emerald-400 mt-0.5">Port {targetApp.port} (Target API)</p>
 
           <div className="mt-3 pt-2.5 border-t border-slate-800/80 text-[10px] font-mono text-slate-400 flex items-center justify-between">
             <span>OWASP API 1-10</span>
-            <span className="text-emerald-400 font-bold">HEALTHY</span>
+            <span className={isUpstreamHealthy ? "text-emerald-400 font-bold" : "text-rose-400 font-bold"}>
+              {targetApp.status ? targetApp.status.toUpperCase() : "UNKNOWN"}
+            </span>
           </div>
         </div>
       </div>
     </div>
   );
 };
-

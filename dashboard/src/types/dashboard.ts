@@ -1,5 +1,6 @@
 export interface DashboardStats {
   total_requests: number;
+  current_rps?: number;
   attacks_detected: number;
   safe_requests: number;
   safe_request_rate: number;

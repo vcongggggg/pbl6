@@ -208,6 +208,12 @@ BUILTIN_TARGET_SPEC: dict[str, Any] = {
                 },
             }
         },
+        "/api/v1/vulnerable/users/list/": {
+            "get": {
+                "summary": "List Users",
+                "responses": {"200": {"description": "User account listing"}},
+            }
+        },
     },
 }
 
@@ -240,26 +246,27 @@ class SchemaValidator:
         compiled: list[tuple[re.Pattern[str], str, dict[str, Any]]] = []
 
         for raw_path, operations in paths.items():
-            pattern_str = "^" + re.sub(r"\{[^}]+\}", r"([^/]+)", raw_path.rstrip("/")) + "/?$"
+            pattern_str = "^" + re.sub(r"\{([^}]+)\}", r"(?P<\1>[^/]+)", raw_path.rstrip("/")) + "/?$"
             regex = re.compile(pattern_str, re.IGNORECASE)
             compiled.append((regex, raw_path, operations))
 
         self._compiled_paths = compiled
 
-    def _match_path(self, path: str) -> tuple[str, dict[str, Any]] | None:
-        """Finds matching OpenAPI path template for an incoming request path."""
+    def _match_path(self, path: str) -> tuple[str, dict[str, Any], dict[str, str]] | None:
+        """Finds matching OpenAPI path template and captured path parameters."""
         clean_path = "/" + path.strip("/")
         # 1. Exact match attempt
         paths = self._spec.get("paths", {})
         if clean_path in paths:
-            return clean_path, paths[clean_path]
+            return clean_path, paths[clean_path], {}
         if f"{clean_path}/" in paths:
-            return f"{clean_path}/", paths[f"{clean_path}/"]
+            return f"{clean_path}/", paths[f"{clean_path}/"], {}
 
         # 2. Regex pattern match for parameterized paths like {order_id}
         for regex, template, ops in self._compiled_paths:
-            if regex.match(clean_path):
-                return template, ops
+            m = regex.match(clean_path)
+            if m:
+                return template, ops, m.groupdict()
 
         return None
 
@@ -289,7 +296,7 @@ class SchemaValidator:
                 )
             return violations
 
-        template_path, operations = matched
+        template_path, operations, path_params = matched
 
         if clean_method not in operations:
             allowed_methods = [m.upper() for m in operations if m in {"get", "post", "put", "patch", "delete"}]
@@ -304,11 +311,55 @@ class SchemaValidator:
 
         operation_spec = operations[clean_method]
 
-        # 1. Validate Query Parameters
+        # 1. Validate Path Parameters
+        violations.extend(self._validate_path_params(operation_spec, path_params))
+
+        # 2. Validate Query Parameters
         violations.extend(self._validate_query_params(operation_spec, query_params))
 
-        # 2. Validate Request Body
+        # 3. Validate Request Body
         violations.extend(self._validate_request_body(operation_spec, body_bytes, content_type))
+
+        return violations
+
+    def _validate_path_params(
+        self,
+        op_spec: dict[str, Any],
+        path_params: dict[str, str],
+    ) -> list[SchemaViolation]:
+        violations: list[SchemaViolation] = []
+        declared_params = op_spec.get("parameters", [])
+
+        for param in declared_params:
+            if param.get("in") != "path":
+                continue
+
+            param_name = param.get("name", "")
+            param_schema = param.get("schema", {})
+            param_type = param_schema.get("type", "string")
+            val = path_params.get(param_name)
+
+            if val is not None:
+                if param_type == "integer":
+                    if not re.match(r"^-?\d+$", val.strip()):
+                        violations.append(
+                            SchemaViolation(
+                                field=param_name,
+                                reason=f"Path parameter '{param_name}' expected integer, got '{val}'.",
+                                violation_type="TYPE_MISMATCH",
+                            )
+                        )
+                elif param_type == "number":
+                    try:
+                        float(val.strip())
+                    except ValueError:
+                        violations.append(
+                            SchemaViolation(
+                                field=param_name,
+                                reason=f"Path parameter '{param_name}' expected number, got '{val}'.",
+                                violation_type="TYPE_MISMATCH",
+                            )
+                        )
 
         return violations
 
@@ -418,6 +469,17 @@ class SchemaValidator:
             return violations
 
         content_spec = req_body_spec.get("content", {})
+        if "application/json" in content_spec and has_content and content_type:
+            if "application/json" not in content_type.lower():
+                violations.append(
+                    SchemaViolation(
+                        field="content-type",
+                        reason=f"Content-Type '{content_type}' is not supported. Expected 'application/json'.",
+                        violation_type="UNSUPPORTED_MEDIA_TYPE",
+                    )
+                )
+                return violations
+
         json_spec = content_spec.get("application/json", {})
         schema = json_spec.get("schema")
         if not schema:
@@ -457,6 +519,18 @@ class SchemaValidator:
                 )
 
         properties = schema.get("properties", {})
+        additional_allowed = schema.get("additionalProperties", False)
+        if not additional_allowed and properties:
+            for extra_key in body_json.keys():
+                if extra_key not in properties:
+                    violations.append(
+                        SchemaViolation(
+                            field=extra_key,
+                            reason=f"Additional property '{extra_key}' is not allowed by schema.",
+                            violation_type="ADDITIONAL_PROPERTY_NOT_ALLOWED",
+                        )
+                    )
+
         for prop_name, prop_schema in properties.items():
             if prop_name not in body_json:
                 continue
@@ -515,3 +589,35 @@ class SchemaValidator:
                 )
 
         return violations
+
+    async def refresh_spec_from_target(self, client: Any | None = None) -> bool:
+        """Fetches live OpenAPI specification from target API upstream with TTL cache and fallback."""
+        now = time.time()
+        if self._last_fetch and (now - self._last_fetch) < self.cache_ttl_seconds:
+            return True
+
+        close_client = False
+        if client is None:
+            import httpx
+            client = httpx.AsyncClient(timeout=3.0)
+            close_client = True
+
+        try:
+            for endpoint in ["/api/schema/", "/openapi.json", "/api/v1/schema/"]:
+                url = f"{self.target_api_url}{endpoint}"
+                try:
+                    resp = await client.get(url)
+                    if resp.status_code == 200:
+                        data = resp.json()
+                        if isinstance(data, dict) and "paths" in data:
+                            self.set_spec(data)
+                            logger.info(f"Refreshed OpenAPI spec from {url}")
+                            return True
+                except Exception:
+                    continue
+        except Exception as err:
+            logger.warning(f"Failed to refresh OpenAPI spec from target upstream: {err}")
+        finally:
+            if close_client:
+                await client.aclose()
+        return False

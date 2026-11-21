@@ -1,15 +1,35 @@
 "use client";
 
-import React from "react";
-import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from "recharts";
+import React, { useState } from "react";
+import {
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  Tooltip,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+} from "recharts";
 import { ProtocolDistributionItem } from "@/types/dashboard";
-import { Layers, Share2, FileCode2, Cpu, Globe, Network } from "lucide-react";
+import {
+  Layers,
+  Share2,
+  FileCode2,
+  Cpu,
+  Globe,
+  Network,
+  PieChart as PieIcon,
+  BarChart2,
+} from "lucide-react";
 
 interface ProtocolDistributionChartProps {
   data: ProtocolDistributionItem[];
 }
 
 export const ProtocolDistributionChart: React.FC<ProtocolDistributionChartProps> = ({ data }) => {
+  const [viewMode, setViewMode] = useState<"pie" | "bar">("pie");
   const totalTraffic = data.reduce((acc, curr) => acc + curr.count, 0);
 
   const getProtocolIcon = (key: string) => {
@@ -29,6 +49,7 @@ export const ProtocolDistributionChart: React.FC<ProtocolDistributionChartProps>
 
   return (
     <div className="bg-slate-900/70 backdrop-blur-md border border-slate-800/80 rounded-xl p-5 shadow-lg flex flex-col h-[340px]">
+      {/* Header with Title, Total, and Pie/Bar Toggle */}
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
           <Network className="w-4 h-4 text-cyan-400" />
@@ -36,46 +57,116 @@ export const ProtocolDistributionChart: React.FC<ProtocolDistributionChartProps>
             Web API Protocols
           </h2>
         </div>
-        <span className="text-xs text-slate-400 font-mono">
-          Total: <span className="text-cyan-300 font-bold">{totalTraffic.toLocaleString()}</span> reqs
-        </span>
+
+        <div className="flex items-center gap-2">
+          {/* Pie / Bar View Toggle */}
+          <div className="flex items-center bg-slate-950/80 p-0.5 rounded-lg border border-slate-800 text-[11px] font-mono">
+            <button
+              onClick={() => setViewMode("pie")}
+              title="Pie / Donut View"
+              className={`flex items-center gap-1 px-2 py-0.5 rounded transition ${
+                viewMode === "pie"
+                  ? "bg-cyan-500/20 text-cyan-300 font-semibold border border-cyan-500/30"
+                  : "text-slate-400 hover:text-white"
+              }`}
+            >
+              <PieIcon className="w-3 h-3" />
+              <span>Pie</span>
+            </button>
+            <button
+              onClick={() => setViewMode("bar")}
+              title="Bar Chart View"
+              className={`flex items-center gap-1 px-2 py-0.5 rounded transition ${
+                viewMode === "bar"
+                  ? "bg-cyan-500/20 text-cyan-300 font-semibold border border-cyan-500/30"
+                  : "text-slate-400 hover:text-white"
+              }`}
+            >
+              <BarChart2 className="w-3 h-3" />
+              <span>Bar</span>
+            </button>
+          </div>
+
+          <span className="text-xs text-slate-400 font-mono">
+            Total: <span className="text-cyan-300 font-bold">{totalTraffic.toLocaleString()}</span>
+          </span>
+        </div>
       </div>
 
+      {/* Main Chart Area (Pie or Bar) */}
       <div className="flex-1 w-full flex items-center justify-center min-h-[190px]">
         {totalTraffic > 0 ? (
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Pie
+          viewMode === "pie" ? (
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={data}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={55}
+                  outerRadius={80}
+                  paddingAngle={4}
+                  dataKey="count"
+                >
+                  {data.map((entry, index) => (
+                    <Cell key={`cell-proto-${index}`} fill={entry.color} stroke="#090d16" strokeWidth={2} />
+                  ))}
+                </Pie>
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "#090d16",
+                    borderColor: "#334155",
+                    borderRadius: "8px",
+                    fontSize: "12px",
+                    color: "#f8fafc",
+                  }}
+                  formatter={(val: any, _name: any, item: any) => [
+                    `${val} requests (${item.payload.percentage}%)`,
+                    item.payload.name,
+                  ]}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+          ) : (
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
                 data={data}
-                cx="50%"
-                cy="50%"
-                innerRadius={55}
-                outerRadius={80}
-                paddingAngle={4}
-                dataKey="count"
+                layout="vertical"
+                margin={{ top: 5, right: 30, left: 40, bottom: 5 }}
               >
-                {data.map((entry, index) => (
-                  <Cell key={`cell-proto-${index}`} fill={entry.color} stroke="#090d16" strokeWidth={2} />
-                ))}
-              </Pie>
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: "#090d16",
-                  borderColor: "#334155",
-                  borderRadius: "8px",
-                  fontSize: "12px",
-                  color: "#f8fafc",
-                }}
-                formatter={(val: any, name: any, item: any) => [
-                  `${val} requests (${item.payload.percentage}%)`,
-                  item.payload.name,
-                ]}
-              />
-            </PieChart>
-          </ResponsiveContainer>
+                <XAxis type="number" stroke="#64748b" fontSize={10} tickLine={false} />
+                <YAxis
+                  type="category"
+                  dataKey="name"
+                  stroke="#94a3b8"
+                  fontSize={10}
+                  tickLine={false}
+                  width={75}
+                />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "#090d16",
+                    borderColor: "#334155",
+                    borderRadius: "8px",
+                    fontSize: "12px",
+                    color: "#f8fafc",
+                  }}
+                  formatter={(val: any, _name: any, item: any) => [
+                    `${val} requests (${item.payload.percentage}%)`,
+                    item.payload.name,
+                  ]}
+                />
+                <Bar dataKey="count" radius={[0, 4, 4, 0]}>
+                  {data.map((entry, index) => (
+                    <Cell key={`bar-cell-${index}`} fill={entry.color} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          )
         ) : (
           <div className="text-center p-4">
-            <div className="w-24 h-24 rounded-full border-4 border-dashed border-slate-800 flex items-center justify-center mx-auto mb-2 text-slate-600 font-mono text-xs">
+            <div className="w-20 h-20 rounded-full border-4 border-dashed border-slate-800 flex items-center justify-center mx-auto mb-2 text-slate-600 font-mono text-xs">
               0 Traffic
             </div>
             <p className="text-xs text-slate-400 font-mono">No multi-protocol requests captured yet.</p>
@@ -100,4 +191,3 @@ export const ProtocolDistributionChart: React.FC<ProtocolDistributionChartProps>
     </div>
   );
 };
-

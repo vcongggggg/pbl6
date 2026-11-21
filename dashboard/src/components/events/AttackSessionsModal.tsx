@@ -113,15 +113,15 @@ export const AttackSessionsModal: React.FC<AttackSessionsModalProps> = ({
       });
       setSessions(data.items || []);
       setTotalSessions(data.total || 0);
-      if (data.items && data.items.length > 0 && !expandedSessionId) {
-        setExpandedSessionId(data.items[0].session_id);
+      if (data.items && data.items.length > 0) {
+        setExpandedSessionId((prev) => prev ?? data.items[0].session_id);
       }
     } catch (err) {
       console.error("Failed to load attack sessions:", err);
     } finally {
       setIsLoading(false);
     }
-  }, [isOpen, page, limit, ipFilter, selectedStage, expandedSessionId]);
+  }, [isOpen, page, limit, ipFilter, selectedStage]);
 
   useEffect(() => {
     if (isOpen) {
@@ -157,8 +157,14 @@ export const AttackSessionsModal: React.FC<AttackSessionsModalProps> = ({
   const totalPages = Math.ceil(totalSessions / limit) || 1;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 sm:p-6 overflow-y-auto animate-in fade-in duration-200">
-      <div className="relative w-full max-w-5xl max-h-[92vh] flex flex-col bg-slate-950 border border-slate-800 rounded-2xl shadow-2xl shadow-red-950/20 overflow-hidden">
+    <div
+      onClick={onClose}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 sm:p-6 overflow-y-auto animate-in fade-in duration-200"
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="relative w-full max-w-5xl max-h-[92vh] flex flex-col bg-slate-950 border border-slate-800 rounded-2xl shadow-2xl shadow-red-950/20 overflow-hidden"
+      >
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800/80 bg-slate-900/60">
           <div className="flex items-center gap-3">
@@ -405,7 +411,7 @@ export const AttackSessionsModal: React.FC<AttackSessionsModalProps> = ({
                             {/* Dot on timeline line */}
                             <div
                               className={`absolute -left-[19px] top-1.5 w-2.5 h-2.5 rounded-full border-2 border-slate-950 ${
-                                ev.action === "BLOCKED" ? "bg-red-500" : "bg-amber-400"
+                                ev.action === "BLOCKED" || ev.action === "BLOCK" ? "bg-red-500" : "bg-amber-400"
                               }`}
                             />
 
@@ -433,7 +439,7 @@ export const AttackSessionsModal: React.FC<AttackSessionsModalProps> = ({
                                 </span>
                                 <span
                                   className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold ${
-                                    ev.action === "BLOCKED"
+                                    ev.action === "BLOCKED" || ev.action === "BLOCK"
                                       ? "bg-red-950 text-red-300 border border-red-800"
                                       : "bg-amber-950 text-amber-300 border border-amber-800"
                                   }`}

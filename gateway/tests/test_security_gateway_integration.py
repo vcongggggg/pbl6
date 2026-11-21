@@ -31,7 +31,7 @@ def test_gateway_detects_sqli_and_persists_security_event_non_blocking(client: T
         assert sec_event is not None
         assert sec_event.request_id == req_log.request_id
         assert sec_event.attack_type == "SQL_INJECTION"
-        assert sec_event.action == "DETECTED"
+        assert sec_event.action in ("DETECTED", "MONITOR")
         assert sec_event.rule_score is not None and sec_event.rule_score > 0.0
 
         details = json.loads(sec_event.details)

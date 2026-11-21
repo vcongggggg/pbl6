@@ -102,9 +102,13 @@ class ApiProtocolDetector:
                 if isinstance(raw_json, dict):
                     # GraphQL requests contain 'query' or 'mutation' (as GraphQL string)
                     query_val = raw_json.get("query") or raw_json.get("mutation")
-                    if isinstance(query_val, str) and ("{" in query_val or "query" in query_val or "mutation" in query_val):
-                        return ApiProtocol.GRAPHQL
-                    if "graphql" in clean_path:
+                    if isinstance(query_val, str):
+                        is_graphql_syntax = ("{" in query_val and "}" in query_val) or bool(
+                            re.search(r"^\s*(?:query|mutation|subscription)\b[^{]*\{", query_val, re.IGNORECASE)
+                        )
+                        if is_graphql_syntax:
+                            return ApiProtocol.GRAPHQL
+                    if "graphql" in clean_path or "gql" in clean_path:
                         return ApiProtocol.GRAPHQL
                     # JSON-RPC requests contain 'jsonrpc' or 'method' + 'params'
                     if "jsonrpc" in raw_json or ("method" in raw_json and "params" in raw_json):
@@ -272,7 +276,8 @@ class UniversalPayloadExtractor:
         if query_params:
             tokens.append(urllib.parse.unquote(query_params))
 
-        soap_action = (headers or {}).get("soapaction", "").strip('"\'')
+        headers_lower = {k.lower(): v for k, v in (headers or {}).items()}
+        soap_action = headers_lower.get("soapaction", "").strip('"\'')
         if soap_action:
             tokens.append(f"SOAPAction:{soap_action}")
 
@@ -280,10 +285,17 @@ class UniversalPayloadExtractor:
         alert = None
         extracted_text_nodes = []
 
+        xxe_pattern = re.compile(r"(?i)<!(?:DOCTYPE|ENTITY)\b[^>]*\b(?:SYSTEM|PUBLIC)\b|<!ENTITY\b")
+        if query_params:
+            unquoted_qp = urllib.parse.unquote(query_params)
+            if xxe_pattern.search(unquoted_qp):
+                is_xxe = True
+                alert = "XML External Entity (XXE) Injection Attempt Detected"
+
         if body_bytes:
             raw_xml = body_bytes.decode("utf-8", errors="replace")
             # XXE Check before XML parsing to avoid local entity expansion (LOGIC-PBL6-002)
-            if re.search(r"(?i)<!(?:DOCTYPE|ENTITY)\b[^>]*\b(?:SYSTEM|PUBLIC)\b|<!ENTITY\b", raw_xml):
+            if xxe_pattern.search(raw_xml):
                 is_xxe = True
                 alert = "XML External Entity (XXE) Injection Attempt Detected"
 

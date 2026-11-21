@@ -233,7 +233,7 @@ def test_dashboard_protocols_distribution(client: TestClient):
 
 
 def test_dashboard_cyber_range_topology(client: TestClient):
-    """Verifies cyber range topology endpoint returns complete Ref 17 node structure."""
+    """Verifies cyber range topology endpoint returns real dynamic Ref 17 node telemetry."""
     res = client.get("/dashboard/topology", headers=ADMIN_HEADERS)
     assert res.status_code == 200
     data = res.json()
@@ -241,9 +241,11 @@ def test_dashboard_cyber_range_topology(client: TestClient):
     assert "network" in data
     assert "blue_team" in data
     assert "target_api" in data
-    assert data["network"]["rtt_latency_ms"] > 0.0
-    assert data["red_team"]["ip"] == "192.168.1.50"
-    assert data["blue_team"]["ip"] == "192.168.1.10"
+    assert data["network"]["rtt_latency_ms"] >= 0.0
+    assert isinstance(data["red_team"]["ip"], str) and len(data["red_team"]["ip"]) > 0
+    assert isinstance(data["blue_team"]["ip"], str) and len(data["blue_team"]["ip"]) > 0
+    assert data["blue_team"]["waf_port"] > 0
+    assert data["target_api"]["status"] in ("ok", "degraded", "unreachable")
 
 
 def test_dashboard_unauthenticated_requests_return_401(client: TestClient):

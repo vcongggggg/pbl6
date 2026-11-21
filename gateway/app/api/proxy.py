@@ -14,6 +14,7 @@ from app.security.engine import RuleEngine
 from app.security.ml_detector import MLDetector, extract_26_from_http
 from app.security.models import DetectionResult
 from app.security.protocol_detector import (
+    ApiProtocol,
     ApiProtocolDetector,
     UniversalPayloadExtractor,
 )
@@ -62,13 +63,21 @@ def get_risk_engine() -> RiskEngine:
     return _risk_engine
 
 
-def get_decision_engine() -> DecisionEngine:
-    """Dependency injecting the policy decision engine instance."""
-    return _decision_engine
+def get_decision_engine(settings: object = Depends(get_settings)) -> DecisionEngine:
+    """Dependency injecting the policy decision engine instance configured with settings thresholds."""
+    cfg = settings if isinstance(settings, Settings) else get_settings()
+    return DecisionEngine(
+        monitor_threshold=float(cfg.risk_rate_limit_threshold),
+        rate_limit_threshold=float(cfg.risk_block_threshold),
+    )
 
 
-def get_rate_limiter() -> SlidingWindowRateLimiter:
+def get_rate_limiter(settings: object = Depends(get_settings)) -> SlidingWindowRateLimiter:
     """Dependency injecting the in-memory sliding window rate limiter instance."""
+    global _rate_limiter
+    cfg = settings if isinstance(settings, Settings) else get_settings()
+    if _rate_limiter.default_limit != cfg.rate_limit_per_minute:
+        _rate_limiter.default_limit = cfg.rate_limit_per_minute
     return _rate_limiter
 
 
@@ -180,7 +189,7 @@ async def proxy_endpoint(
 
     # 3. Phase 8: In-Memory Sliding Window Rate Limiting with Session-Aware Fingerprinting & Exponential Backoff
     rate_limit_result = None
-    if active_waf_mode != "OFF":
+    if active_waf_mode != "OFF" and settings.rate_limit_enabled:
         user_agent = request.headers.get("user-agent")
         session_id = None
         auth_header = request.headers.get("authorization", "")
@@ -206,7 +215,7 @@ async def proxy_endpoint(
                     current_count=rate_limit_result.current_count,
                     limit=rate_limit_result.limit,
                     retry_after=rate_limit_result.retry_after,
-                    action="DETECTED",
+                    action="MONITOR",
                 )
             else:
                 SecurityEventService.record_rate_limit(
@@ -280,22 +289,39 @@ async def proxy_endpoint(
 
                 return response
 
+    # 4. Task 5.4 & Task 6.4: Multi-Protocol Web API Sniffer & Protocol-Specific Decapsulation (REST / GraphQL / SOAP / JSON-RPC) (LOGIC-PBL6-002)
+    api_protocol = ApiProtocolDetector.classify_protocol(
+        path=f"/{path}",
+        headers=dict(request.headers),
+        body_bytes=body_bytes,
+        query_params=query_str,
+    )
+    extracted_api = UniversalPayloadExtractor.extract(
+        protocol=api_protocol,
+        path=f"/{path}",
+        query_params=query_str,
+        headers=dict(request.headers),
+        body_bytes=body_bytes,
+    )
+    payload_content = extracted_api.canonical_payload or f"/{path}"
+
     detection_result = DetectionResult()
     rule_failed = False
 
-    # 4. Inspect request through signature Rule Engine
+    # 4.1 Inspect request through signature Rule Engine (including decapsulated protocol payload)
     try:
         detection_result = rule_engine.inspect_request(
             path=f"/{path}",
             query_params=query_str,
             headers=dict(request.headers),
             body_bytes=body_bytes,
+            canonical_payload=extracted_api.canonical_payload if api_protocol in (ApiProtocol.SOAP_XML, ApiProtocol.GRAPHQL, ApiProtocol.JSON_RPC) else None,
         )
     except Exception as sec_err:
         rule_failed = True
         logger.error(f"Security inspection failed for request [{request_id}]: {sec_err}")
 
-    # 4.1 Positive Security Model: OpenAPI Schema Validation (Master Plan B1)
+    # 4.2 Positive Security Model: OpenAPI Schema Validation (Master Plan B1 & LOGIC-PBL6-003)
     schema_violations: list[SchemaViolation] = []
     if settings.schema_validation_enabled:
         content_type = request.headers.get("content-type")
@@ -310,8 +336,8 @@ async def proxy_endpoint(
             logger.warning(
                 f"Positive security violations [{request_id}]: {[v.to_dict() for v in schema_violations]}"
             )
-            if settings.schema_strict_mode:
-                violation_details = [v.to_dict() for v in schema_violations]
+            violation_details = [v.to_dict() for v in schema_violations]
+            if settings.schema_strict_mode and active_waf_mode not in ("OFF", "MONITOR_ONLY", "MONITOR"):
                 body_resp = json.dumps({
                     "type": "https://api.bookie.local/errors/schema-validation-failed",
                     "title": "Positive Security Model: Schema Validation Failed",
@@ -322,6 +348,24 @@ async def proxy_endpoint(
                     "violations": violation_details,
                     "request_id": request_id,
                 }).encode("utf-8")
+
+                SecurityEventService.record_detection(
+                    db=db,
+                    request_id=request_id,
+                    client_ip=client_ip,
+                    detection_result=detection_result,
+                    action="BLOCKED",
+                    risk_score=100.0,
+                    ml_score=None,
+                    anomaly_score=None,
+                    details_extra={
+                        "decision": "BLOCK",
+                        "reason": "Request payload violated OpenAPI schema contract (schema_strict_mode active)",
+                        "api_protocol": api_protocol.value,
+                        "schema_violations": violation_details,
+                    },
+                    attack_type_override="SCHEMA_VIOLATION",
+                )
 
                 try:
                     TrafficService.record_traffic(
@@ -356,22 +400,7 @@ async def proxy_endpoint(
                     },
                 )
 
-    # 5. Task 5.4 & Task 6.4: Multi-Protocol Web API Sniffer & Protocol-Specific Decapsulation (REST / GraphQL / SOAP / JSON-RPC)
-    api_protocol = ApiProtocolDetector.classify_protocol(
-        path=f"/{path}",
-        headers=dict(request.headers),
-        body_bytes=body_bytes,
-        query_params=query_str,
-    )
-    extracted_api = UniversalPayloadExtractor.extract(
-        protocol=api_protocol,
-        path=f"/{path}",
-        query_params=query_str,
-        headers=dict(request.headers),
-        body_bytes=body_bytes,
-    )
-    payload_content = extracted_api.canonical_payload or f"/{path}"
-    # Single-pass 26-D feature extraction shared across ML and Anomaly detectors (SCI-PBL6-001)
+    # 5. Single-pass 26-D feature extraction shared across ML and Anomaly detectors (SCI-PBL6-001)
     try:
         path_norm = f"/{path}" if not path.startswith("/") else path
         feature_vector_26 = extract_26_from_http(
@@ -382,16 +411,21 @@ async def proxy_endpoint(
     except Exception:
         feature_vector_26 = None
 
-    ml_result = ml_detector.predict(payload_content, feature_vector=feature_vector_26)
+    if settings.ml_enabled:
+        ml_result = ml_detector.predict(payload_content, feature_vector=feature_vector_26)
+        ml_is_available = bool(ml_result.model_loaded and ml_detector.ml_available)
+        ml_score = ml_result.risk_score if ml_is_available else None
+    else:
+        ml_result = None
+        ml_is_available = True
+        ml_score = None
 
-    # ML Fail-Safe Handling (Master Plan A3):
-    # If ML model is unavailable/failed to load, do NOT fail-open (treat as 0% risk).
-    # Request continues with Rule + Anomaly, with normalized weights plus configured fail-safe risk penalty (+15).
-    ml_is_available = bool(ml_result.model_loaded and ml_detector.ml_available)
-    ml_score = ml_result.risk_score if ml_is_available else None
-
-    anomaly_result = anomaly_detector.predict(payload_content, feature_vector=feature_vector_26)
-    anomaly_score = anomaly_result.anomaly_score if anomaly_result.model_loaded else None
+    if settings.anomaly_enabled:
+        anomaly_result = anomaly_detector.predict(payload_content, feature_vector=feature_vector_26)
+        anomaly_score = anomaly_result.anomaly_score if anomaly_result.model_loaded else None
+    else:
+        anomaly_result = None
+        anomaly_score = None
 
     # 6. Phase 7: Calculate Weighted Risk Score (Rule 40% + Supervised ML 35% + Anomaly 25%)
     rule_score = detection_result.rule_risk_score if detection_result else 0.0
@@ -403,7 +437,7 @@ async def proxy_endpoint(
         ablation_mode=settings.ablation_mode,
     )
 
-    if not ml_is_available:
+    if settings.ml_enabled and not ml_is_available:
         logger.warning(
             f"ML model unavailable for request [{request_id}]. Applying fail-safe risk penalty: +{settings.ml_unavailable_risk_penalty}"
         )
@@ -454,8 +488,8 @@ async def proxy_endpoint(
             "BLOCKED"
             if decision.is_blocked
             else (
-                "DETECTED"
-                if active_waf_mode in ("MONITOR_ONLY", "MONITOR")
+                "MONITOR"
+                if active_waf_mode in ("MONITOR_ONLY", "MONITOR") or decision.action == PolicyAction.MONITOR
                 else decision.action.value
             )
         )
@@ -483,14 +517,14 @@ async def proxy_endpoint(
                 "is_protocol_anomaly": extracted_api.is_protocol_anomaly,
                 "schema_violations": [v.to_dict() for v in schema_violations] if schema_violations else [],
                 "breakdown": risk_breakdown.to_dict(),
-                "ml_inference": ml_result.to_dict() if ml_result.model_loaded else {"status": "unavailable", "fail_safe_penalty": settings.ml_unavailable_risk_penalty},
-                "anomaly_inference": anomaly_result.to_dict() if anomaly_result.model_loaded else None,
+                "ml_inference": ml_result.to_dict() if (ml_result and ml_result.model_loaded) else ({"status": "disabled"} if not settings.ml_enabled else {"status": "unavailable", "fail_safe_penalty": settings.ml_unavailable_risk_penalty}),
+                "anomaly_inference": anomaly_result.to_dict() if (anomaly_result and anomaly_result.model_loaded) else None,
                 "ml_available": ml_is_available,
             },
             attack_type_override=override_type,
         )
 
-    # 7. Enforcement: Block with 403 Forbidden or forward to upstream
+    # 9. Enforcement: Block with 403 Forbidden, rate limit with 429, or forward to upstream
     if decision.is_blocked:
         if detection_result.attack_families:
             primary_family = detection_result.attack_families[0].value
@@ -543,6 +577,57 @@ async def proxy_endpoint(
         )
         latency_ms = 1.2
         response_size = len(block_content)
+    elif decision.is_rate_limited:
+        risk_rl_result = rate_limiter.check_rate_limit(
+            client_ip=client_ip,
+            path=f"/{path}",
+            session_id=session_id,
+            user_agent=user_agent,
+            risk_penalty=True,
+        )
+        retry_after_sec = risk_rl_result.retry_after if risk_rl_result.is_limited else 60
+        quota_limit = risk_rl_result.limit
+        quota_current = risk_rl_result.current_count
+        rate_limit_body = json.dumps({
+            "type": "https://api.bookie.local/errors/risk-rate-limit-exceeded",
+            "title": "Too Many Requests: Elevated Risk Throttled",
+            "status": 429,
+            "detail": (
+                f"Request throttled due to elevated risk score ({decision.risk_score:.1f}). "
+                f"Quota restricted for scope '{risk_rl_result.scope}'. Please retry after {retry_after_sec} seconds."
+            ),
+            "instance": f"/api/proxy/{path}",
+            "blocked": True,
+            "error": "RISK_RATE_LIMIT_EXCEEDED",
+            "message": "Elevated risk traffic throttled by [SHIELD] Multi-Tier Policy Engine.",
+            "request_id": request_id,
+            "client_ip": client_ip,
+            "scope": risk_rl_result.scope,
+            "limit": quota_limit,
+            "current_count": quota_current,
+            "retry_after": retry_after_sec,
+            "risk_score": decision.risk_score,
+        }).encode("utf-8")
+
+        response = Response(
+            content=rate_limit_body,
+            status_code=429,
+            media_type="application/json",
+            headers={
+                "Retry-After": str(retry_after_sec),
+                "X-RateLimit-Limit": str(quota_limit),
+                "X-RateLimit-Remaining": "0",
+                "X-RateLimit-Reset": str(retry_after_sec),
+                "X-Request-ID": request_id,
+                "X-WAF-Action": "RATE_LIMIT",
+                "X-WAF-Decision": "RATE_LIMIT",
+                "X-WAF-Risk-Score": str(decision.risk_score),
+                "X-WAF-Mode": active_waf_mode,
+                "X-WAF-API-Protocol": api_protocol.value,
+            },
+        )
+        latency_ms = 1.0
+        response_size = len(rate_limit_body)
     else:
         # Forward request to upstream target
         response, latency_ms, response_size = await proxy_service.forward(

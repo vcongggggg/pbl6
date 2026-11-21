@@ -16,6 +16,8 @@ logger = logging.getLogger("waf.gateway.security_service")
 def derive_session_id(client_ip: str, timestamp: datetime.datetime | None = None) -> str:
     """Derives a deterministic 15-minute attack session ID based on client IP (Master Plan B4)."""
     ts = timestamp or datetime.datetime.now(datetime.timezone.utc)
+    if ts.tzinfo is None:
+        ts = ts.replace(tzinfo=datetime.timezone.utc)
     window_slot = int(ts.timestamp() // 900)  # 15 minutes = 900s
     digest = hashlib.sha256(f"{client_ip}:{window_slot}".encode()).hexdigest()[:12]
     return f"sess_{digest}"
@@ -218,6 +220,8 @@ class SecurityEventService:
             anomaly_score=None,
             behavior_score=risk_score,
             details=json.dumps(details_dict),
+            session_id=derive_session_id(client_ip, timestamp),
+            kill_chain_stage=map_to_kill_chain_stage("RATE_LIMIT_EXCEEDED"),
         )
 
         try:

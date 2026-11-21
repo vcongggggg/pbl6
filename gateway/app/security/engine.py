@@ -37,6 +37,7 @@ class RuleEngine:
         query_params: str | dict[str, Any] | None = None,
         headers: dict[str, str] | None = None,
         body_bytes: bytes | None = None,
+        canonical_payload: str | None = None,
     ) -> DetectionResult:
         """Inspects all relevant HTTP components of a request and aggregates matches."""
         start_time = time.perf_counter()
@@ -116,6 +117,15 @@ class RuleEngine:
         # 4. Inspect Request Body
         if body_bytes:
             self._inspect_body(body_bytes=body_bytes, on_match=add_match)
+
+        # 5. Inspect Decapsulated Multi-Protocol Canonical Payload (LOGIC-PBL6-002)
+        if canonical_payload:
+            self._inspect_text(
+                text=canonical_payload,
+                location=InspectionLocation.BODY,
+                location_key="protocol_payload",
+                on_match=add_match,
+            )
 
         duration_ms = (time.perf_counter() - start_time) * 1000.0
         is_attack = len(matches) > 0

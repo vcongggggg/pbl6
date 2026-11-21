@@ -7,6 +7,12 @@ Tests verification of:
 4. Protocol-specific anomaly flagging (GraphQL Recursive DoS & XML XXE injections)
 """
 
+import respx
+from fastapi.testclient import TestClient
+from httpx import Response
+
+from app.db.models import WafConfigModel
+from app.db.session import SessionLocal
 from app.security.ml_detector import MLDetector, extract_26_from_http
 from app.security.protocol_detector import (
     ApiProtocol,
@@ -92,7 +98,8 @@ def test_protocol_classification_json_rpc():
     assert p1 == ApiProtocol.JSON_RPC
 
 
-def test_graphql_sqli_payload_decapsulation_and_ml_detection():
+@respx.mock
+def test_graphql_sqli_payload_decapsulation_and_ml_detection(client: TestClient):
     # Attacker injects SQLi into GraphQL argument inside full HTTP POST request context
     graphql_sqli = b'{"query": "query { book(id: \\"1\' UNION SELECT username, password FROM users--\\") { title } }"}'
     headers = {
@@ -110,7 +117,7 @@ def test_graphql_sqli_payload_decapsulation_and_ml_detection():
     assert "UNION SELECT" in extracted.canonical_payload
     assert "users" in extracted.canonical_payload
 
-    # Feed into ML Detector
+    # Feed into ML Detector with full HTTP context
     detector = MLDetector()
     if detector.is_loaded:
         res = detector.predict(extracted.canonical_payload)
@@ -125,8 +132,30 @@ def test_graphql_sqli_payload_decapsulation_and_ml_detection():
         assert res_http.attack_type in ("SQLI", "SQL_INJECTION")
         assert res_http.confidence > 0.80
 
+    # Verify end-to-end WAF Gateway HTTP pipeline blocks this GraphQL SQLi attack
+    with SessionLocal() as db:
+        cfg = db.query(WafConfigModel).filter(WafConfigModel.key == "waf_mode").first()
+        if not cfg:
+            db.add(WafConfigModel(key="waf_mode", value="ACTIVE_BLOCKING"))
+        else:
+            cfg.value = "ACTIVE_BLOCKING"
+        db.commit()
 
-def test_soap_xss_payload_decapsulation_and_ml_detection():
+    respx.post("http://vulnerable-api:5000/api/v1/graphql").mock(
+        return_value=Response(200, json={"data": {"book": None}})
+    )
+    response = client.post(
+        "/api/proxy/api/v1/graphql",
+        headers={"Content-Type": "application/json", "User-Agent": "Mozilla/5.0 PBL6-Attacker/1.0"},
+        content=graphql_sqli,
+    )
+    assert response.status_code == 403
+    assert response.headers.get("X-WAF-Action") in ("BLOCK", "BLOCKED")
+    assert response.headers.get("X-WAF-Decision") == "BLOCK"
+
+
+@respx.mock
+def test_soap_xss_payload_decapsulation_and_ml_detection(client: TestClient):
     # Attacker injects XSS into SOAP body element inside full HTTP POST request context
     soap_xss = b"""<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/">
        <soapenv:Body>
@@ -150,7 +179,7 @@ def test_soap_xss_payload_decapsulation_and_ml_detection():
     assert extracted.protocol == ApiProtocol.SOAP_XML
     assert "<script>alert(document.cookie)</script>" in extracted.canonical_payload
 
-    # Feed into ML Detector
+    # Feed into ML Detector with full HTTP context
     detector = MLDetector()
     if detector.is_loaded:
         res = detector.predict(extracted.canonical_payload)
@@ -164,6 +193,31 @@ def test_soap_xss_payload_decapsulation_and_ml_detection():
         assert res_http.is_attack is True
         assert res_http.attack_type in ("XSS", "XSS_ATTACK")
         assert res_http.confidence > 0.80
+
+    # Verify end-to-end WAF Gateway HTTP pipeline blocks this SOAP XSS attack
+    with SessionLocal() as db:
+        cfg = db.query(WafConfigModel).filter(WafConfigModel.key == "waf_mode").first()
+        if not cfg:
+            db.add(WafConfigModel(key="waf_mode", value="ACTIVE_BLOCKING"))
+        else:
+            cfg.value = "ACTIVE_BLOCKING"
+        db.commit()
+
+    respx.post("http://vulnerable-api:5000/ws/CommentService").mock(
+        return_value=Response(200, text="<ok/>")
+    )
+    response = client.post(
+        "/api/proxy/ws/CommentService",
+        headers={
+            "Content-Type": "text/xml; charset=utf-8",
+            "SOAPAction": '"http://api.bookie.store/ws/AddComment"',
+            "User-Agent": "Mozilla/5.0 PBL6-Attacker/1.0",
+        },
+        content=soap_xss,
+    )
+    assert response.status_code == 403
+    assert response.headers.get("X-WAF-Action") in ("BLOCK", "BLOCKED")
+    assert response.headers.get("X-WAF-Decision") == "BLOCK"
 
 
 def test_graphql_deep_recursion_dos_anomaly():
