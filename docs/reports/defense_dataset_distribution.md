@@ -42,9 +42,9 @@
 
 | Tệp Dữ Liệu | Đường Dẫn Lưu Trữ | Số Bản Ghi | Mã Băm SHA-256 Checksum |
 | :--- | :--- | :---: | :--- |
-| **Defense Train** | `data/processed/defense/train.csv` | 14,000 | `f53ce2abf9029998211eb67484932bf2da089bc7368288fbb3f37533a034b034` |
-| **Defense Validation** | `data/processed/defense/val.csv` | 3,000 | `3acf837883cd4fe5708bddb0f77c4fcdab3b718fc49deb3d4d26f76a3a46ebd4` |
-| **Defense Test** | `data/processed/defense/test.csv` | 3,000 | `ca5cb610c373d5dc8a019b623db02f1b0144c2c9496949036eae8bdcfd1973b9` |
+| **Defense Train** | `data/processed/defense/train.csv` | 14,000 | `44188bf37e100bd42163c79ce73aa8799f1d543bf38f88fe7497a3425b81ee05` |
+| **Defense Validation** | `data/processed/defense/val.csv` | 3,000 | `77d0778af0d2c53377499f90bcf198d97d1a6b80bd6db9c0cebe01e36a8d05c2` |
+| **Defense Test** | `data/processed/defense/test.csv` | 3,000 | `39229dd87c8e36090a8ef520e63d325a53324008fba0709919189c9b43e235f3` |
 
 ---
 

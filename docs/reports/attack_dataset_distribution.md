@@ -40,9 +40,9 @@
 
 | Tệp Dữ Liệu | Đường Dẫn Lưu Trữ | Số Bản Ghi | Mã Băm SHA-256 Checksum |
 | :--- | :--- | :---: | :--- |
-| **Attack Train** | `data/processed/attack/train.csv` | 7,000 | `a62214b916e42ec041c906f4fc1fd9065f53f399b3b5458a1dde46a54b57c8e9` |
-| **Attack Validation** | `data/processed/attack/val.csv` | 1,500 | `6a2a77d902e11399f00df233d9ec4535e4aa4bd26aef4bbe6ab2260fc75d4cc2` |
-| **Attack Test** | `data/processed/attack/test.csv` | 1,500 | `04018fd71cf356d78ba7f9e1e7dd53bfe330c99c1c7ea2caf4b328a324a02a01` |
+| **Attack Train** | `data/processed/attack/train.csv` | 7,000 | `9e21a9da6fb2a5ca85bd42c5b67d15dc9d9789c31fc94420abf141838bb776d8` |
+| **Attack Validation** | `data/processed/attack/val.csv` | 1,500 | `627961446c89993ff9866974f2a23a9111286b0dcd03ec71bfc091b663f86a42` |
+| **Attack Test** | `data/processed/attack/test.csv` | 1,500 | `bced48c3d98276c227f3066f777cb81a80b2b47c172f4e1fb7f25707674ece1f` |
 
 ---
 

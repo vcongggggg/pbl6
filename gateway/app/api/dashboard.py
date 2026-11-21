@@ -357,26 +357,26 @@ def get_dashboard_protocol_distribution(
         if details_str:
             try:
                 data = json.loads(details_str)
-                proto = data.get("api_protocol") or data.get("protocol")
-                if proto and proto in protocol_counts:
-                    protocol_counts[proto] += 1
-                elif proto and proto.upper() in protocol_counts:
-                    protocol_counts[proto.upper()] += 1
-                else:
-                    protocol_counts["REST"] += 1
             except Exception:
-                protocol_counts["REST"] += 1
+                # F1(b): Parse error -> skip this row (do not add to REST)
+                continue
+
+            proto = data.get("api_protocol") or data.get("protocol")
+            if not proto:
+                protocol_counts["GENERIC_WEB"] += 1
+            else:
+                proto_str = str(proto).upper().strip()
+                if proto_str in protocol_counts:
+                    protocol_counts[proto_str] += 1
+                elif proto_str == "SOAP":
+                    protocol_counts["SOAP_XML"] += 1
+                elif proto_str in ("JSONRPC", "JSON-RPC"):
+                    protocol_counts["JSON_RPC"] += 1
+                else:
+                    # F1(b): Protocol not in the 5 canonical types -> count towards GENERIC_WEB
+                    protocol_counts["GENERIC_WEB"] += 1
 
     total = sum(protocol_counts.values())
-    if total == 0:
-        protocol_counts = {
-            "REST": 68,
-            "GRAPHQL": 18,
-            "SOAP_XML": 8,
-            "JSON_RPC": 4,
-            "GENERIC_WEB": 2,
-        }
-        total = 100
 
     meta = {
         "REST": {"name": "RESTful API", "color": "#3b82f6", "description": "JSON / OpenAPI 3.0 endpoints"},
@@ -389,7 +389,8 @@ def get_dashboard_protocol_distribution(
     result = []
     for key, info in meta.items():
         cnt = protocol_counts.get(key, 0)
-        pct = round((cnt / total) * 100, 1)
+        # F1(a): When total == 0, return all count = 0, percentage = 0.0 (no hardcoded fallback)
+        pct = round((cnt / total) * 100, 1) if total > 0 else 0.0
         result.append({
             "name": info["name"],
             "key": key,
@@ -402,35 +403,58 @@ def get_dashboard_protocol_distribution(
 
 
 @router.get("/topology", summary="Get distributed cyber range network topology and telemetry")
-def get_cyber_range_topology(
+async def get_cyber_range_topology(
+    request: Request,
     db: Session = Depends(get_db),
+    settings: Settings = Depends(get_settings),
 ) -> dict[str, Any]:
     """Returns real-time distributed Cyber Range network topology conforming to Ref 17 (Elsevier)."""
     total_events = db.query(func.count(SecurityEvent.id)).scalar() or 0
-    blocked_events = db.query(func.count(SecurityEvent.id)).filter(SecurityEvent.action == "BLOCK").scalar() or 0
+    blocked_events = (
+        db.query(func.count(SecurityEvent.id))
+        .filter(SecurityEvent.action.in_(["BLOCK", "BLOCKED"]))
+        .scalar()
+        or 0
+    )
+
+    # Read active WAF mode from DB if configured, otherwise fallback to settings
+    waf_config = db.query(WafConfigModel).filter(WafConfigModel.key == "waf_mode").first()
+    active_mode = waf_config.value if waf_config else settings.waf_mode
+
+    # Resolve target URL and network telemetry dynamically
+    target_url = settings.target_api_url or "http://vulnerable-api:5000"
+    target_status, measured_latency = await check_target_upstream(request, target_url)
+
+    network_info: dict[str, Any] = {
+        "type": "Physical LAN Boundary (802.3 Ethernet / 802.11 Wi-Fi)",
+        "subnet": "192.168.1.0/24",  # Lab cyber range testbed subnet configuration
+    }
+    # F1(c): Never hardcode 1.84 / 0.32 / optimal. If measured, report real number; else mark status "chua_do"
+    if target_status == "ok":
+        network_info["rtt_latency_ms"] = measured_latency
+        network_info["status"] = "measured"
+    else:
+        network_info["status"] = "chua_do"
+
+    # Red Team / Blue Team lab configuration comments
+    red_team_ip = "192.168.1.50"  # Machine 2: Red Team Physical Host
+    blue_team_ip = settings.app_host if settings.app_host not in ("0.0.0.0", "127.0.0.1") else "192.168.1.10"  # Machine 1: Blue Team WAF Host
 
     return {
         "red_team": {
             "name": "Red Team Host (Máy 2)",
-            "ip": "192.168.1.50",
+            "ip": red_team_ip,
             "role": "Autonomous Offensive AI Agent",
             "status": "active",
             "agent_model": "PyTorch DQN + OpenAPI Recon Parser",
             "attacks_generated": total_events,
         },
-        "network": {
-            "type": "Physical LAN Boundary (802.3 Ethernet / 802.11 Wi-Fi)",
-            "subnet": "192.168.1.0/24",
-            "rtt_latency_ms": 1.84,
-            "jitter_ms": 0.32,
-            "packet_loss_pct": 0.0,
-            "status": "optimal",
-        },
+        "network": network_info,
         "blue_team": {
             "name": "Blue Team Host (Máy 1)",
-            "ip": "192.168.1.10",
-            "waf_port": 8000,
-            "mode": "ACTIVE_DEFENSE",
+            "ip": blue_team_ip,
+            "waf_port": settings.app_port,
+            "mode": active_mode,
             "pipeline": "Dual-Stage Fast Path + Deep ML Inference",
             "inspected_count": total_events,
             "blocked_count": blocked_events,
@@ -438,14 +462,14 @@ def get_cyber_range_topology(
         "target_api": {
             "name": "Bookie Bookstore (Vulnerable API)",
             "port": 5000,
-            "url": "http://192.168.1.10:5000",
-            "status": "healthy",
+            "url": target_url,
+            "status": "healthy" if target_status == "ok" else target_status,
             "flaws_monitored": ["SQLi", "XSS", "Path Traversal", "Command Injection", "BOLA"],
         },
         "soc_monitoring": {
             "name": "SOC Situational Awareness Dashboard",
             "port": 3000,
-            "url": "http://192.168.1.10:3000",
+            "url": f"http://{blue_team_ip}:3000",
             "status": "live",
         },
     }

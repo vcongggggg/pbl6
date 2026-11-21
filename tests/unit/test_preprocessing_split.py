@@ -44,9 +44,9 @@ def count_csv_rows(filepath: Path) -> tuple[list[str], int]:
 
 def compute_sha256(filepath: Path) -> str:
     h = hashlib.sha256()
-    with open(filepath, "rb") as f:
-        while chunk := f.read(65536):
-            h.update(chunk)
+    # Normalize CRLF to LF to match canonical git committed blob bytes across platforms
+    content = filepath.read_bytes().replace(b"\r\n", b"\n")
+    h.update(content)
     return h.hexdigest()
 
 

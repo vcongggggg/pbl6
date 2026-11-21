@@ -241,9 +241,36 @@ def test_dashboard_cyber_range_topology(client: TestClient):
     assert "network" in data
     assert "blue_team" in data
     assert "target_api" in data
-    assert data["network"]["rtt_latency_ms"] > 0.0
+    assert data["network"]["status"] in ("measured", "chua_do")
+    # Verify no hardcoded 1.84 or 0.32 in response
+    assert data["network"].get("rtt_latency_ms") != 1.84
+    assert data["network"].get("jitter_ms") is None
     assert data["red_team"]["ip"] == "192.168.1.50"
     assert data["blue_team"]["ip"] == "192.168.1.10"
+
+
+def test_dashboard_empty_db_protocols_and_topology_no_hardcoded(client: TestClient):
+    """F1(d): Verifies DB in empty state returns 0 for all protocols and no hardcoded latency in topology."""
+    client.post("/dashboard/reset-demo", headers=ADMIN_HEADERS)
+
+    # 1. Protocols must all return count=0, percentage=0.0
+    res_proto = client.get("/dashboard/protocols", headers=ADMIN_HEADERS)
+    assert res_proto.status_code == 200
+    proto_data = res_proto.json()
+    assert len(proto_data) == 5
+    for item in proto_data:
+        assert item["count"] == 0
+        assert item["percentage"] == 0.0
+
+    # 2. Topology must not contain hardcoded latency 1.84, jitter 0.32 or fake optimal
+    res_topo = client.get("/dashboard/topology", headers=ADMIN_HEADERS)
+    assert res_topo.status_code == 200
+    topo_data = res_topo.json()
+    net = topo_data["network"]
+    assert net.get("rtt_latency_ms") != 1.84
+    assert net.get("jitter_ms") is None
+    assert net.get("status") != "optimal"
+    assert net.get("status") in ("chua_do", "measured")
 
 
 def test_dashboard_unauthenticated_requests_return_401(client: TestClient):

@@ -69,7 +69,7 @@ def test_perf_pbl6_001_xss002_redos_hardened():
 
     # Must complete well under 20ms (previously took 923ms+)
     assert elapsed_ms < 20.0, f"ReDoS vulnerability detected: took {elapsed_ms:.2f} ms"
-    assert match is None or match is not None  # Finished evaluation without hanging
+    assert match is not None
 
 
 def test_sec_pbl6_006_evasion_zero_width_and_inline_comments():
