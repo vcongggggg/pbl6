@@ -84,6 +84,17 @@ EXTENDED_FEATURE_NAMES: list[str] = CANONICAL_FEATURE_NAMES + HTTP_CONTEXT_FEATU
 # COMPOSITE PAYLOAD RESOLVER
 # -----------------------------------------------------------------------------
 
+def _to_utf8_text(value: Any) -> str:
+    """Safely decodes bytes/bytearray to UTF-8 text instead of str(bytes) -> \"b'...'\"."""
+    if value is None:
+        return ""
+    if isinstance(value, str):
+        return value
+    if isinstance(value, (bytes, bytearray)):
+        return value.decode("utf-8", errors="replace")
+    return str(value)
+
+
 def resolve_payload_text(
     payload_or_request: Any = None,
     path: str | None = None,
@@ -100,15 +111,15 @@ def resolve_payload_text(
     if payload_or_request is None:
         parts: list[str] = []
         if path:
-            parts.append(str(path))
+            parts.append(_to_utf8_text(path))
         if query_params:
-            if isinstance(query_params, str):
-                parts.append(query_params)
+            if isinstance(query_params, (str, bytes, bytearray)):
+                parts.append(_to_utf8_text(query_params))
             elif isinstance(query_params, Mapping):
                 parts.append("&".join(f"{k}={v}" for k, v in query_params.items()))
         if body:
-            if isinstance(body, (str, bytes)):
-                parts.append(str(body))
+            if isinstance(body, (str, bytes, bytearray)):
+                parts.append(_to_utf8_text(body))
             elif isinstance(body, Mapping):
                 try:
                     parts.append(json.dumps(body))
@@ -118,29 +129,24 @@ def resolve_payload_text(
 
     if isinstance(payload_or_request, str):
         return payload_or_request
-    if isinstance(payload_or_request, bytes):
-        try:
-            return payload_or_request.decode("utf-8", errors="replace")
-        except Exception:
-            return str(payload_or_request)
+    if isinstance(payload_or_request, (bytes, bytearray)):
+        return payload_or_request.decode("utf-8", errors="replace")
 
     if isinstance(payload_or_request, Mapping):
         # Extract components from dict
-        req_path = str(payload_or_request.get("path", "") or path or "")
+        req_path = _to_utf8_text(payload_or_request.get("path", "") or path or "")
         req_q = payload_or_request.get("query_params") or query_params or ""
         req_b = payload_or_request.get("body") or body or ""
 
         q_str = ""
-        if isinstance(req_q, str):
-            q_str = req_q
+        if isinstance(req_q, (str, bytes, bytearray)):
+            q_str = _to_utf8_text(req_q)
         elif isinstance(req_q, Mapping):
             q_str = "&".join(f"{k}={v}" for k, v in req_q.items())
 
         b_str = ""
-        if isinstance(req_b, str):
-            b_str = req_b
-        elif isinstance(req_b, bytes):
-            b_str = req_b.decode("utf-8", errors="replace")
+        if isinstance(req_b, (str, bytes, bytearray)):
+            b_str = _to_utf8_text(req_b)
         elif isinstance(req_b, Mapping):
             try:
                 b_str = json.dumps(req_b)
@@ -693,13 +699,18 @@ def extract_26_from_http(
     """
     if isinstance(path, Mapping):
         sample_dict = path
-        req_path = str(sample_dict.get("path", "") or "")
+        req_path = _to_utf8_text(sample_dict.get("path", "") or "")
         req_query = sample_dict.get("query_params") if query_params is None else query_params
         req_body = sample_dict.get("body") if body is None else body
     else:
-        req_path = str(path) if path is not None else ""
+        req_path = _to_utf8_text(path) if path is not None else ""
         req_query = query_params
         req_body = body
+
+    if isinstance(req_query, (bytes, bytearray)):
+        req_query = req_query.decode("utf-8", errors="replace")
+    if isinstance(req_body, (bytes, bytearray)):
+        req_body = req_body.decode("utf-8", errors="replace")
 
     raw_text = resolve_payload_text(path=req_path, query_params=req_query, body=req_body)
     canonical = canonicalize_payload(raw_text)

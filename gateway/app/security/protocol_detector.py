@@ -332,6 +332,7 @@ class UniversalPayloadExtractor:
                 "soap_action": soap_action,
                 "is_xxe_detected": is_xxe,
                 "xml_text_nodes_count": len(extracted_text_nodes),
+                "extracted_text": " ".join(extracted_text_nodes),
             },
             is_protocol_anomaly=is_xxe,
             protocol_alert=alert,

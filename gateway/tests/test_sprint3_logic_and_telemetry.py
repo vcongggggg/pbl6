@@ -544,3 +544,136 @@ def test_sci_002_real_current_rps_and_async_topology_telemetry(client: TestClien
     assert topo["target_api"]["status"] == "ok"
     assert topo["network"]["rtt_latency_ms"] >= 0.0
     assert topo["network"]["packet_loss_pct"] == 0.0
+
+
+# ---------------------------------------------------------------------------
+# SPRINT 3 FIX-1: Live PoC Regression Tests (bytes->b'...', SOAP FP, UnboundLocalError)
+# ---------------------------------------------------------------------------
+
+
+@respx.mock
+def test_benign_rest_post_json_not_blocked_in_active_mode(client: TestClient):
+    """Benign REST POST JSON must return HTTP 200 (not 403) and ML score < 30.0 in ACTIVE_BLOCKING."""
+    from app.security.ml_detector import MLDetector, extract_26_from_http
+
+    get_rate_limiter().reset()
+    prev_mode = _set_db_waf_mode("ACTIVE_BLOCKING")
+    try:
+        respx.post("http://vulnerable-api:5000/api/v1/vulnerable/reviews/").mock(
+            return_value=Response(200, json={"status": "created", "id": 42})
+        )
+        raw_json_bytes = b'{"book_id": 1, "author": "Alice", "comment": "Great book"}'
+        raw_json_str = raw_json_bytes.decode("utf-8")
+
+        # Verify zero bytes -> b'...' corruption in 26-D feature extraction
+        fv_bytes = extract_26_from_http("/api/v1/vulnerable/reviews/", None, raw_json_bytes)
+        fv_str = extract_26_from_http("/api/v1/vulnerable/reviews/", None, raw_json_str)
+        assert fv_bytes.tolist() == fv_str.tolist()
+        assert fv_bytes[2] == 0.0  # count_single_quote must be 0.0 (no b'...' wrapper)
+
+        detector = MLDetector()
+        if detector.is_loaded:
+            ml_res = detector.predict(raw_json_str, feature_vector=fv_bytes.tolist())
+            assert ml_res.is_attack is False
+            assert ml_res.risk_score is not None and ml_res.risk_score < 30.0
+
+        res = client.post(
+            "/api/proxy/api/v1/vulnerable/reviews/",
+            headers={"Content-Type": "application/json"},
+            content=raw_json_bytes,
+        )
+        assert res.status_code == 200
+        ml_score_hdr = res.headers.get("X-WAF-ML-Score")
+        if ml_score_hdr is not None:
+            assert float(ml_score_hdr) < 30.0
+    finally:
+        _set_db_waf_mode(prev_mode)
+
+
+@respx.mock
+def test_benign_soap_xml_returns_200_while_soap_cdata_sqli_blocked(client: TestClient):
+    """Benign SOAP XML returns 200 in ACTIVE_BLOCKING; SOAP CDATA SQLi and SOAP XXE return 403."""
+    get_rate_limiter().reset()
+    prev_mode = _set_db_waf_mode("ACTIVE_BLOCKING")
+    try:
+        respx.post("http://vulnerable-api:5000/ws/StatusService").mock(
+            return_value=Response(200, text="<status>ok</status>")
+        )
+        soap_headers = {
+            "Content-Type": "text/xml; charset=utf-8",
+            "SOAPAction": '"CheckStatus"',
+        }
+
+        # 1. Benign SOAP XML must NOT trigger XSS false positive -> HTTP 200
+        benign_soap = (
+            b"<soap:Envelope><soap:Body>"
+            b"<q>public system status ok</q>"
+            b"</soap:Body></soap:Envelope>"
+        )
+        r_benign = client.post(
+            "/api/proxy/ws/StatusService",
+            headers=soap_headers,
+            content=benign_soap,
+        )
+        assert r_benign.status_code == 200
+
+        # 2. SOAP CDATA SQLi must still be blocked -> HTTP 403
+        cdata_sqli = (
+            b"<soap:Envelope><soap:Body>"
+            b"<q><![CDATA[1' UNION SELECT username, password FROM users--]]></q>"
+            b"</soap:Body></soap:Envelope>"
+        )
+        r_sqli = client.post(
+            "/api/proxy/ws/StatusService",
+            headers=soap_headers,
+            content=cdata_sqli,
+        )
+        assert r_sqli.status_code == 403
+
+        # 3. SOAP XXE must still be blocked -> HTTP 403
+        soap_xxe = (
+            b'<?xml version="1.0"?>'
+            b'<!DOCTYPE foo [<!ENTITY xxe SYSTEM "file:///etc/passwd">]>'
+            b"<soap:Envelope><soap:Body><q>&xxe;</q></soap:Body></soap:Envelope>"
+        )
+        r_xxe = client.post(
+            "/api/proxy/ws/StatusService",
+            headers=soap_headers,
+            content=soap_xxe,
+        )
+        assert r_xxe.status_code == 403
+    finally:
+        _set_db_waf_mode(prev_mode)
+
+
+@respx.mock
+def test_risk_rate_limit_when_rate_limit_enabled_false_no_500(client: TestClient):
+    """Risk [60, 80) in ACTIVE_BLOCKING with rate_limit_enabled=False returns 429 (no HTTP 500 UnboundLocalError)."""
+    get_rate_limiter().reset()
+    prev_mode = _set_db_waf_mode("ACTIVE_BLOCKING")
+    try:
+        respx.get("http://vulnerable-api:5000/api/v1/books/").mock(
+            return_value=Response(200, json={"items": []})
+        )
+        forced_rl = DecisionResult(
+            action=PolicyAction.RATE_LIMIT,
+            risk_score=68.0,
+            waf_mode="ACTIVE_BLOCKING",
+            is_blocked=False,
+            is_rate_limited=True,
+            reason="Medium-high risk score (68.0) triggered risk-based throttling",
+            breakdown=RiskScoreBreakdown(
+                weighted_score=68.0,
+                rule_score=50.0,
+                ml_score=76.0,
+                anomaly_score=65.0,
+            ),
+        )
+        with patch.object(get_settings(), "rate_limit_enabled", False), \
+             patch("app.security.decision.DecisionEngine.evaluate", return_value=forced_rl):
+            res = client.get("/api/proxy/api/v1/books/")
+            assert res.status_code == 429
+            assert res.headers.get("X-WAF-Action") == "RATE_LIMIT"
+            assert res.json()["error"] == "RISK_RATE_LIMIT_EXCEEDED"
+    finally:
+        _set_db_waf_mode(prev_mode)

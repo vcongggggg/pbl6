@@ -188,16 +188,15 @@ async def proxy_endpoint(
         pass
 
     # 3. Phase 8: In-Memory Sliding Window Rate Limiting with Session-Aware Fingerprinting & Exponential Backoff
+    session_id = None
+    auth_header = request.headers.get("authorization", "")
+    if auth_header.lower().startswith("bearer "):
+        session_id = auth_header[7:].strip()[:32]
+    if not session_id:
+        session_id = request.cookies.get("session_id") or request.cookies.get("token")
+
     rate_limit_result = None
     if active_waf_mode != "OFF" and settings.rate_limit_enabled:
-        user_agent = request.headers.get("user-agent")
-        session_id = None
-        auth_header = request.headers.get("authorization", "")
-        if auth_header.lower().startswith("bearer "):
-            session_id = auth_header[7:].strip()[:32]
-        if not session_id:
-            session_id = request.cookies.get("session_id") or request.cookies.get("token")
-
         rate_limit_result = rate_limiter.check_rate_limit(
             client_ip=client_ip,
             path=f"/{path}",
@@ -403,10 +402,14 @@ async def proxy_endpoint(
     # 5. Single-pass 26-D feature extraction shared across ML and Anomaly detectors (SCI-PBL6-001)
     try:
         path_norm = f"/{path}" if not path.startswith("/") else path
+        if api_protocol == ApiProtocol.SOAP_XML and not extracted_api.is_protocol_anomaly:
+            ml_body: str | None = extracted_api.metadata.get("extracted_text") or ""
+        else:
+            ml_body = body_bytes.decode("utf-8", errors="replace") if body_bytes else None
         feature_vector_26 = extract_26_from_http(
             path=path_norm,
             query_params=query_str,
-            body=body_bytes,
+            body=ml_body,
         ).tolist()
     except Exception:
         feature_vector_26 = None
