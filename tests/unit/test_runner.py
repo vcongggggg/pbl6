@@ -314,6 +314,7 @@ class TestDQNEvasionAdvisor:
     """Verify DQN model loader and action recommendation."""
 
     def test_advisor_with_existing_checkpoint(self) -> None:
+        pytest.importorskip("torch", reason="PyTorch not installed in CI environment")
         model_path = _ATTACK_LAB_DIR / "models" / "evasion_agent.pt"
         if not model_path.exists():
             pytest.skip("Model checkpoint not present in test environment")

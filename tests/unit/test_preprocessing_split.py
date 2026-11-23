@@ -50,6 +50,20 @@ def compute_sha256(filepath: Path) -> str:
     return h.hexdigest()
 
 
+def compute_sha256_crlf(filepath: Path) -> str:
+    """Compute SHA-256 with CRLF line endings for cross-OS Git checkout parity."""
+    raw = filepath.read_bytes().replace(b"\r\n", b"\n").replace(b"\n", b"\r\n")
+    return hashlib.sha256(raw).hexdigest()
+
+
+def assert_sha256_matches(filepath: Path, expected_hash: str) -> None:
+    actual_raw = compute_sha256(filepath)
+    if actual_raw != expected_hash:
+        assert compute_sha256_crlf(filepath) == expected_hash, (
+            f"SHA-256 mismatch for {filepath.name}: raw={actual_raw}, expected={expected_hash}"
+        )
+
+
 def test_attack_processed_files_exist():
     """Verify that all attack split CSVs, metadata JSON, and Markdown report exist."""
     assert (ATTACK_DIR / "train.csv").exists()
@@ -183,9 +197,9 @@ def test_metadata_integrity_and_sha256_both_tracks():
     assert meta_a["track"] == "offensive"
     assert meta_a["total_samples"] == 10000
     assert meta_a["split_sizes"] == {"train": 7000, "val": 1500, "test": 1500}
-    assert meta_a["hashes_sha256"]["train"] == compute_sha256(ATTACK_DIR / "train.csv")
-    assert meta_a["hashes_sha256"]["val"] == compute_sha256(ATTACK_DIR / "val.csv")
-    assert meta_a["hashes_sha256"]["test"] == compute_sha256(ATTACK_DIR / "test.csv")
+    assert_sha256_matches(ATTACK_DIR / "train.csv", meta_a["hashes_sha256"]["train"])
+    assert_sha256_matches(ATTACK_DIR / "val.csv", meta_a["hashes_sha256"]["val"])
+    assert_sha256_matches(ATTACK_DIR / "test.csv", meta_a["hashes_sha256"]["test"])
 
     # Track 2
     with open(DEFENSE_META, mode="r", encoding="utf-8") as f:
@@ -194,9 +208,9 @@ def test_metadata_integrity_and_sha256_both_tracks():
     assert meta_d["track"] == "defense"
     assert meta_d["total_samples"] == 20000
     assert meta_d["split_sizes"] == {"train": 14000, "val": 3000, "test": 3000}
-    assert meta_d["hashes_sha256"]["train"] == compute_sha256(DEFENSE_DIR / "train.csv")
-    assert meta_d["hashes_sha256"]["val"] == compute_sha256(DEFENSE_DIR / "val.csv")
-    assert meta_d["hashes_sha256"]["test"] == compute_sha256(DEFENSE_DIR / "test.csv")
+    assert_sha256_matches(DEFENSE_DIR / "train.csv", meta_d["hashes_sha256"]["train"])
+    assert_sha256_matches(DEFENSE_DIR / "val.csv", meta_d["hashes_sha256"]["val"])
+    assert_sha256_matches(DEFENSE_DIR / "test.csv", meta_d["hashes_sha256"]["test"])
 
 
 def test_markdown_reports_contents_both_tracks():
