@@ -2,227 +2,192 @@
 
 ---
 
-## 4.1. Thiết Kế Môi Trường Thực Nghiệm và Bộ Dữ Liệu Kiểm Thử
+## 4.1. Thiết Kế Môi Trường Thực Nghiệm và Các Bộ Dữ Liệu Kiểm Định
 
-### 4.1.1. Hạ tầng mạng và môi trường đo lường thực tế
-Nhằm đảm bảo tính xác thực học thuật và phản ánh khách quan hiệu năng trong điều kiện vận hành thực tế theo hướng dẫn NIST SP 800-115 [Ref 17] và ISO/IEC 27004:2016 [Ref 18], toàn bộ các kịch bản kiểm thử được triển khai trên **mô hình Thao trường An ninh Đối kháng Phân tán gồm 2 máy vật lý độc lập kết nối qua mạng cục bộ LAN (Wi-Fi/Ethernet 192.168.1.0/24)**:
+### 4.1.1. Hạ tầng Thao trường Đối kháng và phương pháp đo kiểm khoa học
+Tuân thủ phương pháp luận **NIST SP 800-115** **[Ref 09]** và **ISO/IEC 27004:2016**, toàn bộ các thực nghiệm được triển khai trên mô hình **Thao trường An ninh Đối kháng 2 Máy (Distributed Cyber Range)** kết hợp kịch bản đo cô lập (in-process microbenchmark & ASGI concurrency) và đối kháng trực tiếp giữa Red Team và Blue Team v2.0:
+- **Máy 1 (Blue Team Host — Nguyễn Văn Công):** Intel Core i7 (8 Cores / 16 Threads), 16 GB RAM, Windows 11 64-bit / Docker Engine 29.4; vận hành WAF Gateway v2.0 (Port 8000), Bookie Bookstore Django Target API (Port 5000, cô lập `127.0.0.1`), SOC Dashboard & AI Arena (Port 3000) và SQLite WAL.
+- **Máy 2 (Red Team Host — Nguyễn Minh):** CPU 6+ Cores, 16 GB RAM, Windows 11 / Linux; vận hành OpenAPI Recon Agent (`recon.py`), Attack Graph Environment (`environment/`), PyTorch DQN Evasion Agent (`evasion_agent.pt`, xác thực SHA-256 + `weights_only=True`) và CLI Runner (`runner.py`).
 
-- **Máy 1 (Blue Team Host):**
-  - Vi xử lý: Intel Core i7 (8 Cores, 16 Threads) @ 2.80 GHz.
-  - Bộ nhớ RAM: 16 GB DDR4.
-  - Hệ điều hành: Windows 11 64-bit.
-  - Dịch vụ vận hành: WAF Security Gateway (Port 8000), Bookie Bookstore (`vulnerable-api`, Port 5000), Next.js 14 SOC Dashboard (Port 3000), CSDL SQLite.
-- **Máy 2 (Red Team Host):**
-  - Vi xử lý: AMD Ryzen 5 / Intel Core i5 @ 2.50 GHz.
-  - Bộ nhớ RAM: 16 GB DDR4.
-  - Hệ điều hành: Windows 11 64-bit / Linux Ubuntu.
-  - Dịch vụ vận hành: Tác tử Tấn công Tự động PyTorch DQN (`evasion_agent.pt`), OpenAPI Recon Parser, LAN Campaign Runner.
+### 4.1.2. Thiết kế bộ dữ liệu không rò rỉ (Zero-Leakage Datasets)
+Khắc phục triệt để hiện tượng rò rỉ dữ liệu Train/Test ở phiên bản v1.0, toàn bộ thực nghiệm của **Blue Team v2.0** áp dụng phân tách theo mã băm chuẩn hóa (**Canonical Hash Disjoint Split**) bảo đảm `0` mẫu trùng lặp giữa các tập (Bảng 4.1):
 
----
+*Bảng 4.1: Tổng hợp 4 bộ dữ liệu và kịch bản kiểm định thực nghiệm Blue Team v2.0 + Red Team*
 
-### 4.1.2. Thiết kế và phân bổ các bộ dữ liệu thực nghiệm
-Hệ thống được kiểm định toàn diện trên 3 bộ dữ liệu độc lập với các đặc trưng và quy mô khác nhau (Bảng 4.1):
-
-*Bảng 4.1: Tổng hợp các tập dữ liệu kiểm định thực nghiệm*
-
-| Tên Tập Dữ Liệu | Quy Mô (N) | Tỷ Lệ Benign / Attack | Nguồn Gốc & Bản Chất Dữ Liệu | Mục Đích Thực Nghiệm |
-| :--- | :---: | :---: | :--- | :--- |
-| **Tập Huấn Luyện & Kiểm Thử Nội Bộ** | **20.000** | 10.000 Benign / 10.000 Attacks | Dữ liệu mô phỏng chuẩn hóa bao phủ 4 họ tấn công (SQLi, XSS, Path, CMD) với 60% mẫu bị làm rối (Obfuscated). | Huấn luyện mô hình, đối sánh 5 thuật toán ML và tối ưu hóa siêu tham số. |
-| **Tập Kiểm Định Trực Tiếp Toàn Trình (Live LAN Benchmark)** | **1.000** | 200 Benign / 800 Attacks | Sinh tự động và phát đa luồng qua mạng LAN vật lý từ Máy 2 sang Máy 1. | Đo lường độ trễ toàn trình (Latency Percentiles SLA), thông lượng (RPS) và tỷ lệ chặn thời gian thực. |
-| **Tập Chuẩn Quốc Tế CSIC 2010** | **3.000** | 1.500 Benign / 1.500 Attacks | Tập dữ liệu thực nghiệm chuẩn quốc tế của Viện Nghiên cứu CSIC (Tây Ban Nha). | Đánh giá năng lực tổng quát hóa liên tập dữ liệu (Cross-Dataset Generalization) và kiểm định chống quá khớp (Overfitting). |
+| Bộ Dữ Liệu / Kịch Bản | Quy Mô (N) | Cơ Cấu Phân Bổ | Kiểm Chứng Zero-Leakage | Mục Đích Thực Nghiệm |
+| :--- | :---: | :--- | :--- | :--- |
+| **`defense_v2` (Zero-Leakage Multi-Source)** | **46.187** | Train `32.330` / Val `6.928` / Test `6.929` (5 lớp: Benign, SQLi, XSS, Path, CMD) | `0` trùng lặp giữa Train/Val/Test, CSIC 2010 và `benchmark_1000` | Huấn luyện, đối sánh 5 thuật toán ML và đánh giá ma trận nhầm lẫn Test Set. |
+| **`benchmark_1000_diverse.csv`** | **1.000** | 200 Benign + 800 Attacks (200 SQLi, 200 XSS, 200 Path, 200 CMD) | `benchmark1000_overlap = 0` với tập huấn luyện | Ablation Study 4 cấu hình phòng thủ & hiệu chuẩn Isolation Forest v2.0. |
+| **CSIC 2010 HTTP Dataset (Quốc tế)** | **3.000** | 1.500 Benign + 1.500 Attacks (254 SQLi, 65 XSS, 1.181 Tamper) | `csic2010_overlap = 0` (100% Zero-Shot ngoại miền) | Đánh giá năng lực tổng quát hóa liên tập dữ liệu & kiểm soát FPR. |
+| **Live Adversarial Red vs Blue Campaign** | **20 lượt** | 5 endpoint Bookie OWASP x 4 vòng biến dị PyTorch DQN + Tamper | Bắn HTTP sống trực tiếp vào WAF Gateway v2.0 + Bookie API | Đánh giá độ bền đối kháng thực chiến giữa Red Team và Blue Team v2.0. |
 
 ---
 
-## 4.2. Thực Nghiệm Đa Mô Hình Học Máy và Luận Chứng Lựa Chọn Champion Random Forest
+## 4.2. Thực Nghiệm Đa Mô Hình Học Máy và Lựa Chọn Champion XGBoost v2.0
 
-### 4.2.1. Kết quả đối sánh 5 trường phái thuật toán học máy
-Thực nghiệm phân tầng Stratified 70/15/15 trên 20.000 mẫu (14.000 mẫu Train, 3.000 mẫu Validation, 3.000 mẫu Test) nhằm so sánh hiệu năng giữa 5 trường phái thuật toán tiêu biểu (Bảng 4.2):
+### 4.2.1. Đối sánh 5 trường phái học máy trên tập `defense_v2` (26 đặc trưng thống nhất)
+Thực nghiệm huấn luyện và đánh giá công bằng trên cùng tập **Test độc lập (`N = 6.929` mẫu, 26 đặc trưng `extract_26_from_http`)** giữa 5 thuật toán tiêu biểu (Bảng 4.2):
 
-*Bảng 4.2: Bảng kết quả thực nghiệm đối sánh 5 trường phái thuật toán học máy*
+*Bảng 4.2: Kết quả đối sánh 5 thuật toán học máy trên tập Test `defense_v2` (`N = 6.929`)*
 
-| Thuật Toán Ứng Viên | Trường Phái Thuật Toán | Accuracy | Precision (Macro) | Recall (Macro) | F1-Score (Macro) | FPR (Benign) | Youden's Index $J$ | Độ Trễ Suy Luận |
-| :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **Logistic Regression** | Tuyến tính (Linear Baseline) | 97.80% | 98.40% | 96.56% | 97.44% | 0.13% | **0.9643** | **0.001 ms** |
-| **Decision Tree (CART)** | Cây quyết định đơn lẻ | 99.60% | 99.76% | 99.44% | 99.60% | 0.13% | **0.9931** | **0.001 ms** |
-| **Linear SVM (Calibrated)** | Siêu phẳng phân tách tối đại | 97.83% | 98.16% | 96.73% | 97.43% | 0.33% | **0.9640** | **0.005 ms** |
-| **Random Forest (CHAMPION) 🏆** | Bagging Ensemble [Ref 13] | **99.93%** | **99.97%** | **99.89%** | **99.93%** | **0.00%** | **0.9989** | **0.037 ms** |
-| **XGBoost (GBDT)** | Boosting Ensemble | 99.97% | 99.99% | 99.95% | 99.97% | 0.00% | **0.9995** | **0.004 ms** |
-| **Multi-Layer Perceptron** | Mạng Nơ-ron Nhân tạo (DL) | 98.63% | 97.92% | 98.89% | 98.38% | 1.80% | **0.9709** | **0.002 ms** |
+| Thuật Toán | Trường Phái | Accuracy | Precision (Macro) | Recall (Macro) | F1-Score (Macro) | Định Dạng Triển Khai |
+| :--- | :--- | :---: | :---: | :---: | :---: | :--- |
+| **Logistic Regression** | Tuyến tính (Baseline) | 96.20% | 94.18% | 93.32% | 93.72% | Scikit-learn (Baseline) |
+| **Decision Tree (CART)** | Cây quyết định đơn lẻ | 98.05% | 97.58% | 96.72% | 97.14% | Scikit-learn (Baseline) |
+| **Random Forest** | Bagging Ensemble [Ref 12] | 99.15% | 99.10% | 98.81% | 98.95% | Pickle `.joblib` (~10.8 ms single-req) |
+| **LightGBM** | Leaf-wise Boosting | 99.21% | 98.73% | 98.80% | 98.77% | Booster |
+| **XGBoost (Baseline)** | Gradient Boosting | 99.03% | 98.41% | 98.39% | 98.40% | UBJSON |
+| **Champion Cost-Sensitive Regularized XGBoost v2.0** | **Regularized GBDT (Triển khai thực tế)** | **99.15%** | **98.71%** | **98.74%** | **98.72%** | **Zero-Pickle `xgb_v2.ubj` (0.618 ms microbench)** |
 
----
+**Luận chứng khoa học lựa chọn Champion Cost-Sensitive Regularized XGBoost v2.0 (`xgb_v2.ubj`):**
+1. **Triệt tiêu hoàn toàn rủi ro Pickle RCE (CWE-502):** Khác với Random Forest `.joblib`, XGBoost v2.0 xuất trực tiếp sang chuẩn nhị phân **UBJSON (`xgb_v2.ubj`)** kết hợp xác thực SHA-256 Fail-Closed trước khi nạp.
+2. **Tốc độ suy luận single-request vượt trội:** Trên thực nghiệm đo từng request đơn lẻ (giống lưu lượng HTTP thực tế của WAF), Random Forest `.joblib` mất **10.78 ms/req**, trong khi `xgb_v2.ubj` chỉ mất **`0.618 ms/req`** (microbench) — **nhanh hơn 17 lần**.
+3. **Kiểm soát chặt False Positive nhờ Cost-Sensitive Regularization:** Siêu tham số điều chuẩn (`n_estimators=150`, `max_depth=6`, `learning_rate=0.08`, `reg_lambda=2.0`, `min_child_weight=3`) giúp mô hình đạt **99.15% Accuracy** trên tập Test nội bộ đồng thời hạ **FPR Zero-Shot trên CSIC 2010 từ 29.60% (v1.0) xuống 0.00% (v2.0)**.
 
-### 4.2.2. Luận chứng khoa học lựa chọn Random Forest làm Champion Model
-Dựa trên bảng chỉ số đa mục tiêu, mô hình **Random Forest** được quyết định lựa chọn làm Champion Model với các căn cứ khoa học vững chắc:
-1. **Khắc phục nhược điểm của mô hình tuyến tính (Logistic Regression / Linear SVM):** Sự chênh lệch lớn về F1-Score (99.93% so với 97.44%) chứng minh không gian đặc trưng của payload tấn công bị làm rối có tính phi tuyến phức tạp, đòi hỏi các ranh giới phân tách trực giao phi tuyến.
-2. **Triệt tiêu nguy cơ quá khớp của Cây quyết định đơn lẻ (Decision Tree):** Decision Tree đơn lẻ có nguy cơ rất cao bị quá khớp trước các biến dị nhỏ của payload. Random Forest áp dụng kỹ thuật Bootstrap Aggregating (Bagging) trên 100 cây con giúp triệt tiêu phương sai dự đoán (Variance Reduction) và đạt tỷ lệ dương tính giả tuyệt đối $	ext{FPR} = 0.00\%$ trên tập mẫu sạch.
-3. **Ưu thế về tính ổn định đối kháng so với XGBoost:** Mặc dù XGBoost có độ chính xác nhỉnh hơn 0.04%, cơ chế Boosting tuần tự của XGBoost có xu hướng tập trung học quá mức vào các mẫu khó (Hard Examples), dẫn đến nguy cơ nhạy cảm quá mức trước các mẫu nhiễu đối kháng (Adversarial Perturbations) [Ref 12]. Ngược lại, Bagging của Random Forest tạo ra sự đa dạng ngẫu nhiên, giúp mô hình ổn định hơn khi gặp các payload lạ. Hơn nữa, Random Forest dễ dàng tuần tự hóa đóng gói bằng Joblib thuần túy, không phụ thuộc thư viện liên kết động C++ phức tạp trong môi trường Docker.
-4. **Vượt trội so với Mạng Nơ-ron (MLP):** Mạng MLP có tỷ lệ báo động nhầm cao nhất ($	ext{FPR} = 1.80\%$), vi phạm nghiêm trọng yêu cầu phi chức năng NFR-03 ($	ext{FPR} \le 1.0\%$).
-5. **Chỉ số Youden's Index xuất sắc:** Đạt $J = 0.9989$, vượt xa ngưỡng chuẩn $0.90$ của OWASP Benchmark Project [Ref 15].
+### 4.2.2. Ma trận nhầm lẫn của Champion XGBoost v2.0 (`Test Set N = 6.929`)
+*Bảng 4.3: Ma trận nhầm lẫn thực tế của `xgb_v2.ubj` trên tập Test `defense_v2` (`N = 6.929`)*
 
----
-
-### 4.2.3. Ma trận nhầm lẫn của Champion Random Forest
-Bảng ma trận nhầm lẫn đo trên **3.000 mẫu kiểm thử độc lập (Test Set)** (Bảng 4.3):
-
-*Bảng 4.3: Ma trận nhầm lẫn của mô hình Champion Random Forest (Test Set N = 3.000)*
-
-| Thực Tế \ Dự Đoán | BENIGN | COMMAND_INJECTION | PATH_TRAVERSAL | SQLI | XSS | Tỷ Lệ Nhận Diện (Recall) |
-| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
-| **BENIGN** | **1.500** | 0 | 0 | 0 | 0 | **100.00%** |
-| **COMMAND_INJECTION** | 0 | **375** | 0 | 0 | 0 | **100.00%** |
-| **PATH_TRAVERSAL** | 2 | 0 | **373** | 0 | 0 | **99.47%** |
-| **SQLI** | 0 | 0 | 0 | **375** | 0 | **100.00%** |
-| **XSS** | 0 | 0 | 0 | 0 | **375** | **100.00%** |
-
-Kết quả chỉ ghi nhận 2 trường hợp bỏ sót nhầm (False Negative) ở nhóm Path Traversal do payload có độ dài cực ngắn, tương đương với truy vấn tệp tĩnh thông thường.
+| Thực Tế \ Dự Đoán | BENIGN | CMD | PATH | SQLI | XSS | Support | Precision | Recall | F1-Score |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **BENIGN** | **3.874** | 1 | 17 | 1 | 8 | 3.901 | 99.49% | 99.31% | 99.40% |
+| **COMMAND_INJECTION** | 1 | **348** | 0 | 3 | 1 | 353 | 97.75% | 98.58% | 98.17% |
+| **PATH_TRAVERSAL** | 4 | 0 | **1.196** | 0 | 0 | 1.200 | 98.60% | 99.67% | 99.13% |
+| **SQL_INJECTION** | 1 | 5 | 0 | **268** | 1 | 275 | 98.53% | 97.45% | 97.99% |
+| **XSS** | 14 | 2 | 0 | 0 | **1.184** | 1.200 | 99.16% | 98.67% | 98.91% |
 
 ---
 
-## 4.3. Đánh Giá Khả Năng Phát Hiện Tấn Công Dị Biệt và Zero-Day (Isolation Forest)
+## 4.3. Đánh Giá Tầng Phát Hiện Dị Biệt Không Giám Sát (Calibrated Isolation Forest v2.0)
 
-Thực nghiệm đo lường năng lực phát hiện của mô hình Isolation Forest (Unsupervised Anomaly Detection [Ref 14]) kết hợp kiến trúc 3 tầng phòng thủ trên tập 500 mẫu tấn công Zero-day bị làm rối tinh vi (JSFuck, Base64 URI, UTF-8 Overlong, IFS Variable Slicing) (Bảng 4.4):
+Mô hình **`iforest_v2.npz`** (50.5 KB, 100 cây cô lập, `max_samples=512`, `contamination=0.04`, nạp bằng `np.load(..., allow_pickle=False)`) được đánh giá trên `benchmark_1000_diverse.csv` (200 Benign, 800 Attacks, 0 mẫu trùng tập huấn luyện) ở 3 mức ngưỡng chính sách (Bảng 4.4):
 
-*Bảng 4.4: Hiệu năng đối sánh 3 tầng phòng thủ trên tập Zero-Day & Obfuscated Attacks*
+*Bảng 4.4: Hiệu năng hiệu chuẩn phân vị của Calibrated Isolation Forest v2.0 (`iforest_v2.npz`)*
 
-| Tầng Phòng Thủ (Defense Tier) | Benign FAR (Báo Nhầm) $\le 1.0\%$ | Known Attacks (Chuẩn Hóa) | Zero-Day & Obfuscated (Làm Rối) | Độ Trễ Suy Luận (CPU) |
+| Ngưỡng Điểm Rủi Ro | Mức Chính Sách | TP / 800 | Recall (%) | FP / 200 | FPR (%) | Precision (%) | Cải Thiện So Với v1.0 (`5.88%`) |
+| :--- | :--- | :---: | :---: | :---: | :---: | :---: | :--- |
+| **`>= 30.0`** | Giám sát (`MONITOR`) | **687 / 800** | **85.88%** | 57 / 200 | 28.50% | 92.34% | Độ phủ giám sát dị biệt rất rộng |
+| **`>= 60.0`** | Cảnh báo / Rate-Limit | **462 / 800** | **57.75%** | **8 / 200** | **4.00%** | **98.30%** | **Tăng 9.8x Recall**, đạt mục tiêu FPR <= 5% |
+| **`>= 80.0`** | Chặn độc lập (`BLOCK`) | **309 / 800** | **38.62%** | **8 / 200** | **4.00%** | **97.48%** | **Tăng 6.6x Recall**, tốc độ nhanh hơn **40x–100x** |
+
+Thời gian suy luận thuần của `iforest_v2.npz` sau khi có vector 26-D chỉ còn **`0.0949 ms/req`** (P95 `0.1558 ms`), nhanh hơn khoảng **100 lần** so với bản scikit-learn `.joblib` ở v1.0 (`9.77 ms`).
+
+---
+
+## 4.4. Thực Nghiệm Ablation Study 4 Cấu Hình Phòng Thủ (Blue Team v2.0)
+
+Để chứng minh định lượng đóng góp của từng tầng phòng thủ, nhóm chạy kịch bản `scripts/run_ablation_study.py` trên **`benchmark_1000_diverse.csv` (1.000 mẫu, `0` overlap với tập train)** với cơ chế cô lập thời gian thực thi từng chế độ và dùng chung một lần trích xuất 26-D trong chế độ Hybrid (Bảng 4.5):
+
+*Bảng 4.5: Ma trận đối sánh thực nghiệm Ablation Study — Blue Team v2.0 (`N = 1.000`)*
+
+| Cấu Hình Phòng Thủ | Accuracy | Precision | Recall | F1-Score | FPR | Youden's J | Mean Latency | P95 Latency |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **1. Rules Only (16 Hardened Rules)** | 59.40% | 100.00% | 49.25% | 66.00% | 0.00% | 0.4925 | **0.106 ms** | 0.188 ms |
+| **2. ML Only (XGBoost v2.0 — 26-D)** | 94.80% | 100.00% | 93.50% | 96.64% | 0.00% | 0.9350 | 0.634 ms | 0.787 ms |
+| **3. Anomaly Only (IForest v2.0, >=80)** | 50.10% | 97.48% | 38.62% | 55.33% | 4.00% | 0.3463 | 0.235 ms | 0.336 ms |
+| *Anomaly Only (Ngưỡng cảnh báo >=60)* | *65.40%* | *98.30%* | *57.75%* | *72.76%* | *4.00%* | *0.5375* | *0.235 ms* | *0.336 ms* |
+| **4. HYBRID DEFENSE v2.0 (Đề tài)** | **97.80%** | **100.00%** | **97.25%** | **98.61%** | **0.00%** | **0.9725** | **0.848 ms** | **1.075 ms** |
+
+*Bảng 4.6: Tỷ lệ chặn theo từng họ lỗ hổng của Hybrid Defense v2.0 (`benchmark_1000_diverse.csv`)*
+
+| Nhóm Lưu Lượng | Tổng Mẫu | Bị Chặn (403) | Cho Qua (200) | Hiệu Quả Phòng Thủ |
 | :--- | :---: | :---: | :---: | :---: |
-| **Tầng 1: Rule Engine (Regex)** | **0.00%** (0 / 2.000) | **75.00%** (75 / 1.500) | **60.00%** (60 / 500) | **0.010 ms** |
-| **Tầng 2: Random Forest (Supervised)** | **0.00%** (0 / 2.000) | **100.00%** (100 / 1.500) | **100.00%** (100 / 500) | **0.020 ms** |
-| **Tầng 3: Isolation Forest (Anomaly)** | **1.00%** (20 / 2.000) | **25.00%** (375 / 1.500) | **24.00%** (120 / 500) | **0.010 ms** |
-| **HỢP LỰC 3 TẦNG: Multi-Tier WAF** | **1.00%** (20 / 2.000) | **100.00%** (1.500 / 1.500) | **100.00%** (500 / 500) | **0.040 ms** |
+| **SQL Injection (SQLi)** | 200 | **200** | 0 | **100.00% BLOCKED** |
+| **Cross-Site Scripting (XSS)** | 200 | **200** | 0 | **100.00% BLOCKED** |
+| **Path Traversal / LFI** | 200 | **200** | 0 | **100.00% BLOCKED** |
+| **OS Command Injection (RCE)** | 200 | **178** | 22 | **89.00% BLOCKED** |
+| **Lưu lượng hợp lệ (Benign)** | 200 | **0** | **200** | **100.00% ALLOWED (0.00% FPR)** |
 
-> [!NOTE]
-> **Khám phá Khoa học Cốt lõi:**
-> Khi gặp các payload làm rối né tránh chữ ký (Rule Engine bị rớt tỷ lệ bắt từ 75% xuống 60%), Isolation Forest đóng vai trò cứu cánh khi độc lập cô lập thành công 24.00% các biến thể dị biệt nhờ sự đột biến về Shannon Entropy ($H(S) > 4.5$) và mật độ ký tự đặc biệt, khẳng định tính đúng đắn của mô hình phòng thủ theo chiều sâu (Defense-in-Depth).
-
----
-
-## 4.4. Thực Nghiệm Kiểm Thử Trực Tiếp Toàn Trình Qua Mạng LAN (Live LAN Benchmark)
-
-Chiến dịch kiểm thử trực tiếp gồm **1.000 requests** được phát tự động từ Máy 2 sang Máy 1 qua giao thức HTTP/1.1 dưới áp lực đồng thời 8 luồng (8 Concurrent Workers):
-
-### 4.4.1. Ma trận nhầm lẫn toàn trình và chỉ số hiệu năng
-*Bảng 4.5: Ma trận nhầm lẫn toàn trình trên 1.000 live requests qua mạng LAN*
-
-| Chỉ Số Đánh Giá | Giá Trị Thực Nghiệm | Đánh Giá Học Thuật |
-| :--- | :---: | :--- |
-| **True Positives (TP - Chặn đúng tấn công)** | **731 / 800** | Kích hoạt HTTP 403 Forbidden chuẩn RFC 7807 |
-| **False Negatives (FN - Lọt lưới tấn công)** | **69 / 800** | Các biến thể lách luật nâng cao |
-| **True Negatives (TN - Cho qua hợp lệ)** | **170 / 200** | Request chuyển tiếp thành công tới Upstream |
-| **False Positives (FP - Chặn nhầm mẫu sạch)** | **30 / 200** | Tỷ lệ báo nhầm trên truy vấn sạch |
-| **Detection Recall (Tỷ lệ bắt mã độc)** | **91.38%** | Đạt chỉ tiêu cam kết NFR-03 ($\ge 90\%$) |
-| **Precision (Độ tin cậy cảnh báo)** | **96.06%** | Hạn chế tối đa cảnh báo rác |
-| **F1-Score (Trung bình điều hòa)** | **93.66%** | Điểm cân bằng học thuật đạt mức xuất sắc |
-| **Overall Accuracy (Độ chính xác toàn diện)** | **90.10%** | Phân loại đúng trên toàn bộ 1.000 mẫu |
+**Phân tích khoa học cốt lõi:**
+- **Hybrid v2.0 vượt trội rõ rệt so với ML đơn lẻ:** Tăng **+3.75% Recall (`93.50% -> 97.25%`)**, tăng **+1.97% F1-Score (`96.64% -> 98.61%`)**, giảm hơn một nửa số tấn công bỏ lọt (`52 -> 22`), đạt **Youden's Index `J = 0.9725`** và giữ tuyệt đối **0.00% FPR**.
+- **Độ trễ giảm 19 lần so với v1.0:** Hybrid v2.0 chỉ tiêu tốn **`0.848 ms/req`** (P95 **`1.075 ms`**) so với `16.10 ms` ở v1.0, chỉ cộng thêm **`+0.214 ms`** so với XGBoost thuần nhưng mang lại 4 lớp phòng vệ chiều sâu (chống Evasion, bắt Zero-Day OOD, Fail-Safe Degraded Mode và XAI giải trình đầy đủ).
 
 ---
 
-### 4.4.2. Hiệu năng chi tiết theo từng danh mục lỗ hổng OWASP
-*Bảng 4.6: Tỷ lệ cản phá theo từng họ tấn công trong bài test 1.000 live requests*
+## 4.5. Đánh Giá Tổng Quát Hóa Liên Tập Dữ Liệu (Zero-Shot CSIC 2010 Benchmark)
 
-| Danh Mục Tấn Công | Tổng Số Mẫu | Bị Chặn (Blocked 403) | Cho Qua (Allowed 200) | Tỷ Lệ Hiệu Quả |
-| :--- | :---: | :---: | :---: | :---: |
-| **SQL Injection (SQLi)** | 200 | 191 | 9 | **95.50% BLOCKED** |
-| **Cross-Site Scripting (XSS)** | 200 | 194 | 6 | **97.00% BLOCKED** |
-| **Path Traversal / LFI** | 200 | 173 | 27 | **86.50% BLOCKED** |
-| **OS Command Injection (RCE)** | 200 | 173 | 27 | **86.50% BLOCKED** |
-| **Lưu Lượng Hợp Lệ (Benign)** | 200 | 30 | 170 | **85.00% ALLOWED** |
+Kiểm định chéo hoàn toàn **Zero-Shot** (`csic2010_overlap = 0`) trên **3.000 request thực tế** của Viện CSIC Tây Ban Nha **[Ref 14]** (1.500 Benign + 1.500 Attacks) thu được kết quả bước ngoặt so với v1.0 (Bảng 4.7):
 
----
+*Bảng 4.7: Đối sánh Zero-Shot CSIC 2010 giữa Blue Team v1.0 và Blue Team v2.0 (`N = 3.000`)*
 
-### 4.4.3. Hồ sơ phân vị độ trễ (Latency Percentile SLA)
-Thời gian thực thi toàn bộ 1.000 requests là **44.17 giây**, thông lượng đạt **22.6 RPS** qua kết nối Wi-Fi thực tế. Phân vị độ trễ được đo lường chi tiết:
-- **Độ trễ trung bình (Mean Latency):** $327.41	ext{ ms}$.
-- **Độ trễ trung vị (P50 Median):** $326.34	ext{ ms}$.
-- **Phân vị 90 (P90):** $443.82	ext{ ms}$.
-- **Phân vị 95 (P95 SLA):** $481.05	ext{ ms}$.
-- **Phân vị đỉnh 99 (P99 Max Jitter):** $555.63	ext{ ms}$.
-
-Trong đó, bản thân thời gian xử lý nội bộ của WAF Gateway (Pipeline Latency) chỉ chiếm **$pprox 0.040	ext{ ms}$**, phần lớn độ trễ còn lại là do truyền dẫn sóng vô tuyến Wi-Fi và thời gian xử lý I/O cơ sở dữ liệu của `vulnerable-api`.
-
----
-
-## 4.5. Đánh Giá Khả Năng Tổng Quát Hóa Liên Tập Dữ Liệu (CSIC 2010 Benchmark)
-
-Nhằm chứng minh tính khách quan khoa học và khẳng định mô hình không bị phụ thuộc vào dữ liệu nội bộ (Overfitting to Synthetic Data), nhóm nghiên cứu đã tiến hành đánh giá chéo trên **3.000 mẫu thuộc tập dữ liệu thực tế chuẩn quốc tế CSIC 2010** (Viện Nghiên cứu CSIC, Tây Ban Nha) [Ref 08] (Bảng 4.7):
-
-*Bảng 4.7: Bảng đối sánh khoa học: Tập nội bộ vs Chuẩn quốc tế CSIC 2010*
-
-| Chỉ Số Đánh Giá (Metric) | Tập Nội Bộ (Synthetic Test Set) | Chuẩn Quốc Tế (CSIC 2010 Benchmark) | Chênh Lệch ($\Delta$) | Đánh Giá Khả Năng Tổng Quát Hóa |
+| Chỉ Số Đánh Giá | Blue Team v1.0 (RF 17-D) | Blue Team v2.0 (XGBoost 26-D) | Blue Team v2.0 (Hybrid 3 Tầng) | Nhận Xét Khoa Học Khách Quan |
 | :--- | :---: | :---: | :---: | :--- |
-| **Độ chính xác (Accuracy)** | **99.93%** | **67.03%** | `-32.90%` | Duy trì khả năng nhận diện tốt trên dữ liệu hoàn toàn lạ |
-| **Precision (Độ tin cậy)** | **99.97%** | **68.26%** | `-31.71%` | Hạn chế tối đa cảnh báo sai |
-| **Recall (Tỷ lệ bắt mã độc)** | **99.89%** | **63.67%** | `-36.22%` | Chặn đứng thành công 955 / 1.500 vector tấn công |
-| **F1-Score (Cân bằng)** | **99.93%** | **65.88%** | `-34.05%` | Mức cân bằng học thuật đạt ngưỡng tốt trong Zero-shot |
-| **Tỷ lệ báo giả (FPR)** | **0.00%** | **29.60%** | `+29.60%` | Đảm bảo tính an toàn cho hạ tầng chưa từng được huấn luyện |
+| **False Positive Rate (FPR)** | **29.60%** (444/1.500 chặn oan) | **0.00%** (0/1.500) | **0.00%** (0/1.500) | **Triệt tiêu hoàn toàn overfitting chặn nhầm người dùng sạch.** |
+| **Precision (Độ tin cậy cảnh báo)** | 68.26% | **100.00%** | **100.00%** | Mọi cảnh báo trên dữ liệu ngoại miền đều là tấn công thực sự. |
+| **XSS Detection Rate (65 mẫu)** | 96.92% (63/65) | 95.38% (62/65) | **100.00% (65/65)** | **Chặn tuyệt đối 100% XSS ngoại miền Zero-Shot.** |
+| **SQLi Detection Rate (254 mẫu)** | 65.75% (kèm 29.6% FPR) | 34.65% (88/254) | **49.61% (126/254)** | Hybrid tăng **+14.96% Recall SQLi** so với ML thuần ở mức `0% FPR`. |
+| **Anomalous Tamper (1.181 mẫu)** | 61.39% (do chặn bừa) | 2.03% (24/1.181) | **5.50% (65/1.181)** | Phản ánh trung thực *Domain Shift*: nhóm tham số nghiệp vụ CSIC (ví dụ sai định dạng mã bưu điện Tây Ban Nha) cần tầng Positive Schema OpenAPI riêng của ứng dụng. |
 
-Phân tích chi tiết theo hành vi mã độc CSIC 2010:
-- **Cross-Site Scripting (XSS):** Chặn đứng **96.92% (63 / 65 mẫu)**.
-- **SQL Injection (SQLi):** Chặn đứng **65.75% (167 / 254 mẫu)**.
-- **Anomalous Parameter Tampering:** Phát hiện **61.39% (725 / 1.181 mẫu)**.
-
-Kết quả thực nghiệm trên tập CSIC 2010 chứng minh rằng vector 17 đặc trưng hình thái mang tính khái quát hóa cao, cho phép WAF bảo vệ được cả những hệ sinh thái Web API bên ngoài mà không cần huấn luyện lại từ đầu.
+Kết quả này khẳng định tính liêm chính khoa học cao: thay vì chấp nhận FPR 29.60% phi thực tế (sẽ làm sập dịch vụ người dùng thật), **Blue Team v2.0** ưu tiên độ tin cậy vận hành (**0.00% FPR, 100.00% Precision**), đạt **100% XSS** và **49.61% SQLi** ngoại miền, đồng thời chứng minh rõ lý do thực tế cần tầng **Positive Security OpenAPI Schema Validator** cho nhóm tấn công sai lệch tham số nghiệp vụ (`ANOMALY_TAMPER`).
 
 ---
 
+## 4.6. Đo Kiểm Hiệu Năng Tải Cao, Độ Trễ & Gia Cố Bảo Mật (Profiling & Security Audit)
 
-## 4.6. Thực Nghiệm Đo Lường Đóng Góp Từng Thành Phần (Ablation Study) & Luận Điểm Bảo Vệ Kiến Trúc Hybrid
+### 4.6.1. Micro-benchmark nội bộ từng thành phần (500 vòng lặp thực trên Gateway v2.0)
+*Bảng 4.8: Độ trễ đo thực tế từng thành phần nội bộ Gateway (`scripts/run_gateway_profiling.py`)*
 
-### 4.6.1. Bối cảnh và mục tiêu thực nghiệm Ablation Study (Master Plan B3)
-Một trong những câu hỏi phản biện cốt tử đối với các hệ thống WAF kết hợp nhiều cơ chế là: *"Liệu kiến trúc phức tạp bao gồm cả Rule Engine, Machine Learning có giám sát và Anomaly Detection có thực sự cần thiết, hay chỉ cần duy trì một mô hình Machine Learning đơn lẻ?"*
+| Thành Phần Pipeline WAF Gateway v2.0 | Mean (ms) | P50 (ms) | P95 (ms) | P99 (ms) |
+| :--- | :---: | :---: | :---: | :---: |
+| `input_normalizer` | 0.0199 | 0.0184 | 0.0249 | 0.0335 |
+| `rule_engine` (16 hardened rules) | 0.1952 | 0.1702 | 0.3178 | 0.4326 |
+| `feature_extractor_26d` | 0.1549 | 0.1432 | 0.2305 | 0.2713 |
+| `ml_detector_xgb_v2` (`xgb_v2.ubj`) | 0.6176 | 0.5325 | 1.1165 | 1.9182 |
+| `anomaly_detector_iforest_v2` (`iforest_v2.npz`) | 0.0949 | 0.0847 | 0.1558 | 0.2237 |
+| `risk_and_decision_engine` + `rate_limiter` | 0.0126 | 0.0119 | 0.0146 | 0.0223 |
+| **Tổng AI Pipeline (`26-D + XGBoost v2 + IForest v2`)** | **0.8674 ms** | — | — | — |
+| **Tổng Toàn Bộ Pipeline Kiểm Tra Đồng Bộ** | **1.0951 ms** | — | — | — |
 
-Để trả lời câu hỏi này một cách khoa học và thực nghiệm, nhóm nghiên cứu đã thiết lập khung đo kiểm **Ablation Study** trên tập dữ liệu chuẩn hóa gồm 1,000 mẫu đa dạng (`data/benchmark_1000_diverse.csv` với 200 SQLi, 200 XSS, 200 Path Traversal, 200 Command Injection và 200 Benign). Quá trình đo kiểm được thực hiện bằng cách cô lập hoàn toàn thời gian thực thi của từng thành phần (Latency Isolation) để phản ánh trung thực chi phí tính toán của từng chế độ.
+### 4.6.2. Thông lượng chịu tải đồng thời (`C = 1, 10, 25, 50`)
+*Bảng 4.9: Thông lượng (RPS) và độ trễ phân vị của WAF Gateway v2.0 dưới tải đồng thời ASGI*
 
-### 4.6.2. Bảng kết quả thực nghiệm 4 cấu hình phòng thủ (Ablation Matrix)
+| Kịch Bản Tải | Concurrency (C) | Tổng Req | Tỷ Lệ Thành Công | Thông Lượng (RPS) | Mean (ms) | P50 (ms) | P95 (ms) |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **Benign Passthrough (HTTP 200)** | 1 | 100 | 100.0% | **201.00 RPS** | 4.95 | 4.58 | 7.55 |
+| **Benign Passthrough (HTTP 200)** | 10 | 100 | 100.0% | **346.67 RPS** | 26.58 | 26.56 | 32.41 |
+| **Benign Passthrough (HTTP 200)** | 25 | 100 | 100.0% | **358.12 RPS** | 62.98 | 62.07 | 82.25 |
+| **Benign Passthrough (HTTP 200)** | **50** | **500** | **100.0%** | **340.14 RPS** | 139.26 | 125.08 | 232.63 |
+| **Active Blocking SQLi (HTTP 403)** | **50** | **500** | **100.0%** | **253.31 RPS** | 179.96 | 169.34 | 293.65 |
+| *Tái đo độc lập (`@pbl6-reviewer`)* | *50* | *300 / 200* | *100.0%* | ***269.50 / 272.75 RPS*** | — | — | — |
 
-| Chế Độ Cấu Hình Phòng Thủ | Accuracy (%) | Precision (%) | Recall / DR (%) | F1-Score (%) | FPR (%) | Độ Trễ Thực Tế (ms/req) | Đặc Tính Kỹ Thuật & Vai Trò Học Thuật |
-| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :--- |
-| **1. Rules Only (Signature)** | 54.80% | **100.00%** | 43.50% | 60.63% | **0.00%** | **0.14 ms** | **Fast-Path Gatekeeper**: Tốc độ sub-millisecond, bắt chính xác tuyệt đối các mã khai thác CVE đại trà nhưng bỏ lọt các biến thể né tránh (Recall thấp). |
-| **2. ML Only (Random Forest)** | 95.90% | 100.00% | 94.88% | 97.37% | 0.00% | 8.40 ms | **Tổng quát hóa cao**: Nhận diện tốt các biến thể payload nhờ 17 đặc trưng n-gram/entropy, tuy nhiên có điểm mù trước tấn công đối kháng (Adversarial Evasion). |
-| **3. Anomaly Only (IForest)** | 24.70% | 100.00% | 5.88% | 11.10% | 0.00% | 9.49 ms | **Bẫy cảnh giới Zero-Day**: Nhận diện các payload có cấu trúc dị biệt hình học mà không cần nhãn giám sát. |
-| **4. Hybrid Defense (Đề tài)** | **96.20%** | **100.00%** | **95.25%** | **97.57%** | **0.00%** | **16.10 ms** | **Phòng thủ chiều sâu (Defense-in-Depth)**: F1-Score và Recall đạt đỉnh, duy trì FPR = 0.00%. Tối ưu hóa giữa tính tất định và khả năng thích ứng. |
-
-### 4.6.3. Phân tích chi phí độ trễ (Latency Trade-off Analysis)
-Kết quả đo đạc cô lập chỉ ra rõ rệt sự phân tầng về mặt hiệu năng:
-- **Rule Engine chỉ mất 0.14 ms / request**, nhanh hơn tầng Machine Learning tới ~60 lần. Điều này chứng minh vai trò chiến lược của Rule Engine như một tầng lọc nhanh (Fast Rejection Gatekeeper) giúp loại bỏ ngay lập tức hơn 80% các đợt rà quét tự động (mass scanning) mà không gây tải cho pipeline máy học.
-- **Tầng Hybrid tiêu tốn 16.10 ms / request** do thực thi tuần tự cả chuỗi bóc tách đặc trưng, duyệt cây quyết định Random Forest và rừng cô lập Isolation Forest. Hệ thống Hybrid **không nhanh hơn ML thuần**, mà chủ động đánh đổi thêm ~7.7 ms để đổi lấy khả năng phòng thủ đa tầng bền bỉ, loại bỏ hoàn toàn điểm nghẽn đơn lẻ (Single Point of Failure).
-
-### 4.6.4. Bốn luận điểm học thuật: Tại sao cần Hybrid khi F1 chỉ hơn ML thuần 0.20%?
-Nhìn thuần túy vào con số 97.57% vs 97.37%, người phản biện dễ ngộ nhận sự dư thừa của kiến trúc Hybrid. Tuy nhiên, trong an toàn thông tin, giá trị của hệ thống nằm ở **năng lực sống sót trong môi trường đối kháng thực tế**:
-1. **Triệt tiêu hiện tượng Adversarial Evasion (Tấn công đối kháng qua biến dị):** Các mô hình ML dựa trên phân phối từ khóa rất dễ bị làm loãng vector bởi các thủ thuật chèn comment SQL (`UN/**/ION/**/SELECT`), URL double-encoding (`%2527`) hoặc chèn tham số dummy. Khi ML bị đánh lừa kéo điểm rủi ro xuống thấp, Rule Engine với bộ chuẩn hóa (canonicalization) sẽ bóc tách và nhận diện chính xác signature cú pháp, bảo vệ hệ thống không bị xuyên thủng.
-2. **Khả năng bắt Zero-Day và Out-of-Distribution (OOD):** ML có giám sát chỉ nhận diện được 5 lớp đã học (`SQLI`, `XSS`, `PATH`, `CMD`, `BENIGN`). Khi xuất hiện lỗ hổng Zero-Day mới (như Log4Shell `${jndi:ldap:...}` hay SSRF vào metadata cloud), ML thuần sẽ phân loại nhầm thành BENIGN. Ngược lại, Isolation Forest (học không giám sát) đo khoảng cách hình học và lập tức cô lập các payload dị dạng này.
-3. **Cơ chế suy thoái an toàn (Fail-Safe Degraded Mode):** Khi tiến trình ML bị quá tải, tràn RAM (OOM) hoặc crash, hệ thống không rơi vào thế Fail-Open (thả nổi cho hacker vào) hay Fail-Closed (chặn nhầm sập dịch vụ). Nhờ kiến trúc Hybrid, Gateway tự động chuyển sang *Degraded Safe Mode*, sử dụng Rule Engine để tiếp tục bảo vệ hệ thống an toàn.
-4. **Fast-Path SLA Optimization:** Rule Engine giải quyết dứt điểm các cuộc tấn công đại trà ở 0.14 ms, bảo vệ tài nguyên tính toán quý giá của API Gateway.
+### 4.6.3. Kiểm định An ninh Toàn diện (19 Blue Team + 7 Red Team Findings Closed)
+Toàn bộ **26 phát hiện kiểm toán** (19 findings Blue Team v1.0->v2.0 và 7 findings Red Team/AI Arena) đã được vá và tái kiểm chứng bằng PoC thực tế:
+- **Chống ReDoS `XSS-002` (50 KB):** Giảm từ **`923.37 ms` -> `0.891 ms`** (**1,036x**).
+- **Chống Bypass Padding > 16 KB & Chunked > 1 MB:** Single 17 KB JSON leaf -> `score=94.5`; JSON depth=35 -> `score=85.5`; Chunked > 1 MB -> `HTTP 413`; Non-UTF-8 `\xff` -> `HTTP 403`.
+- **Chống Bypass Rate Limiter & OOM:** Xoay 25 token/UA trên `/auth/login/` -> bị chặn cứng 15/25 bằng IP Hard Cap; `OrderedDict` LRU giới hạn 50,000 khóa.
+- **Bảo mật Dashboard & Arena:** `0` chuỗi bí mật trong `.next/static/`; toàn bộ `/dashboard/*` và `/dashboard/arena/*` trả `401` khi thiếu `X-API-Key`; `0` telemetry giả lập trên toàn hệ thống.
+- **Chuỗi cung ứng AI an toàn 100%:** `xgb_v2.ubj` + `iforest_v2.npz` (Zero-Pickle) + `evasion_agent.pt` (`torch.load(..., weights_only=True)`) đều bắt buộc qua xác thực SHA-256 Fail-Closed.
+- **Kiểm thử tự động & Chất lượng mã:** **`0` lỗi `ruff`** toàn repo Python (`gateway/`, `ml-engine/`, `attack-lab/`, scripts), **`350+` bài test tự động PASS 100%**, **`0` lỗi ESLint / TypeScript / Next.js build**.
 
 ---
 
-## 4.7. Đánh Giá Năng Lực Tương Quan Chuỗi Tấn Công Theo Mô Hình Cyber Kill Chain (Master Plan B4)
+## 4.7. Thực Nghiệm Đối Kháng Trực Tiếp Red Team DQN vs Blue Team v2.0 & Cyber Kill Chain
 
-### 4.7.1. Nguyên lý xâu chuỗi sự kiện an ninh theo cửa sổ trượt (Sliding Window)
-Thay vì chỉ lưu trữ các cảnh báo an ninh đơn lẻ khiến chuyên viên phân tích SOC bị ngợp trong biển thông tin ("Alert Fatigue"), hệ thống tích hợp thuật toán gom cụm thông minh theo cửa sổ thời gian 15 phút:
-$$	ext{Session\_ID} = 	ext{HMAC-SHA256}(	ext{Client\_IP} \parallel \lfloor t / 900 floor)$$
-Tất cả các hành vi bắt nguồn từ cùng một địa chỉ IP trong khoảng thời gian này được tự động gom vào một phiên tấn công duy nhất (`session_id`), cho phép giám sát dòng thời gian tiến triển của cuộc tấn công.
+### 4.7.1. Kết quả đối đầu trực tiếp (`attack-lab/runner.py` vs WAF Gateway v2.0 + Bookie API)
+Chiến dịch đối kháng trực tiếp (`python attack-lab/runner.py --mode ai_agent --campaign all --max-rounds 4`) được chạy trực tiếp từ Tác tử PyTorch DQN (`evasion_agent.pt`) vào cụm dịch vụ thực **WAF Gateway v2.0 (:8000) -> Bookie Bookstore (:5000)** (kết quả lưu tại `attack-lab/artifacts/campaign_report.json`):
 
-### 4.7.2. Gán nhãn giai đoạn tấn công theo MITRE ATT&CK
-Hệ thống tự động ánh xạ từng request vi phạm vào 5 giai đoạn kinh điển của Cyber Kill Chain:
-1. `RECONNAISSANCE` (Thăm dò / Thu thập thông tin): Rà quét endpoint, thử path traversal (`/robots.txt`, `/.env`).
-2. `EXPLOITATION` (Khai thác lỗ hổng): Bắn các payload SQLi, XSS, Command Injection để phá vỡ rào chắn ứng dụng.
-3. `EVASION` (Né tránh phòng thủ): Sử dụng kỹ thuật mã hóa hex, chèn comment rác hòng vượt qua WAF.
-4. `PRIVILEGE_ABUSE` (Leo thang đặc quyền): Khai thác broken access control, chiếm session token quản trị.
-5. `EXFILTRATION` (Trích xuất dữ liệu): Thực hiện các truy vấn đọc hàng loạt bảng CSDL người dùng.
+*Bảng 4.10: Kết quả đối kháng thực tế Red Team PyTorch DQN vs Blue Team v2.0 (20 lượt tấn công đa vòng)*
 
-### 4.7.3. Trực quan hóa Telemetry trên giao diện Next.js SOC Dashboard
-Giao diện SOC Dashboard được nâng cấp với Modal chuyên dụng **Attack Sessions & Kill Chain Timeline**, cho phép chuyên viên an ninh:
-- Theo dõi toàn cảnh tiến trình tấn công thông qua thanh chỉ báo trực quan 5 bước Kill Chain với trạng thái kích hoạt thực tế.
-- Xem thời lượng phiên (Session Duration), đỉnh rủi ro (Peak Risk Score) và chi tiết từng request theo trình tự thời gian.
-- Hỗ trợ ra quyết định phản ứng tức thì (chuyển đổi chế độ WAF từ `MONITOR_ONLY` sang `ACTIVE_BLOCKING` chỉ bằng 1 cú nhấp chuột).
+| Endpoint Bookie Mục Tiêu | Phương Thức | Họ Lỗ Hổng | Số Vòng Biến Dị | Điểm Rủi Ro Cuối | Kết Quả Đối Đầu |
+| :--- | :---: | :--- | :---: | :---: | :---: |
+| `/api/v1/vulnerable/books/search/` | `GET` | `SQL_INJECTION` | 4 / 4 | **95.79 / 100** | **BLUE TEAM THẮNG (4/4 HTTP 403)** |
+| `/api/v1/vulnerable/auth/login/` | `POST` | `SQL_INJECTION` | 4 / 4 | **94.18 / 100** | **BLUE TEAM THẮNG (4/4 HTTP 403)** |
+| `/api/v1/vulnerable/reviews/` | `POST` | `XSS` | 4 / 4 | **94.20 / 100** | **BLUE TEAM THẮNG (4/4 HTTP 403)** |
+| `/api/v1/vulnerable/files/download/` | `GET` | `PATH_TRAVERSAL` | 4 / 4 | **99.53 / 100** | **BLUE TEAM THẮNG (4/4 HTTP 403)** |
+| `/api/v1/vulnerable/admin/ping/` | `POST` | `COMMAND_INJECTION` | 4 / 4 | **98.77 / 100** | **BLUE TEAM THẮNG (4/4 HTTP 403)** |
+| **TỔNG KẾT CHIẾN DỊCH LIVE** | — | **4 Họ OWASP** | **20 / 20 lượt** | **TB 95.63 / 100** | **20/20 BLOCKED (`0.0%` Bypass, Trễ TB `4.29 ms`)** |
+
+**So sánh đối chứng:** Khi chạy trực tiếp vào backend không có WAF (`target_mode = "direct"`) hoặc môi trường mô phỏng tĩnh không có bộ chuẩn hóa, Tác tử DQN vượt rào thành công **100%** (khai thác toàn bộ 5/5 điểm cuối). Khi kích hoạt **Blue Team v2.0 (`ACTIVE_BLOCKING`)**, toàn bộ **20/20 lượt tấn công biến dị** (kể cả inline comment, case randomization, event handler, nested traversal, `${IFS}`) đều bị chặn đứng ở mức điểm rủi ro trung bình **95.63/100** với độ trễ HTTP end-to-end chỉ **4.29 ms**.
+
+### 4.7.2. Tương quan chuỗi tấn công Cyber Kill Chain & XAI trên SOC Dashboard
+Mọi sự kiện an ninh (cả 403 Blocked, Monitor và 429 Rate Limit) đều được gom cụm theo cửa sổ trượt 15 phút bằng khóa băm UTC `Session_ID = HMAC-SHA256(Client_IP || floor(t_utc / 900))`, ánh xạ tự động vào 5 giai đoạn **MITRE Cyber Kill Chain** (`RECONNAISSANCE`, `EXPLOITATION`, `EVASION`, `PRIVILEGE_ABUSE`, `EXFILTRATION`) và hiển thị trực quan không có lỗi N+1 SQL trên giao diện **Attack Sessions Modal** cùng **Đấu Trường AI (`/arena`)**.
 
 ---
 
 ## 4.8. Tóm Tắt Chương 4
 
-Chương 4 đã cung cấp đầy đủ các bằng chứng thực nghiệm khoa học, minh bạch và có tính thuyết phục cao:
-1. **Khẳng định tính ưu việt của Champion Random Forest:** Đạt độ chính xác 99.93%, F1-Score 99.93%, FPR 0.00% và chỉ số Youden's Index $J = 0.9989$.
-2. **Chứng minh hiệu quả của kiến trúc đa tầng:** Sự phối hợp giữa Rule Engine, Random Forest và Isolation Forest giúp vô hiệu hóa 100% các biến thể làm rối và Zero-day attacks.
-3. **Kiểm định toàn trình qua mạng LAN:** Đạt tỷ lệ bắt mã độc 91.38%, Precision 96.06% trên 1.000 live requests với độ trễ xử lý WAF siêu tốc ($pprox 0.040	ext{ ms}$).
-4. **Khẳng định khả năng tổng quát hóa:** Duy trì độ chính xác 67.03% và chặn 96.92% XSS trên tập dữ liệu chuẩn quốc tế CSIC 2010 mà không cần huấn luyện lại.
+Chương 4 đã cung cấp đầy đủ bằng chứng định lượng trung thực, không rò rỉ dữ liệu và tái lập được 100%:
+1. **Champion XGBoost v2.0 (`xgb_v2.ubj`):** `99.15%` Accuracy, `98.72%` Macro-F1 trên `6.929` mẫu Test độc lập, microbench `0.618 ms/req`, Zero-Pickle.
+2. **Calibrated Isolation Forest v2.0 (`iforest_v2.npz`):** Nâng Recall `@60.0` từ `5.88%` lên **`57.75%`** (FPR `4.00%`) và tăng tốc từ `9.49 ms` xuống **`0.095 ms`**.
+3. **Ablation Study v2.0 (`1.000` mẫu):** Hybrid Defense v2.0 đạt đỉnh **`97.80%` Accuracy, `100.00%` Precision, `97.25%` Recall, `98.61%` F1, `0.00%` FPR, `J = 0.9725`** trong **`0.848 ms/req`**.
+4. **Zero-Shot CSIC 2010 (`3.000` mẫu):** Giảm FPR từ `29.60%` xuống **`0.00%`**, đạt **`100.00%` Precision**, **`100.00%` Hybrid XSS** và **`49.61%` Hybrid SQLi**.
+5. **Chịu tải cao & Đối kháng thực chiến:** Đạt **`253–340 RPS` ở `C = 50`**, vá 100% 26 phát hiện kiểm toán và chặn đứng **20/20 lượt tấn công biến dị PyTorch DQN** (`0.0%` bypass, `4.29 ms`).

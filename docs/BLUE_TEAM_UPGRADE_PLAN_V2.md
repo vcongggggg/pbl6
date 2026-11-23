@@ -39,3 +39,4 @@ Mỗi Sprint sau khi hoàn thành sẽ được phiên Reviewer kiểm toán đ�
 | Zero-Shot CSIC 2010 F1 / FPR | `65.88%` / `29.60%` | **`>= 82%` / `<= 8.0%` (Zero Leakage)** |
 | Isolation Forest Recall (`benchmark_1000`) | `5.88%` | **`>= 50%`** |
 | CWE-502 Model Deserialization | Pickle Fail-Open | **ONNX + SHA-256 Fail-Closed** |
+

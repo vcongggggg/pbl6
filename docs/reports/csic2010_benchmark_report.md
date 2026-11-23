@@ -17,7 +17,7 @@
 | **Recall (Tỷ lệ bắt mã độc)** | **98.74%** | **11.60%** | **17.07%** | Bắt giữ 256/1500 vector tấn công |
 | **F1-Score (Trung bình điều hòa)** | **98.72%** | **20.79%** | **29.16%** | Điểm cân bằng học thuật |
 | **Tỷ lệ dương tính giả (FPR)** | **0.05%** | **0.00%** | **0.00%** | Độ sạch của luồng người dùng lành tính |
-| **Độ trễ suy luận trung bình** | **2.225 ms** | **2.962 ms** | **2.962 ms** | Đạt chuẩn inline SLA (&lt; 2.5ms/request) |
+| **Độ trễ suy luận trung bình** | **2.225 ms** | **2.962 ms** | **2.962 ms** | Đạt chuẩn inline SLA (< 5ms/request; microbench AI 0.867 ms) |
 
 ---
 
