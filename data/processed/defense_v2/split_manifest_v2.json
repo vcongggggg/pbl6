@@ -1,0 +1,46 @@
+{
+  "dataset_name": "PBL6 Zero-Leakage Defense Dataset v2.0",
+  "classes": [
+    "BENIGN",
+    "SQL_INJECTION",
+    "XSS",
+    "PATH_TRAVERSAL",
+    "COMMAND_INJECTION"
+  ],
+  "total_samples": 46187,
+  "splits": {
+    "train": {
+      "size": 32330,
+      "distribution": {
+        "BENIGN": 18199,
+        "PATH_TRAVERSAL": 5600,
+        "XSS": 5600,
+        "COMMAND_INJECTION": 1644,
+        "SQL_INJECTION": 1287
+      }
+    },
+    "val": {
+      "size": 6928,
+      "distribution": {
+        "BENIGN": 3900,
+        "PATH_TRAVERSAL": 1200,
+        "XSS": 1200,
+        "COMMAND_INJECTION": 352,
+        "SQL_INJECTION": 276
+      }
+    },
+    "test": {
+      "size": 6929,
+      "distribution": {
+        "BENIGN": 3901,
+        "XSS": 1200,
+        "PATH_TRAVERSAL": 1200,
+        "COMMAND_INJECTION": 353,
+        "SQL_INJECTION": 275
+      }
+    }
+  },
+  "zero_leakage_verified": true,
+  "csic2010_overlap": 0,
+  "benchmark1000_overlap": 0
+}

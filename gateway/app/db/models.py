@@ -6,6 +6,11 @@ from sqlalchemy.orm import Mapped, mapped_column
 from app.db.base import Base
 
 
+def utc_now() -> datetime.datetime:
+    """Returns current UTC timestamp as naive datetime (avoids deprecated utcnow())."""
+    return datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
+
+
 class RequestLog(Base):
     """Stores incoming HTTP request metadata and execution lifecycle."""
 
@@ -14,7 +19,7 @@ class RequestLog(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     request_id: Mapped[str] = mapped_column(String(64), index=True)
     timestamp: Mapped[datetime.datetime] = mapped_column(
-        DateTime, default=datetime.datetime.utcnow, index=True
+        DateTime, default=utc_now, index=True
     )
     client_ip: Mapped[str] = mapped_column(String(45), index=True)
     user_agent: Mapped[str | None] = mapped_column(String(512), nullable=True)
@@ -38,7 +43,7 @@ class SecurityEvent(Base):
     event_id: Mapped[str] = mapped_column(String(64), unique=True, index=True)
     request_id: Mapped[str] = mapped_column(String(64), index=True)
     timestamp: Mapped[datetime.datetime] = mapped_column(
-        DateTime, default=datetime.datetime.utcnow, index=True
+        DateTime, default=utc_now, index=True
     )
     client_ip: Mapped[str] = mapped_column(String(45), index=True)
     attack_type: Mapped[str] = mapped_column(String(50), index=True)  # e.g., SQLI, XSS, BENIGN
@@ -52,6 +57,7 @@ class SecurityEvent(Base):
     details: Mapped[str | None] = mapped_column(Text, nullable=True)
     session_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
     kill_chain_stage: Mapped[str | None] = mapped_column(String(50), nullable=True, index=True)
+    api_protocol: Mapped[str | None] = mapped_column(String(32), nullable=True, index=True)
 
 
 class AuditLog(Base):
@@ -61,7 +67,7 @@ class AuditLog(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     timestamp: Mapped[datetime.datetime] = mapped_column(
-        DateTime, default=datetime.datetime.utcnow, index=True
+        DateTime, default=utc_now, index=True
     )
     actor: Mapped[str] = mapped_column(String(100))
     action: Mapped[str] = mapped_column(String(100))
@@ -78,5 +84,5 @@ class WafConfigModel(Base):
     key: Mapped[str] = mapped_column(String(100), primary_key=True)
     value: Mapped[str] = mapped_column(Text)
     updated_at: Mapped[datetime.datetime] = mapped_column(
-        DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow
+        DateTime, default=utc_now, onupdate=utc_now
     )

@@ -1,0 +1,19 @@
+{
+  "model_type": "Deep Q-Network (DQN) with Action Masking",
+  "model_file": "evasion_agent.pt",
+  "sha256_hash": "b89d7dc6b7c9533dffe010457843f2507f37a699510203c33b15f094ea768744",
+  "state_dim": 40,
+  "action_dim": 14,
+  "episodes_trained": 160,
+  "training_environment": "Offline AttackGraph simulator curriculum (Task 10.2-10.3)",
+  "final_avg_reward": 10.0,
+  "offline_sim_bypass_rate": 1.0,
+  "final_bypass_rate": 1.0,
+  "tamper_techniques": [
+    "SQL_INJECTION",
+    "XSS",
+    "PATH_TRAVERSAL",
+    "COMMAND_INJECTION",
+    "SQLI"
+  ]
+}

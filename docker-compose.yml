@@ -39,7 +39,7 @@ services:
       - LOG_LEVEL=INFO
       - DATABASE_URL=sqlite:////app/data/waf_security.db
       - TARGET_API_URL=http://vulnerable-api:5000
-      - WAF_MODE=MONITOR_ONLY
+      - WAF_MODE=${WAF_MODE:-ACTIVE_BLOCKING}
       - ADMIN_API_KEY=${ADMIN_API_KEY}
       - PYTHONPATH=/app:/app/ml-engine
     volumes:
@@ -68,10 +68,9 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - BACKEND_URL=${BACKEND_URL:-http://localhost:8000}
+      - BACKEND_URL=${BACKEND_URL:-http://gateway:8000}
       - NEXT_PUBLIC_API_BASE_URL=${BACKEND_URL:-http://localhost:8000}
       - ADMIN_API_KEY=${ADMIN_API_KEY}
-      - NEXT_PUBLIC_ADMIN_API_KEY=${ADMIN_API_KEY}
     depends_on:
       gateway:
         condition: service_healthy

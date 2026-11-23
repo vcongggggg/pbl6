@@ -38,9 +38,9 @@ Tài liệu giải thích chi tiết toàn bộ các khái niệm, từ ngữ ch
 | :--- | :--- | :--- |
 | **API** | Application Programming Interface | Giao diện lập trình ứng dụng, cầu nối cho phép các phần mềm giao tiếp với nhau qua giao thức HTTP/REST. |
 | **REST** | Representational State Transfer | Kiểu kiến trúc API phổ biến sử dụng các phương thức chuẩn HTTP (`GET`, `POST`, `PUT`, `DELETE`). |
-| **Reverse Proxy** | Reverse Proxy Server | Máy chủ proxy ngược đứng trước web server đích. Client chỉ nhìn thấy Reverse Proxy (cổng 8000), Proxy nhận request, kiểm tra an ninh rồi mới forward sang máy chủ nội bộ (`juice-shop:3000`). |
+| **Reverse Proxy** | Reverse Proxy Server | Máy chủ proxy ngược đứng trước web server đích. Client chỉ nhìn thấy Reverse Proxy (cổng 8000), Proxy nhận request, kiểm tra an ninh rồi mới forward sang máy chủ nội bộ (`vulnerable-api:5000`). |
 | **Forward Proxy** | Forward Proxy Server | Proxy xuôi đứng ở phía client (người dùng), thường dùng để ẩn danh hoặc vượt tường lửa nội bộ ra ngoài Internet. |
-| **Upstream / Target** | Upstream Target API | Máy chủ dịch vụ đích nằm phía sau WAF (trong đồ án chính là OWASP Juice Shop). |
+| **Upstream / Target** | Upstream Target API | Máy chủ dịch vụ đích nằm phía sau WAF (trong đồ án là Bookie Bookstore Target API). |
 | **Hop-by-hop Headers** | Hop-by-hop Headers | Các header HTTP chỉ có ý nghĩa giữa 2 điểm truyền thông liền kề (`Connection`, `Keep-Alive`, `Upgrade`...). Gateway phải lọc bỏ chúng trước khi forward để tránh lỗi giao vận. |
 | **Request ID** | Request Identifier (`X-Request-ID`) | Chuỗi định danh duy nhất (UUID) gán cho mỗi request để theo dõi vết (traceability) từ Client $\rightarrow$ Gateway $\rightarrow$ Database $\rightarrow$ Dashboard. |
 | **SSRF** | Server-Side Request Forgery | Lỗ hổng cho phép kẻ tấn công lợi dụng server để gửi request độc hại tới mạng nội bộ. Gateway chống SSRF bằng cách cố định cứng URL target qua biến môi trường. |
@@ -138,7 +138,7 @@ Tài liệu giải thích chi tiết toàn bộ các khái niệm, từ ngữ ch
 | **Recharts** | Recharts Data Visualization | Thư viện vẽ biểu đồ React dựa trên SVG chuyên nghiệp, dùng để vẽ đồ thị sóng kép Timeline và đồ thị vành khăn Donut Chart. |
 | **ORM** | Object-Relational Mapping (SQLAlchemy) | Kỹ thuật ánh xạ bảng cơ sở dữ liệu quan hệ thành các class/object trong mã nguồn Python giúp thao tác dữ liệu an toàn, chống lỗi SQLi nội bộ. |
 | **SQLite** | SQLite Database | Hệ quản trị cơ sở dữ liệu quan hệ nhỏ gọn, nhúng trực tiếp trong file (`waf_security.db`), cực kỳ phù hợp cho môi trường lab và đồ án môn học. |
-| **Docker Compose** | Docker Compose Multi-container | Công cụ định nghĩa và chạy cùng lúc nhiều container Docker (`gateway`, `dashboard`, `juice-shop`) chỉ với 1 câu lệnh `docker compose up --build`. |
+| **Docker Compose** | Docker Compose Multi-container | Công cụ định nghĩa và chạy cùng lúc nhiều container Docker (`gateway`, `dashboard`, `vulnerable-api`) chỉ với 1 câu lệnh `docker compose up --build`. |
 | **CI / CD** | Continuous Integration / Deployment | Quy trình tích hợp và kiểm thử mã nguồn liên tục tự động trên GitHub Actions mỗi khi tạo Pull Request. |
 | **PR** | Pull Request | Yêu cầu gộp nhánh code: Cho phép các thành viên trong nhóm và Tech Lead review, kiểm tra bài test tự động trước khi hòa nhập vào nhánh `main`. |
 | **Branch Protection** | Branch Protection Ruleset | Tính năng của GitHub khóa nhánh `main`, cấm các thành viên push code thẳng lên main nhằm tránh làm hỏng dự án. |

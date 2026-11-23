@@ -1,21 +1,23 @@
 "use client";
 
 import React from "react";
-import { Shield, RefreshCw, Trash2, Activity, Sparkles, Layers } from "lucide-react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { Shield, RefreshCw, Trash2, Activity, Sparkles, Layers, Swords } from "lucide-react";
 import { DashboardStats } from "@/types/dashboard";
 
 interface HeaderProps {
-  stats: DashboardStats | null;
-  pollingInterval: number; // in seconds (0 = off)
-  setPollingInterval: (val: number) => void;
-  onRefresh: () => void;
-  onResetDemo: () => void;
-  onSeedDemo: () => void;
-  onToggleWafMode: () => void;
-  isRefreshing: boolean;
-  isResetting: boolean;
-  isSeeding: boolean;
-  isTogglingWaf: boolean;
+  stats?: DashboardStats | null;
+  pollingInterval?: number; // in seconds (0 = off)
+  setPollingInterval?: (val: number) => void;
+  onRefresh?: () => void;
+  onResetDemo?: () => void;
+  onSeedDemo?: () => void;
+  onToggleWafMode?: () => void;
+  isRefreshing?: boolean;
+  isResetting?: boolean;
+  isSeeding?: boolean;
+  isTogglingWaf?: boolean;
   onOpenAttackSessions?: () => void;
 }
 
@@ -27,12 +29,13 @@ export const Header: React.FC<HeaderProps> = ({
   onResetDemo,
   onSeedDemo,
   onToggleWafMode,
-  isRefreshing,
-  isResetting,
-  isSeeding,
-  isTogglingWaf,
+  isRefreshing = false,
+  isResetting = false,
+  isSeeding = false,
+  isTogglingWaf = false,
   onOpenAttackSessions,
 }) => {
+  const pathname = usePathname();
   const targetReachable = stats?.target_status === "ok";
 
   return (
@@ -65,7 +68,7 @@ export const Header: React.FC<HeaderProps> = ({
                   : "text-rose-400 bg-rose-950/50 border border-rose-800/40"
               }`}>
                 <span className={`w-1.5 h-1.5 rounded-full ${targetReachable ? "bg-emerald-400 animate-pulse" : "bg-rose-500"}`} />
-                {targetReachable ? `${stats?.target_latency_ms || 12}ms` : "Unreachable"}
+                {targetReachable ? `${stats?.target_latency_ms ?? 0}ms` : "Unreachable"}
               </span>
             </span>
 
@@ -77,21 +80,21 @@ export const Header: React.FC<HeaderProps> = ({
               <button
                 id="btn-toggle-waf-mode"
                 onClick={onToggleWafMode}
-                disabled={isTogglingWaf}
+                disabled={isTogglingWaf || !onToggleWafMode}
                 className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-semibold border transition cursor-pointer active:scale-95 disabled:opacity-50 ${
                   stats?.waf_mode === "ACTIVE_BLOCKING"
                     ? "text-rose-300 bg-rose-950/60 border-rose-700 shadow-[0_0_12px_rgba(244,63,94,0.4)]"
                     : "text-amber-300 bg-amber-950/50 border-amber-800/60 hover:bg-amber-900/60"
                 }`}
                 title="Bấm để chuyển đổi giữa [MONITOR_ONLY] (Chỉ giám sát) và [ACTIVE_BLOCKING] (Chặn 403)"
-                aria-label={`Toggle WAF Mode. Current: ${stats?.waf_mode || "MONITOR_ONLY"}`}
+                aria-label={`Toggle WAF Mode. Current: ${stats?.waf_mode || "ACTIVE_BLOCKING"}`}
               >
                 <span
                   className={`w-1.5 h-1.5 rounded-full ${
                     stats?.waf_mode === "ACTIVE_BLOCKING" ? "bg-rose-400 animate-ping" : "bg-amber-400"
                   }`}
                 />
-                <span>[{stats?.waf_mode || "MONITOR_ONLY"}]</span>
+                <span>[{stats?.waf_mode || "ACTIVE_BLOCKING"}]</span>
                 <span className="text-[10px] text-slate-400 font-sans ml-0.5 underline">
                   {stats?.waf_mode === "ACTIVE_BLOCKING" ? "Chặn 403" : "Chỉ ghi log"}
                 </span>
@@ -101,9 +104,34 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
       </div>
 
+      {/* Navigation Switcher: SOC Command Center vs AI Red-vs-Blue Arena */}
+      <nav aria-label="Main Navigation" className="flex items-center bg-slate-950/80 p-1 rounded-xl border border-slate-800 shadow-inner">
+        <Link
+          href="/"
+          className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
+            pathname === "/"
+              ? "bg-purple-950/80 text-purple-300 border border-purple-500/50 shadow-[0_0_12px_rgba(168,85,247,0.3)]"
+              : "text-slate-400 hover:text-slate-200 hover:bg-slate-900/60"
+          }`}
+        >
+          <Shield className="w-3.5 h-3.5 text-purple-400" />
+          <span>Tổng quan SOC</span>
+        </Link>
+        <Link
+          href="/arena"
+          className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
+            pathname === "/arena"
+              ? "bg-rose-950/80 text-rose-300 border border-rose-500/50 shadow-[0_0_12px_rgba(244,63,94,0.3)]"
+              : "text-slate-400 hover:text-slate-200 hover:bg-slate-900/60"
+          }`}
+        >
+          <Swords className="w-3.5 h-3.5 text-rose-400" />
+          <span>Đấu Trường AI (Arena)</span>
+        </Link>
+      </nav>
+
       {/* Header Actions & Smart Polling Controls */}
       <div className="flex items-center gap-3">
-        {/* Attack Sessions Correlation Trigger (Master Plan B4) */}
         {onOpenAttackSessions && (
           <button
             id="btn-attack-sessions"
@@ -116,68 +144,71 @@ export const Header: React.FC<HeaderProps> = ({
           </button>
         )}
 
-        {/* Manual Refresh */}
-        <button
-          id="btn-refresh"
-          onClick={onRefresh}
-          disabled={isRefreshing}
-          aria-label="Tải lại số liệu dashboard"
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700/80 text-xs font-medium transition active:scale-95 disabled:opacity-50 shadow-sm cursor-pointer"
-          title="Tải lại số liệu ngay lập tức"
-        >
-          <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? "animate-spin text-cyan-400" : "text-slate-400"}`} />
-          <span>Refresh</span>
-        </button>
+        {onRefresh && (
+          <button
+            id="btn-refresh"
+            onClick={onRefresh}
+            disabled={isRefreshing}
+            aria-label="Tải lại số liệu dashboard"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700/80 text-xs font-medium transition active:scale-95 disabled:opacity-50 shadow-sm cursor-pointer"
+            title="Tải lại số liệu ngay lập tức"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? "animate-spin text-cyan-400" : "text-slate-400"}`} />
+            <span>Refresh</span>
+          </button>
+        )}
 
-        {/* Seed Demo Data Button */}
-        <button
-          id="btn-seed-demo"
-          onClick={onSeedDemo}
-          disabled={isSeeding}
-          aria-label="Nạp dữ liệu thử nghiệm mẫu"
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-950/40 hover:bg-emerald-900/60 text-emerald-300 border border-emerald-800/50 text-xs font-medium transition active:scale-95 disabled:opacity-50 shadow-sm cursor-pointer"
-          title="Nạp 125+ request và 36 sự kiện bảo mật mẫu để xem biểu đồ và bảng sự kiện hoàn chỉnh"
-        >
-          <Sparkles className={`w-3.5 h-3.5 text-emerald-400 ${isSeeding ? "animate-spin" : ""}`} />
-          <span>{isSeeding ? "Đang nạp..." : "⚡ Nạp Data Mẫu"}</span>
-        </button>
+        {onSeedDemo && (
+          <button
+            id="btn-seed-demo"
+            onClick={onSeedDemo}
+            disabled={isSeeding}
+            aria-label="Nạp dữ liệu thử nghiệm mẫu"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-950/40 hover:bg-emerald-900/60 text-emerald-300 border border-emerald-800/50 text-xs font-medium transition active:scale-95 disabled:opacity-50 shadow-sm cursor-pointer"
+            title="Nạp 125+ request và 36 sự kiện bảo mật mẫu để xem biểu đồ và bảng sự kiện hoàn chỉnh"
+          >
+            <Sparkles className={`w-3.5 h-3.5 text-emerald-400 ${isSeeding ? "animate-spin" : ""}`} />
+            <span>{isSeeding ? "Đang nạp..." : "Nạp Data Mẫu"}</span>
+          </button>
+        )}
 
-        {/* Vertical Divider separating dangerous Reset action */}
-        <div className="h-5 w-px bg-slate-800 mx-0.5" />
+        {onResetDemo && <div className="h-5 w-px bg-slate-800 mx-0.5" />}
 
-        {/* Reset Demo Button */}
-        <button
-          id="btn-reset-demo"
-          onClick={onResetDemo}
-          disabled={isResetting}
-          aria-label="Dọn sạch toàn bộ dữ liệu thử nghiệm"
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-950/40 hover:bg-rose-900/60 text-rose-300 border border-rose-800/50 text-xs font-medium transition active:scale-95 disabled:opacity-50 shadow-sm cursor-pointer"
-          title="Dọn sạch log dữ liệu test để chuẩn bị demo mới"
-        >
-          <Trash2 className="w-3.5 h-3.5 text-rose-400" />
-          <span>Reset Demo</span>
-        </button>
+        {onResetDemo && (
+          <button
+            id="btn-reset-demo"
+            onClick={onResetDemo}
+            disabled={isResetting}
+            aria-label="Dọn sạch toàn bộ dữ liệu thử nghiệm"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-950/40 hover:bg-rose-900/60 text-rose-300 border border-rose-800/50 text-xs font-medium transition active:scale-95 disabled:opacity-50 shadow-sm cursor-pointer"
+            title="Dọn sạch log dữ liệu test để chuẩn bị demo mới"
+          >
+            <Trash2 className="w-3.5 h-3.5 text-rose-400" />
+            <span>Reset Demo</span>
+          </button>
+        )}
 
-        {/* Smart Polling Pill */}
-        <div className="flex items-center gap-1.5 bg-slate-950/80 border border-slate-800 rounded-lg px-2.5 py-1 text-xs font-mono">
-          <Activity className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
-          <span className="text-slate-400">Polling:</span>
-          <div className="flex items-center bg-slate-900 rounded p-0.5 border border-slate-800 text-[11px]">
-            {[3, 5, 0].map((sec) => (
-              <button
-                key={sec}
-                onClick={() => setPollingInterval(sec)}
-                className={`px-2 py-0.5 rounded transition ${
-                  pollingInterval === sec
-                    ? "bg-cyan-500 text-slate-950 font-bold shadow-sm"
-                    : "text-slate-400 hover:text-white"
-                }`}
-              >
-                {sec === 0 ? "Off" : `${sec}s`}
-              </button>
-            ))}
+        {pollingInterval !== undefined && setPollingInterval && (
+          <div className="flex items-center gap-1.5 bg-slate-950/80 border border-slate-800 rounded-lg px-2.5 py-1 text-xs font-mono">
+            <Activity className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
+            <span className="text-slate-400">Polling:</span>
+            <div className="flex items-center bg-slate-900 rounded p-0.5 border border-slate-800 text-[11px]">
+              {[3, 5, 0].map((sec) => (
+                <button
+                  key={sec}
+                  onClick={() => setPollingInterval(sec)}
+                  className={`px-2 py-0.5 rounded transition ${
+                    pollingInterval === sec
+                      ? "bg-cyan-500 text-slate-950 font-bold shadow-sm"
+                      : "text-slate-400 hover:text-white"
+                  }`}
+                >
+                  {sec === 0 ? "Off" : `${sec}s`}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </header>
   );

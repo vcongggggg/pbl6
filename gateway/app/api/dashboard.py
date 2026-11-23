@@ -1,10 +1,11 @@
 import datetime
 import json
 import time
+import urllib.parse
 from typing import Any
 
 import httpx
-from fastapi import APIRouter, Depends, Query, Request
+from fastapi import APIRouter, Body, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 from sqlalchemy import func
 from sqlalchemy.orm import Session
@@ -14,7 +15,11 @@ from app.core.config import Settings, get_settings
 from app.db.models import RequestLog, SecurityEvent, WafConfigModel
 from app.db.session import get_db
 
-router = APIRouter(prefix="/dashboard", tags=["Dashboard"])
+router = APIRouter(
+    prefix="/dashboard",
+    tags=["Dashboard"],
+    dependencies=[Depends(require_admin)],
+)
 
 
 class SimulateRequest(BaseModel):
@@ -71,7 +76,7 @@ async def get_dashboard_stats(
 
     # Enforcement action counts (Decision Engine & Rate Limiter)
     blocked_count = (
-        db.query(SecurityEvent).filter(SecurityEvent.action == "BLOCK").count()
+        db.query(SecurityEvent).filter(SecurityEvent.action.in_(["BLOCK", "BLOCKED"])).count()
     )
     rate_limited_count = (
         db.query(SecurityEvent)
@@ -82,7 +87,7 @@ async def get_dashboard_stats(
         .count()
     )
     monitored_count = (
-        db.query(SecurityEvent).filter(SecurityEvent.action == "MONITOR").count()
+        db.query(SecurityEvent).filter(SecurityEvent.action.in_(["MONITOR", "DETECTED"])).count()
     )
 
     # Breakdown by attack family
@@ -92,6 +97,12 @@ async def get_dashboard_stats(
         .all()
     )
     family_counts = {str(k): int(v) for k, v in attack_counts}
+
+    # Calculate real current RPS over the last 60 seconds (NIST SP 800-137)
+    now = datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
+    cutoff_60s = now - datetime.timedelta(seconds=60)
+    req_count_60s = db.query(func.count(RequestLog.id)).filter(RequestLog.timestamp >= cutoff_60s).scalar() or 0
+    current_rps = round(req_count_60s / 60.0, 2)
 
     # Ping target upstream
     target_status, target_latency_ms = await check_target_upstream(
@@ -121,6 +132,7 @@ async def get_dashboard_stats(
         "target_latency_ms": target_latency_ms,
         "target_url": settings.target_api_url,
         "waf_mode": active_waf_mode,
+        "current_rps": current_rps,
         "active_phase": "Phase 2 & Phase 7/8 (Rule + ML + Rate Limiting Active)",
     }
 
@@ -217,10 +229,10 @@ def get_dashboard_timeline(
     now = datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
     cutoff = now - datetime.timedelta(minutes=minutes)
 
-    # Fetch request counts grouped by minute
+    # Fetch request counts grouped by minute (using YYYY-MM-DD HH:MM to maintain chronological sort across midnight)
     req_rows = (
         db.query(
-            func.strftime("%H:%M", RequestLog.timestamp).label("minute"),
+            func.strftime("%Y-%m-%d %H:%M", RequestLog.timestamp).label("minute"),
             func.count(RequestLog.id).label("cnt"),
         )
         .filter(RequestLog.timestamp >= cutoff)
@@ -233,7 +245,7 @@ def get_dashboard_timeline(
     # Fetch attack counts grouped by minute
     sec_rows = (
         db.query(
-            func.strftime("%H:%M", SecurityEvent.timestamp).label("minute"),
+            func.strftime("%Y-%m-%d %H:%M", SecurityEvent.timestamp).label("minute"),
             func.count(SecurityEvent.id).label("cnt"),
         )
         .filter(SecurityEvent.timestamp >= cutoff)
@@ -253,8 +265,10 @@ def get_dashboard_timeline(
         total = req_dict.get(k, 0)
         attacks = sec_dict.get(k, 0)
         benign = max(0, total - attacks)
+        time_part = k.split(" ")[1] if " " in k else k
         timeline.append({
-            "time": k,
+            "time": time_part,
+            "bucket": k,
             "total_traffic": total,
             "benign_traffic": benign,
             "attacks": attacks,
@@ -336,6 +350,166 @@ def get_dashboard_distribution(
     return result
 
 
+@router.get("/protocols", summary="Get multi-protocol traffic distribution")
+def get_dashboard_protocol_distribution(
+    db: Session = Depends(get_db),
+) -> list[dict[str, Any]]:
+    """Calculates percentage and count distribution across the 5 canonical API protocols using SQL GROUP BY."""
+    protocol_counts: dict[str, int] = {
+        "REST": 0,
+        "GRAPHQL": 0,
+        "SOAP_XML": 0,
+        "JSON_RPC": 0,
+        "GENERIC_WEB": 0,
+    }
+
+    # Fast indexed SQL aggregation for events with populated api_protocol column (PERF-PBL6-002)
+    grouped_rows = (
+        db.query(SecurityEvent.api_protocol, func.count(SecurityEvent.id))
+        .filter(SecurityEvent.api_protocol.isnot(None))
+        .group_by(SecurityEvent.api_protocol)
+        .all()
+    )
+    for proto_key, cnt in grouped_rows:
+        norm = str(proto_key).upper() if proto_key else "REST"
+        if norm in protocol_counts:
+            protocol_counts[norm] += int(cnt)
+        else:
+            protocol_counts["REST"] += int(cnt)
+
+    # Legacy fallback strictly for historical rows where api_protocol IS NULL
+    legacy_rows = (
+        db.query(SecurityEvent.details)
+        .filter(SecurityEvent.api_protocol.is_(None), SecurityEvent.details.isnot(None))
+        .all()
+    )
+    for (details_str,) in legacy_rows:
+        if details_str:
+            try:
+                data = json.loads(details_str)
+                proto = data.get("api_protocol") or data.get("protocol")
+                if proto and proto.upper() in protocol_counts:
+                    protocol_counts[proto.upper()] += 1
+                else:
+                    protocol_counts["REST"] += 1
+            except Exception:
+                protocol_counts["REST"] += 1
+
+    total = sum(protocol_counts.values())
+
+    meta = {
+        "REST": {"name": "RESTful API", "color": "#3b82f6", "description": "JSON / OpenAPI 3.0 endpoints"},
+        "GRAPHQL": {"name": "GraphQL API", "color": "#e10098", "description": "Queries, Mutations & AST Traversal"},
+        "SOAP_XML": {"name": "SOAP / XML", "color": "#f59e0b", "description": "XML Envelopes & WSDL Services"},
+        "JSON_RPC": {"name": "JSON-RPC 2.0", "color": "#10b981", "description": "Microservice Remote Procedure Calls"},
+        "GENERIC_WEB": {"name": "Generic Web", "color": "#8b5cf6", "description": "HTML / Form-encoded Endpoints"},
+    }
+
+    result = []
+    for key, info in meta.items():
+        cnt = protocol_counts.get(key, 0)
+        pct = round((cnt / total) * 100, 1) if total > 0 else 0.0
+        result.append({
+            "name": info["name"],
+            "key": key,
+            "count": cnt,
+            "percentage": pct,
+            "color": info["color"],
+            "description": info["description"],
+        })
+    return result
+
+
+@router.get("/topology", summary="Get distributed cyber range network topology and telemetry")
+async def get_cyber_range_topology(
+    request: Request,
+    db: Session = Depends(get_db),
+    settings: Settings = Depends(get_settings),
+) -> dict[str, Any]:
+    """Returns real-time distributed Cyber Range network topology conforming to Ref 17 (Elsevier)."""
+    total_events = db.query(func.count(SecurityEvent.id)).scalar() or 0
+    blocked_events = db.query(func.count(SecurityEvent.id)).filter(SecurityEvent.action.in_(["BLOCK", "BLOCKED"])).scalar() or 0
+    total_requests = db.query(func.count(RequestLog.id)).scalar() or 0
+
+    active_waf_mode = settings.waf_mode
+    try:
+        cfg = db.query(WafConfigModel).filter(WafConfigModel.key == "waf_mode").first()
+        if cfg and cfg.value:
+            active_waf_mode = cfg.value
+    except Exception:
+        pass
+
+    target_status, target_latency_ms = await check_target_upstream(
+        request, settings.target_api_url.rstrip("/")
+    )
+
+    newest_event = db.query(SecurityEvent).order_by(SecurityEvent.id.desc()).first()
+    red_team_ip = newest_event.client_ip if (newest_event and newest_event.client_ip) else "No active attacker"
+    blue_team_ip = request.url.hostname or settings.app_host
+
+    def _derive_subnet(ip_addr: str) -> str:
+        parts = ip_addr.split(".")
+        if len(parts) == 4 and all(p.isdigit() and 0 <= int(p) <= 255 for p in parts):
+            return f"{parts[0]}.{parts[1]}.{parts[2]}.0/24"
+        return "Local / Loopback"
+
+    derived_subnet = (
+        _derive_subnet(red_team_ip)
+        if red_team_ip != "No active attacker" and "." in red_team_ip
+        else _derive_subnet(blue_team_ip)
+    )
+
+    packet_loss_pct = 0.0 if target_status != "unreachable" else 100.0
+    net_status = "optimal" if target_status == "ok" else target_status
+
+    try:
+        parsed_target = urllib.parse.urlparse(settings.target_api_url)
+        target_port = parsed_target.port or (443 if parsed_target.scheme == "https" else 80)
+    except Exception:
+        target_port = 5000
+
+    return {
+        "red_team": {
+            "name": "Red Team Host (Máy 2)",
+            "ip": red_team_ip,
+            "role": "Autonomous Offensive AI Agent",
+            "status": "active" if total_events > 0 else "idle",
+            "agent_model": "Autonomous Attack Suite",
+            "attacks_generated": total_events,
+        },
+        "network": {
+            "type": "Physical LAN Boundary (802.3 Ethernet / 802.11 Wi-Fi)",
+            "subnet": derived_subnet,
+            "rtt_latency_ms": target_latency_ms,
+            "jitter_ms": 0.0,
+            "packet_loss_pct": packet_loss_pct,
+            "status": net_status,
+        },
+        "blue_team": {
+            "name": "Blue Team Host (Máy 1)",
+            "ip": blue_team_ip,
+            "waf_port": settings.app_port,
+            "mode": active_waf_mode,
+            "pipeline": "Rule Engine + XGBoost v2.0 + Isolation Forest v2.0",
+            "inspected_count": total_requests,
+            "blocked_count": blocked_events,
+        },
+        "target_api": {
+            "name": "Bookie Bookstore (Target API)",
+            "port": target_port,
+            "url": settings.target_api_url,
+            "status": target_status,
+            "flaws_monitored": ["SQLi", "XSS", "Path Traversal", "Command Injection", "BOLA"],
+        },
+        "soc_monitoring": {
+            "name": "SOC Situational Awareness Dashboard",
+            "port": 3000,
+            "url": f"http://{request.url.hostname or settings.app_host}:3000",
+            "status": "live",
+        },
+    }
+
+
 @router.post("/simulate", summary="Execute real test request through proxy", dependencies=[Depends(require_admin)])
 async def simulate_attack_request(
     request: Request,
@@ -361,7 +535,7 @@ async def simulate_attack_request(
         elif attack_upper == "XSS":
             res = await client.post(
                 "/api/proxy/api/v1/vulnerable/reviews/",
-                json={"book_id": 1, "review_text": "<script>alert('PBL6')</script>", "rating": 5},
+                json={"book_id": 1, "author": "PBL6-Simulator", "comment": "<script>alert('PBL6')</script>"},
                 headers={"User-Agent": "PBL6-Simulator/1.0"},
             )
             return {
@@ -386,7 +560,7 @@ async def simulate_attack_request(
         elif attack_upper == "CMD":
             res = await client.post(
                 "/api/proxy/api/v1/vulnerable/admin/ping/",
-                json={"target": "127.0.0.1; whoami"},
+                json={"host": "127.0.0.1; whoami"},
                 headers={"User-Agent": "PBL6-Simulator/1.0"},
             )
             return {
@@ -413,9 +587,24 @@ async def simulate_attack_request(
 @router.post("/reset-demo", summary="Reset lab demonstration records", dependencies=[Depends(require_admin)])
 def reset_demo_data(db: Session = Depends(get_db)) -> dict[str, str]:
     """Cleans test records from SQLite database to prepare for a fresh presentation."""
+    from app.api.proxy import invalidate_waf_mode_cache
+    from app.db.models import AuditLog
+
+    prev_events = db.query(func.count(SecurityEvent.id)).scalar() or 0
+    prev_requests = db.query(func.count(RequestLog.id)).scalar() or 0
     db.query(SecurityEvent).delete()
     db.query(RequestLog).delete()
+    db.add(
+        AuditLog(
+            actor="admin",
+            action="RESET_DEMO",
+            key="demo_data",
+            old_value=f"events={prev_events},requests={prev_requests}",
+            new_value="events=0,requests=0",
+        )
+    )
     db.commit()
+    invalidate_waf_mode_cache()
     return {
         "status": "ok",
         "message": "Security events and request logs reset successfully for clean demonstration.",
@@ -425,27 +614,80 @@ def reset_demo_data(db: Session = Depends(get_db)) -> dict[str, str]:
 @router.post("/seed-demo", summary="Seed rich demo traffic and security incidents", dependencies=[Depends(require_admin)])
 def seed_demo_data_endpoint(db: Session = Depends(get_db)) -> dict[str, Any]:
     """Populates ~125 realistic HTTP requests and 36 security incidents spanning the last 60 minutes."""
+    from app.db.models import AuditLog
     from app.services.seeder import seed_demo_dataset
 
-    return seed_demo_dataset(db)
+    result = seed_demo_dataset(db)
+    db.add(
+        AuditLog(
+            actor="admin",
+            action="SEED_DEMO",
+            key="demo_data",
+            old_value=None,
+            new_value=f"requests={result.get('total_requests', 0)},events={result.get('total_events', 0)}",
+        )
+    )
+    db.commit()
+    return result
 
 
-@router.post("/toggle-waf-mode", summary="Toggle WAF mode between MONITOR_ONLY and ACTIVE_BLOCKING", dependencies=[Depends(require_admin)])
+class ToggleWafModeRequest(BaseModel):
+    mode: str | None = Field(
+        default=None,
+        description="Optional explicit mode: MONITOR_ONLY, ACTIVE_BLOCKING, or OFF. Omit to toggle.",
+    )
+    waf_mode: str | None = Field(
+        default=None,
+        description="Backward-compatible alias for mode.",
+    )
+
+
+@router.post("/toggle-waf-mode", summary="Toggle or set WAF mode between MONITOR_ONLY and ACTIVE_BLOCKING", dependencies=[Depends(require_admin)])
 def toggle_waf_mode_endpoint(
+    payload: ToggleWafModeRequest | None = Body(default=None),
     db: Session = Depends(get_db),
     settings: Settings = Depends(get_settings),
 ) -> dict[str, Any]:
-    """Toggles runtime WAF operational mode between MONITOR_ONLY and ACTIVE_BLOCKING."""
+    """Toggles or explicitly sets runtime WAF operational mode (MONITOR_ONLY / ACTIVE_BLOCKING / OFF)."""
+    from app.api.proxy import invalidate_waf_mode_cache
+    from app.db.models import AuditLog
+
     cfg = db.query(WafConfigModel).filter(WafConfigModel.key == "waf_mode").first()
     current_mode = cfg.value if (cfg and cfg.value) else settings.waf_mode
-    new_mode = "ACTIVE_BLOCKING" if current_mode == "MONITOR_ONLY" else "MONITOR_ONLY"
+
+    requested_raw = None
+    if payload is not None:
+        requested_raw = payload.mode or payload.waf_mode
+
+    if requested_raw:
+        normalized = requested_raw.strip().upper()
+        if normalized == "ACTIVE_BLOCK":
+            normalized = "ACTIVE_BLOCKING"
+        if normalized not in ("MONITOR_ONLY", "ACTIVE_BLOCKING", "OFF"):
+            raise HTTPException(
+                status_code=422,
+                detail=f"Invalid waf_mode '{requested_raw}'. Expected MONITOR_ONLY, ACTIVE_BLOCKING, or OFF.",
+            )
+        new_mode = normalized
+    else:
+        new_mode = "ACTIVE_BLOCKING" if current_mode == "MONITOR_ONLY" else "MONITOR_ONLY"
 
     if cfg:
         cfg.value = new_mode
     else:
         cfg = WafConfigModel(key="waf_mode", value=new_mode)
         db.add(cfg)
+    db.add(
+        AuditLog(
+            actor="admin",
+            action="TOGGLE_WAF_MODE",
+            key="waf_mode",
+            old_value=current_mode,
+            new_value=new_mode,
+        )
+    )
     db.commit()
+    invalidate_waf_mode_cache()
 
     return {
         "status": "success",
@@ -496,16 +738,24 @@ def get_attack_sessions(
         .count()
     )
 
+    # Batch-fetch all session events in a single query to eliminate N+1 SQL (LOGIC-PBL6-005)
+    session_ids = [row.session_id for row in session_rows if row.session_id]
+    all_events = (
+        db.query(SecurityEvent)
+        .filter(SecurityEvent.session_id.in_(session_ids))
+        .order_by(SecurityEvent.timestamp.asc())
+        .all()
+    ) if session_ids else []
+
+    events_by_session: dict[str, list[SecurityEvent]] = {}
+    for ev in all_events:
+        if ev.session_id:
+            events_by_session.setdefault(ev.session_id, []).append(ev)
+
     items = []
     for row in session_rows:
         sess_id = row.session_id
-        # Fetch events in this session
-        sess_events = (
-            db.query(SecurityEvent)
-            .filter(SecurityEvent.session_id == sess_id)
-            .order_by(SecurityEvent.timestamp.asc())
-            .all()
-        )
+        sess_events = events_by_session.get(sess_id, [])
 
         stages_seen = []
         attack_types_seen = set()
@@ -517,7 +767,7 @@ def get_attack_sessions(
             if stage_name not in stages_seen:
                 stages_seen.append(stage_name)
             attack_types_seen.add(ev.attack_type)
-            if ev.action == "BLOCKED":
+            if ev.action in ("BLOCK", "BLOCKED"):
                 has_blocked = True
 
             event_summaries.append({

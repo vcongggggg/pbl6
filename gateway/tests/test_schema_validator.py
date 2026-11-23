@@ -131,18 +131,40 @@ def test_schema_validator_method_not_allowed():
 
 
 def test_proxy_positive_security_strict_mode(client: TestClient):
-    """Verifies that schema violations are blocked immediately in strict mode."""
-    with patch.object(get_settings(), "schema_validation_enabled", True),          patch.object(get_settings(), "schema_strict_mode", True):
+    """Verifies that schema violations are blocked immediately in strict mode under ACTIVE_BLOCKING."""
+    from app.db.models import WafConfigModel
+    from app.db.session import SessionLocal
 
-        # Missing required parameter 'q'
-        res = client.get("/api/proxy/api/v1/vulnerable/books/search/")
-        assert res.status_code == 400
-        data = res.json()
-        assert data["blocked"] is True
-        assert data["status"] == 400
-        assert "violations" in data
-        assert any(v["field"] == "q" for v in data["violations"])
-        assert res.headers.get("X-WAF-Schema-Violation") == "1"
+    with SessionLocal() as db:
+        cfg = db.query(WafConfigModel).filter(WafConfigModel.key == "waf_mode").first()
+        prev_mode = cfg.value if cfg else None
+        if cfg:
+            cfg.value = "ACTIVE_BLOCKING"
+        else:
+            db.add(WafConfigModel(key="waf_mode", value="ACTIVE_BLOCKING"))
+        db.commit()
+
+    try:
+        with patch.object(get_settings(), "schema_validation_enabled", True), \
+             patch.object(get_settings(), "schema_strict_mode", True):
+
+            # Missing required parameter 'q'
+            res = client.get("/api/proxy/api/v1/vulnerable/books/search/")
+            assert res.status_code == 400
+            data = res.json()
+            assert data["blocked"] is True
+            assert data["status"] == 400
+            assert "violations" in data
+            assert any(v["field"] == "q" for v in data["violations"])
+            assert res.headers.get("X-WAF-Schema-Violation") == "1"
+    finally:
+        with SessionLocal() as db:
+            cfg = db.query(WafConfigModel).filter(WafConfigModel.key == "waf_mode").first()
+            if prev_mode is None and cfg is not None:
+                db.delete(cfg)
+            elif cfg is not None:
+                cfg.value = prev_mode
+            db.commit()
 
 
 def test_proxy_positive_security_flag_disabled(client: TestClient):

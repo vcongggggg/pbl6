@@ -24,18 +24,18 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -e gateway/
-          pip install pytest pytest-asyncio pytest-cov respx ruff joblib numpy scikit-learn pandas
+          pip install pytest pytest-asyncio pytest-cov respx ruff joblib numpy scikit-learn pandas xgboost
 
-      - name: Run Ruff Linter
+      - name: Run Ruff Linter (Full Codebase)
         run: |
-          ruff check gateway/ scripts/run_ablation_study.py scripts/generate_benchmark_dataset.py
+          ruff check gateway/ ml-engine/ attack-lab/
 
-      - name: Run Pytest Test Suite
+      - name: Run Pytest Test Suites (Gateway, Unit & ML Engine)
         run: |
-          python -m pytest gateway/tests/
+          python -m pytest gateway/tests/ tests/unit/ ml-engine/tests/
 
   frontend-checks:
-    name: Frontend Build & Typecheck (Node.js 20)
+    name: Frontend Lint, Typecheck & Build (Node.js 20)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -52,6 +52,16 @@ jobs:
         run: |
           cd dashboard
           npm ci
+
+      - name: Run ESLint
+        run: |
+          cd dashboard
+          npm run lint
+
+      - name: TypeScript Typecheck
+        run: |
+          cd dashboard
+          npx tsc --noEmit
 
       - name: Build Next.js Application
         run: |

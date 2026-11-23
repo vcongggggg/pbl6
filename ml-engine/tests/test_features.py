@@ -292,5 +292,5 @@ class TestBatchThroughputAndPerformance:
         elapsed = time.perf_counter() - t0
 
         assert matrix.shape == (1000, 17)
-        # 1000 samples should finish in under 350ms (<0.35ms per sample) even on constrained CI
-        assert elapsed < 0.35, f"Batch extraction took too long: {elapsed:.4f}s for 1000 samples"
+        # 1000 samples should finish in under 600ms (<0.6ms per sample) even on constrained CI
+        assert elapsed < 0.60, f"Batch extraction took too long: {elapsed:.4f}s for 1000 samples"

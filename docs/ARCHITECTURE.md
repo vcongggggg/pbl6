@@ -78,7 +78,7 @@ graph LR
 ## 2. Ranh Giới Và Trách Nhiệm Từng Thành Phần (Component Boundaries)
 
 ### 2.1. `vulnerable-api/` (Target Web API Tự Xây Dựng — Bookie Bookstore)
-* **Lý do tự xây dựng:** Theo chỉ đạo của Giảng viên hướng dẫn, việc tự xây dựng Web API giúp nhóm làm chủ 100% mã nguồn, hiểu tường tận cơ chế khai thác các lỗ hổng OWASP Top 10 trên Web API thực tế, và cho phép định hình cấu trúc dữ liệu theo đúng yêu cầu đề tài (thay thế hoàn toàn OWASP Juice Shop).
+* **Lý do tự xây dựng:** Theo chỉ đạo của Giảng viên hướng dẫn, việc tự xây dựng Web API giúp nhóm làm chủ 100% mã nguồn, hiểu tường tận cơ chế khai thác các lỗ hổng OWASP Top 10 trên Web API thực tế, và cho phép định hình cấu trúc dữ liệu theo đúng yêu cầu đề tài bằng Bookie Bookstore Target API.
 * **Ứng dụng thực tế:** Nền tảng thương mại điện tử Bookie Bookstore với cơ sở dữ liệu SQLite, quản lý sách, đơn hàng, người dùng và đánh giá.
 * **Cổng dịch vụ:** Chạy nội bộ trên Port `5000` (chỉ cho phép Gateway kết nối qua mạng Docker hoặc localhost).
 * **8 Kịch bản lỗ hổng trọng điểm (OWASP Web & API Top 10):**

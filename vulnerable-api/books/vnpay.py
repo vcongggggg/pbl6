@@ -50,4 +50,6 @@ class VNPay:
         hmac_algo = hmac.new(self.hash_key.encode('utf-8'), query_string.encode('utf-8'), hashlib.sha512)
         expected_hash = hmac_algo.hexdigest()
         
-        return vnp_secure_hash == expected_hash
+        if not vnp_secure_hash or not isinstance(vnp_secure_hash, str):
+            return False
+        return hmac.compare_digest(vnp_secure_hash.lower(), expected_hash.lower())

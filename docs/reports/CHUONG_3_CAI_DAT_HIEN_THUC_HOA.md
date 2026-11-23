@@ -2,353 +2,82 @@
 
 ---
 
-## 3.1. Môi Trường Phát Triển và Công Nghệ Sử Dụng
+## 3.1. Môi Trường Phát Triển và Ngăn Xếp Công Nghệ Thực Tế
 
-Nhằm hiện thực hóa các phân hệ đã thiết kế trong Chương 2, hệ thống được xây dựng dựa trên ngăn xếp công nghệ hiện đại, tối ưu hóa cho bài toán an ninh mạng, xử lý đồng thời bất đồng bộ và suy luận học máy thời gian thực (Bảng 3.1):
+*Bảng 3.1: Ngăn xếp công nghệ triển khai thực tế của PBL6 (Blue Team v2.0 + Red Team)*
 
-*Bảng 3.1: Ngăn xếp công nghệ và môi trường phát triển của hệ thống*
-
-| Thành Phần Hệ Thống | Công Nghệ / Thư Viện Cốt Lõi | Phiên Bản | Vai Trò & Chức Năng Kỹ Thuật |
+| Phân Hệ | Công Nghệ / Thư Viện Cốt Lõi | Phiên Bản | Vai Trò Kỹ Thuật Thực Tế |
 | :--- | :--- | :---: | :--- |
-| **Ngôn ngữ Lập trình** | Python | 3.11.x | Ngôn ngữ trung tâm xây dựng WAF Gateway, Target API, ML Engine và Red Team Agent. |
-| | TypeScript / JavaScript | ES2022 | Xây dựng giao diện điều hành an ninh SOC Dashboard. |
-| **Khung WAF & Web API** | FastAPI / Starlette | 0.110.x | Xây dựng Cổng WAF Reverse Proxy và ứng dụng Bookie Bookstore bất đồng bộ (Asynchronous ASGI). |
-| | Uvicorn | 0.28.x | Máy chủ HTTP ASGI hiệu năng cao chạy đa luồng sự kiện (Event Loop). |
-| | HTTPX | 0.27.x | Thư viện HTTP Client bất đồng bộ chuyển tiếp request giữa WAF Gateway và Upstream API. |
-| **Trí Tuệ Nhân Tạo & ML** | Scikit-learn | 1.4.x | Huấn luyện và suy luận mô hình Random Forest Classifier và Isolation Forest Anomaly. |
-| | NumPy / Pandas | 1.26.x | Xử lý mảng ma trận, vector hóa tính toán 17 đặc trưng hình thái. |
-| | Joblib | 1.3.x | Tuần tự hóa, nén và nạp nhanh mô hình học máy vào bộ nhớ RAM. |
-| **Học Tăng Cường Red Team** | PyTorch | 2.2.x | Xây dựng và huấn luyện mạng nơ-ron sâu Deep Q-Network (DQN) né tránh WAF nội bộ (`evasion_agent.pt`). |
-| **Giao Diện SOC Dashboard** | Next.js 14 | 14.2.x | Khung ứng dụng React với App Router kết xuất giao diện giám sát hiệu năng cao. |
-| | Tailwind CSS | 3.4.x | Hệ thống thiết kế giao diện Dark Mode phong cách SOC chuyên nghiệp. |
-| | Recharts & Lucide Icons | Mới nhất | Trực quan hóa dữ liệu biểu đồ sóng Area Chart, Donut Chart và hệ thống biểu tượng an ninh. |
-| **Cơ Sở Dữ Liệu & Lưu Trữ** | SQLite3 / aiosqlite | 3.45.x | CSDL quan hệ lưu vết telemetry lưu lượng `requests` và sự kiện `security_events`. |
-| **Đóng Gói & Triển Khai** | Docker & Docker Compose | 25.x | Đóng gói cô lập các dịch vụ, bảo đảm tính nhất quán trên 2 máy vật lý độc lập. |
+| **WAF Gateway (Blue Team)** | Python, FastAPI, Uvicorn, AnyIO, HTTPX | 3.12 / 0.110+ | Reverse Proxy bất đồng bộ chịu tải cao (`>= 250 RPS @ C=50`), pure ASGI middleware, threadpool offload. |
+| **AI/ML Defense v2.0** | XGBoost (UBJSON), NumPy (NPZ), Scikit-learn | 2.x / 1.26+ | Suy luận Zero-Pickle (`xgb_v2.ubj`, `iforest_v2.npz`, `allow_pickle=False`) + xác thực SHA-256 Fail-Closed. |
+| **Target API (`vulnerable-api`)** | Python Django, SQLite3 | 6.0+ | Ứng dụng Bookie Bookstore với 8 lỗ hổng OWASP, OpenAPI 3.0, HMAC `compare_digest` (cô lập `127.0.0.1:5000`). |
+| **Red Team (`attack-lab`)** | PyTorch, HTTPX, Rich | 2.x / 0.27+ | OpenAPI Recon (cycle guard), AttackGraph MDP (40-D/14-A), DQN `evasion_agent.pt` (`weights_only=True`), CLI Runner. |
+| **SOC Dashboard & AI Arena** | Next.js 14 (App Router), TypeScript, Tailwind CSS, Recharts, Lucide | 14.2.35 / Node 20 | Trung tâm SOC 100% dữ liệu thật + Đấu Trường AI `/arena`, xác thực qua Server-Side BFF Proxy `/api/gateway/*`. |
+| **CSDL & Kiểm Toán** | SQLAlchemy 2.0, SQLite WAL (`QueuePool`) | 2.0.28+ | Lưu trữ `requests`, `security_events` (indexed `api_protocol`/`session_id`), `audit_logs`, `waf_config` với Group Commit. |
+| **DevOps & CI/CD** | Docker Compose, Non-root Dockerfiles, GitHub Actions, Ruff, Pytest | Compose v5 / Ruff | 3 container non-root (`appuser`/`nextjs`), 3 `.dockerignore`, CI tự động kiểm tra lint + 350+ test + Next.js build. |
 
 ---
 
-## 3.2. Cài Đặt Phân Hệ Cổng WAF Gateway (Phòng Thủ Chủ Động)
+## 3.2. Cài Đặt Phân Hệ Cổng WAF Gateway v2.0 (`gateway/`)
 
-### 3.2.1. Cài đặt Module Chuẩn hóa Dữ liệu Đầu vào (`InputNormalizer`)
-Để triệt tiêu các kỹ thuật làm rối mã hóa (Obfuscation Evasion) [Ref 12], module `InputNormalizer` được cài đặt tại `gateway/app/core/normalizer.py` tích hợp giải thuật 3 lớp:
+### 3.2.1. Kiến trúc Reverse Proxy Bất Đồng Bộ & Group Commit WAL (`gateway/app/api/proxy.py`)
+1. **Kiểm soát kích thước Request & Chống Chunked DoS (`SEC-PBL6-002`):** Đọc body theo luồng `async for chunk in request.stream()` với bộ đếm lũy tiến chặn vượt quá `1 MB` bằng `HTTP 413 Payload Too Large` chuẩn RFC 7231.
+2. **RAM TTL Cache `waf_mode` (`PERF-PBL6-001`):** Hàm `_resolve_active_waf_mode()` đọc chế độ hoạt động từ cache RAM (TTL 5s) và tự động xóa cache qua SQLAlchemy listener `@event.listens_for(WafConfigModel, ...)` mỗi khi quản trị viên đổi chế độ.
+3. **Offload kiểm tra CPU-bound:** Toàn bộ chuỗi `_run_security_inspection()` được đẩy sang worker thread qua `await anyio.to_thread.run_sync(...)` để không chặn vòng lặp sự kiện asyncio.
+4. **Leader-Follower Group Commit (`_persist_background_logs`):** Sau khi trả phản hồi HTTP cho client, FastAPI `BackgroundTasks` gom nhiều bản ghi `SecurityEvent` và `RequestLog` vào một transaction SQLite WAL duy nhất, triệt tiêu xung đột khóa ghi ở tải cao `C = 50`.
+5. **Thanh lọc Header & Quản lý kết nối (`gateway/app/services/proxy.py`):** `filter_request_headers()` gỡ bỏ toàn bộ hop-by-hop headers và tiêu đề nhạy cảm `X-API-Key` trước khi chuyển tiếp; `filter_response_header_items()` dùng `upstream_headers.multi_items()` giữ nguyên nhiều header `Set-Cookie`; client tạm luôn đóng trong khối `finally`.
 
-1. **Giải mã URL Đệ quy (Recursive URL Decoding):**
-```python
-def recursive_url_decode(text: str, max_depth: int = 5) -> str:
-    # Giai ma long nhau de quy cho den khi chuoi dat trang thai dung
-    current = text
-    for _ in range(max_depth):
-        decoded = urllib.parse.unquote(current)
-        if decoded == current:
-            break
-        current = decoded
-    return current
-```
+### 3.2.2. Multi-Protocol Sniffer, InputNormalizer & Hardened Rule Engine
+- **`gateway/app/security/protocol_detector.py`:** Phân loại 5 giao thức (`REST`, `GRAPHQL`, `SOAP_XML`, `JSON_RPC`, `GENERIC_WEB`), sửa triệt để false positive trên REST có khóa `"query"` và XML sạch chứa từ tiếng Anh `"system"`/`"public"` bằng biểu thức cấu trúc XXE chặt (`<!(?:DOCTYPE|ENTITY)\b[^>]*\b(?:SYSTEM|PUBLIC)\b|<!ENTITY\b`) trên cả body và query string; bóc tách văn bản lá SOAP/XML (`extracted_text`) truyền vào ML nhằm tránh nhầm thẻ `<soap:Envelope>` thành XSS.
+- **`gateway/app/security/normalizer.py` & `engine.py`:** Chuẩn hóa đệ quy URL -> HTML Entity -> Unicode NFC -> loại Zero-Width Unicode -> gom comment `/*...*/` đa dòng -> quét cửa sổ trượt (Sliding Window > 16 KB) & duyệt JSON depth-limited. Khi `RuleEngine` gặp ngoại lệ đột xuất, Gateway xử lý **Fail-Closed (`HTTP 403`)** thay vì Fail-Open (`SEC-PBL6-003`).
+- **`gateway/app/security/rules/xss.py`:** Viết lại `XSS-002` sang dạng tuyến tính không quay lui bậc hai (`[^<>]*` + `\bon[a-z]{3,20}\s*=`), giảm độ trễ worst-case trên payload 50 KB từ **923.37 ms** xuống **0.891 ms** (nhanh hơn **1,036 lần**).
 
-2. **Khử Thực thể HTML (HTML Entity Unescaping):**
-```python
-def unescape_html(text: str) -> str:
-    # Chuyen doi toan bo thuc the HTML so hoac ten ve ky tu nguyen ban
-    return html.unescape(text)
-```
+### 3.2.3. Bộ Trích Xuất 26 Đặc Trưng Thống Nhất & Suy Luận Zero-Pickle (`ml-engine/` + `gateway/app/security/`)
+- **`ml-engine/features/extractor.py`:** Hàm `extract_26_from_http(path, query_params, body)` chuẩn hóa UTF-8 (decode sạch `bytes`, tránh lỗi chuỗi `b'...'` gây false positive SQLi), dùng chung duy nhất cho huấn luyện (`train_defense_v2.py`), benchmark (`evaluate_csic2010.py`, `run_ablation_study.py`) và runtime Gateway (`proxy.py`, `arena.py`).
+- **`gateway/app/security/ml_detector.py`:** Xác thực mã băm SHA-256 Fail-Closed đối chiếu `xgb_v2_metadata.json` (`2b9cd94af198...`) rồi nạp `ml-engine/artifacts/xgb_v2.ubj` (UBJSON Zero-Pickle) với bộ đệm thread-local tối ưu cho đa luồng.
+- **`gateway/app/security/anomaly.py`:** Xác thực mã băm SHA-256 Fail-Closed đối chiếu `iforest_v2_metadata.json` (`12e15cd99927...`) rồi nạp `ml-engine/artifacts/iforest_v2.npz` bằng `np.load(..., allow_pickle=False)` và tính độ sâu cây cô lập trực tiếp bằng NumPy thuần, hiệu chuẩn điểm `0–100` theo phân vị thực nghiệm.
 
-3. **Chuẩn hóa Unicode NFC:**
-```python
-def canonicalize_unicode(text: str) -> str:
-    # Khu cac ky tu fullwidth hoac visual spoofing ve dang chuan NFC
-    return unicodedata.normalize('NFC', text)
-```
-
-Toàn bộ chuỗi bề mặt request $S = 	ext{Path} + 	ext{"?"} + 	ext{Query} + 	ext{" "} + 	ext{Headers} + 	ext{" "} + 	ext{Body}$ được đưa qua hàm chuẩn hóa tổng hợp:
-$$S_{norm} = 	ext{Normalize}(S) = 	ext{Canonicalize}(	ext{Unescape}(	ext{RecursiveDecode}(S)))$$
+### 3.2.4. Risk Engine, Decision Engine, Rate Limiter & Attack Session Correlation
+- **`risk_engine.py` & `decision.py`:** Tổng hợp trọng số `0.40 * Rule + 0.35 * ML + 0.25 * Anomaly` với High-Confidence Override (`Rule >= 85` hoặc `ML >= 90` -> `BLOCK`), nối trực tiếp mọi tham số ngưỡng từ `Settings` (`.env`) và thực thi đầy đủ cả tầng `RATE_LIMIT` (Risk `60–79` -> HTTP 429).
+- **`rate_limiter.py`:** Cửa sổ trượt `SlidingWindowRateLimiter` dùng `OrderedDict` giới hạn tối đa `50,000` khóa (LRU eviction) kết hợp **IP Hard Cap** trên mọi endpoint nhạy cảm (`/auth/login/` tối đa 10 req/phút/IP bất chấp xoay token/UA).
+- **`services/security.py`:** Tính `session_id = HMAC-SHA256(client_ip || floor(utc_ts / 900))` chuẩn hóa UTC tuyệt đối và ánh xạ `kill_chain_stage` (`RECONNAISSANCE`, `EXPLOITATION`, `EVASION`, `PRIVILEGE_ABUSE`, `EXFILTRATION`) cho cả sự kiện detection lẫn rate-limit; truy vấn `/dashboard/sessions` gom theo lô khử hoàn toàn lỗi N+1 SQL.
 
 ---
 
-### 3.2.2. Cài đặt Động cơ Luật Chữ ký Tất định (`RuleEngine`)
-Động cơ luật được cài đặt tại `gateway/app/core/rule_engine.py`. Nhằm đảm bảo độ trễ xử lý ở mức micro-giây ($< 0.05	ext{ ms}$), toàn bộ 16 mẫu biểu thức chính quy (Regex) được biên dịch sẵn (Pre-compiled) ngay khi khởi động ứng dụng:
+## 3.3. Cài Đặt Ứng Dụng Mục Tiêu Bookie Bookstore (`vulnerable-api/`)
 
-```python
-RULES_CONFIG = [
-    {"id": "SQLI_AUTH_BYPASS", "family": "SQLI", "score": 95, "pattern": re.compile(r"('|")\s*(or|and)\s*('|")?(\d+)\s*=\s*('|")?", re.I)},
-    {"id": "SQLI_UNION_SELECT", "family": "SQLI", "score": 95, "pattern": re.compile(r"union\s+(all\s+)?select\s+", re.I)},
-    {"id": "XSS_SCRIPT_TAG", "family": "XSS", "score": 95, "pattern": re.compile(r"<\s*script[^>]*>.*?<\s*/\s*script\s*>", re.I | re.S)},
-    {"id": "PATH_DOT_DOT_SLASH", "family": "PATH", "score": 90, "pattern": re.compile(r"(\.\.[/\])+", re.I)},
-    {"id": "CMD_CHAINING_SEMI", "family": "CMD", "score": 95, "pattern": re.compile(r";\s*(ls|dir|cat|whoami|id|uname|sh|bash|cmd|powershell)", re.I)},
-    # ... va 11 quy tac chuan hoa khac
-]
-```
-
-Khi một request đến, `RuleEngine.evaluate(text)` duyệt qua danh sách các luật đã biên dịch:
-$$S_{rule} = \max_{\{r \in 	ext{Rules} \mid 	ext{Match}(r, S_{norm})\}} 	ext{Score}(r)$$
-Nếu không có luật nào khớp, $S_{rule} = 0.0$.
+Ứng dụng được cài đặt bằng **Python Django** tại `vulnerable-api/books/api_vulnerable.py` và `vulnerable-api/books/vnpay.py`:
+- Triển khai đủ 8 nhóm lỗ hổng OWASP Web & API Top 10 với schema đồng bộ hoàn toàn với Gateway và Red Team: `POST /auth/login/` (`username`, `password`), `GET /books/search/?q=`, `POST /reviews/` (`book_id`, `author`, `comment`), `GET /files/download/?file=`, `POST /admin/ping/` (`host`), `GET /orders/{order_id}/`, `POST /books/fetch-cover/`, `PUT /users/profile/update/`.
+- Cổng xác thực chữ ký thanh toán `books/vnpay.py` sử dụng so sánh thời gian hằng `hmac.compare_digest()` chống tấn công kênh kề thời gian (Timing Attack).
+- Trong `docker-compose.yml`, container `pbl6-vulnerable-api` chạy dưới quyền non-root `USER appuser` và chỉ ánh xạ `127.0.0.1:5000:5000` để chặn truy cập trực tiếp từ mạng LAN.
 
 ---
 
-### 3.2.3. Cài đặt Bộ Trích xuất Vector 17 Đặc trưng Hình thái (`FeatureExtractor`)
-Module `FeatureExtractor` được cài đặt tại `gateway/app/ml/features.py`. Thuật toán biến đổi chuỗi chuẩn hóa thành vector số học 17 chiều dựa trên công thức Shannon Entropy và thống kê ký tự [Ref 08]:
+## 3.4. Cài Đặt Hệ Thống Tác Tử Red Team & AI Arena (`attack-lab/` + `arena.py`)
 
-```python
-def extract_17_features(raw_text: str, path: str, body: str, params: dict) -> np.ndarray:
-    norm_text = normalize_text(raw_text)
-    length = max(len(norm_text), 1)
-    
-    # 1. Tinh toan Shannon Entropy H(S)
-    counts = collections.Counter(norm_text)
-    entropy = -sum((cnt / length) * math.log2(cnt / length) for cnt in counts.values())
-    
-    # 2. Mat do va tan suat hinh thai
-    digits = sum(c.isdigit() for c in norm_text) / length
-    specials = sum(not c.isalnum() and not c.isspace() for c in norm_text) / length
-    uppers = sum(c.isupper() for c in norm_text) / length
-    whitespaces = sum(c.isspace() for c in norm_text) / length
-    non_asciis = sum(ord(c) > 127 for c in norm_text) / length
-    
-    # 3. Dem tu khoa an ninh
-    sql_kws = len(re.findall(r"(select|union|insert|update|delete|drop|where|or|and)", norm_text, re.I))
-    xss_tags = len(re.findall(r"<\s*(script|iframe|img|svg|body|input)", norm_text, re.I))
-    path_dots = norm_text.count("..") + norm_text.count("/")
-    cmd_ops = sum(norm_text.count(op) for op in [";", "|", "&", "`", "$("])
-    quotes = norm_text.count("'") + norm_text.count('"')
-    angle_brackets = norm_text.count("<") + norm_text.count(">")
-    
-    # 4. Chieu dai chuoi ky tu dac biet lien tiep cuc dai
-    max_consec = max((len(match.group()) for match in re.finditer(r"[^\w\s]+", norm_text)), default=0)
-    
-    return np.array([
-        length, len(path), len(body), len(params),
-        entropy, digits, specials, uppers,
-        sql_kws, xss_tags, path_dots, cmd_ops,
-        quotes, angle_brackets, whitespaces, non_asciis, max_consec
-    ], dtype=np.float32)
-```
+Do Thành viên B (**Nguyễn Minh**) phát triển và đã được kiểm toán, gia cố đồng bộ với Blue Team v2.0:
+1. **`attack-lab/agent/recon.py` (Task 10.1):** `APIReconAgent` tự động dò OpenAPI spec trên Gateway, bảo vệ chống vòng lặp `$ref` bằng tập `seen_refs`, sinh danh sách `EndpointProfile` và chỉ báo lỗ hổng tiềm năng.
+2. **`attack-lab/environment/` (Task 10.2):** `AttackGraph` (`attack_graph.py`), 14 hành động rời rạc (`actions.py`) và máy trạng thái `AttackEnvironment` (`env.py`) sinh vector quan sát 40 chiều phục vụ huấn luyện và suy luận DQN.
+3. **`attack-lab/agent/evasion.py` & `tools.py` (Task 10.3):** Bộ `TAMPER_CATALOG` gồm 14 hàm biến dị bảo toàn ngữ nghĩa cho SQLi, XSS, Path Traversal, CMD Injection; `HttpDispatcher` thu thập telemetry chuẩn thang `0–100` (nhận diện cả `403` lẫn `429`, sửa chính xác `threat_score is None`).
+4. **`attack-lab/runner.py` & `models/evasion_agent.pt` (Task 10.4):** Lớp `DQNEvasionAdvisor` xác thực **SHA-256 Fail-Closed** đối chiếu `evasion_agent_metadata.json` (`b89d7dc6b7c9...`) và nạp trọng số an toàn bằng **`torch.load(..., map_location="cpu", weights_only=True)`** (triệt tiêu CWE-502), điều phối 3 chế độ `replay`, `live`, `ai_agent` và xuất báo cáo `campaign_report.json`.
+5. **`gateway/app/api/arena.py`:** Cung cấp 3 API `/dashboard/arena/battle`, `/live`, `/history` được bảo vệ bởi `require_admin`, thực thi trên threadpool (`anyio.to_thread.run_sync`), sử dụng đúng pipeline `extract_26_from_http` + `XGBoost v2.0` + `IForest v2.0`, đo độ trễ thực bằng `perf_counter` (loại bỏ 100% hằng số random giả).
 
 ---
 
-### 3.2.4. Cài đặt và Đóng gói Mô hình Học máy (`MLClassifier`)
-Hai mô hình học máy được đóng gói bằng thư viện `joblib` và nạp vào bộ nhớ RAM tại thời điểm khởi động máy chủ WAF Gateway:
-1. `champion_rf.joblib`: Mô hình Random Forest 100 cây quyết định được huấn luyện trên 20.000 mẫu [Ref 13].
-2. `iso_forest.joblib`: Mô hình Isolation Forest phát hiện dị biệt huấn luyện trên tập mẫu chuẩn hợp lệ Benign [Ref 14].
+## 3.5. Cài Đặt SOC Command Center & Bảo Mật Frontend BFF (`dashboard/`)
 
-Hàm suy luận song song trong `MLClassifier`:
-```python
-def predict_threat(self, feature_vector: np.ndarray) -> tuple[str, float, float]:
-    X = feature_vector.reshape(1, -1)
-    
-    # Du doan Random Forest
-    rf_probs = self.rf_model.predict_proba(X)[0]
-    pred_idx = np.argmax(rf_probs)
-    pred_class = self.classes_[pred_idx]
-    
-    # Tinh diem rui ro RF (loai tru nhan BENIGN)
-    benign_idx = self.class_to_idx_.get("BENIGN", 0)
-    rf_risk_score = (1.0 - rf_probs[benign_idx]) * 100.0
-    
-    # Du doan Isolation Forest (Anomaly Score)
-    raw_if_score = self.if_model.score_samples(X)[0] # Cang am cang di biet
-    if_risk_score = max(0.0, min(100.0, (-raw_if_score - 0.45) * 200.0))
-    
-    return pred_class, rf_risk_score, if_risk_score
-```
+1. **Server-Side BFF Proxy (`dashboard/src/app/api/gateway/[...path]/route.ts`):** Mọi yêu cầu từ trình duyệt đi vào `/api/gateway/api/dashboard/*` (bao gồm cả `/arena/battle`, `/arena/live`, `/arena/history`). Server Next.js tự chèn header `X-API-Key` từ biến môi trường `ADMIN_API_KEY`, áp dụng kiểm tra regex từng phân đoạn đường dẫn, whitelist chặt danh sách endpoint và xác minh origin chống SSRF. Kết quả kiểm định: **`0` chuỗi bí mật tồn tại trong `.next/static/`**, và mọi truy cập trực tiếp không có key tới Gateway đều bị từ chối `HTTP 401`.
+2. **100% Số Liệu Thật Trên Toàn Giao Diện (`SCI-PBL6-002`):**
+   - `MetricCards.tsx`: Hiển thị KPI thật và `current_rps` tính trên cửa sổ 60 giây gần nhất từ bảng `requests`.
+   - `NetworkTopologyMap.tsx`: Hiển thị trạng thái, độ trễ ping thật tới Bookie và chế độ `waf_mode` thật từ `/dashboard/topology`.
+   - `ProtocolDistributionChart`: Đọc từ `/dashboard/protocols` dùng SQL `GROUP BY` trên cột index `SecurityEvent.api_protocol` (trả `0%` trung thực khi chưa có sự kiện).
+   - `PayloadEvidenceDrawer.tsx` & `DetectionExplainabilityModal.tsx`: Hiển thị đầy đủ **26 đặc trưng thật**, chi tiết luật khớp `details.matches`, điểm `Rule / XGBoost v2.0 / IForest v2.0` thật.
+   - `AttackSessionsModal.tsx`: Hiển thị chuỗi phiên tấn công 5 bước Cyber Kill Chain (đóng được bằng `Escape` và click backdrop).
+   - `dashboard/src/app/arena/page.tsx`: Giao diện **Đấu Trường AI (Red vs Blue Arena)** nối trực tiếp BFF thật (đã gỡ bỏ 100% `inMemoryBattleHistory` và `generateMockBattle()` giả lập), chuyển đổi mượt mà với trang SOC chính qua thanh điều hướng trên `Header.tsx`.
 
 ---
 
-### 3.2.5. Cài đặt Động cơ Ra Quyết định Đa tầng (`HybridDecisionEngine`)
-Module `HybridDecisionEngine` tổng hợp toàn bộ tri thức từ Rule, Random Forest và Isolation Forest thành quyết định bảo vệ theo thuật toán Bảng 3.2:
+## 3.6. Đóng Gói Docker Hardening & CI/CD Tự Động
 
-```python
-def make_decision(self, s_rule: float, s_rf: float, s_if: float) -> tuple[str, float]:
-    # Trong so hoc may: 70% Supervised RF + 30% Unsupervised IF
-    ml_combined = 0.70 * s_rf + 0.30 * s_if
-    
-    # Diem so rui ro tong hop (Fast-path rule override)
-    s_hybrid = max(s_rule, ml_combined)
-    
-    if s_hybrid >= 70.0:
-        action = "BLOCK"
-    elif s_hybrid >= 40.0:
-        action = "MONITOR"
-    else:
-        action = "ALLOW"
-        
-    return action, s_hybrid
-```
-
-Khi quyết định là `BLOCK`, Gateway chặn đứng kết nối và trả về phản hồi chuẩn RFC 7807 [Ref 19]:
-```json
-{
-  "type": "https://api.pbl6.dut.udn.vn/errors/security-violation",
-  "title": "Forbidden Request - Blocked by WAF Security Gateway",
-  "status": 403,
-  "detail": "Request has been identified as malicious and terminated.",
-  "instance": "/api/proxy/vulnerable/books/search/",
-  "request_id": "c1f7b9e2-3490-41fa-8a71-f9589d98a001",
-  "threat_score": 95.0,
-  "action": "BLOCK"
-}
-```
-
----
-
-### 3.2.6. Cài đặt Bộ Điều tiết Tần suất Token Bucket (`TokenBucketRateLimiter`)
-Được cài đặt trong `gateway/app/core/rate_limiter.py` sử dụng cấu trúc dữ liệu trong bộ nhớ (In-memory Thread-Safe Store):
-
-```python
-class TokenBucketRateLimiter:
-    def __init__(self, capacity: int = 60, refill_rate: float = 1.0):
-        self.capacity = capacity
-        self.refill_rate = refill_rate
-        self.buckets = {}
-        self.lock = threading.Lock()
-
-    def is_allowed(self, client_ip: str) -> bool:
-        now = time.time()
-        with self.lock:
-            if client_ip not in self.buckets:
-                self.buckets[client_ip] = {"tokens": self.capacity, "last_updated": now}
-                return True
-            
-            b = self.buckets[client_ip]
-            elapsed = now - b["last_updated"]
-            b["tokens"] = min(self.capacity, b["tokens"] + elapsed * self.refill_rate)
-            b["last_updated"] = now
-            
-            if b["tokens"] >= 1.0:
-                b["tokens"] -= 1.0
-                return True
-            return False
-```
-
----
-
-## 3.3. Cài Đặt Phân Hệ Ứng Dụng Mục Tiêu (`vulnerable-api` - Bookie Bookstore)
-
-Ứng dụng `vulnerable-api` được xây dựng bằng Python FastAPI tại thư mục `vulnerable-api/app/`. Hệ thống triển khai đầy đủ các endpoint mô phỏng lỗ hổng nghiệp vụ thực tế:
-
-### 3.3.1. Cài đặt Lỗ hổng SQL Injection Authentication Bypass
-```python
-@router.post("/auth/login/")
-async def vulnerable_login(payload: LoginRequest, db: sqlite3.Connection = Depends(get_db)):
-    # Lo hong: Ghep chuoi SQL truc tiep ma khong dung Parameterized Query
-    query = f"SELECT id, username, role FROM users WHERE username = '{payload.username}' AND password = '{payload.password}'"
-    cursor = db.cursor()
-    cursor.execute(query)
-    user = cursor.fetchone()
-    if user:
-        return {"status": "success", "user": {"id": user[0], "username": user[1], "role": user[2]}}
-    raise HTTPException(status_code=401, detail="Invalid credentials")
-```
-
-### 3.3.2. Cài đặt Lỗ hổng SQL Injection UNION-based Data Exfiltration
-```python
-@router.get("/books/search/")
-async def search_books(q: str, db: sqlite3.Connection = Depends(get_db)):
-    # Lo hong: Noi suy chuoi tim kiem truc tiep vao menh de LIKE
-    query = f"SELECT id, title, author, price FROM books WHERE title LIKE '%{q}%'"
-    cursor = db.cursor()
-    cursor.execute(query)
-    books = cursor.fetchall()
-    return [{"id": b[0], "title": b[1], "author": b[2], "price": b[3]} for b in books]
-```
-
-### 3.3.3. Cài đặt Lỗ hổng Path Traversal / Local File Inclusion
-```python
-@router.get("/files/download/")
-async def download_file(file: str):
-    # Lo hong: Khong chan ky tu .. va khong kiem tra duong dan thu muc goc
-    base_dir = Path("/app/static/files")
-    target_path = base_dir / file
-    if target_path.exists() and target_path.is_file():
-        return FileResponse(target_path)
-    raise HTTPException(status_code=404, detail="File not found")
-```
-
-### 3.3.4. Cài đặt Lỗ hổng OS Command Injection
-```python
-@router.post("/admin/ping/")
-async def admin_ping(payload: PingRequest):
-    # Lo hong: Chay truc tiep qua shell he dieu hanh voi toan tu noi lenh
-    cmd = f"ping -c 1 {payload.target}"
-    proc = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=5)
-    return {"stdout": proc.stdout, "stderr": proc.stderr, "returncode": proc.returncode}
-```
-
----
-
-## 3.4. Cài Đặt Phân Hệ Tác Tử Tấn Công Tự Động (`attack-lab` - Offensive AI Red Team)
-
-Triển khai độc lập trên **Máy 2 (`naocavang08`)**, phân hệ bao gồm 3 module phối hợp:
-
-### 3.4.1. Cài đặt Module Tự động Trinh sát (OpenAPI Reconnaissance)
-Module `attack-lab/recon.py` gửi truy vấn `GET /api/proxy/vulnerable/openapi.json`, trích xuất cấu trúc các API và ánh xạ các tham số vào từ điển tấn công tương ứng:
-
-```python
-def map_attack_surface(openapi_spec: dict) -> list[dict]:
-    targets = []
-    for path, methods in openapi_spec.get("paths", {}).items():
-        for method, details in methods.items():
-            targets.append({
-                "endpoint": path,
-                "method": method.upper(),
-                "params": details.get("parameters", []),
-                "request_body": details.get("requestBody", {})
-            })
-    return targets
-```
-
-### 3.4.2. Cài đặt Mạng Nơ-ron PyTorch DQN Né Tránh WAF (`evasion_agent.pt`)
-Được xây dựng thuần túy bằng thư viện PyTorch tại `attack-lab/models/dqn_agent.py`:
-
-```python
-class DQNEvasionNetwork(nn.Module):
-    def __init__(self, input_dim: int = 17, action_dim: int = 6):
-        super().__init__()
-        self.fc = nn.Sequential(
-            nn.Linear(input_dim, 128),
-            nn.ReLU(),
-            nn.Dropout(0.1),
-            nn.Linear(128, 64),
-            nn.ReLU(),
-            nn.Linear(64, action_dim)
-        )
-        
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        return self.fc(x)
-```
-
-Quy trình chọn hành vi biến dị theo chiến lược $\epsilon$-greedy:
-$$a_t = egin{cases} 
-	ext{Random Action} \in A & 	ext{với xác suất } \epsilon \
-rg\max_a Q(s_t, a; 	heta) & 	ext{với xác suất } 1 - \epsilon
-\end{cases}$$
-
----
-
-## 3.5. Cài Đặt Phân Hệ Giám Sát SOC Dashboard
-
-Được xây dựng bằng Next.js 14 tại `dashboard/`, hệ thống kết nối trực tiếp với các điểm cuối API Telemetry của Gateway (`/api/v1/waf/telemetry/stats`, `/api/v1/waf/telemetry/events`):
-
-1. **5 Thẻ Chỉ Số An Ninh (Metric KPI Cards):**
-   - `Total Traffic`: Tổng số request đã bóc tách.
-   - `Attacks Detected`: Tổng số cuộc tấn công đã nhận diện và vô hiệu hóa.
-   - `Average Threat Score`: Điểm đe dọa trung bình trên toàn hệ thống.
-   - `Clean Traffic Ratio`: Tỷ lệ phần trăm lưu lượng an toàn.
-   - `Quick Simulator`: Công cụ bắn thử nghiệm payload trực quan từ giao diện web.
-
-2. **Biểu đồ Sóng Đôi Area Chart & Donut Chart:**
-   - Sử dụng thư viện `Recharts` trực quan hóa phân bố thời gian thực của 2 luồng: `Clean Requests` (xanh ngọc lục bảo) và `Blocked Attacks` (đỏ cờ).
-   - Biểu đồ tròn Donut Chart hiển thị tỷ trọng phân bố 4 họ tấn công: SQLi, XSS, Path Traversal, Command Injection.
-
-3. **Bảng Sự Kiện & Ngăn Kéo Bằng Chứng (Evidence Drawer):**
-   - Cho phép chuyên viên an ninh nhấp vào bất kỳ sự kiện an ninh nào để mở ngăn kéo bên phải, hiển thị song song: Chuỗi Payload thô (Raw) và Chuỗi sau khi qua Bộ chuẩn hóa (Canonical Normalized), kèm theo chi tiết các luật bị kích hoạt và đóng góp đặc trưng (Feature Attribution).
-
----
-
-## 3.6. Tóm Tắt Chương 3
-
-Chương 3 đã hoàn thiện trọn vẹn việc cài đặt và hiện thực hóa các phân hệ của đề tài:
-1. **Hoàn thiện Cổng WAF Gateway:** Cài đặt thành công toàn bộ đường ống 7 bước với module chuẩn hóa chuỗi đệ quy, động cơ 16 luật chữ ký tất định, bộ trích xuất vector 17 đặc trưng hình thái, cơ chế suy luận mô hình học máy kép (Random Forest + Isolation Forest), động cơ đánh giá rủi ro thích ứng Hybrid Decision và bộ điều tiết tần suất Token Bucket.
-2. **Xây dựng Ứng dụng Mục tiêu Bookie Bookstore:** Hiện thực hóa trọn vẹn 8 kịch bản lỗ hổng nghiêm trọng chuẩn OWASP Web & API Top 10 kèm điểm cuối xuất bản lược đồ OpenAPI 3.0.
-3. **Hiện thực hóa Tác tử Tấn công Tự động Red Team:** Cài đặt module tự động trinh sát và mạng nơ-ron học tăng cường sâu PyTorch DQN (`evasion_agent.pt`) vận hành độc lập trên Máy 2.
-4. **Xây dựng Trung tâm Giám sát SOC Dashboard:** Hoàn thành giao diện giám sát thời gian thực Next.js 14 với 5 thẻ KPI, biểu đồ sóng lưu lượng và ngăn kéo đối soát bằng chứng số.
-
-Toàn bộ các phân hệ đã cài đặt tạo thành một hệ sinh thái an ninh hoàn chỉnh, sẵn sàng cho công tác thử nghiệm và đánh giá hiệu năng trong Chương 4.
+- **Docker Hardening (`INFRA-PBL6-001`):** Tạo 3 file `.dockerignore` riêng (`gateway/`, `dashboard/`, `vulnerable-api/`); chạy toàn bộ 3 container dưới quyền **non-root** (`USER appuser` / `USER nextjs`); đồng bộ `dashboard/Dockerfile` lên `node:20-alpine` + `npm ci`; khai báo `xgboost>=2.0.0` trong `gateway/pyproject.toml`; đặt mặc định an toàn `WAF_MODE=${WAF_MODE:-ACTIVE_BLOCKING}` trong `docker-compose.yml`.
+- **CI Pipeline (`.github/workflows/ci.yml`):** Tự động chạy `ruff check gateway/ ml-engine/ attack-lab/`, chạy trọn bộ `pytest` trên `gateway/tests/`, `tests/unit/`, `ml-engine/tests/`, và kiểm tra `npm run lint`, `tsc --noEmit`, `next build` trên `dashboard/`.

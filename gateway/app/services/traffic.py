@@ -122,6 +122,7 @@ class TrafficService:
         response_size: int | None,
         user_agent: str | None = None,
         timestamp: datetime.datetime | None = None,
+        commit: bool = True,
     ) -> RequestLog:
         """Create and persist a traffic record into SQLite."""
         if timestamp is None:
@@ -148,10 +149,12 @@ class TrafficService:
 
         try:
             db.add(log_entry)
-            db.commit()
-            db.refresh(log_entry)
+            if commit:
+                db.commit()
+                db.refresh(log_entry)
             return log_entry
         except Exception as e:
-            db.rollback()
+            if commit:
+                db.rollback()
             logger.error(f"Failed to persist traffic log [{request_id}]: {e}")
             raise

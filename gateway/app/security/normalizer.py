@@ -45,9 +45,13 @@ class InputNormalizer:
         except Exception:
             pass
 
-        # 4. Remove null bytes and non-printable control characters (except newline, tab, cr)
+        # 4. Remove null bytes, non-printable control characters, and zero-width characters (SEC-PBL6-006)
         current = current.replace("\x00", "")
         current = re.sub(r"[\x01-\x08\x0b\x0c\x0e-\x1f\x7f]", "", current)
+        current = re.sub(r"[\u200b-\u200f\ufeff]", "", current)
+
+        # 4.1 Strip inline SQL comments (/*...*/) including multiline (/*\n...*/) to defeat obfuscation (SEC-PBL6-006)
+        current = re.sub(r"/\*.*?\*/", " ", current, flags=re.DOTALL)
 
         # 5. Normalize multiple whitespace sequences to a single space
         current = re.sub(r"\s+", " ", current)

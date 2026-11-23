@@ -1,37 +1,44 @@
-# BÁO CÁO THỰC NGHIỆM ĐO LƯỜNG ĐÓNG GÓP TỪNG THÀNH PHẦN (ABLATION STUDY)
-> **Mã công việc:** Task B3 (Issue #126 / Refined in #132 — Master Plan P1)
-> **Người thực hiện:** Thành viên A (`vcongggggg` — Tech Lead / Blue Team)
-> **Thời gian đo kiểm:** 2026-10-07 07:57:09
-> **Tập dữ liệu:** `benchmark_1000_diverse.csv` (1000 mẫu đa dạng: 200 Benign, 800 Attacks)
-> **Phương pháp đo lường Latency:** Đo cô lập thời gian chạy của chính detector trong từng mode (không chạy ngầm detector khác) để phản ánh trung thực chi phí tính toán.
+# BÁO CÁO THỰC NGHIỆM ĐO LƯỜNG ĐÓNG GÓP TỪNG THÀNH PHẦN (ABLATION STUDY — BLUE TEAM v2.0)
+
+> **Mã công việc:** Task B3 (Issue #126 / Nâng cấp Blue Team v2.0)
+> **Người thực hiện:** Nguyễn Văn Công (`vcongggggg` — Tech Lead / Blue Team)
+> **Thời gian đo kiểm:** 2026-11-23 16:21:36
+> **Tập dữ liệu:** `benchmark_1000_diverse.csv` (1000 mẫu độc lập: 200 Benign, 800 Attacks — `0` mẫu trùng với tập train `defense_v2`)
+> **Mô hình thực thi:** `Champion Cost-Sensitive Regularized XGBoost v2.0` (`xgb_v2.ubj`, 26-D) + `Calibrated Isolation Forest v2.0` (`iforest_v2.npz`, Zero-Pickle) + Rule Engine (16 hardened signatures)
+> **Phương pháp đo Latency:** Cô lập thời gian thực thi của từng cấu hình; trong chế độ Hybrid, vector 26-D (`extract_26_from_http`) chỉ trích xuất **1 lần duy nhất** dùng chung cho cả XGBoost v2.0 và Isolation Forest v2.0 giống hệt production (`gateway/app/api/proxy.py`).
 
 ---
 
-### 1. BẢNG ĐỐI SÁNH THỰC NGHIỆM 4 CẤU HÌNH PHÒNG THỦ (ABLATION MATRIX)
+## 1. Bảng Đối Sánh Thực Nghiệm 4 Cấu Hình Phòng Thủ (Ablation Matrix v2.0)
 
-| Chế Độ Cấu Hình Phòng Thủ | Accuracy (%) | Precision (%) | Recall / DR (%) | F1-Score (%) | FPR (%) | Độ Trễ (ms/req) | Đặc Tính Kỹ Thuật & Vai Trò Học Thuật |
-| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :--- |
-| **1. Rules Only (Signature-based)** | 54.80% | **100.00%** | 43.50% | 60.63% | **0.00%** | **0.14 ms** | **Siêu nhanh, giải thích tức thì**: Bắt chính xác 100% mẫu khớp regex CVE/OWASP; nhưng bỏ lọt các biến thể né tránh/obfuscated (Recall thấp: 43.50%). |
-| **2. ML Only (Random Forest)** | 95.90% | 100.00% | 94.88% | 97.37% | 0.00% | 8.40 ms | **Khả năng tổng quát hóa cao**: Bắt tốt tấn công biến dị thông qua 17 đặc trưng n-gram/entropies; tuy nhiên dễ bị tấn công đối kháng (Adversarial Evasion). |
-| **3. Anomaly Only (Isolation Forest)** | 24.70% | 100.00% | 5.88% | 11.10% | 0.00% | 9.49 ms | **Phát hiện dị thường (Unsupervised)**: Cảnh báo sớm các request phân bố dị biệt; đóng vai trò bẫy cảnh giới zero-day. |
-| **4. Hybrid Defense (Rule + ML + Anomaly)** | **96.20%** | **100.00%** | **95.25%** | **97.57%** | **0.00%** | 16.10 ms | **TỐI ƯU TOÀN DIỆN & DEFENSE-IN-DEPTH**: F1-Score (97.57%) và Recall (95.25%) đạt đỉnh, duy trì FPR = 0.00%. Độ trễ tăng nhẹ do chạy chuỗi phòng thủ đa tầng nhưng vẫn nằm sâu dưới chuẩn SLA (10ms). |
-
----
-
-### 2. PHÂN TÍCH TRADE-OFF VỀ ĐỘ TRỄ (LATENCY ANALYSIS)
-- **Rules Only (0.14 ms):** Tốc độ xử lý sub-millisecond cho phép đóng vai trò "Fast-Path Gatekeeper" giảm tải cho các tầng sau.
-- **ML Only (8.40 ms) & Anomaly Only (9.49 ms):** Chi phí trích xuất đặc trưng + duyệt cây quyết định / rừng cô lập.
-- **Hybrid (16.10 ms):** Là tổng thời gian thực thi của cả 3 cơ chế. **Hệ thống Hybrid KHÔNG nhanh hơn ML thuần**, mà chủ động đánh đổi thêm ~1.5–2ms độ trễ để đạt được mức độ an toàn cao nhất, loại trừ điểm yếu chí tử (Single Point of Failure) của từng phương pháp đơn lẻ.
+| Chế Độ Cấu Hình Phòng Thủ | Accuracy (%) | Precision (%) | Recall / DR (%) | F1-Score (%) | FPR (%) | Youden's J | Mean (ms/req) | P95 (ms/req) |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **1. Rules Only (16 Hardened OWASP Signatures)** | 59.40% | 100.00% | 49.25% | 66.00% | 0.00% | 0.4925 | **0.106 ms** | 0.188 ms |
+| **2. ML Only (XGBoost v2.0 — 26-D UBJSON)** | 94.80% | 100.00% | 93.50% | 96.64% | 0.00% | 0.9350 | 0.634 ms | 0.787 ms |
+| **3. Anomaly Only (Calibrated IForest v2.0 — NPZ) (Block >= 80)** | 50.10% | 97.48% | 38.62% | 55.33% | 4.00% | 0.3463 | 0.235 ms | 0.336 ms |
+| *Anomaly Only — Cảnh báo / Rate-Limit (>= 60)* | *65.40%* | *98.30%* | *57.75%* | *72.76%* | *4.00%* | *0.5375* | *0.235 ms* | *0.336 ms* |
+| **4. Hybrid Defense v2.0 (Rule + XGBoost v2 + IForest v2)** | **97.80%** | **100.00%** | **97.25%** | **98.61%** | **0.00%** | **0.9725** | **0.848 ms** | **1.075 ms** |
 
 ---
 
-### 3. LUẬN ĐIỂM HỌC THUẬT: TẠI SAO CẦN HYBRID KHI F1 CHỈ HƠN ML THUẦN 0.2%?
-*(Xem chi tiết luận cứ hoàn chỉnh tại tài liệu độc lập: `docs/reports/WHY_HYBRID_DEFENSE.md`)*
-1. **Giá trị của Hybrid không nằm ở 0.2% F1 trên tập test chuẩn, mà nằm ở Defense-in-Depth (Phòng thủ chiều sâu):**
-   - ML thuần đạt F1 cao trên tập dữ liệu đã biết (in-distribution), nhưng **hoàn toàn mù trước tấn công đối kháng (Adversarial Perturbation / Evasion)**.
-   - Khi kẻ tấn công chèn comment, whitespace hoặc URL double-encoding để làm loãng vector đặc trưng ML, Rule Engine với regex chuẩn hóa vẫn nhận diện và chặn đứng.
-2. **Ngăn chặn Zero-Day / Out-of-Distribution (OOD):**
-   - ML phân loại có giám sát (Supervised) bắt buộc phải gán nhãn vào 1 trong các lớp đã học.
-   - Detector Anomaly (Isolation Forest) kết hợp trong Hybrid sẽ bắt các payload cấu trúc dị dạng chưa từng có trong tập huấn luyện.
-3. **Đảm bảo tính sẵn sàng cao (Fail-Safe & High Availability):**
-   - Nếu container ML-Engine quá tải hoặc bị crash, kiến trúc Hybrid tự động chuyển sang Degraded Mode (dùng Rule Engine + Anomaly Engine cục bộ) để duy trì bảo vệ gateway, không bao giờ gây gián đoạn hệ thống.
+## 2. Phân Tích Trade-Off Hiệu Năng & Độ Trễ (Blue Team v1.0 -> v2.0)
+
+1. **Bước nhảy vọt về tốc độ nhờ chuyển sang Zero-Pickle (`xgb_v2.ubj` + `iforest_v2.npz`) & Single-Pass 26-D:**
+   - Ở **Blue Team v1.0** (`rf_model.joblib` + `iforest_model.joblib`), chế độ Hybrid tiêu tốn **16.10 ms/req** (vượt ngưỡng inline SLA 10 ms), trong đó `Anomaly Only` mất 9.49 ms và chỉ đạt Recall 5.88%.
+   - Ở **Blue Team v2.0**, nhờ thay bằng **XGBoost v2.0 UBJSON** và **Isolation Forest v2.0 NumPy NPZ** kết hợp trích xuất 26-D một lần duy nhất:
+     - **Rules Only:** `0.106 ms/req` (P95 `0.188 ms`).
+     - **ML Only (XGBoost v2.0):** `0.634 ms/req` (P95 `0.787 ms`).
+     - **Anomaly Only (IForest v2.0 NPZ):** `0.235 ms/req` (tăng tốc **>20x** so với 9.49 ms của v1.0; tại ngưỡng cảnh báo `>= 60.0` đạt Recall **`57.75%`** với FPR chỉ **`4.00%`**).
+     - **Hybrid Defense v2.0:** **`0.848 ms/req`** (P95 **`1.075 ms`**) — nằm sâu dưới ngưỡng inline SLA `< 5 ms`, tăng thêm chỉ **`+0.214 ms`** so với ML thuần!
+2. **Chất lượng phòng thủ tổng hợp:**
+   - **Hybrid Defense v2.0** đạt Accuracy **`97.80%`**, Precision **`100.00%`**, Recall **`97.25%`**, F1-Score **`98.61%`** (chênh lệch `+1.97%` so với ML thuần), FPR **`0.00%`** và Youden's Index **`J = 0.9725`**.
+
+---
+
+## 3. Luận Điểm Học Thuật: Giá Trị Defense-in-Depth Của Kiến Trúc Hybrid v2.0
+
+*(Xem phân tích đầy đủ tại `docs/reports/WHY_HYBRID_DEFENSE.md`)*
+
+1. **Chống tấn công đối kháng (Adversarial Evasion) & Obfuscation:** Rule Engine đã được gia cố (`InputNormalizer` khử Zero-Width Unicode, `/*...*/` multiline, recursive URL decoding, sliding window > 16KB) giúp chặn đứng mọi kỹ thuật né tránh signature và làm loãng vector ML.
+2. **Phát hiện Zero-Day & Out-of-Distribution (OOD):** Calibrated Isolation Forest v2.0 (`.npz`, hiệu chuẩn theo phân vị thực nghiệm) nâng độ nhạy phát hiện bất thường ở ngưỡng cảnh báo `>= 60` từ **5.88% (v1.0)** lên **`57.75%` (v2.0)** trong khi kiểm soát chặt FPR ở mức **`4.00%`**.
+3. **An toàn chuỗi cung ứng & Khả năng chịu lỗi (Fail-Closed & Fail-Safe):** Triệt tiêu 100% rủi ro Deserialization RCE (CWE-502) nhờ định dạng Zero-Pickle + xác thực SHA-256 Fail-Closed trước khi nạp; khi tầng ML gặp sự cố, Gateway tự động áp dụng Fail-Safe penalty và duy trì phòng thủ bằng Rule Engine + Schema Validator.

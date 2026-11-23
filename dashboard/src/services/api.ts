@@ -1,6 +1,10 @@
 ﻿import { config } from "@/config/env";
 import {
+  ArenaBattleResult,
+  ArenaHistoryResponse,
   AttackDistributionItem,
+  ProtocolDistributionItem,
+  CyberRangeTopology,
   DashboardStats,
   EventsResponse,
   SimulateResult,
@@ -8,35 +12,20 @@ import {
   AttackSessionsResponse,
 } from "@/types/dashboard";
 
-let cachedRuntimeConfig: { backendUrl: string; adminApiKey: string } | null = null;
+let cachedRuntimeConfig: { backendUrl: string } | null = null;
 
 /**
- * Resolves API Gateway backend URL and admin key at runtime (Master Plan A6).
- * Caches result in module memory for subsequent calls.
+ * Resolves API Gateway backend URL at runtime (Master Plan A6 / SEC-PBL6-004).
+ * In the browser, all dashboard requests route through the Next.js Server-Side BFF
+ * proxy (/api/gateway) which attaches administrative credentials server-side,
+ * eliminating client-side API key leakage.
  */
-export async function getRuntimeConfig(): Promise<{ backendUrl: string; adminApiKey: string }> {
+export async function getRuntimeConfig(): Promise<{ backendUrl: string }> {
   if (cachedRuntimeConfig) {
     return cachedRuntimeConfig;
   }
 
-  let backendUrl = config.apiBaseUrl.replace(/\/$/, "");
-  const adminApiKey = config.adminApiKey;
-
-  if (typeof window !== "undefined") {
-    try {
-      const res = await fetch("/api/config", { cache: "no-store" });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.backendUrl) {
-          backendUrl = data.backendUrl.replace(/\/$/, "");
-        }
-      }
-    } catch (err) {
-      console.warn("Failed to fetch /api/config, falling back to build-time config", err);
-    }
-  }
-
-  cachedRuntimeConfig = { backendUrl, adminApiKey };
+  cachedRuntimeConfig = { backendUrl: "/api/gateway" };
   return cachedRuntimeConfig;
 }
 
@@ -46,12 +35,7 @@ export async function getApiBase(): Promise<string> {
 }
 
 async function getAdminHeaders(): Promise<HeadersInit> {
-  const conf = await getRuntimeConfig();
-  const headers: Record<string, string> = { "Content-Type": "application/json" };
-  if (conf.adminApiKey) {
-    headers["X-API-Key"] = conf.adminApiKey;
-  }
-  return headers;
+  return { "Content-Type": "application/json" };
 }
 
 export async function fetchDashboardStats(): Promise<DashboardStats> {
@@ -106,6 +90,28 @@ export async function fetchDashboardDistribution(): Promise<AttackDistributionIt
   });
   if (!res.ok) {
     throw new Error(`Failed to fetch distribution: HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function fetchDashboardProtocols(): Promise<ProtocolDistributionItem[]> {
+  const apiBase = await getApiBase();
+  const res = await fetch(`${apiBase}/api/dashboard/protocols`, {
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    throw new Error(`Failed to fetch protocol distribution: HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function fetchCyberRangeTopology(): Promise<CyberRangeTopology> {
+  const apiBase = await getApiBase();
+  const res = await fetch(`${apiBase}/api/dashboard/topology`, {
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    throw new Error(`Failed to fetch cyber range topology: HTTP ${res.status}`);
   }
   return res.json();
 }
@@ -184,4 +190,67 @@ export async function fetchAttackSessions(params: {
     throw new Error(`Failed to fetch attack sessions: HTTP ${res.status}`);
   }
   return res.json();
+}
+
+// -----------------------------------------------------------------------------
+// AI Arena (Task 10.4) — 100% Real Server-Side BFF API (Zero Synthetic Fallback)
+// -----------------------------------------------------------------------------
+
+export async function triggerArenaBattle(
+  campaign: string = "all",
+  maxRounds: number = 8,
+  targetMode: "waf" | "direct" = "waf"
+): Promise<ArenaBattleResult> {
+  const apiBase = await getApiBase();
+  const headers = await getAdminHeaders();
+  const res = await fetch(`${apiBase}/api/dashboard/arena/battle`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({
+      campaign: campaign.toLowerCase(),
+      max_rounds: maxRounds,
+      target_mode: targetMode,
+    }),
+  });
+  if (!res.ok) {
+    throw new Error(`Failed to execute arena battle: HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function fetchArenaLive(): Promise<ArenaBattleResult | null> {
+  const apiBase = await getApiBase();
+  const res = await fetch(`${apiBase}/api/dashboard/arena/live`, {
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    throw new Error(`Failed to fetch live arena battle: HTTP ${res.status}`);
+  }
+  const data = await res.json();
+  if (!data || data.status === "idle" || !data.battle_id) {
+    return null;
+  }
+  return data;
+}
+
+export async function fetchArenaHistory(): Promise<ArenaHistoryResponse> {
+  const apiBase = await getApiBase();
+  const res = await fetch(`${apiBase}/api/dashboard/arena/history`, {
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    throw new Error(`Failed to fetch arena history: HTTP ${res.status}`);
+  }
+  const data = await res.json();
+  return {
+    total_battles: data.total_battles ?? 0,
+    red_wins: data.red_wins ?? data.red_team_wins ?? 0,
+    blue_wins: data.blue_wins ?? data.blue_team_wins ?? 0,
+    red_team_wins: data.red_team_wins ?? data.red_wins ?? 0,
+    blue_team_wins: data.blue_team_wins ?? data.blue_wins ?? 0,
+    draw_count: data.draw_count ?? 0,
+    red_team_win_rate: data.red_team_win_rate ?? 0,
+    blue_team_defense_rate: data.blue_team_defense_rate ?? 0,
+    battles: Array.isArray(data.battles) ? data.battles : [],
+  };
 }

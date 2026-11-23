@@ -23,26 +23,41 @@ HOP_BY_HOP_HEADERS = {
     "content-length",
 }
 
+# Sensitive Gateway-only headers that must never leak to upstream Target API (SEC-PBL6-007)
+SENSITIVE_GATEWAY_HEADERS = {
+    "x-api-key",
+}
+
 
 def filter_request_headers(
     request_headers: dict[str, str] | list[tuple[str, str]],
 ) -> dict[str, str]:
-    """Strip hop-by-hop headers and preserve valid application headers."""
+    """Strip hop-by-hop and sensitive Gateway-only headers (e.g. X-API-Key) before upstream forward."""
     header_dict = dict(request_headers) if isinstance(request_headers, list) else request_headers
+    blocked = HOP_BY_HOP_HEADERS | SENSITIVE_GATEWAY_HEADERS
     filtered: dict[str, str] = {}
     for key, value in header_dict.items():
-        if key.lower() not in HOP_BY_HOP_HEADERS:
+        if key.lower() not in blocked:
             filtered[key] = value
     return filtered
 
 
 def filter_response_headers(upstream_headers: httpx.Headers) -> dict[str, str]:
-    """Strip hop-by-hop response headers and preserve application response headers."""
+    """Strip hop-by-hop response headers (single-value dict helper for backward compatibility)."""
     filtered: dict[str, str] = {}
     for key, value in upstream_headers.items():
         if key.lower() not in HOP_BY_HOP_HEADERS:
             filtered[key] = value
     return filtered
+
+
+def filter_response_header_items(upstream_headers: httpx.Headers) -> list[tuple[str, str]]:
+    """Strip hop-by-hop response headers while preserving multi-value headers like Set-Cookie (SEC-PBL6-007)."""
+    items: list[tuple[str, str]] = []
+    for key, value in upstream_headers.multi_items():
+        if key.lower() not in HOP_BY_HOP_HEADERS:
+            items.append((key, value))
+    return items
 
 
 class ProxyService:
@@ -90,6 +105,7 @@ class ProxyService:
         forward_headers = filter_request_headers(dict(request.headers))
         forward_headers["X-Request-ID"] = request_id
 
+        close_client = self._client is None
         client = self.get_client()
         start_time = time.perf_counter()
 
@@ -101,23 +117,21 @@ class ProxyService:
                 content=body_bytes if body_bytes else None,
             )
 
-            latency_ms = (time.perf_counter() - start_time) * 1000
+            latency_ms = round((time.perf_counter() - start_time) * 1000.0, 3)
             response_content = upstream_response.content
             response_size = len(response_content)
-
-            resp_headers = filter_response_headers(upstream_response.headers)
-            resp_headers["X-Request-ID"] = request_id
 
             response = Response(
                 content=response_content,
                 status_code=upstream_response.status_code,
-                headers=resp_headers,
-                media_type=upstream_response.headers.get("content-type"),
             )
+            for key, value in filter_response_header_items(upstream_response.headers):
+                response.headers.append(key, value)
+            response.headers["X-Request-ID"] = request_id
             return response, latency_ms, response_size
 
         except (httpx.ConnectError, httpx.NetworkError) as err:
-            latency_ms = (time.perf_counter() - start_time) * 1000
+            latency_ms = round((time.perf_counter() - start_time) * 1000.0, 3)
             logger.warning(f"Upstream target unavailable [{request_id}]: {err}")
             error_payload = {
                 "status": "error",
@@ -134,7 +148,7 @@ class ProxyService:
             return resp, latency_ms, len(resp.body)
 
         except httpx.TimeoutException as err:
-            latency_ms = (time.perf_counter() - start_time) * 1000
+            latency_ms = round((time.perf_counter() - start_time) * 1000.0, 3)
             logger.warning(f"Upstream target timeout [{request_id}]: {err}")
             error_payload = {
                 "status": "error",
@@ -151,7 +165,7 @@ class ProxyService:
             return resp, latency_ms, len(resp.body)
 
         except Exception as err:
-            latency_ms = (time.perf_counter() - start_time) * 1000
+            latency_ms = round((time.perf_counter() - start_time) * 1000.0, 3)
             logger.error(f"Upstream proxy internal error [{request_id}]: {err}")
             error_payload = {
                 "status": "error",
@@ -168,3 +182,6 @@ class ProxyService:
                 headers={"X-Request-ID": request_id},
             )
             return resp, latency_ms, len(resp.body)
+        finally:
+            if close_client:
+                await client.aclose()

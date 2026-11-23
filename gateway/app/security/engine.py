@@ -18,6 +18,7 @@ INSPECTABLE_HEADERS = {
     "referer",
     "origin",
     "accept",
+    "cookie",
     "x-forwarded-for",
     "x-real-ip",
     "x-requested-with",
@@ -36,6 +37,7 @@ class RuleEngine:
         query_params: str | dict[str, Any] | None = None,
         headers: dict[str, str] | None = None,
         body_bytes: bytes | None = None,
+        canonical_payload: str | None = None,
     ) -> DetectionResult:
         """Inspects all relevant HTTP components of a request and aggregates matches."""
         start_time = time.perf_counter()
@@ -116,6 +118,15 @@ class RuleEngine:
         if body_bytes:
             self._inspect_body(body_bytes=body_bytes, on_match=add_match)
 
+        # 5. Inspect Decapsulated Multi-Protocol Canonical Payload (LOGIC-PBL6-002)
+        if canonical_payload:
+            self._inspect_text(
+                text=canonical_payload,
+                location=InspectionLocation.BODY,
+                location_key="protocol_payload",
+                on_match=add_match,
+            )
+
         duration_ms = (time.perf_counter() - start_time) * 1000.0
         is_attack = len(matches) > 0
         rule_risk_score = RuleScorer.calculate_score(matches)
@@ -139,50 +150,65 @@ class RuleEngine:
         location_key: str | None,
         on_match: Any,
     ) -> None:
-        """Evaluates rules on both raw bounded text and canonicalized representation."""
+        """Evaluates rules on both raw bounded text and canonicalized representation.
+
+        If text exceeds 16KB (e.g. large JSON leaf string, query param, or raw text),
+        applies sliding window (16384 window, 512 overlap) so no payload is truncated (SEC-PBL6-002).
+        """
         if not text:
             return
 
-        raw_sample, canonical = InputNormalizer.get_canonical_representations(text)
+        window_size = 16384
+        overlap = 512
+        step = window_size - overlap
 
-        # Evaluate all rules on canonical representation
-        for rule in self.rules:
-            match = rule.evaluate(
-                input_text=canonical,
-                location=location,
-                location_key=location_key,
-            )
-            if match:
-                on_match(match)
-            elif raw_sample != canonical:
-                # Fallback to evaluate on raw representation
-                raw_match = rule.evaluate(
-                    input_text=raw_sample,
+        if len(text) <= window_size:
+            chunks = [(text, location_key)]
+        else:
+            chunks = [
+                (text[offset : offset + window_size], f"{location_key or ''}_offset_{offset}".strip("_"))
+                for offset in range(0, len(text), step)
+            ]
+
+        for chunk_text, chunk_loc_key in chunks:
+            raw_sample, canonical = InputNormalizer.get_canonical_representations(chunk_text)
+
+            # Evaluate all rules on canonical representation
+            for rule in self.rules:
+                match = rule.evaluate(
+                    input_text=canonical,
                     location=location,
-                    location_key=location_key,
+                    location_key=chunk_loc_key,
                 )
-                if raw_match:
-                    on_match(raw_match)
+                if match:
+                    on_match(match)
+                elif raw_sample != canonical:
+                    # Fallback to evaluate on raw representation
+                    raw_match = rule.evaluate(
+                        input_text=raw_sample,
+                        location=location,
+                        location_key=chunk_loc_key,
+                    )
+                    if raw_match:
+                        on_match(raw_match)
 
     def _inspect_body(self, body_bytes: bytes, on_match: Any) -> None:
-        """Parses and inspects request body (JSON, form, or raw text)."""
+        """Parses and inspects request body (JSON, form, or raw text) safely."""
         if not body_bytes:
             return
 
-        try:
-            text = body_bytes[:16384].decode("utf-8")
-        except UnicodeDecodeError:
-            return
+        # SEC-PBL6-002: decode with errors="replace" so non-UTF-8 prefix cannot bypass inspection
+        text = body_bytes.decode("utf-8", errors="replace")
 
-        # Attempt JSON traversal
+        # Attempt full JSON traversal with depth guard
         try:
             data = json.loads(text)
-            self._inspect_json_recursive(data=data, on_match=on_match, prefix="body")
+            self._inspect_json_recursive(data=data, on_match=on_match, prefix="body", depth=0, max_depth=32)
             return
         except Exception:
+            # Fallback to plain text inspection with sliding window if JSON parsing fails or depth exceeds max_depth
             pass
 
-        # Fallback to plain text inspection
         self._inspect_text(
             text=text,
             location=InspectionLocation.BODY,
@@ -190,8 +216,13 @@ class RuleEngine:
             on_match=on_match,
         )
 
-    def _inspect_json_recursive(self, data: Any, on_match: Any, prefix: str) -> None:
-        """Recursively inspects keys and values in nested JSON objects."""
+    def _inspect_json_recursive(
+        self, data: Any, on_match: Any, prefix: str, depth: int = 0, max_depth: int = 32
+    ) -> None:
+        """Recursively inspects keys and values in nested JSON objects with depth protection."""
+        if depth > max_depth:
+            raise ValueError(f"JSON nesting depth exceeded maximum threshold ({max_depth})")
+
         if isinstance(data, dict):
             for k, v in data.items():
                 k_str = str(k)
@@ -201,10 +232,14 @@ class RuleEngine:
                     location_key=f"{prefix}.key({k_str})",
                     on_match=on_match,
                 )
-                self._inspect_json_recursive(data=v, on_match=on_match, prefix=f"{prefix}.{k_str}")
+                self._inspect_json_recursive(
+                    data=v, on_match=on_match, prefix=f"{prefix}.{k_str}", depth=depth + 1, max_depth=max_depth
+                )
         elif isinstance(data, list):
             for i, item in enumerate(data):
-                self._inspect_json_recursive(data=item, on_match=on_match, prefix=f"{prefix}[{i}]")
+                self._inspect_json_recursive(
+                    data=item, on_match=on_match, prefix=f"{prefix}[{i}]", depth=depth + 1, max_depth=max_depth
+                )
         elif isinstance(data, (str, int, float, bool)) and data is not None:
             self._inspect_text(
                 text=str(data),

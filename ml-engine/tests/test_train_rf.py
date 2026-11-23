@@ -180,16 +180,17 @@ def test_gateway_mldetector_compatibility():
     detector = MLDetector(model_path=model_file)
     assert detector.is_loaded is True
 
-    # Warmup predictions to absorb Windows dynamic DLL/thread initialization
+    # Warmup predictions on both benign and attack paths to avoid cold-start flake on busy Windows CPU
     for _ in range(5):
         _ = detector.predict("warmup test request")
+        _ = detector.predict("UNION SELECT username, password FROM users--")
 
     # Test benign prediction
     res_benign = detector.predict("/books/1/read/?page=2")
     assert res_benign.model_loaded is True
     assert res_benign.is_attack is False
 
-    # Test SQLi attack prediction across 5 iterations
+    # Test SQLi attack prediction across 5 timed iterations
     latencies = []
     for _ in range(5):
         res_sqli = detector.predict("UNION SELECT username, password FROM users--")

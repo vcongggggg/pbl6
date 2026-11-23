@@ -1,76 +1,59 @@
-# Báo Cáo Đo Kiểm Hiệu Năng & Độ Trễ Toàn Phần WAF Gateway (Task 11.3)
-## Gateway Performance & Latency Overhead Profiling under Load
+# Blue Team v2.0 — Gateway Performance & High-Concurrency Profiling Report
 
-> **Chuẩn Mực Kiểm Định:** ISO/IEC 25010 (Performance Efficiency) & ISO/IEC 27004:2016 [Ref 18]  
-> **Hệ Thống Thực Nghiệm:** Web API Security Platform (PBL6) — Machine 1 (Blue Team)  
-> **Thời Gian Thực Thi:** `2026-09-26 01:36:34 UTC`  
-> **Cơ Sở Khoa Học:** William Stallings 2017 [Ref 02], Derek DeJonghe 2020 [Ref 06], MDPI Electronics 2025 [Ref 07].
-
----
-
-## 1. TỔNG QUAN VÀ MỤC TIÊU ĐO LƯỜNG HỌC THUẬT
-
-Một trong những tiêu chí khắt khe nhất đối với hệ thống tường lửa ứng dụng Web API thời gian thực (Inline Reverse Proxy WAF) là **Độ trễ xử lý (Latency Overhead)** và **Thông lượng tối đa (Throughput)**:
-- Nếu bổ sung các lớp trí tuệ nhân tạo (Machine Learning) làm độ trễ tăng quá cao ($\ge 50\text{ ms}$), hệ thống sẽ làm suy giảm trải nghiệm người dùng cuối và gây nghẽn cổ chai (bottleneck) cho các dịch vụ vi mô (Microservices).
-- Bài đo kiểm này được thực hiện nhằm chứng minh luận điểm cốt lõi của đề tài: **Kiến trúc phòng thủ đa tầng kết hợp Random Forest và Isolation Forest đạt hiệu năng thời gian thực siêu tốc, thỏa mãn nghiêm ngặt cam kết SLA (NFR-01: Độ trễ $\le 15\text{ ms}$)**.
+**Generated At (UTC):** 2026-11-21T14:50:43.589215+00:00
+**Benchmark Mode:** `in_process_asgi`
+**ML Model:** `Champion Cost-Sensitive Regularized XGBoost v2.0` (`xgb_v2.ubj`)
+**Anomaly Model:** `iforest_v2.npz`
 
 ---
 
-## 2. BẢNG ĐỐI SÁNH HIỆU NĂNG: BASELINE TRỰC TIẾP VS PROTECTED WAF GATEWAY
+## 1. Real Sub-Millisecond Internal Component Micro-Benchmark
 
-Thực nghiệm đo kiểm trên các mức tải đồng thời $C \in \{1, 10, 25, 50, 100\}$ với $500$ requests cho mỗi kịch bản:
+| Component | Iterations | Mean (ms) | P50 (ms) | P95 (ms) | P99 (ms) |
+|:---|---:|---:|---:|---:|---:|
+| `input_normalizer` | 500 | 0.0199 | 0.0184 | 0.0249 | 0.0335 |
+| `rule_engine` | 500 | 0.1952 | 0.1702 | 0.3178 | 0.4326 |
+| `feature_extractor_26d` | 500 | 0.1549 | 0.1432 | 0.2305 | 0.2713 |
+| `ml_detector_xgb_v2` | 500 | 0.6176 | 0.5325 | 1.1165 | 1.9182 |
+| `anomaly_detector_iforest_v2` | 500 | 0.0949 | 0.0847 | 0.1558 | 0.2237 |
+| `risk_and_decision_engine` | 500 | 0.0086 | 0.0081 | 0.0104 | 0.0146 |
+| `sliding_window_rate_limiter` | 500 | 0.0040 | 0.0038 | 0.0042 | 0.0077 |
 
-| Tải Đồng Thời (Concurrency) | Baseline (Direct API) RPS | Protected WAF RPS | Baseline P50 (ms) | Protected WAF P50 (ms) | Baseline P95 SLA (ms) | Protected WAF P95 (ms) | Độ Trễ Phát Sinh ($\Delta t$) | Tỷ Lệ Overhead (\%) |
-| :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **C =   1** |  178.1 RPS | **  17.9 RPS** |   4.61 ms | ** 51.57 ms** |   8.32 ms | ** 75.23 ms** | +46.96 ms | +1018.7\% |
-| **C =  10** |  265.8 RPS | **  19.5 RPS** |  30.78 ms | **477.94 ms** |  60.51 ms | **704.17 ms** | +447.16 ms | +1452.7\% |
-| **C =  25** |  171.7 RPS | **  19.2 RPS** | 111.56 ms | **1196.85 ms** | 292.94 ms | **1479.82 ms** | +1085.29 ms | +972.9\% |
-| **C =  50** |  122.3 RPS | **  19.9 RPS** | 260.14 ms | **2103.93 ms** | 515.22 ms | **2880.24 ms** | +1843.80 ms | +708.8\% |
-| **C = 100** |  153.6 RPS | **  19.1 RPS** | 466.85 ms | **4624.68 ms** | 601.65 ms | **5179.68 ms** | +4157.83 ms | +890.6\% |
-
----
-
-## 3. BÓC TÁCH ĐỘ TRỄ NỘI BỘ SIÊU VI (SUB-MILLISECOND WAF COMPONENT BREAKDOWN)
-
-Bằng việc sử dụng đồng hồ phân giải nano-giây `time.perf_counter_ns()`, hệ thống đã đo lường chính xác thời gian thực thi nội tại của từng module an ninh trong WAF Gateway qua **5,000 chu kỳ**:
-
-| STT | Thành Phần Pipeline Xử Lý | Thời Gian Vi Mô (Microseconds - µs) | Thời Gian Mili-giây (ms) | Tỷ Trọng (\%) | Cơ Sở Kỹ Thuật |
-| :---: | :--- | :---: | :---: | :---: | :--- |
-| **1** | Input Normalization (Recursive URL + HTML + Unicode NFC) | **  12.27 µs** |  0.01227 ms |   5.0\% | In-memory Zero-Copy |
-| **2** | Deterministic Rule Engine (16 OWASP Signatures) | **   1.48 µs** |  0.00148 ms |   0.6\% | In-memory Zero-Copy |
-| **3** | 17-D Morphological & Entropy Feature Extractor | **  33.78 µs** |  0.03378 ms |  13.9\% | In-memory Zero-Copy |
-| **4** | Supervised Random Forest Classifier Inference | **  24.50 µs** |  0.02450 ms |  10.1\% | In-memory Zero-Copy |
-| **5** | Unsupervised Isolation Forest Anomaly Inference | **  11.80 µs** |  0.01180 ms |   4.8\% | In-memory Zero-Copy |
-| **6** | Hybrid Risk Scoring & Policy Decision Engine | **   0.14 µs** |  0.00014 ms |   0.1\% | In-memory Zero-Copy |
-| **7** | In-Memory Sliding Window Rate Limiter | ** 159.59 µs** |  0.15959 ms |  65.5\% | In-memory Zero-Copy |
-| **TOTAL** | **TỔNG ĐỘ TRỄ NỘI BỘ TOÀN TOÀN PIPELINE AI** | ** 243.55 µs** | **  0.2436 ms** | **100.0\%** | **Vượt xa SLA (< 1.0 ms)** |
-
-> [!IMPORTANT]
-> **Kết Luận Đột Phá:**
-> Tổng thời gian xử lý nội tại của toàn bộ đường ống AI WAF (bao gồm cả Chuẩn hóa chuỗi đệ quy, 16 Regex rules, 17 Đặc trưng hình thái, Random Forest và Isolation Forest) chỉ tiêu tốn **243.55 micro-giây (0.2436 ms)**, tức chỉ bằng **1/375 ngưỡng trần cam kết SLA ($15.0\text{ ms}$)**!
+- **Combined AI Pipeline Mean (`26-D + XGBoost v2 + IForest v2`):** **0.8674 ms/req**
+- **Full Synchronous Inspection Mean:** **1.0951 ms/req**
 
 ---
 
-## 4. HIỆU NĂNG NGẮT KẾT NỐI CHỦ ĐỘNG (ACTIVE BLOCKING FAST-PATH)
+## 2. High-Concurrency Gateway Throughput & Latency
 
-Khi phát hiện payload tấn công nguy hiểm, WAF Gateway kích hoạt cơ chế ngắt kết nối ngay lập tức tại Cổng (Short-circuit Termination), không chuyển tiếp request về Upstream API:
-- **Thông lượng chặn tấn công:** `19.9 RPS` (ở Concurrency C = 25).
-- **Độ trễ phản hồi HTTP 403 Forbidden:** `1181.37 ms` (P95: `1530.12 ms`).
-- **Tỷ lệ bảo vệ thành công:** `100.0%` chặn đứng các truy vấn độc hại, hoàn toàn không gây tốn tài nguyên cho ứng dụng mục tiêu.
+### 2.1 Benign Traffic Passthrough (`HTTP 200 OK`)
+
+| Concurrency (C) | Requests | Duration (s) | Throughput (RPS) | Success (%) | Mean (ms) | P50 (ms) | P95 (ms) | P99 (ms) |
+|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| 1 | 100 | 0.497 | **201.00** | 100.0% | 4.95 | 4.58 | 7.55 | 8.22 |
+| 10 | 100 | 0.288 | **346.67** | 100.0% | 26.58 | 26.56 | 32.41 | 33.59 |
+| 25 | 100 | 0.279 | **358.12** | 100.0% | 62.98 | 62.07 | 82.25 | 89.02 |
+| 50 | 500 | 1.470 | **340.14** | 100.0% | 139.26 | 125.08 | 232.63 | 244.12 |
+
+### 2.2 Active Attack Blocking (`HTTP 403 Forbidden`)
+
+| Concurrency (C) | Requests | Duration (s) | Throughput (RPS) | Success (%) | Mean (ms) | P50 (ms) | P95 (ms) | P99 (ms) |
+|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| 1 | 100 | 0.567 | **176.41** | 100.0% | 5.64 | 5.20 | 8.41 | 11.09 |
+| 10 | 100 | 0.452 | **221.08** | 100.0% | 42.44 | 31.59 | 116.94 | 135.84 |
+| 25 | 100 | 0.276 | **362.18** | 100.0% | 62.45 | 63.25 | 73.09 | 76.48 |
+| 50 | 500 | 1.974 | **253.31** | 100.0% | 179.96 | 169.34 | 293.65 | 315.34 |
 
 ---
 
-## 5. MỨC ĐỘ TIÊU THỤ TÀI NGUYÊN HỆ THỐNG (RESOURCE UTILIZATION)
+## 3. Process Resource Telemetry (`psutil`)
 
-Đo lường mức tiêu hao tài nguyên phần cứng của tiến trình WAF Gateway trong suốt chiến dịch kiểm thử tải cao liên tục:
-- **Mức tiêu thụ CPU trung bình:** `0.0%` (Đỉnh tải tối đa: `0.0%`).
-- **Bộ nhớ RAM thường trú (Memory RSS):** `60.7 MB` (Đỉnh bộ nhớ: `60.7 MB`).
-- **Đánh giá hiệu quả:** WAF Gateway vận hành cực kỳ nhẹ tải, hoàn toàn tương thích và ổn định khi triển khai trong môi trường Docker Container hoặc thiết bị máy chủ biên (Edge Computing).
-
----
-
-## 6. KẾT LUẬN NGHIỆM THU CHO LUẬN VĂN PBL6
-
-1. **Thỏa mãn 100% Cam Kết Kỹ Thuật NFR-01:** Độ trễ toàn trình được duy trì ở mức tối ưu, thời gian suy luận ML trung bình $\le 0.05\text{ ms}$ trên CPU thuần túy.
-2. **Khả năng chịu tải đồng thời vượt bậc:** Đáp ứng trơn tru tới $C = 100$ kết nối song song với tỷ lệ lỗi $0.00\%$.
-3. **Sẵn sàng cho môi trường Production:** Đạt chuẩn ISO/IEC 25010 và RFC 2544, đáp ứng hoàn hảo yêu cầu thực chiến của đề tài tốt nghiệp.
+```json
+{
+  "pid": 2772,
+  "process_cpu_percent": 113.4,
+  "rss_memory_before_mb": 306.1,
+  "rss_memory_after_mb": 320.29,
+  "rss_memory_delta_mb": 14.19
+}
+```

@@ -4,22 +4,14 @@ import React, { useState, useEffect } from "react";
 import {
   X,
   Brain,
-  Shield,
   ShieldAlert,
-  ShieldCheck,
   Check,
   Copy,
   Terminal,
-  Cpu,
   Layers,
-  Sparkles,
   Network,
   Laptop,
-  AlertTriangle,
-  Info,
-  ExternalLink,
-  ChevronRight,
-  Trophy,
+  Cpu,
 } from "lucide-react";
 import { SecurityEventItem } from "@/types/dashboard";
 
@@ -27,6 +19,19 @@ interface DetectionExplainabilityModalProps {
   event: SecurityEventItem | null;
   onClose: () => void;
 }
+
+const isRfc1918LanIp = (ip: string): boolean => {
+  if (!ip) return false;
+  if (ip.startsWith("10.") || ip.startsWith("192.168.")) return true;
+  if (ip.startsWith("172.")) {
+    const octets = ip.split(".");
+    if (octets.length >= 2) {
+      const second = parseInt(octets[1], 10);
+      return !Number.isNaN(second) && second >= 16 && second <= 31;
+    }
+  }
+  return false;
+};
 
 export const DetectionExplainabilityModal: React.FC<DetectionExplainabilityModalProps> = ({
   event,
@@ -54,95 +59,111 @@ export const DetectionExplainabilityModal: React.FC<DetectionExplainabilityModal
   };
 
   const details = event.details || {};
-  const ruleMatches = details.rule_matches || details.matches || [];
+  const ruleMatches = details.matches || details.rule_matches || [];
   const primaryMatch = ruleMatches.length > 0 ? ruleMatches[0] : null;
 
   const rawInput = primaryMatch?.raw_input || event.evidence || "N/A";
   const canonicalInput = primaryMatch?.canonical_input || event.evidence || "N/A";
   const pattern = primaryMatch?.pattern || primaryMatch?.rule_id || "Signature Regex Match";
 
-  // Check if Client IP originates from LAN Machine 2 (Red Team) vs Localhost
-  const isLanAttacker =
-    event.client_ip.startsWith("192.168.") ||
-    event.client_ip.startsWith("10.") ||
-    event.client_ip.startsWith("172.");
+  const isLanAttacker = isRfc1918LanIp(event.client_ip);
 
-  // 1. Layer 1: Rule Engine Score (Phase 2 Active - 40% Weight)
-  const ruleRawScore = event.rule_score || 85.0;
-  const ruleWeight = 0.40;
+  // 1. Layer 1: Deterministic Rule Engine (40% Weight) — Strictly genuine score
+  const ruleRawScore = event.rule_score ?? 0.0;
+  const ruleWeight = 0.4;
   const ruleContribution = ruleRawScore * ruleWeight;
 
-  // 2. Layer 2: Supervised ML Score - Model-Agnostic (Phase 5 - 35% Weight)
-  // PR #82 Empirical Champion: XGBoost (F1: 99.97%, Latency: 0.0039ms), Fallback: Random Forest
-  const mlConfidence = Math.min(99.8, Math.max(89.5, 88.0 + (rawInput.length % 12)));
-  const mlRawScore =
-    event.ml_score != null
-      ? Number(event.ml_score)
-      : Math.min(100.0, Math.max(75.0, ruleRawScore * 0.95 + 4.0));
+  // 2. Layer 2: Supervised ML Score (35% Weight) — Strictly genuine telemetry, zero fabrication
+  const mlInference = details.ml_inference || null;
+  const mlRawScore: number | null = event.ml_score != null ? Number(event.ml_score) : null;
   const mlWeight = 0.35;
-  const mlContribution = mlRawScore * mlWeight;
+  const mlContribution = mlRawScore != null ? mlRawScore * mlWeight : 0.0;
 
-  // 3. Layer 3: Isolation Forest Anomaly Score (Phase 6 - 25% Weight)
-  const anomalyRawScore =
-    event.anomaly_score != null
-      ? Number(event.anomaly_score)
-      : Math.min(100.0, Math.max(65.0, ruleRawScore * 0.88 + 8.0));
+  const rawConfidence =
+    typeof mlInference?.confidence === "number" ? mlInference.confidence : null;
+  const mlConfidencePct: number | null =
+    rawConfidence != null
+      ? Number((rawConfidence <= 1.0 ? rawConfidence * 100 : rawConfidence).toFixed(2))
+      : null;
+
+  const mlModelName: string = mlInference?.model_name || "N/A";
+  const mlModelVersion: string | null = mlInference?.model_version || null;
+  const mlPredictedClass: string = mlInference?.attack_type || (mlRawScore != null ? event.attack_type : "N/A");
+  const mlLatencyMs: number | null =
+    typeof mlInference?.latency_ms === "number" ? mlInference.latency_ms : null;
+
+  // 3. Layer 3: Isolation Forest Anomaly Score (25% Weight) — Strictly genuine telemetry
+  const anomalyInference = details.anomaly_inference || null;
+  const anomalyRawScore: number | null =
+    event.anomaly_score != null ? Number(event.anomaly_score) : null;
   const anomalyWeight = 0.25;
-  const anomalyContribution = anomalyRawScore * anomalyWeight;
+  const anomalyContribution = anomalyRawScore != null ? anomalyRawScore * anomalyWeight : 0.0;
 
-  // Final Hybrid Weighted Risk Score (0 - 100) (Phase 7 Specification)
+  const anomalyIsFlagged: boolean | null =
+    typeof anomalyInference?.is_anomaly === "boolean" ? anomalyInference.is_anomaly : null;
+  const anomalyDecisionRaw: number | null =
+    typeof anomalyInference?.raw_score === "number" ? anomalyInference.raw_score : null;
+
+  // Final Hybrid Weighted Risk Score (0 - 100)
   const computedHybridScore = Number(
     (ruleContribution + mlContribution + anomalyContribution).toFixed(1)
   );
   const hybridScore =
     event.risk_score != null ? Number(event.risk_score.toFixed(1)) : computedHybridScore;
 
-  // Determine WAF Decision based on Decision Matrix:
-  // <30: ALLOW | 30-60: MONITOR | 60-80: RATE_LIMIT | >80: BLOCK (403)
-  const getDecision = (score: number) => {
-    if (score >= 80) {
+  // Derive decision display strictly from actual recorded event.action & details.reason
+  const getActualDecision = (action: string, reason?: string) => {
+    const norm = (action || "").toUpperCase();
+    if (norm === "BLOCK" || norm === "BLOCKED") {
       return {
-        action: "BLOCK",
+        action: "BLOCKED",
         code: 403,
         badgeColor:
           "bg-rose-500/20 text-rose-400 border-rose-500/60 shadow-[0_0_15px_rgba(244,63,94,0.35)]",
         title: "ACTIVE BLOCK (HTTP 403 FORBIDDEN)",
-        desc: "Request chứa dấu hiệu tấn công nguy hiểm vượt ngưỡng an toàn (Score > 80). Gateway tự động ngắt kết nối và gửi phản hồi 403 Forbidden bảo vệ Target API.",
+        desc:
+          reason ||
+          "Gateway đã chặn request độc hại và phản hồi HTTP 403 Forbidden để bảo vệ Target API.",
         color: "text-rose-400",
       };
-    } else if (score >= 60) {
+    }
+    if (norm === "RATE_LIMIT") {
       return {
         action: "RATE_LIMIT",
         code: 429,
         badgeColor:
           "bg-amber-500/20 text-amber-400 border-amber-500/60 shadow-[0_0_15px_rgba(245,158,11,0.35)]",
-        title: "RATE LIMIT THRESHOLD (HTTP 429)",
-        desc: "Mức độ nghi vấn trung bình cao (Score 60-80). Gateway áp dụng hạn chế tần suất gọi API từ IP nghi vấn để ngăn chặn dò quét tự động.",
+        title: "RATE LIMITED (HTTP 429 TOO MANY REQUESTS)",
+        desc:
+          reason ||
+          "Gateway đã giới hạn tần suất request (HTTP 429) từ địa chỉ IP nguồn có mức rủi ro cao.",
         color: "text-amber-400",
       };
-    } else if (score >= 30) {
+    }
+    if (norm === "MONITOR" || norm === "DETECTED") {
       return {
-        action: "MONITOR",
+        action: norm,
         code: 200,
         badgeColor:
           "bg-yellow-500/20 text-yellow-400 border-yellow-500/60 shadow-[0_0_15px_rgba(234,179,8,0.35)]",
-        title: "SECURITY MONITORING (LOGGED)",
-        desc: "Dấu hiệu bất thường mức độ thấp đến trung bình (Score 30-60). Được ghi nhận vào security_events phục vụ điều tra nhưng vẫn cho phép chuyển tiếp.",
+        title: "SECURITY MONITORING (LOGGED & FORWARDED)",
+        desc:
+          reason ||
+          "Sự kiện an ninh đã được ghi nhận vào cơ sở dữ liệu giám sát nhưng vẫn cho phép chuyển tiếp (Monitor Mode).",
         color: "text-yellow-400",
       };
-    } else {
-      return {
-        action: "ALLOW",
-        code: 200,
-        badgeColor: "bg-emerald-500/20 text-emerald-400 border-emerald-500/60",
-        title: "SAFE TRAFFIC (FORWARDED)",
-        desc: "Lưu lượng hợp lệ bình thường (Score < 30). Chuyển tiếp an toàn tới Target API.",
-        color: "text-emerald-400",
-      };
     }
+    return {
+      action: norm || "ALLOW",
+      code: 200,
+      badgeColor: "bg-emerald-500/20 text-emerald-400 border-emerald-500/60",
+      title: "SAFE TRAFFIC (FORWARDED)",
+      desc: reason || "Lưu lượng được đánh giá an toàn và chuyển tiếp tới Target API.",
+      color: "text-emerald-400",
+    };
   };
 
-  const decision = getDecision(hybridScore);
+  const decision = getActualDecision(event.action || details.decision, details.reason);
 
   // Attack classification details
   const getAttackMetadata = (type: string) => {
@@ -195,55 +216,56 @@ export const DetectionExplainabilityModal: React.FC<DetectionExplainabilityModal
 
   const attackMeta = getAttackMetadata(event.attack_type);
 
-  // Full explanation report payload for 1-click export
+  // Full explanation report payload for 1-click export (100% real data)
   const fullExplanationJson = JSON.stringify(
     {
-      explainability_version: "PBL6-Explainability-v2.0-Agnostic",
+      explainability_version: "PBL6-Explainability-v2.0",
       standard_compliance: ["NIST SP 800-137", "ISO/IEC 27004", "IEEE TNSM 2021"],
       event_id: event.event_id,
       request_id: event.request_id,
       timestamp: event.timestamp,
       client_ip: event.client_ip,
-      client_origin: isLanAttacker ? "LAN_MACHINE_2_ATTACKER" : "LOCALHOST_TESTER",
+      client_origin: isLanAttacker ? "RFC1918_LAN_HOST" : "LOCALHOST_OR_EXTERNAL",
       attack_type: event.attack_type,
       severity: event.severity,
       decision: {
-        action: decision.action,
+        recorded_action: event.action,
         http_code: decision.code,
+        reason: details.reason ?? null,
         hybrid_risk_score: hybridScore,
         formula: "0.40 * S_rule + 0.35 * S_ml + 0.25 * S_anomaly",
-        model_architecture: "Defense-in-Depth Multi-Layered Risk Scoring (Phase 7 Specification)",
       },
       layers: {
         layer_1_rule_engine: {
           name: "Deterministic Pattern Matching",
-          weight: 0.40,
+          weight: ruleWeight,
           raw_score: ruleRawScore,
           weighted_points: Number(ruleContribution.toFixed(2)),
           rule_id: event.rule_id,
           rule_name: event.rule_name,
           location: event.location,
-          pattern: pattern,
-          status: "PHASE_2_ACTIVE",
+          pattern,
         },
         layer_2_supervised_ml: {
-          name: "Supervised Threat Classification (Model-Agnostic)",
-          weight: 0.35,
+          name: "Supervised Threat Classification",
+          weight: mlWeight,
           raw_score: mlRawScore,
           weighted_points: Number(mlContribution.toFixed(2)),
-          predicted_class: event.attack_type,
-          confidence_percent: mlConfidence,
-          champion_model: "XGBoost (PR #82 Empirical Champion - F1: 99.97%, Latency: 0.0039ms)",
-          fallback_model: "Random Forest",
-          status: event.ml_score != null ? "ACTIVE_TELEMETRY" : "PHASE_5_INFERENCE",
+          predicted_class: mlPredictedClass,
+          confidence_percent: mlConfidencePct,
+          model_name: mlModelName,
+          model_version: mlModelVersion,
+          latency_ms: mlLatencyMs,
+          status: mlRawScore != null ? "ACTIVE_TELEMETRY" : "UNAVAILABLE",
         },
         layer_3_isolation_forest: {
           name: "Unsupervised Anomaly Detection",
-          weight: 0.25,
+          weight: anomalyWeight,
           raw_score: anomalyRawScore,
           weighted_points: Number(anomalyContribution.toFixed(2)),
-          anomaly_probability: Number((anomalyRawScore / 100).toFixed(2)),
-          status: event.anomaly_score != null ? "ACTIVE_TELEMETRY" : "PHASE_6_INFERENCE",
+          is_anomaly: anomalyIsFlagged,
+          decision_raw_score: anomalyDecisionRaw,
+          status: anomalyRawScore != null ? "ACTIVE_TELEMETRY" : "UNAVAILABLE",
         },
       },
       threat_intelligence: {
@@ -282,7 +304,7 @@ export const DetectionExplainabilityModal: React.FC<DetectionExplainabilityModal
                   <h3 className="text-base font-bold text-slate-100 flex items-center gap-2">
                     <span>Giải Thích Quyết Định WAF (XAI &amp; Feature Attribution)</span>
                     <span className="px-2 py-0.5 rounded-full bg-purple-950 text-purple-300 border border-purple-800 text-[10px] font-mono">
-                      Phase 7 Spec
+                      Real Telemetry
                     </span>
                   </h3>
                 </div>
@@ -333,12 +355,12 @@ export const DetectionExplainabilityModal: React.FC<DetectionExplainabilityModal
                 {isLanAttacker ? (
                   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-rose-950/80 text-rose-300 border border-rose-800/80">
                     <Network className="w-3 h-3 text-rose-400" />
-                    <span>LAN Máy 2 ({event.client_ip})</span>
+                    <span>LAN Host ({event.client_ip})</span>
                   </span>
                 ) : (
                   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">
                     <Laptop className="w-3 h-3 text-slate-400" />
-                    <span>Localhost ({event.client_ip})</span>
+                    <span>Host ({event.client_ip})</span>
                   </span>
                 )}
               </div>
@@ -361,8 +383,8 @@ export const DetectionExplainabilityModal: React.FC<DetectionExplainabilityModal
                   <div>
                     <div className="flex items-center gap-2">
                       <span className="text-[11px] font-mono text-slate-400">HYBRID WEIGHTED RISK SCORE</span>
-                      <span className="px-1.5 py-0.2 rounded bg-purple-950 text-purple-300 border border-purple-800 text-[9px] font-mono">
-                        Phase 7 Spec
+                      <span className={`px-1.5 py-0.2 rounded border text-[9px] font-mono font-bold ${decision.badgeColor}`}>
+                        {decision.action}
                       </span>
                     </div>
                     <h3 className={`text-base font-extrabold tracking-wide mt-1 ${decision.color}`}>
@@ -407,17 +429,17 @@ export const DetectionExplainabilityModal: React.FC<DetectionExplainabilityModal
                 {/* Stacked Progress Bar */}
                 <div className="w-full h-2.5 rounded-full bg-slate-950 overflow-hidden flex border border-slate-800">
                   <div
-                    style={{ width: `${(ruleContribution / 100) * 100}%` }}
+                    style={{ width: `${Math.min(100, ruleContribution)}%` }}
                     className="h-full bg-blue-500 transition-all duration-500"
                     title={`Rule Engine: ${ruleContribution.toFixed(1)} pts (40%)`}
                   />
                   <div
-                    style={{ width: `${(mlContribution / 100) * 100}%` }}
+                    style={{ width: `${Math.min(100, mlContribution)}%` }}
                     className="h-full bg-purple-500 transition-all duration-500"
-                    title={`Supervised ML (XGBoost Champion / RF Fallback): ${mlContribution.toFixed(1)} pts (35%)`}
+                    title={`Supervised ML: ${mlContribution.toFixed(1)} pts (35%)`}
                   />
                   <div
-                    style={{ width: `${(anomalyContribution / 100) * 100}%` }}
+                    style={{ width: `${Math.min(100, anomalyContribution)}%` }}
                     className="h-full bg-emerald-500 transition-all duration-500"
                     title={`Isolation Forest Anomaly: ${anomalyContribution.toFixed(1)} pts (25%)`}
                   />
@@ -441,7 +463,7 @@ export const DetectionExplainabilityModal: React.FC<DetectionExplainabilityModal
                         TẦNG 1: RULE ENGINE
                       </span>
                       <span className="text-[10px] font-mono text-emerald-400 font-bold">
-                        ● Active (Phase 2)
+                        ● Active
                       </span>
                     </div>
                     <h5 className="font-bold text-slate-100 text-[13px]">{event.rule_name}</h5>
@@ -469,35 +491,41 @@ export const DetectionExplainabilityModal: React.FC<DetectionExplainabilityModal
                   </div>
                 </div>
 
-                {/* Pillar 2: Supervised ML (Model-Agnostic - XGBoost Champion / RF Fallback) */}
+                {/* Pillar 2: Supervised ML (Real Telemetry) */}
                 <div className="p-3.5 rounded-xl bg-slate-900/80 border border-purple-500/30 flex flex-col justify-between space-y-3">
                   <div>
                     <div className="flex items-center justify-between mb-1.5">
                       <span className="px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/40 text-[10px] font-mono font-bold">
                         TẦNG 2: SUPERVISED ML
                       </span>
-                      <span className="inline-flex items-center gap-1 text-[10px] font-mono text-amber-300 font-semibold">
-                        <Trophy className="w-3 h-3 text-amber-400" />
-                        <span>XGBoost Champion 🏆</span>
+                      <span className="inline-flex items-center gap-1 text-[10px] font-mono text-slate-300 font-semibold">
+                        <Cpu className="w-3 h-3 text-purple-400" />
+                        <span>{mlRawScore != null ? "Live Telemetry" : "N/A"}</span>
                       </span>
                     </div>
                     <h5 className="font-bold text-slate-100 text-[13px]">Phân loại Đa lớp Mối Đe Dọa</h5>
                     <div className="mt-2 space-y-1 font-mono text-[11px] text-slate-300">
-                      <div className="flex justify-between">
-                        <span className="text-slate-400">Mô hình:</span>
-                        <span className="text-amber-300 font-semibold">XGBoost (RF Fallback)</span>
+                      <div className="flex justify-between gap-2">
+                        <span className="text-slate-400 shrink-0">Mô hình:</span>
+                        <span className="text-amber-300 font-semibold truncate text-right" title={mlModelName}>
+                          {mlModelName}{mlModelVersion ? ` (${mlModelVersion})` : ""}
+                        </span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-slate-400">Dự đoán lớp:</span>
-                        <span className="text-purple-400 font-bold">{event.attack_type}</span>
+                        <span className="text-purple-400 font-bold">{mlPredictedClass}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-slate-400">Độ tin cậy:</span>
-                        <span className="text-emerald-400 font-bold">{mlConfidence.toFixed(1)}%</span>
+                        <span className="text-emerald-400 font-bold">
+                          {mlConfidencePct != null ? `${mlConfidencePct.toFixed(1)}%` : "N/A"}
+                        </span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-slate-400">Điểm ML {event.ml_score != null ? "thực" : "ước tính"}:</span>
-                        <span className="text-amber-400 font-bold">{mlRawScore.toFixed(1)} / 100</span>
+                        <span className="text-slate-400">Điểm ML thực:</span>
+                        <span className="text-amber-400 font-bold">
+                          {mlRawScore != null ? `${mlRawScore.toFixed(1)} / 100` : "N/A"}
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -510,7 +538,7 @@ export const DetectionExplainabilityModal: React.FC<DetectionExplainabilityModal
                   </div>
                 </div>
 
-                {/* Pillar 3: Isolation Forest Anomaly Detection */}
+                {/* Pillar 3: Isolation Forest Anomaly Detection (Real Telemetry) */}
                 <div className="p-3.5 rounded-xl bg-slate-900/80 border border-emerald-500/30 flex flex-col justify-between space-y-3">
                   <div>
                     <div className="flex items-center justify-between mb-1.5">
@@ -518,22 +546,32 @@ export const DetectionExplainabilityModal: React.FC<DetectionExplainabilityModal
                         TẦNG 3: ISOLATION FOREST
                       </span>
                       <span className="text-[10px] font-mono text-emerald-300">
-                        ◌ Phase 6 Spec
+                        {anomalyRawScore != null ? "Live Telemetry" : "N/A"}
                       </span>
                     </div>
                     <h5 className="font-bold text-slate-100 text-[13px]">Phát hiện Hành vi Dị biệt</h5>
                     <div className="mt-2 space-y-1 font-mono text-[11px] text-slate-300">
                       <div className="flex justify-between">
-                        <span className="text-slate-400">Độ bất thường:</span>
-                        <span className="text-emerald-400 font-bold">{Number((anomalyRawScore / 100).toFixed(2))}</span>
+                        <span className="text-slate-400">Trạng thái:</span>
+                        <span className={anomalyIsFlagged ? "text-rose-400 font-bold" : "text-emerald-400 font-bold"}>
+                          {anomalyIsFlagged === null
+                            ? "N/A"
+                            : anomalyIsFlagged
+                            ? "ANOMALY"
+                            : "NORMAL"}
+                        </span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-slate-400">Độ lệch chuẩn:</span>
-                        <span className="text-slate-200">+2.4σ Outlier</span>
+                        <span className="text-slate-400">Raw Decision Score:</span>
+                        <span className="text-slate-200">
+                          {anomalyDecisionRaw != null ? anomalyDecisionRaw.toFixed(4) : "N/A"}
+                        </span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-slate-400">Điểm Anomaly {event.anomaly_score != null ? "thực" : "ước tính"}:</span>
-                        <span className="text-amber-400 font-bold">{anomalyRawScore.toFixed(1)} / 100</span>
+                        <span className="text-slate-400">Điểm Anomaly thực:</span>
+                        <span className="text-amber-400 font-bold">
+                          {anomalyRawScore != null ? `${anomalyRawScore.toFixed(1)} / 100` : "N/A"}
+                        </span>
                       </div>
                     </div>
                   </div>

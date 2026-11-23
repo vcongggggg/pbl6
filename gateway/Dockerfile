@@ -2,7 +2,7 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
-# Install security updates and build requirements
+# Install security updates and runtime requirements
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     && rm -rf /var/lib/apt/lists/*
@@ -14,8 +14,13 @@ RUN pip install --no-cache-dir .
 # Copy application source code
 COPY . .
 
-# Ensure data directory exists
-RUN mkdir -p /app/data
+# Create non-root user and ensure data directory ownership (INFRA-PBL6-001)
+RUN mkdir -p /app/data \
+    && groupadd --system --gid 1001 appuser \
+    && useradd --system --uid 1001 --gid appuser --home-dir /app --shell /sbin/nologin appuser \
+    && chown -R appuser:appuser /app /app/data
+
+USER appuser
 
 EXPOSE 8000
 

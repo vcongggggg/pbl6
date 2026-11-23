@@ -1,0 +1,152 @@
+{
+  "model_name": "Champion Cost-Sensitive Regularized XGBoost v2.0",
+  "model_file": "xgb_v2.ubj",
+  "model_version": "2.0.0",
+  "sha256_hash": "2b9cd94af19804735a082e2cbdc5ebf3fc28f00985209600ef67d8bdcef80336",
+  "feature_count": 26,
+  "feature_names": [
+    "length",
+    "entropy",
+    "count_single_quote",
+    "count_double_quote",
+    "count_less_than",
+    "count_greater_than",
+    "count_semicolon",
+    "count_hyphen",
+    "count_slash",
+    "count_backslash",
+    "count_parenthesis",
+    "special_char_ratio",
+    "sql_keyword_count",
+    "xss_keyword_count",
+    "sqli_regex_matches",
+    "xss_regex_matches",
+    "path_traversal_matches",
+    "cmd_keyword_count",
+    "cmd_regex_matches",
+    "encoding_layer_depth",
+    "sql_comment_and_func_score",
+    "param_value_entropy_ratio",
+    "numeric_anomaly_flag",
+    "natural_text_ratio",
+    "safe_structured_ratio",
+    "protocol_complexity_score"
+  ],
+  "classes": [
+    "BENIGN",
+    "COMMAND_INJECTION",
+    "PATH_TRAVERSAL",
+    "SQL_INJECTION",
+    "XSS"
+  ],
+  "class_mapping": {
+    "BENIGN": 0,
+    "COMMAND_INJECTION": 1,
+    "PATH_TRAVERSAL": 2,
+    "SQL_INJECTION": 3,
+    "XSS": 4
+  },
+  "attack_threshold": 0.5,
+  "latency_benchmark": {
+    "mean_ms": 2.2247,
+    "p99_ms": 9.1817
+  },
+  "metrics": {
+    "test_accuracy": 0.9915,
+    "test_precision_macro": 0.9871,
+    "test_recall_macro": 0.9874,
+    "test_f1_macro": 0.9872,
+    "confusion_matrix": [
+      [
+        3874,
+        1,
+        17,
+        1,
+        8
+      ],
+      [
+        1,
+        348,
+        0,
+        3,
+        1
+      ],
+      [
+        4,
+        0,
+        1196,
+        0,
+        0
+      ],
+      [
+        1,
+        5,
+        0,
+        268,
+        1
+      ],
+      [
+        14,
+        2,
+        0,
+        0,
+        1184
+      ]
+    ],
+    "classification_report": {
+      "BENIGN": {
+        "precision": 0.9948638931689779,
+        "recall": 0.9930786977698026,
+        "f1-score": 0.9939704939063502,
+        "support": 3901.0
+      },
+      "COMMAND_INJECTION": {
+        "precision": 0.9775280898876404,
+        "recall": 0.9858356940509915,
+        "f1-score": 0.9816643159379408,
+        "support": 353.0
+      },
+      "PATH_TRAVERSAL": {
+        "precision": 0.9859851607584501,
+        "recall": 0.9966666666666667,
+        "f1-score": 0.9912971404890178,
+        "support": 1200.0
+      },
+      "SQL_INJECTION": {
+        "precision": 0.9852941176470589,
+        "recall": 0.9745454545454545,
+        "f1-score": 0.979890310786106,
+        "support": 275.0
+      },
+      "XSS": {
+        "precision": 0.9916247906197655,
+        "recall": 0.9866666666666667,
+        "f1-score": 0.9891395154553049,
+        "support": 1200.0
+      },
+      "accuracy": 0.9914850627796219,
+      "macro avg": {
+        "precision": 0.9870592104163786,
+        "recall": 0.9873586359399165,
+        "f1-score": 0.987192355314944,
+        "support": 6929.0
+      },
+      "weighted avg": {
+        "precision": 0.9915022783936094,
+        "recall": 0.9914850627796219,
+        "f1-score": 0.9914850949421464,
+        "support": 6929.0
+      }
+    }
+  },
+  "hyperparameters": {
+    "n_estimators": 150,
+    "max_depth": 6,
+    "learning_rate": 0.08,
+    "subsample": 0.8,
+    "colsample_bytree": 0.8,
+    "min_child_weight": 3,
+    "reg_lambda": 2.0,
+    "nthread": 1
+  }
+}

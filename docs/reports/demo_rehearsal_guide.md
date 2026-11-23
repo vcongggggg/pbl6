@@ -1,101 +1,75 @@
-# 🎙️ HƯỚNG DẪN KỊCH BẢN THUYẾT TRÌNH & DIỄN TẬP THỰC CHIẾN 10 PHÚT (TASK 12.3)
+# HƯỚNG DẪN KỊCH BẢN THUYẾT TRÌNH & DIỄN TẬP THỰC CHIẾN 10 PHÚT (BLUE TEAM v2.0)
 
-> **Dự án:** Web API Security Platform & Adaptive Hybrid WAF (PBL6)  
-> **Thời lượng kịch bản:** Đúng **10 Phút** chuẩn mực bảo vệ trước Hội đồng Chấm Đồ Án  
-> **Công cụ điều khiển:** `scripts/demo_rehearsal.py`  
-> **Mã công việc:** Task 12.3 (Issue #49)  
-> **Tác giả:** `vcongggggg` (Thành viên A) & `naocavang08` (Thành viên B)
+- **Dự án:** Web API Security Platform & Adaptive Hybrid WAF (PBL6 — Blue Team v2.0)
+- **Thời lượng kịch bản:** Đúng **10 Phút** bảo vệ trực tiếp trước Hội đồng Chấm Đồ Án
+- **Công cụ điều khiển:** `scripts/start_all_services.py` & `scripts/demo_rehearsal.py`
+- **Tác giả:** Nguyễn Văn Công (`vcongggggg` — Blue Team) & Nguyễn Minh (`naocavang08` — Red Team)
 
 ---
 
-## 1. TỔNG QUAN PHÂN BỔ THỜI GIAN (10-MINUTE DEFENSE TIMELINE)
+## 1. PHÂN BỔ THỜI GIAN DIỄN TẬP (10-MINUTE DEFENSE TIMELINE)
 
-| Thời gian | Phân đoạn kịch bản | Thao tác trên máy chiếu / Terminal | Lời thoại thuyết trình trọng tâm |
+| Thời gian | Phân đoạn kịch bản | Thao tác trên máy chiếu / Terminal | Trọng tâm trình bày trước Hội đồng |
 | :---: | :--- | :--- | :--- |
-| **0:00 - 1:00** | **Mở đầu & Bối cảnh** | Chiếu slide Kiến trúc Thao trường An ninh Đối kháng (Máy 1 Blue Team vs Máy 2 Red Team). | *"Kính thưa Thầy Cô Hội đồng, nhóm xây dựng giải pháp WAF Hybrid tích hợp AI đa tầng bảo vệ Web API tự làm chủ..."* |
-| **1:00 - 3:00** | **Giai đoạn 1: Baseline Traffic** | Chạy `python scripts/demo_rehearsal.py`, thực hiện Stage 1. | *"Đầu tiên, hệ thống xử lý lưu lượng hợp lệ duyệt sách. Toàn bộ 100% request đạt HTTP 200, Threat Score = 0, độ trễ tối ưu."* |
-| **3:00 - 5:30** | **Giai đoạn 2: Tấn công Monitor-Only** | Chạy Stage 2, mở song song giao diện Dashboard (:3000). | *"Khi chuyển WAF sang Monitor-Only, 4 họ tấn công SQLi, XSS, LFI, RCE lập tức bị bắt, tính Risk Score 95/100 và báo động đỏ thời gian thực."* |
-| **5:30 - 7:30** | **Giai đoạn 3: Active Blocking** | Chạy Stage 3, kích hoạt phòng thủ chủ động. | *"Chuyển WAF sang Active Block: WAF kích hoạt cơ chế Fast-Path chặn đứng 100% payload bằng HTTP 403 Forbidden trong < 2ms, bảo vệ an toàn cho Bookie Bookstore."* |
-| **7:30 - 9:00** | **Giai đoạn 4: Rate Limiting** | Chạy Stage 4, kích hoạt bão request Brute-force. | *"Đối với tấn công dò mật khẩu tần suất cao, bộ Sliding Window giới hạn 10 req/min và phạt HTTP 429 kèm Exponential Backoff theo RFC 6585."* |
-| **9:00 - 10:00** | **Tổng kết & Explainability** | Mở Explainability Modal và Evidence Drawer trên Dashboard. | *"Mọi quyết định của WAF đều minh bạch: giải trình chi tiết từng luật và đặc trưng AI 17-D. Sẵn sàng nhận câu hỏi phản biện từ Hội đồng."* |
+| **0:00 - 1:00** | **Khởi động & Kiến trúc** | Chạy `python scripts/start_all_services.py --check`; mở Dashboard `http://localhost:3000`. | Giới thiệu mô hình Thao trường Đối kháng Phân tán (Máy 1 Blue Team v2.0 vs Máy 2 Red Team), 100% dữ liệu thật, không telemetry giả. |
+| **1:00 - 2:30** | **Giai đoạn 1: Baseline Traffic** | Chạy `python scripts/demo_rehearsal.py --interactive`, thực hiện Stage 1. | 5/5 request hợp lệ (GET tìm sách, OpenAPI 3.0, POST JSON review) đều đạt `HTTP 200 OK`, `0% False Positive`. |
+| **2:30 - 5:00** | **Giai đoạn 2: Monitor-Only** | Chạy Stage 2 (tự động chuyển WAF sang `MONITOR_ONLY` qua `X-API-Key` & ghi `AuditLog`). | 5/5 tấn công OWASP (SQLi Auth Bypass, SQLi UNION, XSS, Path Traversal, CMD RCE) bị gắn cờ `MONITOR`, hiện trực tiếp trên Live Events Table. |
+| **5:00 - 7:30** | **Giai đoạn 3: Active Blocking** | Chạy Stage 3 (chuyển sang `ACTIVE_BLOCKING`). | Chặn đứng 5/5 tấn công né tránh nâng cao (SQLi `UNION/**/SELECT`, XSS `<details ontoggle>`, Windows LFI, CMD `; python3`, và **SOAP/XML XXE**) bằng `HTTP 403 Forbidden` (RFC 7807) trong ~1–3 ms. |
+| **7:30 - 9:00** | **Giai đoạn 4: Rate Limiting** | Chạy Stage 4 (gửi 14 request brute-force xoay `User-Agent` vào `/auth/login/`). | Chứng minh cơ chế **IP Hard Cap (10 req/min)** chống xoay token/UA, phạt ngay **`HTTP 429 Too Many Requests`** kèm `Retry-After`. |
+| **9:00 - 10:00** | **SOC XAI & Kill Chain** | Trên Dashboard `http://localhost:3000`: mở **Attack Sessions**, **Evidence Drawer (26-D)** và **Explainability Modal**. | Chứng minh giải trình minh bạch: 26 đặc trưng thật, điểm `Rule + XGBoost v2.0 + IForest v2.0`, phân bổ đa giao thức và chuỗi Cyber Kill Chain. |
 
 ---
 
-## 2. KỊCH BẢN CHI TIẾT TỪNG PHÚT & LỜI THOẠI MẪU (SPEAKER SCRIPT)
+## 2. CHECKLIST CHUẨN BỊ TRƯỚC GIỜ BẢO VỆ (5 PHÚT TRƯỚC KHI LÊN BẢNG)
 
-### 🟢 Phút 0:00 - 1:00: Giới thiệu Thao trường & Khởi động
-* **Hành động:** 
-  - Mở 2 cửa sổ: Một bên là Terminal chạy `python scripts/demo_rehearsal.py --interactive`, một bên là trình duyệt mở Dashboard `http://localhost:3000`.
-* **Lời thoại:**
-  > *"Kính thưa quý Thầy Cô trong Hội đồng chấm đồ án tốt nghiệp PBL6, hôm nay nhóm xin phép biểu diễn kịch bản thực chiến trực tiếp giữa hệ thống phòng thủ WAF Gateway tích hợp AI đa tầng và ứng dụng mục tiêu Bookie Bookstore. Toàn bộ hệ thống chạy trên môi trường thực tế, không sử dụng dữ liệu giả lập tĩnh."*
-
----
-
-### 🟢 Phút 1:00 - 3:00: Giai đoạn 1 — Đo kiểm Baseline Lưu lượng Hợp lệ
-* **Hành động:**
-  - Nhấn `[ENTER]` trên Terminal để kích hoạt Stage 1.
-* **Màn hình hiển thị:**
-  - 5 request tìm kiếm sách ('Python', 'Security') chuyển tiếp thành công với mã `200 OK`, Threat Score = 0.
-* **Lời thoại:**
-  > *"Trong giai đoạn 1, hệ thống tiếp nhận các luồng nghiệp vụ thông thường của người dùng như tìm kiếm sách và duyệt catalog. Như Thầy Cô có thể quan sát, Gateway hoạt động hoàn toàn trong suốt (Transparent Proxy), chuyển tiếp 100% request với mã HTTP 200 OK và điểm rủi ro Threat Score bằng 0, không gây ảnh hưởng đến trải nghiệm người dùng."*
-
----
-
-### 🟡 Phút 3:00 - 5:30: Giai đoạn 2 — Phát hiện Tấn công ở Chế độ Giám sát (MONITOR_ONLY)
-* **Hành động:**
-  - Nhấn `[ENTER]` để chuyển sang Stage 2.
-  - Chuyển tab sang Next.js Dashboard để chỉ vào bảng Live Events.
-* **Màn hình hiển thị:**
-  - 5 payload tấn công (SQLi Auth Bypass, UNION query, XSS, Path Traversal, Command Injection) bị gắn cờ `FLAGGED`, điểm rủi ro `95/100`, dòng trạng thái nhấp nháy đỏ trên Dashboard.
-* **Lời thoại:**
-  > *"Tại Giai đoạn 2, nhóm mô phỏng tình huống WAF hoạt động ở chế độ Giám sát (Monitor-Only) - tương đương giai đoạn huấn luyện và tiền triển khai của doanh nghiệp. Khi kẻ tấn công bắn các payload SQL Injection, XSS hay Path Traversal, WAF trích xuất 17 đặc trưng hình thái, đối soát qua 16 luật tĩnh và mô hình Random Forest. Điểm rủi ro được chấm tức thời ở mức 95/100 và ghi nhận sự kiện an ninh vào cơ sở dữ liệu SQLite, xuất hiện trực tiếp trên giao diện Dashboard mà không ngắt kết nối của ứng dụng."*
+1. **Khởi động 3 dịch vụ (chọn 1 trong 2 cách):**
+   - **Cách A — Chạy trực tiếp trên Windows (nhanh nhất, không cần Docker Desktop):**
+     ```bash
+     python scripts/start_all_services.py --start --prod
+     ```
+   - **Cách B — Chạy bằng Docker Compose (3 container non-root hardened):**
+     ```bash
+     docker compose up --build -d
+     docker compose ps
+     ```
+2. **Kiểm tra sức khỏe toàn hệ thống:**
+   ```bash
+   python scripts/start_all_services.py --check
+   ```
+   Xác nhận 3 cổng đều `[OK]`:
+   - Bookie Target API: `http://127.0.0.1:5000/api/v1/vulnerable/openapi.json` (cô lập loopback)
+   - WAF Gateway v2.0: `http://127.0.0.1:8000/health`
+   - SOC Dashboard UI: `http://localhost:3000`
+3. **Dọn sạch dữ liệu cũ trên Dashboard (nếu muốn bắt đầu từ 0):**
+   Bấm nút **Reset Demo** trên thanh điều khiển Dashboard (`http://localhost:3000`) hoặc gọi qua API có `X-API-Key`:
+   ```bash
+   curl -X POST http://127.0.0.1:8000/dashboard/reset-demo -H "X-API-Key: dev-admin-secret-key-change-me"
+   ```
 
 ---
 
-### 🔴 Phút 5:30 - 7:30: Giai đoạn 3 — Kích hoạt Chặn Đứng Chủ Động (ACTIVE_BLOCK)
-* **Hành động:**
-  - Nhấn `[ENTER]` để chuyển sang Stage 3.
-* **Màn hình hiển thị:**
-  - Trạng thái Gateway chuyển thành `ACTIVE_BLOCK (SIẾT CHẶT TỐI ĐA)`.
-  - Các cuộc tấn công tinh vi né tránh (URL Encoded SQLi, SVG XSS, LFI Escapes) bị chặn đứng với mã `[403 FORBIDDEN]` và độ trễ Fast-path cực nhanh.
-* **Lời thoại:**
-  > *"Bây giờ nhóm kích hoạt chế độ Phòng thủ Chủ động (Active Block). Cơ chế Fast-path của WAF lập tức ngắt kết nối kẻ tấn công ngay tại tầng Proxy, phản hồi HTTP 403 Forbidden với độ trễ xử lý nội bộ chỉ xấp xỉ 1.85 mili-giây. Upstream Target API được che chắn tuyệt đối, mã độc hoàn toàn không có cơ hội chạm tới cơ sở dữ liệu."*
-
----
-
-### 🟣 Phút 7:30 - 9:00: Giai đoạn 4 — Chống Brute-force & Điều tiết Hạn mức (RATE_LIMIT)
-* **Hành động:**
-  - Nhấn `[ENTER]` để chuyển sang Stage 4.
-* **Màn hình hiển thị:**
-  - 14 requests dò mật khẩu dồn dập vào `/api/v1/vulnerable/auth/login/`.
-  - Request 1-9 được xử lý bình thường. Từ request 10 trở đi, WAF lập tức trả về `[429 TOO MANY REQUESTS]` kèm tiêu đề `Retry-After: 60s`.
-* **Lời thoại:**
-  > *"Tại Giai đoạn 4, nhóm chứng minh năng lực phòng vệ trước tấn công Brute-force và quét lỗ hổng tự động. Theo quy chuẩn OWASP API4:2023 và RFC 6585, endpoint nhạy cảm auth/login bị khống chế tối đa 10 req/phút bằng thuật toán Sliding Window Counter O(1). Khi chạm ngưỡng vi phạm, hệ thống kích hoạt trừng phạt Exponential Backoff, bắt buộc client phải chờ đợi, triệt tiêu hoàn toàn botnet tự động."*
-
----
-
-### 🔵 Phút 9:00 - 10:00: Tổng kết Viễn trắc & Khả năng Giải trình (Explainability)
-* **Hành động:**
-  - Chuyển sang trình duyệt Dashboard `http://localhost:3000`.
-  - Click vào 1 dòng sự kiện SQL Injection để mở **Explainability Modal**.
-  - Mở **Evidence Drawer** để Hội đồng thấy Payload giải mã và 17 đặc trưng vector hóa.
-* **Lời thoại:**
-  > *"Để kết thúc phần biểu diễn, nhóm xin trình chiếu năng lực Giải trình Quyết định (Explainability AI). Khác với các mô hình hộp đen truyền thống, Dashboard cung cấp chi tiết: tại sao mẫu này bị chấm 95 điểm, tỷ trọng đóng góp của độ dài payload, Shannon entropy, số ký tự đặc biệt, và kết quả suy luận của Random Forest. Bảng điểm tổng kết hiển thị 100% tấn công bị chặn đứng, bảo toàn tính sẵn sàng của hệ thống. Nhóm xin chân thành cảm ơn Thầy Cô và sẵn sàng lắng nghe câu hỏi phản biện ạ!"*
-
----
-
-## 3. CHEAT SHEET CÁC LỆNH VẬN HÀNH NHANH (CLI COMMANDS)
+## 3. CHEAT SHEET LỆNH DEMO TRỰC TIẾP TRƯỚC HỘI ĐỒNG
 
 ```bash
-# 1. Chạy diễn tập tương tác từng bước (Khuyên dùng khi bảo vệ):
+# 1. Chạy diễn tập tương tác từng bước (Khuyên dùng khi thuyết trình):
 python scripts/demo_rehearsal.py --interactive
 
-# 2. Chạy tự động có nhịp nghỉ (Khi chạy thử hoặc demo nhanh):
-python scripts/demo_rehearsal.py --auto --interval 1.5
+# 2. Chạy tự động toàn trình 4 giai đoạn (dùng kiểm tra nhanh):
+python scripts/demo_rehearsal.py --auto --interval 0.5
 
-# 3. Reset dữ liệu demo trên Dashboard trước giờ bảo vệ:
-curl -X POST http://localhost:8000/api/dashboard/reset-demo
+# 3. Demo Red Team trinh sát OpenAPI tự động (từ Máy 2 hoặc terminal riêng):
+python attack-lab/agent/recon.py --target http://127.0.0.1:8000
 
-# 4. Bơm sẵn 50 mẫu demo kiểm chứng nếu cần:
-curl -X POST http://localhost:8000/api/dashboard/seed-demo
+# 4. Bơm sẵn dữ liệu mẫu phong phú (nếu cần trình chiếu biểu đồ lịch sử 60 phút):
+curl -X POST http://127.0.0.1:8000/dashboard/seed-demo -H "X-API-Key: dev-admin-secret-key-change-me"
+
+# 5. Chạy đo hiệu năng chịu tải thực tế C=50 (>= 250 RPS) ngay trước Hội đồng nếu được hỏi:
+python scripts/run_gateway_profiling.py --in-process
 ```
+
+---
+
+## 4. LƯU Ý XỬ LÝ SỰ CỐ NHANH KHI DEMO (FALLBACK PLAN)
+
+- **Nếu Hội đồng hỏi về bảo mật khóa Admin trên trình duyệt:** Mở DevTools -> tab Network -> chỉ cho Thầy Cô thấy toàn bộ request Dashboard gọi vào `/api/gateway/api/dashboard/*` (Next.js Server-Side BFF Proxy), không hề có header `X-API-Key` hay secret lộ trong JavaScript client bundle; gọi thẳng `curl http://127.0.0.1:8000/dashboard/stats` sẽ bị từ chối `HTTP 401 Unauthorized`.
+- **Nếu chạy Stage 4 nhiều lần liên tiếp trong vòng 1 phút:** Bộ Rate Limiter giữ cửa sổ trượt 60 giây trên RAM cho IP `127.0.0.1`, nên nếu cần lặp lại Stage 4 ngay lập tức, chỉ cần đợi 60 giây hoặc khởi động lại Gateway.

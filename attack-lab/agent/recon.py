@@ -225,10 +225,20 @@ class APIReconAgent:
                     return json.loads(response.read().decode("utf-8"))
                 raise ValueError(f"HTTP {response.status}")
 
-    def resolve_ref(self, ref_path: str) -> dict[str, Any]:
-        """Resolve an internal JSON reference ($ref) such as '#/components/schemas/User'."""
+    def resolve_ref(
+        self,
+        ref_path: str,
+        seen_refs: set[str] | None = None,
+    ) -> dict[str, Any]:
+        """Resolve an internal JSON reference ($ref) with circular-reference protection."""
         if not ref_path or not ref_path.startswith("#/"):
             return {}
+
+        visited = set(seen_refs) if seen_refs is not None else set()
+        if ref_path in visited:
+            logger.warning("Circular OpenAPI $ref detected and skipped: %s", ref_path)
+            return {}
+        visited.add(ref_path)
 
         parts = ref_path.lstrip("#/").split("/")
         curr: Any = self.raw_spec
@@ -239,7 +249,7 @@ class APIReconAgent:
                 return {}
 
         if isinstance(curr, dict) and "$ref" in curr:
-            return self.resolve_ref(curr["$ref"])
+            return self.resolve_ref(curr["$ref"], seen_refs=visited)
         return curr if isinstance(curr, dict) else {}
 
     def _extract_schema_properties(self, schema: dict[str, Any]) -> list[RequestBodyField]:

@@ -74,7 +74,10 @@ def test_dashboard_sessions_api(client: TestClient):
         db.close()
 
     # Query GET /dashboard/sessions
-    res = client.get(f"/dashboard/sessions?client_ip={test_ip}")
+    res = client.get(
+        f"/dashboard/sessions?client_ip={test_ip}",
+        headers={"X-API-Key": "dev-admin-secret-key-change-me"},
+    )
     assert res.status_code == 200
     data = res.json()
     assert "items" in data

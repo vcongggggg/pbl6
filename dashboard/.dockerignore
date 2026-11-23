@@ -1,0 +1,11 @@
+node_modules/
+.next/
+out/
+.env
+.env.*
+tsconfig.tsbuildinfo
+.git/
+.gitignore
+npm-debug.log*
+README.md
+

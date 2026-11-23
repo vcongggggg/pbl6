@@ -35,8 +35,8 @@ export const MetricCards: React.FC<MetricCardsProps> = ({
   const rateLimitedCount = stats?.rate_limited_count ?? 0;
   const safeRate = stats?.safe_request_rate ?? 100;
 
-  // Derive estimated RPS
-  const rps = totalRequests > 0 ? Math.max(1, Math.round(totalRequests / 90)) : 0;
+  // Real current RPS computed over the trailing 60-second window on the Gateway backend
+  const rps = stats?.current_rps ?? 0;
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
@@ -49,7 +49,7 @@ export const MetricCards: React.FC<MetricCardsProps> = ({
             Total Traffic
           </span>
           <span className="text-[11px] px-2 py-0.5 rounded-full bg-cyan-950/60 text-cyan-400 border border-cyan-800/50 font-mono">
-            RPS: {rps} req/s
+            RPS: {rps.toFixed(2)} req/s
           </span>
         </div>
         <div className="mt-3">

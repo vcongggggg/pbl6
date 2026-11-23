@@ -37,12 +37,13 @@ class Settings(BaseSettings):
 
     # Traffic Logging Limits
     max_body_log_bytes: int = 4096
+    max_request_body_bytes: int = 1048576  # Max request body size: 1MB (SEC-PBL6-002)
 
     # WAF Controls (Baseline flags for future phases)
     waf_mode: Literal["OFF", "MONITOR_ONLY", "ACTIVE_BLOCKING", "HYBRID"] = "MONITOR_ONLY"
-    ml_enabled: bool = False
-    anomaly_enabled: bool = False
-    rate_limit_enabled: bool = False
+    ml_enabled: bool = True
+    anomaly_enabled: bool = True
+    rate_limit_enabled: bool = True
 
     # ML Fail-Safe & Resilience (Master Plan A3)
     ml_unavailable_risk_penalty: float = 15.0

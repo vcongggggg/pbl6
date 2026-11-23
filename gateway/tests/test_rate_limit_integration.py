@@ -131,4 +131,4 @@ def test_rate_limit_monitor_only_does_not_block(client: TestClient):
         event = db.query(SecurityEvent).filter(SecurityEvent.request_id == last_req_id).first()
         assert event is not None
         assert event.attack_type == "RATE_LIMIT_EXCEEDED"
-        assert event.action == "DETECTED"
+        assert event.action in ("DETECTED", "MONITOR")

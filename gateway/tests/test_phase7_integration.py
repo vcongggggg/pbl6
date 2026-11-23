@@ -108,7 +108,7 @@ def test_phase7_monitor_only_mode_forwards_and_attaches_headers(client: TestClie
     with SessionLocal() as db:
         sec_event = db.query(SecurityEvent).filter(SecurityEvent.request_id == req_id).first()
         assert sec_event is not None
-        assert sec_event.action == "DETECTED"
+        assert sec_event.action in ("DETECTED", "MONITOR")
         assert sec_event.risk_score > 0.0
 
 
