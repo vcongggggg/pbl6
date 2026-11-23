@@ -53,8 +53,13 @@ pnpm-debug.log*
 
 # Databases
 *.db
+*.db-wal
+*.db-shm
+*.db-journal
 *.sqlite
 *.sqlite3
+gateway/data/
+dashboard/tsconfig.tsbuildinfo
 
 # ML Data & Artifacts (Preserve structure via .gitkeep)
 data/raw/*

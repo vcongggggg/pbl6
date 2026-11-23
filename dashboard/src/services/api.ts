@@ -1,5 +1,7 @@
 ﻿import { config } from "@/config/env";
 import {
+  ArenaBattleResult,
+  ArenaHistoryResponse,
   AttackDistributionItem,
   ProtocolDistributionItem,
   CyberRangeTopology,
@@ -188,4 +190,67 @@ export async function fetchAttackSessions(params: {
     throw new Error(`Failed to fetch attack sessions: HTTP ${res.status}`);
   }
   return res.json();
+}
+
+// -----------------------------------------------------------------------------
+// AI Arena (Task 10.4) — 100% Real Server-Side BFF API (Zero Synthetic Fallback)
+// -----------------------------------------------------------------------------
+
+export async function triggerArenaBattle(
+  campaign: string = "all",
+  maxRounds: number = 8,
+  targetMode: "waf" | "direct" = "waf"
+): Promise<ArenaBattleResult> {
+  const apiBase = await getApiBase();
+  const headers = await getAdminHeaders();
+  const res = await fetch(`${apiBase}/api/dashboard/arena/battle`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({
+      campaign: campaign.toLowerCase(),
+      max_rounds: maxRounds,
+      target_mode: targetMode,
+    }),
+  });
+  if (!res.ok) {
+    throw new Error(`Failed to execute arena battle: HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function fetchArenaLive(): Promise<ArenaBattleResult | null> {
+  const apiBase = await getApiBase();
+  const res = await fetch(`${apiBase}/api/dashboard/arena/live`, {
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    throw new Error(`Failed to fetch live arena battle: HTTP ${res.status}`);
+  }
+  const data = await res.json();
+  if (!data || data.status === "idle" || !data.battle_id) {
+    return null;
+  }
+  return data;
+}
+
+export async function fetchArenaHistory(): Promise<ArenaHistoryResponse> {
+  const apiBase = await getApiBase();
+  const res = await fetch(`${apiBase}/api/dashboard/arena/history`, {
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    throw new Error(`Failed to fetch arena history: HTTP ${res.status}`);
+  }
+  const data = await res.json();
+  return {
+    total_battles: data.total_battles ?? 0,
+    red_wins: data.red_wins ?? data.red_team_wins ?? 0,
+    blue_wins: data.blue_wins ?? data.blue_team_wins ?? 0,
+    red_team_wins: data.red_team_wins ?? data.red_wins ?? 0,
+    blue_team_wins: data.blue_team_wins ?? data.blue_wins ?? 0,
+    draw_count: data.draw_count ?? 0,
+    red_team_win_rate: data.red_team_win_rate ?? 0,
+    blue_team_defense_rate: data.blue_team_defense_rate ?? 0,
+    battles: Array.isArray(data.battles) ? data.battles : [],
+  };
 }

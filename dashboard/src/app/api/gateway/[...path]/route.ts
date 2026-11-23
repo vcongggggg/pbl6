@@ -14,7 +14,10 @@ const ALLOWED_DASHBOARD_ENDPOINTS = new Set([
   "reset-demo",
   "seed-demo",
   "toggle-waf-mode",
+  "arena",
 ]);
+
+const ALLOWED_ARENA_SUBPATHS = new Set(["battle", "live", "history"]);
 
 /**
  * Next.js Server-Side BFF (Backend-For-Frontend) Proxy Route (SEC-PBL6-004)
@@ -52,11 +55,24 @@ async function proxyRequest(request: NextRequest, { params }: { params: { path: 
     );
   }
 
-  // (b) Whitelist check on dashboard endpoint
+  // (b) Whitelist check on dashboard endpoint (and strict Arena subpaths)
   const targetEndpoint = segments[1];
   if (!ALLOWED_DASHBOARD_ENDPOINTS.has(targetEndpoint)) {
     return NextResponse.json(
       { error: `Forbidden: Endpoint '${targetEndpoint}' is not allowed.` },
+      { status: 403 }
+    );
+  }
+  if (targetEndpoint === "arena") {
+    if (segments.length !== 3 || !ALLOWED_ARENA_SUBPATHS.has(segments[2])) {
+      return NextResponse.json(
+        { error: "Forbidden: Invalid Arena endpoint path." },
+        { status: 403 }
+      );
+    }
+  } else if (segments.length !== 2) {
+    return NextResponse.json(
+      { error: "Forbidden: Unexpected extra dashboard path segments." },
       { status: 403 }
     );
   }

@@ -5,7 +5,7 @@ import urllib.parse
 from typing import Any
 
 import httpx
-from fastapi import APIRouter, Depends, Query, Request
+from fastapi import APIRouter, Body, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 from sqlalchemy import func
 from sqlalchemy.orm import Session
@@ -631,18 +631,46 @@ def seed_demo_data_endpoint(db: Session = Depends(get_db)) -> dict[str, Any]:
     return result
 
 
-@router.post("/toggle-waf-mode", summary="Toggle WAF mode between MONITOR_ONLY and ACTIVE_BLOCKING", dependencies=[Depends(require_admin)])
+class ToggleWafModeRequest(BaseModel):
+    mode: str | None = Field(
+        default=None,
+        description="Optional explicit mode: MONITOR_ONLY, ACTIVE_BLOCKING, or OFF. Omit to toggle.",
+    )
+    waf_mode: str | None = Field(
+        default=None,
+        description="Backward-compatible alias for mode.",
+    )
+
+
+@router.post("/toggle-waf-mode", summary="Toggle or set WAF mode between MONITOR_ONLY and ACTIVE_BLOCKING", dependencies=[Depends(require_admin)])
 def toggle_waf_mode_endpoint(
+    payload: ToggleWafModeRequest | None = Body(default=None),
     db: Session = Depends(get_db),
     settings: Settings = Depends(get_settings),
 ) -> dict[str, Any]:
-    """Toggles runtime WAF operational mode between MONITOR_ONLY and ACTIVE_BLOCKING."""
+    """Toggles or explicitly sets runtime WAF operational mode (MONITOR_ONLY / ACTIVE_BLOCKING / OFF)."""
     from app.api.proxy import invalidate_waf_mode_cache
     from app.db.models import AuditLog
 
     cfg = db.query(WafConfigModel).filter(WafConfigModel.key == "waf_mode").first()
     current_mode = cfg.value if (cfg and cfg.value) else settings.waf_mode
-    new_mode = "ACTIVE_BLOCKING" if current_mode == "MONITOR_ONLY" else "MONITOR_ONLY"
+
+    requested_raw = None
+    if payload is not None:
+        requested_raw = payload.mode or payload.waf_mode
+
+    if requested_raw:
+        normalized = requested_raw.strip().upper()
+        if normalized == "ACTIVE_BLOCK":
+            normalized = "ACTIVE_BLOCKING"
+        if normalized not in ("MONITOR_ONLY", "ACTIVE_BLOCKING", "OFF"):
+            raise HTTPException(
+                status_code=422,
+                detail=f"Invalid waf_mode '{requested_raw}'. Expected MONITOR_ONLY, ACTIVE_BLOCKING, or OFF.",
+            )
+        new_mode = normalized
+    else:
+        new_mode = "ACTIVE_BLOCKING" if current_mode == "MONITOR_ONLY" else "MONITOR_ONLY"
 
     if cfg:
         cfg.value = new_mode
