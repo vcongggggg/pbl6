@@ -36,5 +36,32 @@
       "api_evolving_client_strict_schema_on_pct": 13.33,
       "policy_conclusion": "Strict FPR on B1000 dropped from 4.0% -> 0.0% (Schema OFF) and 8.5% -> 0.0% (Schema ON) with 0.00% Recall loss. In v3.2 Phase D3, SCHEMA_VALIDATION_ENABLED is enabled by default under route_tiered policy: undocumented routes receive telemetry notice without penalty (operational FPR 0.000%, aggregate strict FPR 0.117%), while evolving REST clients exhibit 13.33% strict contract audit rate solely on documented schema parameter mismatches."
     }
-  ]
+  ],
+  "rest_corpus_strict_fp_breakdown": {
+    "total_samples": 15,
+    "operational_fp_pct": 0.0,
+    "strict_penalty_violations_count": 2,
+    "strict_penalty_violations_pct": 13.33,
+    "undocumented_routes_count": 1,
+    "details": [
+      {
+        "method": "GET",
+        "path": "/api/v1/vulnerable/books/search/",
+        "reason": "MISSING_PARAMETER: required 'q' is missing",
+        "is_penalty": true
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/vulnerable/users/profile/update/",
+        "reason": "ADDITIONAL_PROPERTY_NOT_ALLOWED: extra 'display_name' on sensitive locked endpoint",
+        "is_penalty": true
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/vulnerable/catalog/categories/",
+        "reason": "UNDOCUMENTED_ROUTE: route not in Bookie spec",
+        "is_penalty": false
+      }
+    ]
+  }
 }

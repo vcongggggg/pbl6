@@ -26,7 +26,8 @@
         "COMMAND_INJECTION": 0
       },
       "blocked": 195,
-      "recall_pct": 99.49
+      "recall_pct": 99.49,
+      "detection_recall_loose_pct": 99.49
     },
     "group_b_parameter_tampering": {
       "count": 1304,

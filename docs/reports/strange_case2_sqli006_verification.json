@@ -1,0 +1,64 @@
+{
+  "metadata": {
+    "task_id": "pbl6-v3-2-fix-002",
+    "verification_target": "Strange Suite Case 2 SQLI-006 Activation",
+    "measured_at": "2026-11-24T21:15:00+07:00",
+    "rules_count": 26
+  },
+  "case_details": {
+    "suite": "strange_heldout",
+    "case_id": 2,
+    "endpoint": "/api/v3/catalog/items",
+    "parameter": "category_id",
+    "raw_payload": "105 OR 17-7=10",
+    "full_request_url": "/api/v3/catalog/items?category_id=105%20OR%2017-7%3D10",
+    "attack_family": "SQL_INJECTION"
+  },
+  "waf_inspection_layers": {
+    "layer_1_rules": {
+      "matched": true,
+      "rule_score": 92.2,
+      "matched_rules": [
+        {
+          "rule_id": "SQLI-006",
+          "description": "Unquoted Logical/Arithmetic Tautology and Time-Delay SQLi (Arithmetic Tautology: 17-7 = 10)",
+          "attack_type": "AttackType.SQL_INJECTION",
+          "location": "InspectionLocation.QUERY",
+          "confidence": 0.98
+        },
+        {
+          "rule_id": "SQLI-006",
+          "description": "Unquoted Logical/Arithmetic Tautology and Time-Delay SQLi (Arithmetic Tautology: 17-7 = 10)",
+          "attack_type": "AttackType.SQL_INJECTION",
+          "location": "InspectionLocation.QUERY",
+          "confidence": 0.98
+        }
+      ],
+      "sqli_006_activated": true
+    },
+    "layer_2_xgboost": {
+      "is_attack": false,
+      "confidence": 0.8318,
+      "attack_type": "BENIGN"
+    },
+    "layer_3_isolation_forest": {
+      "is_anomaly": false,
+      "anomaly_score": 51.48
+    },
+    "layer_4_decision": {
+      "risk_score": 78.86,
+      "action": "PolicyAction.BLOCK",
+      "is_blocked": true,
+      "reason": "High-confidence attack signature confirmed (Rule: 92.2 >= 85.0) - immediate block enforcement (Torrano-Gimenez 2015).",
+      "blocking_layer": "LAYER_1_DETERMINISTIC_RULES (SQLI-006 unquoted arithmetic tautology)"
+    }
+  },
+  "strange_suite_overall_block_rate": {
+    "total_cases": 18,
+    "passes": 3,
+    "total_episodes": 54,
+    "blocked_episodes": 51,
+    "block_rate_pct": 94.44,
+    "case_2_blocked_across_passes": "3/3 (100.0%)"
+  }
+}

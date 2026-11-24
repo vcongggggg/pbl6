@@ -261,6 +261,7 @@ def audit_csic2010() -> dict[str, Any]:
                 },
                 "blocked": group_a_blocked,
                 "recall_pct": round(group_a_recall, 2),
+                "detection_recall_loose_pct": round(group_a_recall, 2),
             },
             "group_b_parameter_tampering": {
                 "count": group_b_count,

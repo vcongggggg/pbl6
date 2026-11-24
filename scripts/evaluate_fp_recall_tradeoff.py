@@ -273,7 +273,7 @@ def run_tradeoff_sweep():
                 f"across all three benign corpora while achieving {chosen['csic_group_a_recall_pct']:.2f}% ({chosen['csic_group_a_blocked']}/{csic_group_a_total}) "
                 f"block recall on CSIC Group A True Payload Attacks, {chosen['csic_total_recall_pct']:.2f}% ({chosen['csic_total_blocked']}/{total_csic_attack}) "
                 f"block recall on CSIC total, and {chosen['b1000_recall_pct']:.2f}% ({chosen['b1000_total_blocked']}/{total_b1000_attack}) on B1000. "
-                "On standard CSIC 2010 and B1000 corpora, Dual-AI Consensus yields identical block metrics to Baseline-80 (168/196, 782/800) "
+                f"On standard CSIC 2010 and B1000 corpora, Dual-AI Consensus yields identical block metrics to Baseline-80 ({chosen['csic_group_a_blocked']}/{csic_group_a_total}, {chosen['b1000_total_blocked']}/{total_b1000_attack}) "
                 "with 0 false positive regressions, serving as an architectural safeguard against score dilution on evasive vectors."
             ),
         },
