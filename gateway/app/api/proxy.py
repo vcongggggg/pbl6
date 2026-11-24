@@ -163,9 +163,11 @@ def _run_security_inspection(
             query_params=query_str,
             body_bytes=body_bytes,
             content_type=content_type,
+            policy=getattr(settings, "schema_enforcement_policy", "route_tiered"),
         )
+        has_penalty_violations = any(v.is_penalty for v in schema_violations)
         if (
-            schema_violations
+            has_penalty_violations
             and settings.schema_strict_mode
             and active_waf_mode not in ("OFF", "MONITOR_ONLY", "MONITOR")
         ):
@@ -702,7 +704,8 @@ async def proxy_endpoint(
             round(risk_breakdown.weighted_score + 25.0, 2),
         )
 
-    if settings.schema_validation_enabled and schema_violations:
+    has_penalty_violations = any(v.is_penalty for v in schema_violations)
+    if settings.schema_validation_enabled and has_penalty_violations:
         logger.info(
             f"Applying Positive Security risk penalty: +{settings.schema_violation_penalty} to request [{request_id}]"
         )
@@ -724,10 +727,11 @@ async def proxy_endpoint(
     )
 
     # 8. Prepare security event record payload if attacks or elevated risk observed
+    has_penalty_violations = any(v.is_penalty for v in schema_violations)
     detection_kwargs: dict[str, Any] | None = None
     record_security_event = (
         (detection_result and (detection_result.is_attack or decision.action != PolicyAction.ALLOW))
-        or bool(settings.schema_validation_enabled and schema_violations)
+        or bool(settings.schema_validation_enabled and has_penalty_violations)
     )
     if record_security_event:
         action_label = (
@@ -741,7 +745,7 @@ async def proxy_endpoint(
         )
         override_type = None
         if not detection_result or not detection_result.is_attack:
-            if settings.schema_validation_enabled and schema_violations:
+            if settings.schema_validation_enabled and has_penalty_violations:
                 override_type = "SCHEMA_VIOLATION"
             elif not ml_is_available:
                 override_type = "ML_UNAVAILABLE"
@@ -966,6 +970,8 @@ async def proxy_endpoint(
         if anomaly_result and anomaly_result.model_loaded:
             response.headers["X-WAF-Anomaly-Score"] = str(anomaly_result.anomaly_score)
             response.headers["X-WAF-Anomaly-Latency"] = f"{anomaly_result.latency_ms}ms"
+        if any(v.violation_type == "UNDOCUMENTED_ROUTE" for v in schema_violations):
+            response.headers["X-WAF-Schema-Notice"] = "UNDOCUMENTED_ROUTE"
 
     # 10. Offload SQLite persistence into FastAPI BackgroundTasks (PERF-PBL6-001)
     background_tasks.add_task(

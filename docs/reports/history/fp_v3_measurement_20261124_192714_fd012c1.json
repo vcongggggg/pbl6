@@ -1,0 +1,91 @@
+{
+  "metadata": {
+    "task_id": "pbl6-v3-fix-round-001 / A1.1",
+    "measured_at": "2026-11-24T19:21:56+0700",
+    "active_rules_total": 26,
+    "v3_added_rule_ids": [
+      "CMD-005",
+      "SSRF-001",
+      "SSRF-002",
+      "SSRF-003",
+      "SSRF-004",
+      "NOSQLI-001",
+      "NOSQLI-002",
+      "MASS-001",
+      "MASS-002"
+    ],
+    "stateful_guards": [
+      "BOLADetector (window=60s, threshold=4)",
+      "ResponseDLPGuard (<=512KB JSON)"
+    ],
+    "definitions": {
+      "fp_operational": "Benign request actively blocked (HTTP 403) or throttled (HTTP 429) in ACTIVE_BLOCKING mode.",
+      "fp_strict_schema_off": "Benign request triggering ANY rule match, ML is_attack, IForest >= 60.0, or Decision != ALLOW (risk >= 30.0) with schema_validation_enabled=False.",
+      "fp_strict_schema_on": "Same as fp_strict_schema_off PLUS any OpenAPI SchemaValidator violation (missing param, extra field, undocumented sub-route) with schema_validation_enabled=True."
+    }
+  },
+  "corpora": {
+    "benchmark_1000_diverse_benign": {
+      "corpus": "benchmark_1000_diverse_benign",
+      "benign_samples": 200,
+      "fp_operational_count": 0,
+      "fp_operational_pct": 0.0,
+      "fp_strict_schema_off_count": 0,
+      "fp_strict_schema_off_pct": 0.0,
+      "fp_strict_schema_on_count": 0,
+      "fp_strict_schema_on_pct": 0.0,
+      "schema_only_additional_fp_count": 0,
+      "triggered_rules": {},
+      "pillar_flag_counts": {},
+      "schema_violation_breakdown": {
+        "UNDOCUMENTED_ROUTE": 150
+      }
+    },
+    "csic2010_benign": {
+      "corpus": "csic2010_benign",
+      "benign_samples": 1500,
+      "fp_operational_count": 0,
+      "fp_operational_pct": 0.0,
+      "fp_strict_schema_off_count": 0,
+      "fp_strict_schema_off_pct": 0.0,
+      "fp_strict_schema_on_count": 0,
+      "fp_strict_schema_on_pct": 0.0,
+      "schema_only_additional_fp_count": 0,
+      "triggered_rules": {},
+      "pillar_flag_counts": {},
+      "schema_violation_breakdown": {
+        "UNDOCUMENTED_ROUTE": 1500
+      }
+    },
+    "bookie_and_rest_api_benign": {
+      "corpus": "bookie_and_rest_api_benign",
+      "benign_samples": 15,
+      "fp_operational_count": 0,
+      "fp_operational_pct": 0.0,
+      "fp_strict_schema_off_count": 0,
+      "fp_strict_schema_off_pct": 0.0,
+      "fp_strict_schema_on_count": 2,
+      "fp_strict_schema_on_pct": 13.33,
+      "schema_only_additional_fp_count": 2,
+      "triggered_rules": {},
+      "pillar_flag_counts": {
+        "schema_violation": 2
+      },
+      "schema_violation_breakdown": {
+        "MISSING_PARAMETER": 1,
+        "ADDITIONAL_PROPERTY_NOT_ALLOWED": 1,
+        "UNDOCUMENTED_ROUTE": 1
+      }
+    }
+  },
+  "aggregate_summary": {
+    "total_benign_evaluated": 1715,
+    "fp_operational_count": 0,
+    "fp_operational_pct": 0.0,
+    "fp_strict_schema_off_count": 0,
+    "fp_strict_schema_off_pct": 0.0,
+    "fp_strict_schema_on_count": 2,
+    "fp_strict_schema_on_pct": 0.117,
+    "v3_new_guards_false_positives": 0
+  }
+}

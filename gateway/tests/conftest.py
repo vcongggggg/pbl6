@@ -7,6 +7,7 @@ from fastapi.testclient import TestClient
 os.environ["APP_ENV"] = "test"
 os.environ["DATABASE_URL"] = "sqlite:///./data/test_waf.db"
 os.environ["TARGET_API_URL"] = "http://vulnerable-api:5000"
+os.environ["WAF_MODE"] = "MONITOR_ONLY"
 
 # Remove existing stale test db before importing and initializing
 test_db_path = "./data/test_waf.db"

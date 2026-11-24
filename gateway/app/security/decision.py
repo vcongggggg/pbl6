@@ -52,6 +52,8 @@ class DecisionEngine:
     DEFAULT_CRITICAL_RULE_THRESHOLD: float = 85.0
     DEFAULT_CRITICAL_ML_THRESHOLD: float = 90.0
     DEFAULT_CRITICAL_RF_THRESHOLD: float = 90.0  # Backward-compatible alias
+    DEFAULT_DUAL_AI_ML_THRESHOLD: float = 75.0
+    DEFAULT_DUAL_AI_ANOMALY_THRESHOLD: float = 70.0
 
     def __init__(
         self,
@@ -61,6 +63,9 @@ class DecisionEngine:
         critical_rule_threshold: float = DEFAULT_CRITICAL_RULE_THRESHOLD,
         critical_ml_threshold: float = DEFAULT_CRITICAL_ML_THRESHOLD,
         critical_rf_threshold: float | None = None,
+        dual_ai_ml_threshold: float = DEFAULT_DUAL_AI_ML_THRESHOLD,
+        dual_ai_anomaly_threshold: float = DEFAULT_DUAL_AI_ANOMALY_THRESHOLD,
+        enable_dual_ai_consensus: bool = True,
     ) -> None:
         """Initializes thresholds for policy boundaries."""
         self.allow_threshold = allow_threshold
@@ -72,6 +77,9 @@ class DecisionEngine:
         )
         self.critical_ml_threshold = effective_ml_thresh
         self.critical_rf_threshold = effective_ml_thresh  # Backward compatibility
+        self.dual_ai_ml_threshold = dual_ai_ml_threshold
+        self.dual_ai_anomaly_threshold = dual_ai_anomaly_threshold
+        self.enable_dual_ai_consensus = enable_dual_ai_consensus
 
     def evaluate(
         self,
@@ -94,14 +102,29 @@ class DecisionEngine:
         normalized_mode = (waf_mode or "ACTIVE_BLOCKING").upper()
 
         # 1. High-Confidence Threat Override check (Model-Agnostic: checks ml_score or rf_score)
-        is_critical_signature = risk_breakdown.rule_score >= self.critical_rule_threshold
+        rule_score = risk_breakdown.rule_score
+        is_critical_signature = rule_score >= self.critical_rule_threshold
         ml_score = risk_breakdown.ml_score if risk_breakdown.ml_score is not None else risk_breakdown.rf_score
+        anom_score = risk_breakdown.anomaly_score or 0.0
+
         is_critical_ml = (
             ml_score is not None
             and ml_score >= self.critical_ml_threshold
         )
+        is_dual_ai_consensus = (
+            self.enable_dual_ai_consensus
+            and rule_score == 0.0
+            and ml_score is not None
+            and ml_score >= self.dual_ai_ml_threshold
+            and anom_score >= self.dual_ai_anomaly_threshold
+        )
 
-        if score >= self.rate_limit_threshold or is_critical_signature or is_critical_ml:
+        if (
+            score >= self.rate_limit_threshold
+            or is_critical_signature
+            or is_critical_ml
+            or is_dual_ai_consensus
+        ):
             base_action = PolicyAction.BLOCK
         elif score >= self.monitor_threshold:
             base_action = PolicyAction.RATE_LIMIT
@@ -155,6 +178,13 @@ class DecisionEngine:
                 reason = (
                     f"High-confidence supervised ML classification confirmed (Score: {ml_score:.1f} "
                     f">= {self.critical_ml_threshold:.1f}) - immediate block enforcement."
+                )
+            elif is_dual_ai_consensus:
+                effective_score = max(score, (ml_score or 0.0) * 0.6 + anom_score * 0.4)
+                reason = (
+                    f"Dual-AI Consensus confirmed (ML: {ml_score:.1f} >= {self.dual_ai_ml_threshold:.1f}, "
+                    f"Anomaly: {anom_score:.1f} >= {self.dual_ai_anomaly_threshold:.1f}, Rule: 0.0) "
+                    "- immediate block override preventing score dilution."
                 )
             else:
                 reason = (

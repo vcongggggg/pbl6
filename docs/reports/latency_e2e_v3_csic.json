@@ -7,7 +7,11 @@
     "transport": "Real TCP HTTP/1.1 Keep-Alive (httpx.Client -> uvicorn WAF Gateway :8055 -> uvicorn ASGI Upstream :5055)",
     "waf_mode": "ACTIVE_BLOCKING (Full v3.0: InputNormalizer + 25 Rules + 5 OWASP API Guards + XGBoost 26-D + IForest 26-D + Response DLP + Background SQLite WAL)",
     "wall_clock_seconds": 13.03,
-    "sequential_rps": 230.2
+    "sequential_rps": 230.2,
+    "history_snapshot": "docs/reports/history/latency_e2e_v3_csic_20261124_192715_fd012c1.json",
+    "git_base_sha": "fd012c1d17e42f531b635cbe94c7dd738023ee0f",
+    "cpu_load_pct": 25.5,
+    "last_pointer_update": "2026-11-24T19:27:15.274065"
   },
   "http_e2e_latency_ms": {
     "mean_ms": 4.203,

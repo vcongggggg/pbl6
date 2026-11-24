@@ -1,0 +1,49 @@
+{
+  "metadata": {
+    "dataset": "CSIC 2010 HTTP Dataset (csic_2010_benchmark.csv)",
+    "total_attack_samples": 1500,
+    "total_benign_samples": 1500,
+    "audit_methodology": "Recursive URL-decode (depth=3) + regex with strict word boundary (\\b)",
+    "history_snapshot": "docs/reports/history/csic2010_taxonomy_breakdown_20261124_192714_fd012c1.json",
+    "git_base_sha": "fd012c1d17e42f531b635cbe94c7dd738023ee0f",
+    "cpu_load_pct": 43.8,
+    "last_pointer_update": "2026-11-24T19:27:14.816512"
+  },
+  "reviewer_sqli_finding_verification": {
+    "total_original_sqli_labeled": 254,
+    "true_sqli_count": 118,
+    "mislabeled_insertar_count": 136,
+    "mislabeled_other_count": 0,
+    "total_mislabeled_sqli": 136,
+    "mislabeled_pct": 53.54,
+    "verified_reviewer_number": 136
+  },
+  "two_tier_breakdown": {
+    "group_a_true_payload": {
+      "count": 196,
+      "percentage": 13.07,
+      "categories": {
+        "SQLI": 118,
+        "XSS": 78,
+        "PATH_TRAVERSAL": 0,
+        "COMMAND_INJECTION": 0
+      },
+      "blocked": 195,
+      "recall_pct": 99.49
+    },
+    "group_b_parameter_tampering": {
+      "count": 1304,
+      "percentage": 86.93,
+      "categories": {
+        "PARAMETER_TAMPERING": 1304
+      },
+      "blocked": 50,
+      "recall_pct": 3.83
+    },
+    "total_overall": {
+      "count": 1500,
+      "blocked": 245,
+      "recall_pct": 16.33
+    }
+  }
+}

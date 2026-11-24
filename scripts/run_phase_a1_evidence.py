@@ -172,19 +172,20 @@ def run_a1_1_fp_measurement() -> dict[str, Any]:
                 pillar_flags["iforest_ge_60"] += 1
             if has_non_allow:
                 pillar_flags["decision_non_allow_ge_30"] += 1
-            if s_violations:
+            has_penalty_violations = any(sv.is_penalty for sv in s_violations)
+            if has_penalty_violations:
                 pillar_flags["schema_violation"] += 1
 
             is_strict_off = bool(has_rule or has_ml or has_anom60 or has_non_allow)
             if is_strict_off:
                 strict_fp_schema_off += 1
 
-            # Strict FP (Schema ON): also counts any schema violation or +25 schema penalty pushing score >= 30
-            rb_schema_on = min(100.0, rb.weighted_score + (25.0 if s_violations else 0.0))
-            is_strict_on = bool(is_strict_off or bool(s_violations) or rb_schema_on >= 30.0)
+            # Strict FP (Schema ON): also counts any real schema penalty violation or +25 schema penalty pushing score >= 30
+            rb_schema_on = min(100.0, rb.weighted_score + (25.0 if has_penalty_violations else 0.0))
+            is_strict_on = bool(is_strict_off or bool(has_penalty_violations) or rb_schema_on >= 30.0)
             if is_strict_on:
                 strict_fp_schema_on += 1
-            if s_violations and not is_strict_off:
+            if has_penalty_violations and not is_strict_off:
                 schema_only_fp += 1
 
         return {

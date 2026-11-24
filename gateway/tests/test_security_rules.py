@@ -70,6 +70,17 @@ def test_sqli_rules():
         is None
     )
 
+    # SQLI-006: Unquoted Logical/Arithmetic Tautology and Time-Delay
+    assert rules["SQLI-006"].evaluate("105 OR 17-7=10", InspectionLocation.QUERY) is not None
+    assert rules["SQLI-006"].evaluate("105 AND 17-7=10", InspectionLocation.QUERY) is not None
+    assert rules["SQLI-006"].evaluate("105 OR 5*2=10", InspectionLocation.QUERY) is not None
+    assert rules["SQLI-006"].evaluate("105 OR 10-5 LIKE 5", InspectionLocation.QUERY) is not None
+    assert rules["SQLI-006"].evaluate("105 OR 10!=9", InspectionLocation.QUERY) is not None
+    assert rules["SQLI-006"].evaluate("WAITFOR DELAY '0:0:5'", InspectionLocation.QUERY) is not None
+    assert rules["SQLI-006"].evaluate("WAITFOR TIME '23:00'", InspectionLocation.QUERY) is not None
+    assert rules["SQLI-006"].evaluate("delivery in 1 or 2 days", InspectionLocation.QUERY) is None
+    assert rules["SQLI-006"].evaluate("order 1 or 2 items", InspectionLocation.QUERY) is None
+
 
 def test_xss_rules():
     """Verifies all XSS rules on positive and negative cases."""

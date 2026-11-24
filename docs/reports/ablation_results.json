@@ -10,7 +10,11 @@
     "feature_dim": 26,
     "timestamp": "2026-11-23 16:21:36",
     "device": "Machine 1 (Blue Team Host)",
-    "methodology_note": "Unified 26-D feature extraction (extract_26_from_http) shared once per request in Hybrid mode; each mode measures ONLY its active detector(s) latency. Blocking decision follows DecisionEngine ACTIVE_BLOCKING (>=80 block or Rule>=85/ML>=90 override). Anomaly Only also reports detection @60.0."
+    "methodology_note": "Unified 26-D feature extraction (extract_26_from_http) shared once per request in Hybrid mode; each mode measures ONLY its active detector(s) latency. Blocking decision follows DecisionEngine ACTIVE_BLOCKING (>=80 block or Rule>=85/ML>=90 override). Anomaly Only also reports detection @60.0.",
+    "history_snapshot": "docs/reports/history/ablation_results_20261124_192715_fd012c1.json",
+    "git_base_sha": "fd012c1d17e42f531b635cbe94c7dd738023ee0f",
+    "cpu_load_pct": 48.0,
+    "last_pointer_update": "2026-11-24T19:27:15.695877"
   },
   "modes": {
     "rules_only": {

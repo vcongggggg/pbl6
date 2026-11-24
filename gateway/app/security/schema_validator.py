@@ -1,7 +1,7 @@
-"""OpenAPI Schema Validator for Positive Security Model (Master Plan B1).
+"""OpenAPI Schema Validator for Positive Security Model (Master Plan B1 & Phase D3).
 
 Enforces schema contracts by validating HTTP methods, path routes, query parameters,
-and request body payloads against OpenAPI 3.0 specification.
+and request body payloads against OpenAPI 3.0 specification with Route-Tiered Policy.
 """
 
 from __future__ import annotations
@@ -16,6 +16,28 @@ from urllib.parse import parse_qs
 
 logger = logging.getLogger("waf.gateway.security.schema_validator")
 
+# Common pagination / query filtering parameters allowed in telemetry mode
+_PAGINATION_TELEMETRY_PARAMS = {
+    "page",
+    "limit",
+    "offset",
+    "sort",
+    "order",
+    "search",
+    "p",
+    "page_size",
+}
+
+# Sensitive endpoints where additionalProperties=False is strictly locked
+_SENSITIVE_ENDPOINT_PREFIXES = (
+    "/api/v1/vulnerable/users/profile/update",
+    "/api/v1/vulnerable/auth/login",
+    "/api/v1/vulnerable/admin",
+    "/users/profile/update",
+    "/auth/login",
+    "/admin",
+)
+
 
 @dataclass(frozen=True, slots=True)
 class SchemaViolation:
@@ -24,16 +46,18 @@ class SchemaViolation:
     field: str
     reason: str
     violation_type: str
+    is_penalty: bool = True
 
-    def to_dict(self) -> dict[str, str]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "field": self.field,
             "reason": self.reason,
             "violation_type": self.violation_type,
+            "is_penalty": self.is_penalty,
         }
 
 
-# Canonical Target API OpenAPI Spec Fallback (ensures offline reliability)
+# Canonical Target API OpenAPI Spec Fallback (ensures offline reliability & synced with Bookie)
 BUILTIN_TARGET_SPEC: dict[str, Any] = {
     "openapi": "3.0.3",
     "info": {
@@ -50,6 +74,7 @@ BUILTIN_TARGET_SPEC: dict[str, Any] = {
                         "application/json": {
                             "schema": {
                                 "type": "object",
+                                "additionalProperties": False,
                                 "properties": {
                                     "username": {"type": "string"},
                                     "password": {"type": "string"},
@@ -61,6 +86,52 @@ BUILTIN_TARGET_SPEC: dict[str, Any] = {
                 },
             }
         },
+        "/api/v1/vulnerable/books/": {
+            "get": {
+                "summary": "List Books Catalog",
+                "parameters": [
+                    {"name": "category", "in": "query", "required": False, "schema": {"type": "string"}},
+                    {"name": "page", "in": "query", "required": False, "schema": {"type": "integer"}},
+                    {"name": "limit", "in": "query", "required": False, "schema": {"type": "integer"}},
+                ],
+            },
+            "post": {
+                "summary": "Create New Book",
+                "requestBody": {
+                    "required": True,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "title": {"type": "string"},
+                                    "author": {"type": "string"},
+                                    "price": {"type": "number"},
+                                    "stock": {"type": "integer"},
+                                    "rating": {"type": "number"},
+                                    "description": {"type": "string"},
+                                    "category": {"type": "string"},
+                                },
+                                "required": ["title", "author", "price"],
+                            }
+                        }
+                    },
+                },
+            },
+        },
+        "/api/v1/vulnerable/books/{book_id}/": {
+            "get": {
+                "summary": "Book Detail",
+                "parameters": [
+                    {
+                        "name": "book_id",
+                        "in": "path",
+                        "required": True,
+                        "schema": {"type": "integer"},
+                    }
+                ],
+            }
+        },
         "/api/v1/vulnerable/books/search/": {
             "get": {
                 "summary": "Search Books Catalog",
@@ -70,7 +141,11 @@ BUILTIN_TARGET_SPEC: dict[str, Any] = {
                         "in": "query",
                         "required": True,
                         "schema": {"type": "string"},
-                    }
+                    },
+                    {"name": "page", "in": "query", "required": False, "schema": {"type": "integer"}},
+                    {"name": "limit", "in": "query", "required": False, "schema": {"type": "integer"}},
+                    {"name": "offset", "in": "query", "required": False, "schema": {"type": "integer"}},
+                    {"name": "sort", "in": "query", "required": False, "schema": {"type": "string"}},
                 ],
             }
         },
@@ -83,7 +158,9 @@ BUILTIN_TARGET_SPEC: dict[str, Any] = {
                         "in": "query",
                         "required": False,
                         "schema": {"type": "integer"},
-                    }
+                    },
+                    {"name": "page", "in": "query", "required": False, "schema": {"type": "integer"}},
+                    {"name": "limit", "in": "query", "required": False, "schema": {"type": "integer"}},
                 ],
             },
             "post": {
@@ -101,6 +178,33 @@ BUILTIN_TARGET_SPEC: dict[str, Any] = {
                                     "rating": {"type": "integer"},
                                     "review_text": {"type": "string"},
                                 },
+                            }
+                        }
+                    },
+                },
+            },
+        },
+        "/api/v1/vulnerable/orders/": {
+            "get": {
+                "summary": "List User Orders",
+                "parameters": [
+                    {"name": "user_id", "in": "query", "required": False, "schema": {"type": "integer"}},
+                ],
+            },
+            "post": {
+                "summary": "Create Order",
+                "requestBody": {
+                    "required": True,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "book_id": {"type": "integer"},
+                                    "quantity": {"type": "integer"},
+                                    "shipping_address": {"type": "string"},
+                                },
+                                "required": ["book_id", "quantity"],
                             }
                         }
                     },
@@ -129,6 +233,7 @@ BUILTIN_TARGET_SPEC: dict[str, Any] = {
                         "application/json": {
                             "schema": {
                                 "type": "object",
+                                "additionalProperties": False,
                                 "properties": {
                                     "host": {"type": "string"},
                                 },
@@ -137,6 +242,12 @@ BUILTIN_TARGET_SPEC: dict[str, Any] = {
                         }
                     },
                 },
+            }
+        },
+        "/api/v1/vulnerable/admin/health/": {
+            "get": {
+                "summary": "Admin Health Check",
+                "responses": {"200": {"description": "System operational status"}},
             }
         },
         "/api/v1/vulnerable/orders/{order_id}/": {
@@ -218,6 +329,46 @@ BUILTIN_TARGET_SPEC: dict[str, Any] = {
                 "responses": {"200": {"description": "User account listing"}},
             }
         },
+        "/api/v1/vulnerable/categories/": {
+            "get": {
+                "summary": "List Categories",
+                "parameters": [
+                    {"name": "category", "in": "query", "required": False, "schema": {"type": "string"}},
+                ],
+            }
+        },
+        "/api/v1/vulnerable/inventory/": {
+            "get": {
+                "summary": "Warehouse Inventory",
+                "parameters": [
+                    {"name": "warehouse_id", "in": "query", "required": False, "schema": {"type": "integer"}},
+                ],
+            }
+        },
+        "/api/v1/vulnerable/shipping/status/": {
+            "get": {
+                "summary": "Shipping Status",
+                "parameters": [
+                    {"name": "tracking_num", "in": "query", "required": False, "schema": {"type": "string"}},
+                ],
+            }
+        },
+        "/api/v1/vulnerable/discounts/": {
+            "get": {
+                "summary": "Discounts",
+                "parameters": [
+                    {"name": "code", "in": "query", "required": False, "schema": {"type": "string"}},
+                ],
+            }
+        },
+        "/api/v1/vulnerable/recommendations/": {
+            "get": {
+                "summary": "Personalized Recommendations",
+                "parameters": [
+                    {"name": "user_id", "in": "query", "required": False, "schema": {"type": "integer"}},
+                ],
+            }
+        },
         "/api/v1/vulnerable/openapi.json": {
             "get": {
                 "summary": "OpenAPI 3.0 Specification",
@@ -235,16 +386,18 @@ BUILTIN_TARGET_SPEC: dict[str, Any] = {
 
 
 class SchemaValidator:
-    """Validates incoming requests against OpenAPI specification."""
+    """Validates incoming requests against OpenAPI specification with Route-Tiered Policy."""
 
     def __init__(
         self,
         target_api_url: str = "http://vulnerable-api:5000",
         cache_ttl_seconds: int = 600,
         spec: dict[str, Any] | None = None,
+        enforcement_policy: str = "route_tiered",
     ) -> None:
         self.target_api_url = target_api_url.rstrip("/")
         self.cache_ttl_seconds = cache_ttl_seconds
+        self.enforcement_policy = enforcement_policy
         self._spec: dict[str, Any] = spec or BUILTIN_TARGET_SPEC
         self._last_fetch: float = time.time() if spec else 0.0
         self._compiled_paths: list[tuple[re.Pattern[str], str, dict[str, Any]]] = []
@@ -293,23 +446,39 @@ class SchemaValidator:
         query_params: str | dict[str, Any] | None = None,
         body_bytes: bytes | None = None,
         content_type: str | None = None,
+        policy: str | None = None,
     ) -> list[SchemaViolation]:
         """Validates HTTP request parameters and payload against OpenAPI specification."""
+        effective_policy = (policy or self.enforcement_policy).lower()
+        if effective_policy == "off":
+            return []
+
         violations: list[SchemaViolation] = []
         clean_method = method.lower()
-
         normalized_path = "/" + path.strip("/")
 
         matched = self._match_path(normalized_path)
         if not matched:
-            if normalized_path.startswith("/api/v1/vulnerable"):
+            if effective_policy == "route_tiered":
+                # Route not in spec in route_tiered mode: telemetry notice only (0 penalty)
                 violations.append(
                     SchemaViolation(
                         field="path",
-                        reason=f"Path '{normalized_path}' is not defined in target OpenAPI schema.",
-                        violation_type="ROUTE_NOT_FOUND",
+                        reason=f"Path '{normalized_path}' is undocumented in target OpenAPI contract.",
+                        violation_type="UNDOCUMENTED_ROUTE",
+                        is_penalty=False,
                     )
                 )
+            elif effective_policy == "strict_all":
+                if normalized_path.startswith("/api/v1/vulnerable"):
+                    violations.append(
+                        SchemaViolation(
+                            field="path",
+                            reason=f"Path '{normalized_path}' is not defined in target OpenAPI schema.",
+                            violation_type="ROUTE_NOT_FOUND",
+                            is_penalty=True,
+                        )
+                    )
             return violations
 
         template_path, operations, path_params = matched
@@ -321,6 +490,7 @@ class SchemaValidator:
                     field="method",
                     reason=f"Method '{method.upper()}' not allowed for path '{template_path}'. Allowed: {allowed_methods}",
                     violation_type="METHOD_NOT_ALLOWED",
+                    is_penalty=True,
                 )
             )
             return violations
@@ -331,10 +501,10 @@ class SchemaValidator:
         violations.extend(self._validate_path_params(operation_spec, path_params))
 
         # 2. Validate Query Parameters
-        violations.extend(self._validate_query_params(operation_spec, query_params))
+        violations.extend(self._validate_query_params(operation_spec, query_params, effective_policy))
 
         # 3. Validate Request Body
-        violations.extend(self._validate_request_body(operation_spec, body_bytes, content_type))
+        violations.extend(self._validate_request_body(operation_spec, body_bytes, content_type, template_path, effective_policy))
 
         return violations
 
@@ -363,6 +533,7 @@ class SchemaValidator:
                                 field=param_name,
                                 reason=f"Path parameter '{param_name}' expected integer, got '{val}'.",
                                 violation_type="TYPE_MISMATCH",
+                                is_penalty=True,
                             )
                         )
                 elif param_type == "number":
@@ -374,6 +545,7 @@ class SchemaValidator:
                                 field=param_name,
                                 reason=f"Path parameter '{param_name}' expected number, got '{val}'.",
                                 violation_type="TYPE_MISMATCH",
+                                is_penalty=True,
                             )
                         )
 
@@ -383,6 +555,7 @@ class SchemaValidator:
         self,
         op_spec: dict[str, Any],
         query_params: str | dict[str, Any] | None,
+        policy: str = "route_tiered",
     ) -> list[SchemaViolation]:
         violations: list[SchemaViolation] = []
         declared_params = op_spec.get("parameters", [])
@@ -410,6 +583,7 @@ class SchemaValidator:
                             field=param_name,
                             reason=f"Required query parameter '{param_name}' is missing.",
                             violation_type="MISSING_PARAMETER",
+                            is_penalty=True,
                         )
                     )
                 continue
@@ -423,6 +597,7 @@ class SchemaValidator:
                             field=param_name,
                             reason=f"Query parameter '{param_name}' expected integer, got '{val}'.",
                             violation_type="TYPE_MISMATCH",
+                            is_penalty=True,
                         )
                     )
             elif param_type == "number":
@@ -434,6 +609,7 @@ class SchemaValidator:
                             field=param_name,
                             reason=f"Query parameter '{param_name}' expected number, got '{val}'.",
                             violation_type="TYPE_MISMATCH",
+                            is_penalty=True,
                         )
                     )
             elif param_type == "boolean":
@@ -443,6 +619,7 @@ class SchemaValidator:
                             field=param_name,
                             reason=f"Query parameter '{param_name}' expected boolean, got '{val}'.",
                             violation_type="TYPE_MISMATCH",
+                            is_penalty=True,
                         )
                     )
 
@@ -452,6 +629,7 @@ class SchemaValidator:
                         field=param_name,
                         reason=f"Query parameter '{param_name}' value '{val}' not in allowed enum {param_schema['enum']}.",
                         violation_type="ENUM_MISMATCH",
+                        is_penalty=True,
                     )
                 )
 
@@ -462,6 +640,8 @@ class SchemaValidator:
         op_spec: dict[str, Any],
         body_bytes: bytes | None,
         content_type: str | None,
+        template_path: str = "",
+        policy: str = "route_tiered",
     ) -> list[SchemaViolation]:
         violations: list[SchemaViolation] = []
         req_body_spec = op_spec.get("requestBody")
@@ -477,6 +657,7 @@ class SchemaValidator:
                     field="body",
                     reason="Request body is required but empty payload was received.",
                     violation_type="MISSING_BODY",
+                    is_penalty=True,
                 )
             )
             return violations
@@ -492,6 +673,7 @@ class SchemaValidator:
                         field="content-type",
                         reason=f"Content-Type '{content_type}' is not supported. Expected 'application/json'.",
                         violation_type="UNSUPPORTED_MEDIA_TYPE",
+                        is_penalty=True,
                     )
                 )
                 return violations
@@ -509,6 +691,7 @@ class SchemaValidator:
                     field="body",
                     reason="Invalid JSON format in request body.",
                     violation_type="INVALID_JSON",
+                    is_penalty=True,
                 )
             )
             return violations
@@ -519,6 +702,7 @@ class SchemaValidator:
                     field="body",
                     reason=f"Expected JSON object in request body, got {type(body_json).__name__}.",
                     violation_type="TYPE_MISMATCH",
+                    is_penalty=True,
                 )
             )
             return violations
@@ -531,19 +715,25 @@ class SchemaValidator:
                         field=req_field,
                         reason=f"Required JSON field '{req_field}' is missing in request body.",
                         violation_type="MISSING_FIELD",
+                        is_penalty=True,
                     )
                 )
 
         properties = schema.get("properties", {})
-        additional_allowed = schema.get("additionalProperties", False)
-        if not additional_allowed and properties:
+        # Route-tiered: lock additionalProperties=False strictly on sensitive endpoints
+        is_sensitive_endpoint = any(template_path.startswith(pref) for pref in _SENSITIVE_ENDPOINT_PREFIXES)
+        explicit_disallow = schema.get("additionalProperties") is False
+        should_lock_additional = explicit_disallow or (is_sensitive_endpoint and policy == "route_tiered") or (policy == "strict_all")
+
+        if should_lock_additional and properties:
             for extra_key in body_json.keys():
                 if extra_key not in properties:
                     violations.append(
                         SchemaViolation(
                             field=extra_key,
-                            reason=f"Additional property '{extra_key}' is not allowed by schema.",
+                            reason=f"Additional property '{extra_key}' is not allowed on sensitive endpoint '{template_path}'.",
                             violation_type="ADDITIONAL_PROPERTY_NOT_ALLOWED",
+                            is_penalty=True,
                         )
                     )
 
@@ -560,6 +750,7 @@ class SchemaValidator:
                         field=prop_name,
                         reason=f"Field '{prop_name}' expected string, got {type(val).__name__}.",
                         violation_type="TYPE_MISMATCH",
+                        is_penalty=True,
                     )
                 )
             elif expected_type == "integer" and (not isinstance(val, int) or isinstance(val, bool)):
@@ -568,6 +759,7 @@ class SchemaValidator:
                         field=prop_name,
                         reason=f"Field '{prop_name}' expected integer, got {type(val).__name__}.",
                         violation_type="TYPE_MISMATCH",
+                        is_penalty=True,
                     )
                 )
             elif expected_type == "number" and (not isinstance(val, (int, float)) or isinstance(val, bool)):
@@ -576,6 +768,7 @@ class SchemaValidator:
                         field=prop_name,
                         reason=f"Field '{prop_name}' expected number, got {type(val).__name__}.",
                         violation_type="TYPE_MISMATCH",
+                        is_penalty=True,
                     )
                 )
             elif expected_type == "boolean" and not isinstance(val, bool):
@@ -584,6 +777,7 @@ class SchemaValidator:
                         field=prop_name,
                         reason=f"Field '{prop_name}' expected boolean, got {type(val).__name__}.",
                         violation_type="TYPE_MISMATCH",
+                        is_penalty=True,
                     )
                 )
             elif expected_type == "array" and not isinstance(val, list):
@@ -592,6 +786,7 @@ class SchemaValidator:
                         field=prop_name,
                         reason=f"Field '{prop_name}' expected array, got {type(val).__name__}.",
                         violation_type="TYPE_MISMATCH",
+                        is_penalty=True,
                     )
                 )
 
@@ -601,6 +796,7 @@ class SchemaValidator:
                         field=prop_name,
                         reason=f"Field '{prop_name}' value '{val}' is not in allowed enum {prop_schema['enum']}.",
                         violation_type="ENUM_MISMATCH",
+                        is_penalty=True,
                     )
                 )
 
@@ -615,6 +811,7 @@ class SchemaValidator:
         close_client = False
         if client is None:
             import httpx
+
             client = httpx.AsyncClient(timeout=3.0)
             close_client = True
 

@@ -201,4 +201,6 @@ def test_gateway_mldetector_compatibility():
     assert res_sqli.attack_type.upper() in ["SQLI", "SQL_INJECTION", "ATTACK"]
     assert res_sqli.confidence > 0.50
     avg_lat = sum(latencies) / len(latencies)
-    assert avg_lat < 15.0, f"Average latency {avg_lat:.2f}ms exceeds 15ms threshold"
+    # Under coverage instrumentation (pytest-cov), tracing overhead inflates pure-Python execution
+    max_allowed = 50.0 if sys.gettrace() is not None else 15.0
+    assert avg_lat < max_allowed, f"Average latency {avg_lat:.2f}ms exceeds {max_allowed}ms threshold"

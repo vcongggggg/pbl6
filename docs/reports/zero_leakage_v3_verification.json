@@ -1,8 +1,12 @@
 {
   "metadata": {
     "task_id": "pbl6-v3-fix-round-001 / A1.3 (D3)",
-    "measured_at": "2026-11-24T16:39:51+0700",
-    "hash_protocol": "SHA-256(canonicalize_payload(canonicalize_http_request(path, query_params, body, headers=None)))"
+    "measured_at": "2026-11-24T19:23:05+0700",
+    "hash_protocol": "SHA-256(canonicalize_payload(canonicalize_http_request(path, query_params, body, headers=None)))",
+    "history_snapshot": "docs/reports/history/zero_leakage_v3_verification_20261124_192715_fd012c1.json",
+    "git_base_sha": "fd012c1d17e42f531b635cbe94c7dd738023ee0f",
+    "cpu_load_pct": 17.0,
+    "last_pointer_update": "2026-11-24T19:27:15.590713"
   },
   "datasets": {
     "defense_v2_train": {

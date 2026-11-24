@@ -219,3 +219,34 @@ def test_c3_fp_tuning_root_anomaly_and_openapi_routes():
         == []
     )
 
+
+def test_route_tiered_schema_policy():
+    """Verifies Phase D3 Route-Tiered Schema enforcement policy."""
+    validator = SchemaValidator(enforcement_policy="route_tiered")
+
+    # 1. Undocumented route receives notice with is_penalty=False
+    v_undoc = validator.validate_request(method="GET", path="/unknown/endpoint/path/")
+    assert len(v_undoc) == 1
+    assert v_undoc[0].violation_type == "UNDOCUMENTED_ROUTE"
+    assert v_undoc[0].is_penalty is False
+
+    # 2. Documented search route allows pagination telemetry parameters
+    v_search = validator.validate_request(
+        method="GET",
+        path="/api/v1/vulnerable/books/search/",
+        query_params="q=Python&page=2&limit=20&sort=desc",
+    )
+    assert len(v_search) == 0
+
+    # 3. Sensitive profile update endpoint strictly enforces additionalProperties=False
+    v_sensitive = validator.validate_request(
+        method="POST",
+        path="/api/v1/vulnerable/users/profile/update/",
+        body_bytes=json.dumps({"email": "test@example.com", "role": "admin"}).encode("utf-8"),
+        content_type="application/json",
+    )
+    assert any(v.violation_type == "ADDITIONAL_PROPERTY_NOT_ALLOWED" and v.is_penalty for v in v_sensitive)
+
+    # 4. Off policy bypasses all checks
+    assert validator.validate_request(method="POST", path="/invalid/", policy="off") == []
+
