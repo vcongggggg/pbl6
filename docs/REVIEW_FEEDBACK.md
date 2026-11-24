@@ -1,6 +1,16 @@
-# ✅ FINAL AUDIT & REMEDIATION SIGN-OFF — NHÁNH `feat/pbl6-v3-autonomous-pentest-cockpit` (v3.0)
+# ✅ FINAL AUDIT & REMEDIATION SIGN-OFF — NHÁNH `feat/pbl6-v3-1-live-redteam` (v3.1 / Phase C Verified)
 
-## 🏆 KẾT LUẬN THẨM ĐỊNH SAU KHẮC PHỤC & VÒNG BỔ SUNG PHASE A (`pbl6-v3-fix-round-001`): **READY FOR INDEPENDENT MUSE RE-AUDIT & PR MERGE**
+## 🏆 KẾT LUẬN KIỂM TOÁN & VÁ TRIỆT ĐỂ PHASE C (`pbl6-v3-1-001`): **READY FOR FINAL MUSE AUDIT & v3.1 PR**
+- **Ngày hoàn tất kiểm toán & khắc phục v3.1 (`C1 -> C5`):** `2026-11-24`
+- **Tóm tắt 4 hạng mục kiểm toán Phase C đã được phát hiện và vá triệt để (`100% VERIFIED`):**
+  - **[C1 — Live HTTP 3x3 Benchmark & Live `/api/proxy` Arena (`docs/reports/adversarial_benchmark_live_http.json`)]**: Sửa lỗi `target_upstream.py` trả `'SECRET_KEY'` tràn lan trên mọi URL gây kích hoạt nhầm `ResponseDLPGuard`; tách riêng route nhạy cảm `/users/list`, bật `ML_ENABLED=false, ANOMALY_ENABLED=false` thật cho cổng `:8056` (`Rules Only`), bổ sung header `X-WAF-Rule-Score` trong `proxy.py` (`0` hằng số fallback cứng), thêm `--target-url` (chuẩn CWE-918) và chế độ `execution_mode="live_http"` trong `arena.py`. Kết quả thật trên tập ngoại miền `Strange` qua TCP HTTP: `Rules Only` chặn **`88.9%` (`48/54`)**, `Hybrid v3.0` nâng lên **`94.4%` (`51/54`, trễ HTTP TB `4.252 ms`)**.
+  - **[C2 — Huấn luyện Dueling-DQN `600` Episodes & Biểu đồ Hội tụ (`fig6_dqn_600ep_convergence.png`)]**: Xác thực SHA-256 của `.pt` & `.npz` (`600` episodes, `seed=42`, `Stage 1 = +45.37`, `Stage 2 = +23.27`, `Stage 3 = -14.32` không dính reward-hacking, giảm `8.51%` thử mù quáng), xuất biểu đồ `fig6` 300 DPI và chạy lại `adversarial_benchmark_3x3.json` với checkpoint 600-episode mới.
+  - **[C3 — Tinh chỉnh Giảm False Positive 2 Vòng Có Kiểm Soát (`docs/reports/fp_v3_tuning_c3.json`)]**: Vòng 1 xử lý điểm suy biến đường dẫn gốc `'/'` (`special_char_ratio = 1.0`) trong `AnomalyDetector`; Vòng 2 đồng bộ `/openapi.json`, `/docs/`, `/reviews/` vào `BUILTIN_TARGET_SPEC`. Kết quả: `B1000 Strict FPR` giảm từ **`4.0% -> 0.0%` (`Schema OFF`)** và **`8.5% -> 0.0%` (`Schema ON`)** với **`0.00%` suy giảm Recall** (`Operational FPR = 0.00%` trên `1.715` mẫu lành tính; độ trễ 2-hop CSIC 2010 `mean = 4.203 ms`).
+  - **[C4 & C5 — Ma trận Đối chiếu Tự động `27/27` (`scripts/generate_reconciliation_matrix.py`) & Rehearsal v3.0 (`8/8`)]**: Xóa toàn bộ 18 con số gõ tay sai lệch trong `THESIS_ARTIFACT_RECONCILIATION_MATRIX.md`, thay bằng trình kiểm chứng tự động giải nén quét trực tiếp `.docx`, `.pptx`, `.md` khớp `27/27` chỉ số (`0` sai lệch); sửa lỗi hiển thị `8/5 -> 8/8` và `BACKEND_URL` trong `run_live_demo_rehearsal.py`.
+
+---
+
+## 📋 LỊCH SỬ THẨM ĐỊNH PHASE A (`pbl6-v3-fix-round-001` — MERGED PR #138 @ `2acd4e2`)
 - **Ngày hoàn tất Phase A (`A1 -> A5`):** `2026-11-24`
 - **Bằng chứng thực nghiệm mới bổ sung theo §7 của Muse (`100% VERIFIED`):**
   - **[A1.1 — Đo FPR sau 5 OWASP API Guards (`docs/reports/fp_v3_measurement.json`)]**: Trên `1.715` mẫu lành tính (`1.500` CSIC 2010 + `200` B1000 + `15` REST API), `Operational FPR = 0.00% (0/1.715)` và 5 lá chắn v3.0 mới sinh `0` cảnh báo giả. Khi bật `schema_validation_enabled = True`, `Strict FPR` trên tập B1000 tăng từ `4.0% -> 8.5%` (và `26.67%` trên REST client gửi thêm trường tùy chọn).

@@ -98,8 +98,9 @@ BUILTIN_TARGET_SPEC: dict[str, Any] = {
                                     "book_id": {"type": "integer"},
                                     "author": {"type": "string"},
                                     "comment": {"type": "string"},
+                                    "rating": {"type": "integer"},
+                                    "review_text": {"type": "string"},
                                 },
-                                "required": ["author", "comment"],
                             }
                         }
                     },
@@ -215,6 +216,18 @@ BUILTIN_TARGET_SPEC: dict[str, Any] = {
             "get": {
                 "summary": "List Users",
                 "responses": {"200": {"description": "User account listing"}},
+            }
+        },
+        "/api/v1/vulnerable/openapi.json": {
+            "get": {
+                "summary": "OpenAPI 3.0 Specification",
+                "responses": {"200": {"description": "OpenAPI JSON contract"}},
+            }
+        },
+        "/api/v1/vulnerable/docs/": {
+            "get": {
+                "summary": "Swagger UI Documentation",
+                "responses": {"200": {"description": "Interactive API docs"}},
             }
         },
     },

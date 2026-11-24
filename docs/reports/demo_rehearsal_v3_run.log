@@ -1,0 +1,130 @@
+[96m[1m
+==============================================================================
+   [SHIELD]  PBL6 CYBER RANGE: 10-MINUTE DEFENSE REHEARSAL (BLUE TEAM v3.0)
+   Rule Engine + 5 OWASP API Guards + XGBoost v2.0 + IForest v2.0 + DQN Arena
+==============================================================================
+[0m
+Target Gateway: [92m[1mhttp://127.0.0.1:8000[0m
+Operating Mode: [93mAUTOMATIC (--auto)[0m
+Time Allotment: [96m10 Minutes Structured Academic Defense[0m
+
+Đang kiểm tra sức khỏe WAF Gateway...
+[92m[OK] WAF Gateway v2.0 sẵn sàng: HTTP 200 OK[0m
+
+[2m[TIMER] Nghỉ 0.1s để thuyết trình...[0m
+
+[92m[1m==============================================================================[0m
+[92m[1mGIAI ĐOẠN 1 (0:00 - 2:00): LƯU LƯỢNG NGƯỜI DÙNG BÌNH THƯỜNG (BASELINE)[0m
+[92m[1m==============================================================================[0m
+Mục tiêu: Chứng minh Blue Team v2.0 hoạt động trong suốt, 0% False Positive trên REST & SOAP sạch.
+
+  [[92m200 OK[0m] GET tìm sách sạch: 'Python'              |  36.96ms | Risk: 2.36  | ML: 2.29  | Proto: REST
+  [[92m200 OK[0m] GET tìm sách sạch: 'Architecture'        |   6.37ms | Risk: 2.31  | ML: 2.12  | Proto: REST
+  [[92m200 OK[0m] GET đặc tả OpenAPI 3.0 của Bookie        |   5.32ms | Risk: 2.89  | ML: 0.07  | Proto: REST
+  [[92m201 OK[0m] POST đánh giá sách hợp lệ (JSON)         |   5.16ms | Risk: 3.65  | ML: 0.42  | Proto: REST
+  [[92m200 OK[0m] GET kiểm tra giao thức REST query sạch   |   6.13ms | Risk: 3.22  | ML: 3.99  | Proto: REST
+
+[92m[PASS] Giai đoạn 1 hoàn tất: 5/5 lưu lượng sạch đi qua mượt mà![0m
+[2m[TIMER] Nghỉ 0.1s để thuyết trình...[0m
+
+[93m[1m==============================================================================[0m
+[93m[1mGIAI ĐOẠN 2 (2:00 - 5:00): TẤN CÔNG OWASP Ở CHẾ ĐỘ GIÁM SÁT (MONITOR_ONLY)[0m
+[93m[1m==============================================================================[0m
+Mục tiêu: WAF phát hiện đa tầng (Rule + XGBoost v2.0 + IForest v2.0), ghi log SOC nhưng không ngắt.
+
+[CONFIG] Trạng thái WAF Gateway: [93m[1mMONITOR_ONLY[0m (updated=True)
+
+  [[93mMONITOR[0m] SQLi Auth Bypass                 | HTTP: 200 | Risk: [91m94.19[0m | ML: 99.98 | Decision: MONITOR |   6.3ms
+  [[93mMONITOR[0m] SQLi UNION Data Exfiltration     | HTTP: 500 | Risk: [91m88.0 [0m | ML: 99.97 | Decision: MONITOR |   6.6ms
+  [[93mMONITOR[0m] XSS Stored/Reflected Payload     | HTTP: 201 | Risk: [91m95.03[0m | ML: 99.99 | Decision: MONITOR |   5.2ms
+  [[93mMONITOR[0m] Path Traversal / LFI             | HTTP: 404 | Risk: [91m89.68[0m | ML: 99.91 | Decision: MONITOR |   5.6ms
+  [[93mMONITOR[0m] Command Injection (RCE)          | HTTP: 200 | Risk: [91m77.46[0m | ML: 99.68 | Decision: MONITOR |  50.4ms
+
+[93m[PASS] Giai đoạn 2 hoàn tất: 5/5 tấn công đã bị gắn cờ và ghi vết lên SOC Dashboard![0m
+[2m[TIMER] Nghỉ 0.1s để thuyết trình...[0m
+
+[91m[1m==============================================================================[0m
+[91m[1mGIAI ĐOẠN 3 (5:00 - 7:30): PHÒNG THỦ CHỦ ĐỘNG (ACTIVE_BLOCKING) & HTTP 403[0m
+[91m[1m==============================================================================[0m
+Mục tiêu: Chặn đứng tức thì tấn công né tránh (Obfuscation, Zero-Width, SOAP XXE) bằng HTTP 403.
+
+[CONFIG] Trạng thái WAF Gateway: [91m[1mACTIVE_BLOCKING[0m (updated=True)
+
+  [[91m403 BLOCKED[0m] SQLi Evasion (Inline Comment + URL)        | [92m15.77ms[0m | Risk: 97.5  | Proto: REST | BLOCK
+  [[91m403 BLOCKED[0m] XSS Obfuscated SVG Event Handler           | [92m13.62ms[0m | Risk: 99.99 | Proto: REST | BLOCK
+  [[91m403 BLOCKED[0m] Path Traversal Windows/Linux Escape        | [92m 3.39ms[0m | Risk: 97.5  | Proto: REST | BLOCK
+  [[91m403 BLOCKED[0m] Command Injection Pipe + Interpreter       | [92m 3.33ms[0m | Risk: 85.5  | Proto: REST | BLOCK
+  [[91m403 BLOCKED[0m] Multi-Protocol SOAP/XML XXE Injection      | [92m23.09ms[0m | Risk: 97.2  | Proto: SOAP_XML | BLOCK
+  [[91m403 BLOCKED[0m] OWASP API #7: SSRF Internal Metadata Probe | [92m 3.32ms[0m | Risk: 90.4  | Proto: REST | BLOCK
+  [[91m403 BLOCKED[0m] OWASP API #8: NoSQLi JSON Operator ($ne)   | [92m 3.24ms[0m | Risk: 88.2  | Proto: REST | BLOCK
+  [[91m403 BLOCKED[0m] OWASP API #3: Mass Assignment Privilege (role:admin) | [92m 3.29ms[0m | Risk: 88.2  | Proto: REST | BLOCK
+
+[92m[PASS] Giai đoạn 3 hoàn tất: 8/8 tấn công bị chặn đứng bằng HTTP 403 Forbidden qua Multi-Layer WAF + 5 OWASP API Guards![0m
+[2m[TIMER] Nghỉ 0.1s để thuyết trình...[0m
+
+[95m[1m==============================================================================[0m
+[95m[1mGIAI ĐOẠN 4 (7:30 - 10:00): ĐIỀU TIẾT TẦN SUẤT BRUTE-FORCE & TỔNG KẾT SOC[0m
+[95m[1m==============================================================================[0m
+Mục tiêu: Chống Brute-force /auth/login/ (IP Hard Cap 10 req/min) bằng HTTP 429 + Retry-After.
+
+  Request #01: [[92mHTTP 401[0m] Trễ:  6.37ms | Hạn mức Sliding Window còn lại: 7
+  Request #02: [[92mHTTP 401[0m] Trễ:  6.05ms | Hạn mức Sliding Window còn lại: 6
+  Request #03: [[92mHTTP 401[0m] Trễ:  6.20ms | Hạn mức Sliding Window còn lại: 5
+  Request #04: [[92mHTTP 401[0m] Trễ:  6.32ms | Hạn mức Sliding Window còn lại: 4
+  Request #05: [[92mHTTP 401[0m] Trễ:  5.98ms | Hạn mức Sliding Window còn lại: 3
+  Request #06: [[92mHTTP 401[0m] Trễ:  6.07ms | Hạn mức Sliding Window còn lại: 2
+  Request #07: [[92mHTTP 401[0m] Trễ:  6.17ms | Hạn mức Sliding Window còn lại: 1
+  Request #08: [[92mHTTP 401[0m] Trễ:  6.12ms | Hạn mức Sliding Window còn lại: 0
+  Request #09: [[91m[1m429 TOO MANY REQUESTS[0m] CHẶN BRUTE-FORCE (Retry-After: 56s,  1.73ms)
+  Request #10: [[91m[1m429 TOO MANY REQUESTS[0m] CHẶN BRUTE-FORCE (Retry-After: 56s,  1.69ms)
+  Request #11: [[91m[1m429 TOO MANY REQUESTS[0m] CHẶN BRUTE-FORCE (Retry-After: 120s,  1.80ms)
+  Request #12: [[91m[1m429 TOO MANY REQUESTS[0m] CHẶN BRUTE-FORCE (Retry-After: 240s,  1.76ms)
+  Request #13: [[91m[1m429 TOO MANY REQUESTS[0m] CHẶN BRUTE-FORCE (Retry-After: 480s,  1.69ms)
+  Request #14: [[91m[1m429 TOO MANY REQUESTS[0m] CHẶN BRUTE-FORCE (Retry-After: 900s,  1.75ms)
+
+[95m[PASS] Đã kích hoạt điều tiết thích ứng: 6 requests bị phạt HTTP 429![0m
+
+[96m[1m==============================================================================[0m
+[96m[1mBẢNG TỔNG KẾT DIỄN TẬP BẢO VỆ ĐỒ ÁN (BLUE TEAM v3.0 SCOREBOARD)[0m
+[96m[1m==============================================================================[0m
+- Lưu lượng hợp lệ (Baseline HTTP 200):     [92m5/5[0m
+- Tấn công Monitor-Only được gắn cờ:        [93m5/5[0m
+- Tấn công Active Blocking bị chặn 403:     [91m8/8[0m
+- Brute-Force bị phạt HTTP 429:             [95m6[0m
+- Live Gateway Stats (/dashboard/stats):    total=32, detected=20, blocked=9, rate_limited=6, mode=ACTIVE_BLOCKING
+- Độ trễ trung bình Baseline E2E:           [96m11.99 ms[0m
+==============================================================================
+
+[92m[1mKỊCH BẢN DIỄN TẬP 10 PHÚT HOÀN TẤT![0m
+Mở trình duyệt tại [96m[1mhttp://localhost:3000[0m để trình chiếu SOC Command Center:
+  1. KPI Cards, Real-Time 60s RPS, Multi-Protocol Distribution & Cyber Range Topology.
+  2. Attack Sessions & MITRE Cyber Kill Chain Timeline.
+  3. Evidence Drawer (26-D Feature Vector thật) & Detection Explainability Modal.
+
+
+[96m[1m==============================================================================
+ [STAGE 5] ĐẤU TRƯỜNG ĐỐI KHÁNG TỰ ĐỘNG (AI ARENA & EVASION EVALUATION)
+ [2mKích hoạt chuỗi đối kháng tự động giữa tác tử Red Team Dueling-DQN và Blue Team v3.0[0m[96m[1m
+==============================================================================[0m
+[96mĐang gửi yêu cầu kích hoạt AI Pentest Evaluation tới /api/dashboard/arena/pentest/run...[0m
+[92m[OK] Đấu trường hoàn thành với mã kết quả: HTTP 200 OK (138.7 ms)[0m
+  - Mã trận đấu:       [96mpentest-7761468cce[0m
+  - Cấp độ phòng thủ:  [1mhybrid_v3[0m
+  - Tổng số vòng:      8
+  - Số lần chặn/DLP:   [92m[1m8[0m
+  - Số lần lọt:        [91m0[0m
+  - Người chiến thắng: [92m[1mBLUE_TEAM[0m
+  - Điểm rủi ro TB:    [96m93.8/100[0m
+  - Độ trễ xử lý TB:   [96m1.343 ms[0m
+
+[1mChi tiết từng vòng đối kháng (Dual-Brain Telemetry):[0m
+  [1] [92m[HTTP 403][0m [1mSQL_INJECTION[0m (case_randomize) -> Risk=94.2 | Winner=BLUE_TEAM | [2mChế độ Hybrid v3.0: Chuẩn hóa đệ quy + Rules: SQLI-001, XGBoost ...[0m
+  [2] [92m[HTTP 403][0m [1mXSS[0m (event_handler) -> Risk=100.0 | Winner=BLUE_TEAM | [2mChế độ Hybrid v3.0: Chuẩn hóa đệ quy + Rules: XSS-002, XGBoost (...[0m
+  [3] [92m[HTTP 403][0m [1mPATH_TRAVERSAL[0m (null_byte_extension) -> Risk=98.4 | Winner=BLUE_TEAM | [2mChế độ Hybrid v3.0: Chuẩn hóa đệ quy + Rules: PATH-001, PATH-001...[0m
+  [4] [92m[HTTP 403][0m [1mCOMMAND_INJECTION[0m (whitespace_ifs) -> Risk=86.4 | Winner=BLUE_TEAM | [2mChế độ Hybrid v3.0: Chuẩn hóa đệ quy + Rules: CMD-005, XGBoost (...[0m
+  [5] [92m[HTTP 403][0m [1mSSRF[0m (ssrf_loopback) -> Risk=91.3 | Winner=BLUE_TEAM | [2mChế độ Hybrid v3.0: Chuẩn hóa đệ quy + Rules: SSRF-004, SSRF-004...[0m
+  [6] [92m[HTTP 403][0m [1mBOLA_IDOR[0m (id_enumeration_burst) -> Risk=92.0 | Winner=BLUE_TEAM | [2mChế độ Hybrid v3.0: Chuẩn hóa đệ quy + Rules: BOLA-002, XGBoost ...[0m
+  [7] [92m[HTTP 403][0m [1mMASS_ASSIGNMENT[0m (role_escalation) -> Risk=100.0 | Winner=BLUE_TEAM | [2mChế độ Hybrid v3.0: Chuẩn hóa đệ quy + Rules: MASS-001, SQLI-001...[0m
+  [8] [92m[DLP 200][0m [1mEXCESSIVE_DATA_EXPOSURE[0m (sensitive_dump) -> Risk=88.0 | Winner=BLUE_TEAM | [2mChế độ Hybrid v3.0: Request GET hợp lệ nhưng Response DLP phát h...[0m
+
+------------------------------------------------------------------------------
