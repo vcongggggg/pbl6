@@ -16,31 +16,42 @@ import { Activity } from "lucide-react";
 
 interface ThreatTimelineChartProps {
   data: TimelinePoint[];
+  compact?: boolean;
 }
 
-export const ThreatTimelineChart: React.FC<ThreatTimelineChartProps> = ({ data }) => {
+export const ThreatTimelineChart: React.FC<ThreatTimelineChartProps> = ({ data, compact = false }) => {
   const hasData = data && data.length > 0;
 
   return (
-    <div className="bg-slate-900/70 backdrop-blur-md border border-slate-800/80 rounded-xl p-5 shadow-lg flex flex-col h-[340px]">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <Activity className="w-4 h-4 text-cyan-400" />
-          <h2 className="text-sm font-bold tracking-wider uppercase text-slate-200 font-mono">
-            Real-time Traffic & Threat Timeline
+    <div
+      className={
+        compact
+          ? "w-full h-full flex flex-col min-h-0 overflow-hidden"
+          : "bg-slate-900/70 backdrop-blur-md border border-slate-800/80 rounded-xl p-5 shadow-lg flex flex-col h-[340px]"
+      }
+    >
+      <div className={`flex items-center justify-between ${compact ? "mb-1.5" : "mb-4"}`}>
+        <div className="flex items-center gap-1.5 min-w-0">
+          <Activity className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+          <h2
+            className={`${
+              compact ? "text-xs" : "text-sm"
+            } font-bold tracking-wider uppercase text-slate-200 font-mono truncate`}
+          >
+            {compact ? "60m Traffic & Threat" : "Real-time Traffic & Threat Timeline"}
           </h2>
         </div>
-        <div className="flex items-center gap-3 text-xs font-mono">
-          <span className="flex items-center gap-1.5 text-cyan-400">
-            <span className="w-2.5 h-2.5 rounded-full bg-cyan-400"></span> Benign Traffic
+        <div className="flex items-center gap-2.5 text-[10px] font-mono shrink-0">
+          <span className="flex items-center gap-1 text-cyan-400">
+            <span className="w-2 h-2 rounded-full bg-cyan-400"></span> Benign
           </span>
-          <span className="flex items-center gap-1.5 text-rose-400">
-            <span className="w-2.5 h-2.5 rounded-full bg-rose-500"></span> Attacks Detected
+          <span className="flex items-center gap-1 text-rose-400">
+            <span className="w-2 h-2 rounded-full bg-rose-500"></span> Attacks
           </span>
         </div>
       </div>
 
-      <div className="flex-1 w-full min-h-[220px]">
+      <div className={compact ? "flex-1 w-full min-h-0" : "flex-1 w-full min-h-[220px]"}>
         {hasData ? (
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>

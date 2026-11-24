@@ -1,7 +1,10 @@
 from app.security.rules.base import BaseRule, RegexRule
 from app.security.rules.command_injection import get_command_injection_rules
+from app.security.rules.mass_assignment import get_mass_assignment_rules
+from app.security.rules.nosqli import get_nosqli_rules
 from app.security.rules.path_traversal import get_path_traversal_rules
 from app.security.rules.sqli import get_sqli_rules
+from app.security.rules.ssrf import get_ssrf_rules
 from app.security.rules.xss import get_xss_rules
 
 
@@ -12,6 +15,9 @@ def get_all_rules() -> list[BaseRule]:
     rules.extend(get_xss_rules())
     rules.extend(get_path_traversal_rules())
     rules.extend(get_command_injection_rules())
+    rules.extend(get_ssrf_rules())
+    rules.extend(get_nosqli_rules())
+    rules.extend(get_mass_assignment_rules())
     return rules
 
 
@@ -23,4 +29,7 @@ __all__ = [
     "get_xss_rules",
     "get_path_traversal_rules",
     "get_command_injection_rules",
+    "get_ssrf_rules",
+    "get_nosqli_rules",
+    "get_mass_assignment_rules",
 ]

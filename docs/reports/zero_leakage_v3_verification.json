@@ -1,0 +1,52 @@
+{
+  "metadata": {
+    "task_id": "pbl6-v3-fix-round-001 / A1.3 (D3)",
+    "measured_at": "2026-11-24T11:49:54+0700",
+    "hash_protocol": "SHA-256(canonicalize_payload(canonicalize_http_request(path, query_params, body, headers=None)))"
+  },
+  "datasets": {
+    "defense_v2_train": {
+      "file": "data/processed/defense_v2/train.csv",
+      "size_bytes": 72574760,
+      "sha256_lf_normalized": "c95e0fefd81bab4064434172b3cf572e363cae03cc0a3c0a79a68e0f138fc4a5",
+      "row_count": 32330,
+      "unique_canonical_hashes": 32330
+    },
+    "defense_v2_val": {
+      "file": "data/processed/defense_v2/val.csv",
+      "size_bytes": 14987132,
+      "sha256_lf_normalized": "31bf930de7a720b8f404505496c036579764b0f450ff463809cedd00acb11ef8",
+      "row_count": 6928,
+      "unique_canonical_hashes": 6928
+    },
+    "defense_v2_test": {
+      "file": "data/processed/defense_v2/test.csv",
+      "size_bytes": 15497110,
+      "sha256_lf_normalized": "23c346a2ba4597898aa91d3cc357bdc312dbc5e6336d488d1fe60b021d725e48",
+      "row_count": 6929,
+      "unique_canonical_hashes": 6929
+    },
+    "csic2010": {
+      "file": "data/benchmarks/csic2010/csic_2010_benchmark.csv",
+      "size_bytes": 2273617,
+      "sha256_lf_normalized": "ec1d4139a5dec12d401e95fcaecd56ea0e3d7646a359c7543f3a117149e5f756",
+      "row_count": 3000,
+      "unique_canonical_hashes": 1592
+    },
+    "benchmark_1000": {
+      "file": "data/benchmark_1000_diverse.csv",
+      "size_bytes": 446506,
+      "sha256_lf_normalized": "9ad67aa3eac1f06a7df0fb79980955e3f2514799a89f1f5e59db57442d59b0ea",
+      "row_count": 1000,
+      "unique_canonical_hashes": 609
+    }
+  },
+  "pairwise_canonical_hash_overlaps": {
+    "train_vs_val": 0,
+    "train_vs_test": 0,
+    "val_vs_test": 0,
+    "defense_v2_all_vs_csic2010": 0,
+    "defense_v2_all_vs_benchmark_1000": 0
+  },
+  "zero_leakage_verified": true
+}

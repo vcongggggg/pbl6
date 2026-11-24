@@ -1,228 +1,313 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useRef } from "react";
-import Link from "next/link";
+import React, { useState, useEffect, useCallback } from "react";
 import { Header } from "@/components/Header";
 import {
-  triggerArenaBattle,
-  fetchArenaLive,
+  triggerPentestRun,
+  streamPentestEvaluation,
   fetchArenaHistory,
   fetchDashboardStats,
   toggleWafMode,
+  PentestAttackGraphNode,
+  PentestQValueEntry,
+  PentestReport,
+  PentestRoundResult,
 } from "@/services/api";
-import {
-  ArenaBattleResult,
-  ArenaHistoryResponse,
-  ArenaRound,
-  DashboardStats,
-} from "@/types/dashboard";
+import { ArenaHistoryResponse, DashboardStats } from "@/types/dashboard";
 import {
   Swords,
   Shield,
-  Flame,
-  Trophy,
   Play,
   RotateCcw,
-  History,
-  Activity,
   CheckCircle2,
   XCircle,
   Copy,
   Check,
-  X,
-  Sparkles,
-  Terminal,
-  Zap,
   Target,
   ChevronRight,
   Cpu,
-  AlertTriangle,
-  Info,
+  History,
+  X,
+  Globe,
 } from "lucide-react";
 
+const INITIAL_OPENAPI_SURFACES: PentestAttackGraphNode[] = [
+  {
+    endpoint: "/api/v1/vulnerable/books/search/",
+    method: "GET",
+    category: "Injection",
+    flaw: "SQL_INJECTION (q)",
+    priority: 1,
+    surfaces: ["q"],
+  },
+  {
+    endpoint: "/api/v1/vulnerable/reviews/",
+    method: "POST",
+    category: "Injection",
+    flaw: "XSS (comment)",
+    priority: 2,
+    surfaces: ["comment"],
+  },
+  {
+    endpoint: "/api/v1/vulnerable/files/download/",
+    method: "GET",
+    category: "Injection",
+    flaw: "PATH_TRAVERSAL (file)",
+    priority: 3,
+    surfaces: ["file"],
+  },
+  {
+    endpoint: "/api/v1/vulnerable/admin/ping/",
+    method: "POST",
+    category: "Injection",
+    flaw: "COMMAND_INJECTION (host)",
+    priority: 4,
+    surfaces: ["host"],
+  },
+  {
+    endpoint: "/api/v1/vulnerable/books/fetch-cover/",
+    method: "GET",
+    category: "API Logic",
+    flaw: "SSRF (url)",
+    priority: 5,
+    surfaces: ["url"],
+  },
+  {
+    endpoint: "/api/v1/vulnerable/orders/{order_id}/",
+    method: "GET",
+    category: "API Logic",
+    flaw: "BOLA_IDOR (order_id)",
+    priority: 6,
+    surfaces: ["order_id"],
+  },
+  {
+    endpoint: "/api/v1/vulnerable/users/profile/update/",
+    method: "POST",
+    category: "API Logic",
+    flaw: "MASS_ASSIGNMENT (role)",
+    priority: 7,
+    surfaces: ["role"],
+  },
+  {
+    endpoint: "/api/v1/vulnerable/users/list/",
+    method: "GET",
+    category: "API Logic",
+    flaw: "EXCESSIVE_DATA_EXPOSURE",
+    priority: 8,
+    surfaces: ["users"],
+  },
+];
+
+function normalizeQEntries(raw: unknown): PentestQValueEntry[] {
+  if (Array.isArray(raw)) {
+    return raw.map((item: any, idx: number) => ({
+      action: String(item?.action ?? `action_${idx}`),
+      family: String(item?.family ?? "GENERAL"),
+      transformation: item?.transformation ? String(item.transformation) : undefined,
+      q_value: typeof item?.q_value === "number" && Number.isFinite(item.q_value) ? item.q_value : 0,
+      selected: Boolean(item?.selected ?? idx === 0),
+    }));
+  }
+  if (raw && typeof raw === "object") {
+    return Object.entries(raw as Record<string, unknown>).map(([k, v], idx) => ({
+      action: k,
+      family: "GENERAL",
+      q_value: typeof v === "number" && Number.isFinite(v) ? v : 0,
+      selected: idx === 0,
+    }));
+  }
+  return [];
+}
+
 export default function ArenaPage() {
-  // Telemetry & stats from gateway
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [isTogglingWaf, setIsTogglingWaf] = useState<boolean>(false);
 
-  // Battle configuration
-  const [campaign, setCampaign] = useState<string>("ALL");
-  const [maxRounds, setMaxRounds] = useState<number>(8);
-  const [streamingMode, setStreamingMode] = useState<boolean>(true);
+  // Pentest Configuration
+  const [defenseTier, setDefenseTier] = useState<"no_waf" | "rules_only" | "hybrid_v3">("hybrid_v3");
+  const [scope, setScope] = useState<string>("full_pentest");
+  const [targetUrl, setTargetUrl] = useState<string>("http://127.0.0.1:5000");
+  const [syncToSoc, setSyncToSoc] = useState<boolean>(false);
+  const [maxRounds] = useState<number>(8);
 
-  // Battle execution states
-  const [battleState, setBattleState] = useState<"STANDBY" | "IN_PROGRESS" | "FINISHED">("STANDBY");
-  const [currentBattle, setCurrentBattle] = useState<ArenaBattleResult | null>(null);
-  const [visibleRounds, setVisibleRounds] = useState<ArenaRound[]>([]);
-  const [activeRoundIndex, setActiveRoundIndex] = useState<number>(-1);
-  const [isTriggering, setIsTriggering] = useState<boolean>(false);
+  // Execution & Live SSE Trace States
+  const [isRunning, setIsRunning] = useState<boolean>(false);
+  const [currentPhase, setCurrentPhase] = useState<number>(0);
+  const [specSource, setSpecSource] = useState<string>("OpenAPI Ready");
+  const [surfaceNodes, setSurfaceNodes] = useState<PentestAttackGraphNode[]>(INITIAL_OPENAPI_SURFACES);
+  const [report, setReport] = useState<PentestReport | null>(null);
+  const [traceRounds, setTraceRounds] = useState<PentestRoundResult[]>([]);
+  const [selectedRound, setSelectedRound] = useState<PentestRoundResult | null>(null);
+  const [filterEndpoint, setFilterEndpoint] = useState<string>("ALL");
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  // UI drawers & filters
-  const [roundFilter, setRoundFilter] = useState<"ALL" | "BYPASS" | "BLOCKED">("ALL");
-  const [selectedRound, setSelectedRound] = useState<ArenaRound | null>(null);
+  // History Drawer
   const [isHistoryOpen, setIsHistoryOpen] = useState<boolean>(false);
   const [historyData, setHistoryData] = useState<ArenaHistoryResponse | null>(null);
-  const [copiedPayload, setCopiedPayload] = useState<string | null>(null);
-  const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info" } | null>(null);
 
-  const showToast = (message: string, type: "success" | "error" | "info" = "info") => {
-    setToast({ message, type });
-    setTimeout(() => setToast(null), 4000);
-  };
-
-  // Load telemetry stats on mount
   const loadStats = useCallback(async () => {
     try {
       const data = await fetchDashboardStats();
-      setStats(data);
+      if (data) {
+        setStats(data);
+      }
     } catch {
-      // ignore
+      // ignore offline
     }
   }, []);
 
-  // Load history data
-  const loadHistory = useCallback(async () => {
+  useEffect(() => {
+    loadStats();
+  }, [loadStats]);
+
+  const loadHistory = async () => {
+    setIsHistoryOpen(true);
     try {
       const hist = await fetchArenaHistory();
       setHistoryData(hist);
     } catch {
       // ignore
     }
-  }, []);
+  };
 
-  useEffect(() => {
-    loadStats();
-    loadHistory();
-  }, [loadStats, loadHistory]);
+  const copyToClipboard = (text: string, key: string) => {
+    navigator.clipboard.writeText(text || "");
+    setCopiedKey(key);
+    setTimeout(() => setCopiedKey(null), 1800);
+  };
 
-  // Handle ESC key for modal/drawer
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        setSelectedRound(null);
-        setIsHistoryOpen(false);
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
-
-  // WAF Mode Toggle
   const handleToggleWafMode = async () => {
     setIsTogglingWaf(true);
     try {
-      const res = await toggleWafMode();
-      showToast(res.message, "success");
+      await toggleWafMode();
       await loadStats();
-    } catch (err: any) {
-      showToast(`Không thể chuyển chế độ WAF: ${err.message}`, "error");
+    } catch {
+      // ignore
     } finally {
       setIsTogglingWaf(false);
     }
   };
 
-  // Copy helper
-  const handleCopy = (text: string, id: string) => {
-    navigator.clipboard.writeText(text);
-    setCopiedPayload(id);
-    setTimeout(() => setCopiedPayload(null), 2000);
-  };
+  const handleRunPentest = async () => {
+    if (isRunning) return;
+    setIsRunning(true);
+    setErrorMsg(null);
+    setReport(null);
+    setTraceRounds([]);
+    setSelectedRound(null);
+    setFilterEndpoint("ALL");
+    setCurrentPhase(1);
 
-  // Start Battle
-  const handleStartBattle = async () => {
-    if (isTriggering || battleState === "IN_PROGRESS") return;
-
-    setIsTriggering(true);
-    setBattleState("IN_PROGRESS");
-    setVisibleRounds([]);
-    setActiveRoundIndex(-1);
+    const runParams = {
+      target_url: targetUrl.trim() || "http://127.0.0.1:5000",
+      defense_tier: defenseTier,
+      scope,
+      max_rounds: maxRounds,
+      sync_to_soc: syncToSoc,
+    };
 
     try {
-      const result = await triggerArenaBattle(campaign, maxRounds);
-      setCurrentBattle(result);
+      const streamedRounds: PentestRoundResult[] = [];
+      let receivedVerdict = false;
 
-      if (streamingMode) {
-        // Stream rounds one by one for cyber combat effect
-        for (let i = 0; i < result.rounds.length; i++) {
-          setActiveRoundIndex(i);
-          await new Promise((r) => setTimeout(r, 450));
-          setVisibleRounds((prev) => [...prev, result.rounds[i]]);
+      await streamPentestEvaluation(runParams, {
+        onRecon: (evt) => {
+          setCurrentPhase(1);
+          if (evt?.spec_source) setSpecSource(String(evt.spec_source));
+        },
+        onAttackGraph: (evt) => {
+          setCurrentPhase(2);
+          if (Array.isArray(evt?.nodes) && evt.nodes.length > 0) {
+            setSurfaceNodes(evt.nodes);
+          }
+        },
+        onRound: (rd) => {
+          streamedRounds.push(rd);
+          setCurrentPhase(streamedRounds.length === 1 ? 3 : 4);
+          setTraceRounds([...streamedRounds]);
+          setSelectedRound(rd);
+        },
+        onVerdict: (verdict) => {
+          receivedVerdict = true;
+          if (Array.isArray(verdict.attack_graph) && verdict.attack_graph.length > 0) {
+            setSurfaceNodes(verdict.attack_graph);
+          }
+          setReport({
+            ...verdict,
+            rounds: verdict.rounds && verdict.rounds.length > 0 ? verdict.rounds : streamedRounds,
+          });
+          setCurrentPhase(5);
+        },
+      });
+
+      if (!receivedVerdict) {
+        const fallback = await triggerPentestRun(runParams);
+        if (Array.isArray(fallback.attack_graph) && fallback.attack_graph.length > 0) {
+          setSurfaceNodes(fallback.attack_graph);
         }
-      } else {
-        setVisibleRounds(result.rounds);
+        setReport(fallback);
+        setTraceRounds(fallback.rounds || []);
+        if (fallback.rounds && fallback.rounds.length > 0) {
+          setSelectedRound(fallback.rounds[fallback.rounds.length - 1]);
+        }
+        setCurrentPhase(5);
       }
 
-      setBattleState("FINISHED");
-      showToast(
-        `Trận đấu kết thúc! ${
-          result.winner === "BLUE_TEAM"
-            ? "🛡️ Blue Team bảo vệ thành công!"
-            : "🔥 Red Team đã bypass thành công!"
-        }`,
-        result.winner === "BLUE_TEAM" ? "success" : "info"
-      );
-      loadHistory();
-      loadStats();
+      if (syncToSoc) {
+        await loadStats();
+      }
     } catch (err: any) {
-      setBattleState("STANDBY");
-      showToast(`Lỗi khi khởi chạy trận đấu: ${err.message}`, "error");
+      try {
+        const fallback = await triggerPentestRun(runParams);
+        if (Array.isArray(fallback.attack_graph) && fallback.attack_graph.length > 0) {
+          setSurfaceNodes(fallback.attack_graph);
+        }
+        setReport(fallback);
+        setTraceRounds(fallback.rounds || []);
+        if (fallback.rounds && fallback.rounds.length > 0) {
+          setSelectedRound(fallback.rounds[fallback.rounds.length - 1]);
+        }
+        setCurrentPhase(5);
+      } catch (innerErr: any) {
+        setErrorMsg(innerErr?.message || err?.message || "Không thể kết nối máy chủ Arena.");
+        setCurrentPhase(0);
+      }
     } finally {
-      setIsTriggering(false);
-      setActiveRoundIndex(-1);
+      setIsRunning(false);
     }
   };
 
-  // Load a historical battle into the active view
-  const handleSelectHistoricalBattle = (battle: ArenaBattleResult) => {
-    setCurrentBattle(battle);
-    setVisibleRounds(battle.rounds);
-    setBattleState("FINISHED");
-    setIsHistoryOpen(false);
-    showToast(`Đã tải lại trận đấu: ${battle.battle_id}`, "info");
+  const matchEndpoint = (roundEp: string, nodeEp: string) => {
+    if (roundEp === nodeEp) return true;
+    if (nodeEp.includes("{")) {
+      const prefix = nodeEp.split("{")[0];
+      return Boolean(prefix && roundEp.startsWith(prefix));
+    }
+    return false;
   };
 
-  // Filtered rounds
-  const displayedRounds = visibleRounds.filter((r) => {
-    if (roundFilter === "BYPASS") return r.winner === "RED_TEAM";
-    if (roundFilter === "BLOCKED") return r.winner === "BLUE_TEAM";
-    return true;
-  });
+  const displayedRounds =
+    filterEndpoint === "ALL"
+      ? traceRounds
+      : traceRounds.filter((r) => matchEndpoint(r.target_endpoint || r.endpoint, filterEndpoint));
 
-  // Calculate live aggregate rates
-  const totalRoundsCount = visibleRounds.length;
-  const bypassCount = visibleRounds.filter((r) => r.winner === "RED_TEAM").length;
-  const blockedCount = visibleRounds.filter((r) => r.winner === "BLUE_TEAM").length;
-  const bypassRate = totalRoundsCount > 0 ? Math.round((bypassCount / totalRoundsCount) * 100) : 0;
-  const blockRate = totalRoundsCount > 0 ? Math.round((blockedCount / totalRoundsCount) * 100) : 0;
-  const avgThreatScore =
-    totalRoundsCount > 0
-      ? Number(
-          (
-            visibleRounds.reduce((acc, r) => acc + r.waf_threat_score, 0) /
-            totalRoundsCount
-          ).toFixed(1)
-        )
-      : 0;
+  const stepperPhases = [
+    { num: 1, name: "Recon (OpenAPI)" },
+    { num: 2, name: "Attack Graph" },
+    { num: 3, name: "Baseline Probe" },
+    { num: 4, name: "DQN Mutate & Pivot" },
+    { num: 5, name: "Verdict & SOC" },
+  ];
+
+  const qEntries = selectedRound ? normalizeQEntries(selectedRound.dqn_q_values) : [];
+  const qValuesNumeric = qEntries.map((e) => e.q_value);
+  const qMin = qValuesNumeric.length > 0 ? Math.min(...qValuesNumeric) : 0;
+  const qMax = qValuesNumeric.length > 0 ? Math.max(...qValuesNumeric) : 1;
+  const qSpan = Math.max(qMax - qMin, 0.25);
 
   return (
-    <div className="min-h-screen bg-[#07090e] text-slate-100 flex flex-col font-sans selection:bg-rose-500 selection:text-white">
-      {/* Toast Notification */}
-      {toast && (
-        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2.5 px-4 py-3 rounded-xl border shadow-2xl backdrop-blur-xl transition-all duration-300 animate-in fade-in slide-in-from-bottom-5 bg-slate-900/95 border-slate-700 text-xs font-mono">
-          {toast.type === "success" && <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />}
-          {toast.type === "error" && <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />}
-          {toast.type === "info" && <Info className="w-4 h-4 text-cyan-400 shrink-0" />}
-          <span className="text-slate-200">{toast.message}</span>
-          <button
-            onClick={() => setToast(null)}
-            className="ml-2 text-slate-500 hover:text-white transition"
-          >
-            <X className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      )}
-
-      {/* 1. Shared Header with Navigation Switcher */}
+    <div className="h-screen w-screen flex flex-col overflow-hidden bg-[#07090e] text-slate-100 font-sans selection:bg-rose-500 selection:text-white">
       <Header
         stats={stats}
         onRefresh={loadStats}
@@ -230,933 +315,613 @@ export default function ArenaPage() {
         isTogglingWaf={isTogglingWaf}
       />
 
-      {/* Main Arena Content Container */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 space-y-6">
-        {/* Arena Header Banner */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2 border-b border-slate-800/80">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="px-2.5 py-0.5 rounded-full text-xs font-mono font-bold bg-rose-950/60 text-rose-400 border border-rose-800/60 shadow-[0_0_12px_rgba(244,63,94,0.3)]">
-                TASK 10.4 • CYBER ARENA
-              </span>
-              <span className="text-xs font-mono text-slate-400">
-                PBL6 AI-Powered Combat Lab
-              </span>
-            </div>
-            <h1 className="text-2xl font-extrabold text-white mt-1.5 flex items-center gap-2.5 tracking-tight">
-              <Swords className="w-6 h-6 text-rose-400 animate-pulse" />
-              Đấu Trường Đối Kháng Trực Tiếp: Red Team vs Blue Team
-            </h1>
-            <p className="text-xs text-slate-400 mt-1 max-w-3xl">
-              Mô phỏng đọ sức thời gian thực giữa tác nhân tấn công thông minh ứng dụng Học tăng cường
-              (Deep Q-Network RL Evasion Agent) và Cổng phòng thủ AI-WAF đa tầng (Deterministic Regex + XGBoost + IsolationForest).
-            </p>
+      {/* Command Strip & 5-Phase Stepper */}
+      <div className="h-16 shrink-0 bg-slate-900/80 border-b border-slate-800/80 px-4 flex items-center justify-between gap-3 text-xs font-mono whitespace-nowrap overflow-x-auto">
+        <div className="flex items-center gap-2">
+          {/* Editable Target API URL */}
+          <div className="flex items-center gap-1.5 bg-slate-950/90 px-2.5 py-1 rounded-lg border border-slate-800">
+            <Globe className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+            <span className="text-[11px] text-slate-400">Target:</span>
+            <input
+              id="input-target-url"
+              type="text"
+              value={targetUrl}
+              onChange={(e) => setTargetUrl(e.target.value)}
+              disabled={isRunning}
+              placeholder="http://127.0.0.1:5000"
+              className="w-40 bg-transparent text-slate-200 focus:outline-none text-xs font-mono"
+            />
           </div>
 
-          {/* Quick Actions */}
-          <div className="flex items-center gap-2.5 self-start md:self-auto">
+          {/* 3-Tier Progressive Defense Switch */}
+          <div className="flex items-center bg-slate-950/90 p-1 rounded-lg border border-slate-800">
+            <span className="text-[11px] text-slate-400 px-1.5 font-semibold">Cấp độ:</span>
             <button
-              onClick={() => setIsHistoryOpen(true)}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700/80 text-xs font-medium transition active:scale-95 shadow-sm"
-              title="Xem lịch sử các trận đấu trước"
+              onClick={() => setDefenseTier("no_waf")}
+              disabled={isRunning}
+              className={`px-2 py-1 rounded text-xs transition cursor-pointer font-semibold ${
+                defenseTier === "no_waf"
+                  ? "bg-rose-950/90 text-rose-300 border border-rose-600/60 shadow-sm"
+                  : "text-slate-400 hover:text-white"
+              }`}
             >
-              <History className="w-3.5 h-3.5 text-cyan-400" />
-              <span>Lịch Sử Đấu</span>
-              {historyData && (
-                <span className="ml-1 px-1.5 py-0.2 rounded-full bg-slate-800 text-[10px] font-mono text-cyan-300 border border-slate-700">
-                  {historyData.total_battles}
-                </span>
-              )}
+              1. No WAF
+            </button>
+            <button
+              onClick={() => setDefenseTier("rules_only")}
+              disabled={isRunning}
+              className={`px-2 py-1 rounded text-xs transition cursor-pointer font-semibold ${
+                defenseTier === "rules_only"
+                  ? "bg-amber-950/90 text-amber-300 border border-amber-600/60 shadow-sm"
+                  : "text-slate-400 hover:text-white"
+              }`}
+            >
+              2. Rules Only
+            </button>
+            <button
+              onClick={() => setDefenseTier("hybrid_v3")}
+              disabled={isRunning}
+              className={`px-2 py-1 rounded text-xs transition cursor-pointer font-semibold ${
+                defenseTier === "hybrid_v3"
+                  ? "bg-purple-950/90 text-purple-200 border border-purple-500/60 shadow-sm"
+                  : "text-slate-400 hover:text-white"
+              }`}
+            >
+              3. Hybrid v3.0
             </button>
           </div>
+
+          {/* Scope Selector */}
+          <div className="flex items-center bg-slate-950/90 px-2.5 py-1 rounded-lg border border-slate-800">
+            <span className="text-slate-400 text-[11px] mr-1">Phạm vi:</span>
+            <select
+              value={scope}
+              onChange={(e) => setScope(e.target.value)}
+              disabled={isRunning}
+              className="bg-transparent text-slate-200 focus:outline-none text-xs cursor-pointer font-mono"
+            >
+              <option value="full_pentest" className="bg-slate-900">Full Pentest (8/8)</option>
+              <option value="injection" className="bg-slate-900">OWASP Injections</option>
+              <option value="api_logic" className="bg-slate-900">OWASP API Logic</option>
+            </select>
+          </div>
+
+          {/* Sync SOC */}
+          <label className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-slate-950/90 border border-slate-800 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={syncToSoc}
+              onChange={(e) => setSyncToSoc(e.target.checked)}
+              disabled={isRunning}
+              className="accent-purple-500 rounded cursor-pointer"
+            />
+            <span className="text-[11px] text-slate-300">Sync -&gt; SOC</span>
+          </label>
+
+          {/* Run Button */}
+          <button
+            id="btn-run-pentest"
+            onClick={handleRunPentest}
+            disabled={isRunning}
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-bold transition active:scale-95 disabled:opacity-50 cursor-pointer shadow-[0_0_15px_rgba(244,63,94,0.4)]"
+          >
+            {isRunning ? (
+              <>
+                <RotateCcw className="w-3.5 h-3.5 animate-spin" />
+                <span>Đang Chạy...</span>
+              </>
+            ) : (
+              <>
+                <Play className="w-3.5 h-3.5 fill-white" />
+                <span>Chạy Pentest AI</span>
+              </>
+            )}
+          </button>
+
+          {/* History Button */}
+          <button
+            onClick={loadHistory}
+            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-950/90 hover:bg-slate-800 border border-slate-800 text-slate-300 transition cursor-pointer"
+            title="Xem lịch sử đối kháng"
+          >
+            <History className="w-3.5 h-3.5 text-purple-400" />
+            <span className="text-[11px]">Lịch sử</span>
+          </button>
         </div>
 
-        {/* 2. Three-Column Combat Arena: Red Team vs Center Status vs Blue Team */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
-          {/* LEFT: RED TEAM (AI ATTACK AGENT) */}
-          <div className="lg:col-span-4 bg-slate-900/80 backdrop-blur-md rounded-2xl border border-rose-900/40 p-5 shadow-[0_0_25px_rgba(244,63,94,0.08)] flex flex-col justify-between relative overflow-hidden group">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-rose-500/10 rounded-full blur-3xl pointer-events-none group-hover:bg-rose-500/15 transition"></div>
-
-            <div>
-              {/* Header */}
-              <div className="flex items-center justify-between pb-3 border-b border-rose-950/80">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-9 h-9 rounded-xl bg-rose-950/80 border border-rose-600/50 flex items-center justify-center shadow-[0_0_12px_rgba(244,63,94,0.4)]">
-                    <Flame className="w-5 h-5 text-rose-400" />
-                  </div>
-                  <div>
-                    <h2 className="text-sm font-bold text-white flex items-center gap-1.5">
-                      RED TEAM AGENT
-                    </h2>
-                    <span className="text-[11px] font-mono text-rose-300 flex items-center gap-1">
-                      <Cpu className="w-3 h-3 text-rose-400" /> Deep Q-Network RL v1.0
-                    </span>
-                  </div>
-                </div>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-rose-950 text-rose-300 border border-rose-800">
-                  ATTACKER
-                </span>
-              </div>
-
-              {/* Agent Specs */}
-              <div className="mt-3.5 space-y-2 text-xs text-slate-300">
-                <div className="flex justify-between items-center py-1 border-b border-slate-800/60 font-mono text-[11px]">
-                  <span className="text-slate-400">Policy:</span>
-                  <span className="text-rose-300 font-semibold">Epsilon-Greedy DQN Q-Network</span>
-                </div>
-                <div className="flex justify-between items-center py-1 border-b border-slate-800/60 font-mono text-[11px]">
-                  <span className="text-slate-400">Mục tiêu:</span>
-                  <span className="text-slate-200">Bypass WAF (HTTP 200 OK)</span>
-                </div>
-                <div className="flex justify-between items-center py-1 border-b border-slate-800/60 font-mono text-[11px]">
-                  <span className="text-slate-400">Không gian hành động:</span>
-                  <span className="text-slate-200">10 Evasion Mutators</span>
-                </div>
-              </div>
-
-              {/* Real-time KPI Metric */}
-              <div className="mt-4 p-3.5 rounded-xl bg-rose-950/20 border border-rose-900/30">
-                <div className="flex items-center justify-between text-xs font-mono">
-                  <span className="text-slate-400">Tỷ Lệ Xuyên Thủng (Bypass):</span>
-                  <span className="text-rose-400 font-bold text-sm">{bypassRate}%</span>
-                </div>
-                <div className="w-full h-2 rounded-full bg-slate-800/80 mt-2 overflow-hidden">
-                  <div
-                    className="h-full bg-gradient-to-r from-rose-600 to-rose-400 transition-all duration-500 rounded-full"
-                    style={{ width: `${bypassRate}%` }}
-                  />
-                </div>
-                <div className="flex justify-between items-center text-[10px] font-mono text-slate-400 mt-2">
-                  <span>Thành công: <strong className="text-rose-300">{bypassCount}</strong> hiệp</span>
-                  <span>Tổng tấn công: <strong className="text-white">{totalRoundsCount}</strong></span>
-                </div>
-              </div>
-
-              {/* Mutation Arsenal Chips */}
-              <div className="mt-4">
-                <span className="text-[11px] font-mono text-slate-400 uppercase tracking-wider block mb-2">
-                  Kho Vũ Khí Đột Biến (Action Space):
-                </span>
-                <div className="flex flex-wrap gap-1.5">
-                  {[
-                    "Space to Comment",
-                    "Hex Encoding",
-                    "Case Randomize",
-                    "Nested Traversal",
-                    "Whitespace IFS",
-                    "URL Double Encode",
-                    "Null Byte Injection",
-                  ].map((tech) => (
-                    <span
-                      key={tech}
-                      className="px-2 py-0.5 rounded-md text-[10px] font-mono bg-rose-950/40 text-rose-300 border border-rose-900/50"
-                    >
-                      {tech}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-4 pt-3 border-t border-slate-800/60 text-[11px] font-mono text-slate-400 flex items-center justify-between">
-              <span>Trạng thái:</span>
-              <span className="flex items-center gap-1.5 text-rose-400 font-semibold">
-                <span className={`w-2 h-2 rounded-full ${battleState === "IN_PROGRESS" ? "bg-rose-400 animate-ping" : "bg-rose-500"}`} />
-                {battleState === "IN_PROGRESS" ? "ĐANG TẤN CÔNG..." : "SẴN SÀNG"}
-              </span>
-            </div>
-          </div>
-
-          {/* CENTER: COMBAT BADGE & MATCH CONTROLLER */}
-          <div className="lg:col-span-4 bg-slate-900/90 backdrop-blur-md rounded-2xl border border-slate-800 p-5 shadow-xl flex flex-col justify-between relative">
-            <div>
-              {/* Central VS Badge */}
-              <div className="flex flex-col items-center text-center">
-                <div className="relative flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-rose-950/60 via-purple-950/60 to-cyan-950/60 border border-slate-700/80 shadow-[0_0_30px_rgba(168,85,247,0.3)]">
-                  <Swords className={`w-8 h-8 text-amber-400 ${battleState === "IN_PROGRESS" ? "animate-bounce" : ""}`} />
-                  <span className="absolute -bottom-2 px-2 py-0.5 rounded-full text-[10px] font-extrabold font-mono bg-slate-950 text-amber-300 border border-amber-600/50 shadow-md">
-                    VS
-                  </span>
-                </div>
-
-                <div className="mt-3">
-                  <h3 className="text-base font-bold text-white tracking-tight">
-                    Đấu Trường Đối Kháng AI Arena
-                  </h3>
-                  <div className="mt-1 flex items-center justify-center gap-2">
-                    <span
-                      className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-mono font-semibold ${
-                        battleState === "IN_PROGRESS"
-                          ? "bg-amber-950/70 text-amber-300 border border-amber-600 animate-pulse"
-                          : battleState === "FINISHED"
-                          ? "bg-purple-950/70 text-purple-300 border border-purple-600"
-                          : "bg-slate-800 text-slate-300 border border-slate-700"
-                      }`}
-                    >
-                      <span className={`w-1.5 h-1.5 rounded-full ${battleState === "IN_PROGRESS" ? "bg-amber-400 animate-ping" : "bg-slate-400"}`} />
-                      {battleState === "IN_PROGRESS"
-                        ? `ĐANG ĐỐI KHÁNG (${activeRoundIndex + 1}/${maxRounds})`
-                        : battleState === "FINISHED"
-                        ? "TRẬN ĐẤU HOÀN TẤT"
-                        : "TRẠNG THÁI CHỜ (STANDBY)"}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Match Controls */}
-              <div className="mt-5 space-y-3.5 bg-slate-950/60 p-4 rounded-xl border border-slate-800">
-                {/* Campaign Selection */}
-                <div>
-                  <label className="text-[11px] font-mono text-slate-400 uppercase tracking-wider block mb-1.5">
-                    1. Chọn Chiến Dịch Tấn Công:
-                  </label>
-                  <div className="grid grid-cols-2 gap-1.5 text-xs font-mono">
-                    {[
-                      { id: "ALL", label: "Tất Cả (Matrix)" },
-                      { id: "SQLI", label: "SQL Injection" },
-                      { id: "XSS", label: "XSS Mutator" },
-                      { id: "PATH", label: "Path Traversal" },
-                      { id: "CMD", label: "Command Inj." },
-                    ].map((item) => (
-                      <button
-                        key={item.id}
-                        onClick={() => setCampaign(item.id)}
-                        disabled={battleState === "IN_PROGRESS"}
-                        className={`px-2.5 py-1.5 rounded-lg border text-left transition font-medium ${
-                          campaign === item.id
-                            ? "bg-rose-950/60 border-rose-600 text-rose-300 shadow-[0_0_10px_rgba(244,63,94,0.3)]"
-                            : "bg-slate-900 border-slate-800 text-slate-400 hover:text-white"
-                        }`}
-                      >
-                        {item.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Number of Rounds */}
-                <div>
-                  <div className="flex justify-between items-center text-[11px] font-mono text-slate-400 mb-1.5">
-                    <span>2. Số Lượng Hiệp Đấu:</span>
-                    <span className="text-white font-bold">{maxRounds} hiệp</span>
-                  </div>
-                  <div className="grid grid-cols-4 gap-1.5 font-mono text-xs">
-                    {[4, 6, 8, 12].map((num) => (
-                      <button
-                        key={num}
-                        onClick={() => setMaxRounds(num)}
-                        disabled={battleState === "IN_PROGRESS"}
-                        className={`py-1 rounded-lg border text-center transition ${
-                          maxRounds === num
-                            ? "bg-purple-950/60 border-purple-600 text-purple-300 font-bold"
-                            : "bg-slate-900 border-slate-800 text-slate-400 hover:text-white"
-                        }`}
-                      >
-                        {num}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Streaming Mode Option */}
-                <div className="flex items-center justify-between pt-1 text-xs">
-                  <span className="text-slate-400 font-mono text-[11px]">Hiệu ứng từng hiệp:</span>
-                  <button
-                    onClick={() => setStreamingMode(!streamingMode)}
-                    disabled={battleState === "IN_PROGRESS"}
-                    className={`px-2 py-0.5 rounded text-[11px] font-mono border transition ${
-                      streamingMode
-                        ? "bg-cyan-950/60 border-cyan-700 text-cyan-300"
-                        : "bg-slate-900 border-slate-800 text-slate-500"
-                    }`}
-                  >
-                    {streamingMode ? "Bật (Stream 450ms)" : "Tắt (Chạy nhanh)"}
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* Launch Button */}
-            <div className="mt-5 space-y-2">
-              <button
-                id="btn-start-arena-battle"
-                onClick={handleStartBattle}
-                disabled={isTriggering || battleState === "IN_PROGRESS"}
-                className="w-full flex items-center justify-center gap-2.5 px-4 py-3 rounded-xl bg-gradient-to-r from-rose-600 via-purple-600 to-cyan-600 hover:from-rose-500 hover:to-cyan-500 text-white font-bold text-sm tracking-wide transition shadow-[0_0_20px_rgba(244,63,94,0.3)] active:scale-98 disabled:opacity-50 cursor-pointer"
-              >
-                {battleState === "IN_PROGRESS" ? (
-                  <>
-                    <Activity className="w-4 h-4 animate-spin text-amber-300" />
-                    <span>ĐANG ĐỐI KHÁNG THỜI GIAN THỰC...</span>
-                  </>
-                ) : (
-                  <>
-                    <Swords className="w-4 h-4 text-white" />
-                    <span>⚔️ KHỞI CHẠY TRẬN ĐẤU AI ARENA</span>
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-
-          {/* RIGHT: BLUE TEAM (AI-WAF DEFENSE GATEWAY) */}
-          <div className="lg:col-span-4 bg-slate-900/80 backdrop-blur-md rounded-2xl border border-cyan-900/40 p-5 shadow-[0_0_25px_rgba(6,182,212,0.08)] flex flex-col justify-between relative overflow-hidden group">
-            <div className="absolute top-0 left-0 w-32 h-32 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none group-hover:bg-cyan-500/15 transition"></div>
-
-            <div>
-              {/* Header */}
-              <div className="flex items-center justify-between pb-3 border-b border-cyan-950/80">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-9 h-9 rounded-xl bg-cyan-950/80 border border-cyan-600/50 flex items-center justify-center shadow-[0_0_12px_rgba(6,182,212,0.4)]">
-                    <Shield className="w-5 h-5 text-cyan-400" />
-                  </div>
-                  <div>
-                    <h2 className="text-sm font-bold text-white flex items-center gap-1.5">
-                      BLUE TEAM WAF
-                    </h2>
-                    <span className="text-[11px] font-mono text-cyan-300 flex items-center gap-1">
-                      <Target className="w-3 h-3 text-cyan-400" /> AI-Powered Gateway v2.0
-                    </span>
-                  </div>
-                </div>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-cyan-950 text-cyan-300 border border-cyan-800">
-                  DEFENDER
-                </span>
-              </div>
-
-              {/* Defender Specs */}
-              <div className="mt-3.5 space-y-2 text-xs text-slate-300">
-                <div className="flex justify-between items-center py-1 border-b border-slate-800/60 font-mono text-[11px]">
-                  <span className="text-slate-400">Kiến trúc:</span>
-                  <span className="text-cyan-300 font-semibold">Hybrid 3-Layer Defense</span>
-                </div>
-                <div className="flex justify-between items-center py-1 border-b border-slate-800/60 font-mono text-[11px]">
-                  <span className="text-slate-400">Chế độ WAF:</span>
-                  <span className="text-rose-400 font-bold">
-                    {stats?.waf_mode || "ACTIVE_BLOCKING"}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center py-1 border-b border-slate-800/60 font-mono text-[11px]">
-                  <span className="text-slate-400">Độ trễ TB:</span>
-                  <span className="text-emerald-400 font-mono font-semibold">~2.1 ms</span>
-                </div>
-              </div>
-
-              {/* Real-time KPI Metric */}
-              <div className="mt-4 p-3.5 rounded-xl bg-cyan-950/20 border border-cyan-900/30">
-                <div className="flex items-center justify-between text-xs font-mono">
-                  <span className="text-slate-400">Tỷ Lệ Chặn (Block Rate):</span>
-                  <span className="text-cyan-400 font-bold text-sm">{blockRate}%</span>
-                </div>
-                <div className="w-full h-2 rounded-full bg-slate-800/80 mt-2 overflow-hidden">
-                  <div
-                    className="h-full bg-gradient-to-r from-cyan-600 to-emerald-400 transition-all duration-500 rounded-full"
-                    style={{ width: `${blockRate}%` }}
-                  />
-                </div>
-                <div className="flex justify-between items-center text-[10px] font-mono text-slate-400 mt-2">
-                  <span>Chặn thành công: <strong className="text-cyan-300">{blockedCount}</strong> hiệp</span>
-                  <span>Điểm Threat TB: <strong className="text-amber-400">{avgThreatScore}/100</strong></span>
-                </div>
-              </div>
-
-              {/* Defense Engine Chips */}
-              <div className="mt-4">
-                <span className="text-[11px] font-mono text-slate-400 uppercase tracking-wider block mb-2">
-                  Hệ Phòng Ngự Đa Lớp:
-                </span>
-                <div className="flex flex-wrap gap-1.5">
-                  {[
-                    "Deterministic Regex Engine",
-                    "XGBoost Classifier",
-                    "IsolationForest Anomaly",
-                    "Canonical Normalizer",
-                    "Adaptive Risk Scoring",
-                  ].map((layer) => (
-                    <span
-                      key={layer}
-                      className="px-2 py-0.5 rounded-md text-[10px] font-mono bg-cyan-950/40 text-cyan-300 border border-cyan-900/50"
-                    >
-                      {layer}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-4 pt-3 border-t border-slate-800/60 text-[11px] font-mono text-slate-400 flex items-center justify-between">
-              <span>Trạng thái:</span>
-              <span className="flex items-center gap-1.5 text-cyan-400 font-semibold">
-                <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
-                ĐANG BẢO VỆ CỔNG
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* 3. Battle Outcome Summary (Appears once match completes) */}
-        {battleState === "FINISHED" && currentBattle && (
-          <div className="bg-slate-900/90 backdrop-blur-md rounded-2xl border border-slate-700/80 p-5 shadow-2xl animate-in fade-in slide-in-from-top-4 duration-300">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-800">
-              <div className="flex items-center gap-3">
+        {/* 5-Phase Stepper */}
+        <div className="flex items-center gap-1 bg-slate-950/90 px-2.5 py-1.5 rounded-lg border border-slate-800 shrink-0">
+          {stepperPhases.map((phase, idx) => {
+            const isActive = currentPhase === phase.num;
+            const isDone = currentPhase > phase.num;
+            return (
+              <React.Fragment key={phase.num}>
+                {idx > 0 && <ChevronRight className="w-3 h-3 text-slate-600" />}
                 <div
-                  className={`w-12 h-12 rounded-xl flex items-center justify-center border shadow-lg ${
-                    currentBattle.winner === "BLUE_TEAM"
-                      ? "bg-emerald-950/60 border-emerald-500/60 text-emerald-400 shadow-[0_0_20px_rgba(16,185,129,0.3)]"
-                      : "bg-rose-950/60 border-rose-500/60 text-rose-400 shadow-[0_0_20px_rgba(244,63,94,0.3)]"
+                  className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold transition ${
+                    isActive
+                      ? "bg-rose-950/90 text-rose-300 border border-rose-500/60 animate-pulse"
+                      : isDone
+                      ? "text-emerald-400 bg-emerald-950/40 border border-emerald-800/40"
+                      : "text-slate-500"
                   }`}
                 >
-                  <Trophy className="w-6 h-6" />
+                  <span>{phase.num}.</span>
+                  <span>{phase.name}</span>
                 </div>
-                <div>
-                  <span className="text-xs font-mono uppercase tracking-wider text-slate-400">
-                    Kết Quả Chung Cuộc Trận Đấu:
-                  </span>
-                  <h3 className="text-lg font-extrabold text-white flex items-center gap-2">
-                    {currentBattle.winner === "BLUE_TEAM" ? (
-                      <span className="text-emerald-400">
-                        🛡️ BLUE TEAM CHIẾN THẮNG — HỆ THỐNG WAF PHÒNG THỦ VỮNG CHẮC
+              </React.Fragment>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Main 3-Column Zero-Scroll Body */}
+      <main className="flex-1 min-h-0 p-3 grid grid-cols-12 gap-3 overflow-hidden">
+        {/* COLUMN 1: DYNAMIC OPENAPI ATTACK SURFACE */}
+        <div className="col-span-12 lg:col-span-3 h-full min-h-0 bg-slate-900/70 border border-slate-800/80 rounded-xl p-3 shadow flex flex-col overflow-hidden">
+          <div className="flex items-center justify-between pb-2 border-b border-slate-800/80 text-xs font-mono">
+            <div className="flex items-center gap-1.5">
+              <Target className="w-4 h-4 text-cyan-400" />
+              <span className="font-bold text-white uppercase tracking-wider">OpenAPI Surface</span>
+              <span className="text-[10px] px-1.5 py-0.2 rounded bg-slate-800 text-slate-300">
+                {surfaceNodes.length} nodes
+              </span>
+            </div>
+            {filterEndpoint !== "ALL" && (
+              <button
+                onClick={() => setFilterEndpoint("ALL")}
+                className="text-[10px] text-cyan-400 hover:underline cursor-pointer"
+              >
+                Hiện tất cả
+              </button>
+            )}
+          </div>
+
+          <div className="flex-1 overflow-y-auto mt-2 space-y-1.5 pr-1">
+            {surfaceNodes.map((node, nIdx) => {
+              const isFiltered = filterEndpoint === node.endpoint;
+              const matchesInTrace = traceRounds.filter((r) =>
+                matchEndpoint(r.target_endpoint || r.endpoint, node.endpoint)
+              );
+              const hasBypass = matchesInTrace.some((r) => !r.waf_blocked);
+              const hasBlock = matchesInTrace.some((r) => r.waf_blocked);
+
+              return (
+                <div
+                  key={`${node.method}-${node.endpoint}-${nIdx}`}
+                  onClick={() => setFilterEndpoint(isFiltered ? "ALL" : node.endpoint)}
+                  className={`p-2 rounded-lg border transition cursor-pointer text-xs font-mono ${
+                    isFiltered
+                      ? "bg-purple-950/70 border-purple-500/80 shadow-[0_0_10px_rgba(168,85,247,0.25)]"
+                      : "bg-slate-950/70 border-slate-800/70 hover:border-slate-700"
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-1 mb-1">
+                    <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-slate-800 text-slate-300">
+                      {node.method}
+                    </span>
+                    <span className="text-[10px] text-slate-400 truncate font-semibold">
+                      P{node.priority} • {node.category}
+                    </span>
+                  </div>
+
+                  <div className="font-bold text-slate-200 truncate" title={node.endpoint}>
+                    {node.endpoint}
+                  </div>
+                  <div className="text-[11px] text-slate-400 mt-1 flex items-center justify-between gap-1">
+                    <span className="truncate">{node.flaw}</span>
+                    {hasBypass ? (
+                      <span className="text-[10px] px-1.5 py-0.2 rounded bg-rose-950/70 text-rose-300 border border-rose-800 font-bold shrink-0">
+                        Bypass 200
+                      </span>
+                    ) : hasBlock ? (
+                      <span className="text-[10px] px-1.5 py-0.2 rounded bg-emerald-950/70 text-emerald-300 border border-emerald-800 font-bold shrink-0">
+                        Đã Chặn
                       </span>
                     ) : (
-                      <span className="text-rose-400">
-                        🔥 RED TEAM CHIẾN THẮNG — TÁC NHÂN RL ĐÃ BYPASS THÀNH CÔNG
-                      </span>
+                      <span className="text-[10px] text-slate-500 shrink-0">Chờ probe</span>
                     )}
-                  </h3>
-                  <p className="text-xs text-slate-300 mt-0.5">
-                    {currentBattle.winner === "BLUE_TEAM"
-                      ? `Cổng WAF AI đã ngăn chặn thành công ${currentBattle.blocked_count}/${currentBattle.total_rounds} hiệp tấn công đột biến.`
-                      : `Tác nhân tấn công DQN đã xuyên thủng bộ lọc WAF trong ${currentBattle.bypass_count}/${currentBattle.total_rounds} hiệp đối kháng.`}
-                  </p>
+                  </div>
                 </div>
-              </div>
+              );
+            })}
+          </div>
 
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={handleStartBattle}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-purple-950/60 hover:bg-purple-900/60 text-purple-300 border border-purple-700 text-xs font-semibold font-mono transition"
-                >
-                  <RotateCcw className="w-3.5 h-3.5" />
-                  <span>Đấu Lại Trận Mới</span>
-                </button>
-              </div>
+          <div className="pt-2 mt-2 border-t border-slate-800/80 text-[10px] font-mono text-slate-400 space-y-0.5">
+            <div className="flex items-center justify-between">
+              <span>Target:</span>
+              <span className="text-slate-200 font-bold truncate max-w-[160px]">{targetUrl}</span>
             </div>
-
-            {/* Outcome KPI Stats Row */}
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mt-4 text-xs font-mono">
-              <div className="bg-slate-950/60 p-3 rounded-xl border border-slate-800">
-                <span className="text-slate-400 text-[11px]">Tổng Số Hiệp:</span>
-                <div className="text-xl font-bold text-white mt-1">{currentBattle.total_rounds}</div>
-              </div>
-              <div className="bg-rose-950/20 p-3 rounded-xl border border-rose-900/30">
-                <span className="text-rose-400 text-[11px]">Red Team Bypass:</span>
-                <div className="text-xl font-bold text-rose-300 mt-1">
-                  {currentBattle.bypass_count}{" "}
-                  <span className="text-xs text-rose-400 font-normal">
-                    ({Math.round((currentBattle.bypass_count / currentBattle.total_rounds) * 100)}%)
-                  </span>
-                </div>
-              </div>
-              <div className="bg-cyan-950/20 p-3 rounded-xl border border-cyan-900/30">
-                <span className="text-cyan-400 text-[11px]">Blue Team Block:</span>
-                <div className="text-xl font-bold text-cyan-300 mt-1">
-                  {currentBattle.blocked_count}{" "}
-                  <span className="text-xs text-cyan-400 font-normal">
-                    ({Math.round((currentBattle.blocked_count / currentBattle.total_rounds) * 100)}%)
-                  </span>
-                </div>
-              </div>
-              <div className="bg-slate-950/60 p-3 rounded-xl border border-slate-800">
-                <span className="text-slate-400 text-[11px]">Điểm Đe Dọa TB (Threat):</span>
-                <div className="text-xl font-bold text-amber-400 mt-1">
-                  {currentBattle.avg_threat_score}{" "}
-                  <span className="text-xs text-slate-500 font-normal">/ 100</span>
-                </div>
-              </div>
-              <div className="bg-slate-950/60 p-3 rounded-xl border border-slate-800">
-                <span className="text-slate-400 text-[11px]">Chiến Dịch:</span>
-                <div className="text-sm font-bold text-slate-200 mt-1 uppercase">
-                  {currentBattle.campaign}
-                </div>
-              </div>
+            <div className="flex items-center justify-between">
+              <span>Spec Source:</span>
+              <span className="text-cyan-400 truncate max-w-[160px]">{specSource}</span>
             </div>
           </div>
-        )}
+        </div>
 
-        {/* 4. Battle Rounds Stream / Timeline Table */}
-        <div className="bg-slate-900/80 backdrop-blur-md rounded-2xl border border-slate-800 p-5 shadow-xl space-y-4">
-          {/* Header & Filter Controls */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-800">
-            <div className="flex items-center gap-2">
-              <Activity className="w-4 h-4 text-rose-400" />
-              <h3 className="text-sm font-bold text-white tracking-tight">
-                DÒNG THỜI GIAN CÁC HIỆP ĐỐI KHÁNG (BATTLE ROUNDS STREAM)
-              </h3>
-              <span className="px-2 py-0.5 rounded-full text-[11px] font-mono bg-slate-800 text-slate-300 border border-slate-700">
-                {visibleRounds.length} Hiệp
+        {/* COLUMN 2: REAL-TIME SSE LIVE TRACE */}
+        <div className="col-span-12 lg:col-span-5 h-full min-h-0 bg-slate-900/70 border border-slate-800/80 rounded-xl p-3 shadow flex flex-col overflow-hidden">
+          <div className="flex items-center justify-between pb-2 border-b border-slate-800/80 text-xs font-mono">
+            <div className="flex items-center gap-1.5">
+              <Swords className="w-4 h-4 text-rose-400" />
+              <span className="font-bold text-white uppercase tracking-wider">SSE Pentest Trace</span>
+              <span className="text-[10px] px-1.5 py-0.2 rounded bg-slate-800 text-slate-300">
+                {displayedRounds.length} rounds
               </span>
             </div>
 
-            {/* Filter by Winner */}
-            <div className="flex items-center gap-1.5 bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs font-mono">
-              <button
-                onClick={() => setRoundFilter("ALL")}
-                className={`px-2.5 py-1 rounded-lg transition ${
-                  roundFilter === "ALL"
-                    ? "bg-slate-800 text-white font-bold"
-                    : "text-slate-400 hover:text-white"
-                }`}
-              >
-                Tất cả ({visibleRounds.length})
-              </button>
-              <button
-                onClick={() => setRoundFilter("BLOCKED")}
-                className={`px-2.5 py-1 rounded-lg transition ${
-                  roundFilter === "BLOCKED"
-                    ? "bg-cyan-950 text-cyan-300 border border-cyan-800 font-bold"
-                    : "text-slate-400 hover:text-white"
-                }`}
-              >
-                🛡️ WAF Block ({visibleRounds.filter((r) => r.winner === "BLUE_TEAM").length})
-              </button>
-              <button
-                onClick={() => setRoundFilter("BYPASS")}
-                className={`px-2.5 py-1 rounded-lg transition ${
-                  roundFilter === "BYPASS"
-                    ? "bg-rose-950 text-rose-300 border border-rose-800 font-bold"
-                    : "text-slate-400 hover:text-white"
-                }`}
-              >
-                🔥 Red Bypass ({visibleRounds.filter((r) => r.winner === "RED_TEAM").length})
-              </button>
-            </div>
+            {report && (
+              <div className="flex items-center gap-2">
+                <span className="text-emerald-400 font-bold text-[11px]">
+                  Chặn: {report.blocked_count}
+                </span>
+                <span className="text-rose-400 font-bold text-[11px]">
+                  Lọt: {report.bypass_count}
+                </span>
+                <span
+                  className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                    report.winner === "BLUE_TEAM"
+                      ? "bg-emerald-950/80 text-emerald-300 border border-emerald-600"
+                      : report.winner === "RED_TEAM"
+                      ? "bg-rose-950/80 text-rose-300 border border-rose-600"
+                      : "bg-amber-950/80 text-amber-300 border border-amber-600"
+                  }`}
+                >
+                  {report.winner}
+                </span>
+              </div>
+            )}
           </div>
 
-          {/* Rounds List / Cards */}
-          {displayedRounds.length === 0 ? (
-            <div className="py-16 text-center text-slate-500 font-mono text-xs flex flex-col items-center justify-center">
-              <Swords className="w-10 h-10 text-slate-600 mb-2 animate-pulse" />
-              <p>Chưa có hiệp đối kháng nào được ghi nhận.</p>
-              <p className="text-slate-400 mt-1">
-                Nhấn <span className="text-rose-400 font-semibold">[⚔️ KHỞI CHẠY TRẬN ĐẤU AI ARENA]</span> ở trên để bắt đầu!
-              </p>
+          {errorMsg && (
+            <div className="mt-2 p-2 rounded bg-rose-950/70 border border-rose-700 text-rose-200 text-xs font-mono">
+              {errorMsg}
             </div>
-          ) : (
-            <div className="space-y-3">
-              {displayedRounds.map((round) => {
-                const isBlueWinner = round.winner === "BLUE_TEAM";
-                const isBlocked = round.response_status === 403;
+          )}
 
-                // Color code for Threat Score (0 - 100 standard scale)
-                const threatScoreColor =
-                  round.waf_threat_score >= 85
-                    ? "text-rose-400 bg-rose-950/60 border-rose-800"
-                    : round.waf_threat_score >= 60
-                    ? "text-amber-400 bg-amber-950/60 border-amber-800"
-                    : "text-emerald-400 bg-emerald-950/60 border-emerald-800";
+          <div className="flex-1 overflow-y-auto mt-2 space-y-2 pr-1">
+            {displayedRounds.length > 0 ? (
+              displayedRounds.map((r, idx) => {
+                const rNum = r.round ?? r.round_num ?? idx + 1;
+                const selNum = selectedRound ? selectedRound.round ?? selectedRound.round_num : -1;
+                const isSelected = selNum === rNum;
+                const isBlocked = Boolean(r.waf_blocked);
+                const statusCode = r.http_status ?? r.response_status ?? 200;
+                const epLabel = r.target_endpoint || r.endpoint;
+                const techLabel = r.mutation_technique || r.technique;
 
                 return (
                   <div
-                    key={round.round_num}
-                    className={`rounded-xl border p-4 transition-all duration-200 hover:border-slate-600 ${
-                      isBlueWinner
-                        ? "bg-slate-950/70 border-slate-800/80"
-                        : "bg-rose-950/15 border-rose-900/40 shadow-[0_0_15px_rgba(244,63,94,0.08)]"
+                    key={rNum}
+                    onClick={() => setSelectedRound(r)}
+                    className={`p-2.5 rounded-lg border transition cursor-pointer text-xs font-mono ${
+                      isSelected
+                        ? "bg-purple-950/60 border-purple-500 shadow-[0_0_12px_rgba(168,85,247,0.3)]"
+                        : "bg-slate-950/70 border-slate-800/70 hover:border-slate-700"
                     }`}
                   >
-                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-                      {/* Round Header & Winner Badge */}
-                      <div className="flex items-center gap-3">
-                        <span className="w-9 h-9 rounded-lg bg-slate-900 border border-slate-700/80 flex items-center justify-center font-mono font-bold text-xs text-white">
-                          #{round.round_num}
+                    <div className="flex items-center justify-between gap-2 mb-1">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span className="w-5 h-5 rounded-full bg-slate-800 text-slate-200 flex items-center justify-center text-[10px] font-bold shrink-0">
+                          {rNum}
                         </span>
-
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span
-                              className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-mono font-bold border ${
-                                isBlueWinner
-                                  ? "bg-emerald-950/80 text-emerald-300 border-emerald-700 shadow-sm"
-                                  : "bg-rose-950/80 text-rose-300 border-rose-700 shadow-[0_0_10px_rgba(244,63,94,0.3)]"
-                              }`}
-                            >
-                              {isBlueWinner ? (
-                                <>
-                                  <Shield className="w-3.5 h-3.5 text-emerald-400" />
-                                  <span>BLUE TEAM BLOCKED</span>
-                                </>
-                              ) : (
-                                <>
-                                  <Flame className="w-3.5 h-3.5 text-rose-400" />
-                                  <span>RED TEAM BYPASS</span>
-                                </>
-                              )}
-                            </span>
-
-                            <span className="px-2 py-0.5 rounded text-[11px] font-mono bg-slate-800 text-slate-300 border border-slate-700">
-                              {round.attack_type}
-                            </span>
-
-                            <span
-                              className={`px-2 py-0.5 rounded text-[11px] font-mono font-bold ${
-                                isBlocked
-                                  ? "bg-rose-950/60 text-rose-400 border border-rose-800"
-                                  : "bg-emerald-950/60 text-emerald-400 border border-emerald-800"
-                              }`}
-                            >
-                              HTTP {round.response_status}
-                            </span>
-                          </div>
-
-                          <div className="text-xs text-slate-400 font-mono mt-1 flex items-center gap-2">
-                            <span>Endpoint: <strong className="text-slate-300">{round.endpoint}</strong></span>
-                            <span>•</span>
-                            <span>Technique: <strong className="text-purple-300">{round.technique}</strong></span>
-                          </div>
-                        </div>
+                        <span className="px-1.5 py-0.2 rounded bg-rose-950/60 text-rose-300 border border-rose-800/50 font-bold text-[10px] shrink-0">
+                          {r.attack_type}
+                        </span>
+                        <span className="text-slate-400 text-[11px] truncate" title={epLabel}>
+                          {epLabel}
+                        </span>
                       </div>
 
-                      {/* Threat Score & Latency Gauge */}
-                      <div className="flex items-center gap-4 self-end lg:self-auto">
-                        <div className="text-right">
-                          <span className="text-[10px] font-mono text-slate-400 block">Threat Score:</span>
-                          <span className={`inline-block px-2 py-0.5 rounded text-xs font-mono font-bold border ${threatScoreColor}`}>
-                            {round.waf_threat_score.toFixed(1)} / 100
-                          </span>
-                        </div>
-
-                        <div className="text-right font-mono text-xs text-slate-400">
-                          <span className="text-[10px] block">Latency:</span>
-                          <span className="text-slate-200">{round.latency_ms} ms</span>
-                        </div>
-
-                        <button
-                          onClick={() => setSelectedRound(round)}
-                          className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-medium transition cursor-pointer"
-                        >
-                          <span>Chi Tiết</span>
-                          <ChevronRight className="w-3 h-3 text-slate-400" />
-                        </button>
-                      </div>
+                      <span
+                        className={`px-2 py-0.5 rounded text-[10px] font-bold flex items-center gap-1 shrink-0 ${
+                          isBlocked
+                            ? "bg-emerald-950/80 text-emerald-300 border border-emerald-700"
+                            : "bg-rose-950/80 text-rose-300 border border-rose-700"
+                        }`}
+                      >
+                        {isBlocked ? <CheckCircle2 className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
+                        <span>{r.dlp_redacted ? "DLP SCRUB" : `HTTP ${statusCode}`}</span>
+                      </span>
                     </div>
 
-                    {/* Payloads Comparison Bar */}
-                    <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-2 text-xs font-mono">
-                      {/* Original Seed */}
-                      <div className="bg-slate-900/90 p-2.5 rounded-lg border border-slate-800">
-                        <div className="flex justify-between items-center text-[10px] text-slate-400 mb-1">
-                          <span>Payload Gốc (Seed):</span>
-                        </div>
-                        <code className="text-slate-300 text-[11px] break-all select-all block">
-                          {round.original_payload || "N/A"}
-                        </code>
-                      </div>
+                    <div className="text-[11px] text-slate-300 flex items-center justify-between gap-2 mb-1">
+                      <span className="text-cyan-400 font-semibold truncate">{techLabel}</span>
+                      <span className="text-slate-400 shrink-0">
+                        Risk {(r.waf_threat_score ?? r.threat_score ?? 0).toFixed(1)} • {(r.latency_ms ?? 0).toFixed(2)} ms
+                      </span>
+                    </div>
 
-                      {/* Mutated RL Payload */}
-                      <div className={`p-2.5 rounded-lg border ${
-                        isBlueWinner ? "bg-slate-900/90 border-slate-800" : "bg-rose-950/30 border-rose-900/60"
-                      }`}>
-                        <div className="flex justify-between items-center text-[10px] text-rose-300 mb-1">
-                          <span>Payload Đột Biến (RL Mutated Evasion):</span>
-                          <button
-                            onClick={() => handleCopy(round.payload, `round-${round.round_num}`)}
-                            className="text-slate-400 hover:text-white transition flex items-center gap-1"
-                            title="Sao chép payload"
-                          >
-                            {copiedPayload === `round-${round.round_num}` ? (
-                              <Check className="w-3 h-3 text-emerald-400" />
-                            ) : (
-                              <Copy className="w-3 h-3" />
-                            )}
-                          </button>
-                        </div>
-                        <code className="text-rose-200 text-[11px] font-bold break-all select-all block">
-                          {round.payload}
-                        </code>
-                      </div>
+                    <div className="p-1.5 rounded bg-slate-900 border border-slate-800 text-[10px] text-slate-400 truncate">
+                      <code>{r.mutated_payload || r.original_payload || "(GET probe)"}</code>
                     </div>
                   </div>
                 );
-              })}
-            </div>
-          )}
+              })
+            ) : (
+              <div className="py-20 text-center text-slate-500 text-xs font-mono">
+                <Swords className="w-8 h-8 text-slate-700 mx-auto mb-2" />
+                <p>Sẵn sàng kiểm thử xâm nhập tự động 5 pha (OpenAPI -&gt; Dueling-DQN -&gt; WAF).</p>
+                <p className="text-[11px] text-slate-600 mt-1">
+                  Chọn cấp độ phòng thủ (<span className="text-rose-400">No WAF</span> /{" "}
+                  <span className="text-amber-400">Rules Only</span> /{" "}
+                  <span className="text-purple-400">Hybrid v3.0</span>) rồi bấm{" "}
+                  <span className="text-rose-400 font-bold">[Chạy Pentest AI]</span>.
+                </p>
+              </div>
+            )}
+          </div>
         </div>
-      </main>
 
-      {/* 5. Round Detail Inspection Drawer / Modal */}
-      {selectedRound && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200"
-          onClick={() => setSelectedRound(null)}
-        >
-          <div
-            className="w-full max-w-2xl bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl p-6 overflow-hidden max-h-[90vh] flex flex-col"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Header */}
-            <div className="flex items-center justify-between pb-4 border-b border-slate-800">
-              <div className="flex items-center gap-2.5">
-                <span className="w-8 h-8 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center font-mono font-bold text-xs text-white">
-                  #{selectedRound.round_num}
-                </span>
-                <div>
-                  <h3 className="text-base font-bold text-white flex items-center gap-2">
-                    Kiểm Tra Chi Tiết Hiệp Đấu Đối Kháng
-                  </h3>
-                  <span className="text-xs font-mono text-slate-400">
-                    Phân tích quyết định phòng thủ AI-WAF vs Kỹ thuật đột biến RL
-                  </span>
-                </div>
-              </div>
-
-              <button
-                onClick={() => setSelectedRound(null)}
-                className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"
-                aria-label="Đóng"
-              >
-                <X className="w-5 h-5" />
-              </button>
+        {/* COLUMN 3: DUAL-BRAIN INSPECTOR */}
+        <div className="col-span-12 lg:col-span-4 h-full min-h-0 flex flex-col gap-3 overflow-hidden">
+          {/* Top Half: Trained 64-D Dueling-DQN Brain */}
+          <div className="flex-1 min-h-0 bg-slate-900/70 border border-slate-800/80 rounded-xl p-3 shadow flex flex-col overflow-hidden">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-800/80 text-xs font-mono">
+              <span className="font-bold text-rose-400 uppercase tracking-wider flex items-center gap-1.5">
+                <Cpu className="w-4 h-4 text-rose-400" />
+                Bộ Não Red Team Dueling-DQN
+              </span>
+              <span className="text-[10px] text-slate-400">64-D State -&gt; 26 Actions</span>
             </div>
 
-            {/* Modal Body */}
-            <div className="flex-1 overflow-y-auto py-4 space-y-4 text-xs font-mono">
-              {/* Verdict Banner */}
-              <div
-                className={`p-3.5 rounded-xl border flex items-center justify-between ${
-                  selectedRound.winner === "BLUE_TEAM"
-                    ? "bg-emerald-950/40 border-emerald-800 text-emerald-300"
-                    : "bg-rose-950/40 border-rose-800 text-rose-300"
-                }`}
-              >
-                <div className="flex items-center gap-2.5">
-                  {selectedRound.winner === "BLUE_TEAM" ? (
-                    <Shield className="w-5 h-5 text-emerald-400" />
-                  ) : (
-                    <Flame className="w-5 h-5 text-rose-400" />
-                  )}
+            <div className="flex-1 overflow-y-auto mt-2 space-y-2 pr-1 text-xs font-mono">
+              {selectedRound ? (
+                <>
                   <div>
-                    <span className="font-bold text-sm block">
-                      {selectedRound.winner === "BLUE_TEAM"
-                        ? "BLUE TEAM WAF BLOCKED (403 FORBIDDEN)"
-                        : "RED TEAM BYPASSED (200 OK)"}
+                    <span className="text-[11px] text-slate-400 mb-1 block font-semibold">
+                      Trained Action Q(s, a) Ranking:
                     </span>
-                    <span className="text-[11px] opacity-80">
-                      Quyết định WAF: [{selectedRound.waf_decision}] • Độ trễ: {selectedRound.latency_ms} ms
-                    </span>
+                    <div className="space-y-1">
+                      {qEntries.map((entry, idx) => {
+                        const normPct = Math.min(
+                          100,
+                          Math.max(12, Math.round(((entry.q_value - qMin) / qSpan) * 88 + 12))
+                        );
+                        const isChosen = Boolean(entry.selected ?? idx === 0);
+                        return (
+                          <div key={`${entry.action}-${idx}`} className="space-y-0.5">
+                            <div className="flex justify-between text-[10px] gap-2">
+                              <span className={`truncate ${isChosen ? "text-rose-300 font-bold" : "text-slate-400"}`}>
+                                {isChosen ? `★ ${entry.action}` : entry.action}
+                              </span>
+                              <span className="text-slate-300 font-bold shrink-0">
+                                {entry.q_value.toFixed(3)}
+                              </span>
+                            </div>
+                            <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                              <div
+                                className={`h-full rounded-full ${isChosen ? "bg-rose-500" : "bg-slate-600"}`}
+                                style={{ width: `${normPct}%` }}
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
 
-                <div className="text-right">
-                  <span className="text-[10px] block opacity-80">Threat Score:</span>
-                  <span className="font-extrabold text-base">{selectedRound.waf_threat_score.toFixed(1)} / 100</span>
-                </div>
-              </div>
-
-              {/* Vector & Technique Information */}
-              <div className="bg-slate-950 p-3.5 rounded-xl border border-slate-800 space-y-2">
-                <div className="flex justify-between border-b border-slate-800/80 pb-1.5">
-                  <span className="text-slate-400">Loại Tấn Công (Attack Family):</span>
-                  <span className="text-white font-bold">{selectedRound.attack_type}</span>
-                </div>
-                <div className="flex justify-between border-b border-slate-800/80 pb-1.5">
-                  <span className="text-slate-400">Target Endpoint:</span>
-                  <span className="text-slate-200">{selectedRound.endpoint}</span>
-                </div>
-                <div className="flex justify-between border-b border-slate-800/80 pb-1.5">
-                  <span className="text-slate-400">Kỹ Thuật Đột Biến (Mutator Technique):</span>
-                  <span className="text-purple-400 font-bold">{selectedRound.technique}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-400">Học Tăng Cường (RL Evasion Score):</span>
-                  <span className="text-cyan-400">
-                    {selectedRound.evasion_score ? selectedRound.evasion_score.toFixed(3) : "0.785"} (DQN Q-value)
-                  </span>
-                </div>
-              </div>
-
-              {/* Seed vs Mutated Payload Side-by-Side */}
-              <div className="space-y-3">
-                <div className="bg-slate-950 p-3.5 rounded-xl border border-slate-800">
-                  <div className="flex justify-between items-center text-slate-400 mb-1.5">
-                    <span>1. Payload Gốc Ban Đầu (Seed Payload):</span>
+                  <div className="p-2 rounded-lg bg-rose-950/40 border border-rose-900/50 text-[11px] text-rose-200">
+                    <span className="font-bold text-rose-300 block mb-0.5">Phân tích đối kháng:</span>
+                    <p className="leading-relaxed">{selectedRound.reasoning_vi}</p>
                   </div>
-                  <pre className="p-2.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 break-all whitespace-pre-wrap">
-                    {selectedRound.original_payload || "N/A"}
-                  </pre>
-                </div>
 
-                <div className="bg-slate-950 p-3.5 rounded-xl border border-rose-900/40">
-                  <div className="flex justify-between items-center text-rose-300 mb-1.5">
-                    <span>2. Payload Đột Biến (RL Agent Mutated Output):</span>
-                    <button
-                      onClick={() => handleCopy(selectedRound.payload, "modal-payload")}
-                      className="text-slate-400 hover:text-white transition flex items-center gap-1 text-[11px]"
-                    >
-                      {copiedPayload === "modal-payload" ? (
-                        <Check className="w-3.5 h-3.5 text-emerald-400" />
-                      ) : (
-                        <Copy className="w-3.5 h-3.5" />
+                  <div>
+                    <div className="flex items-center justify-between mb-1 text-[11px]">
+                      <span className="text-slate-400 font-semibold">Payload Gốc -&gt; Đột Biến:</span>
+                      <button
+                        onClick={() =>
+                          copyToClipboard(selectedRound.mutated_payload || selectedRound.original_payload, "mutated")
+                        }
+                        className="text-[10px] text-cyan-400 hover:underline flex items-center gap-1 cursor-pointer"
+                      >
+                        {copiedKey === "mutated" ? (
+                          <Check className="w-3 h-3 text-emerald-400" />
+                        ) : (
+                          <Copy className="w-3 h-3" />
+                        )}
+                        <span>Copy</span>
+                      </button>
+                    </div>
+                    {selectedRound.original_payload &&
+                      selectedRound.mutated_payload &&
+                      selectedRound.original_payload !== selectedRound.mutated_payload && (
+                        <div className="p-1.5 mb-1 rounded bg-slate-950/80 border border-slate-800 text-[10px] text-slate-500 break-all">
+                          Baseline: {selectedRound.original_payload}
+                        </div>
                       )}
-                      <span>Sao chép</span>
-                    </button>
+                    <pre className="p-2 rounded bg-slate-950 border border-slate-800 text-[10px] text-amber-300 whitespace-pre-wrap break-all max-h-20 overflow-y-auto">
+                      {selectedRound.mutated_payload || selectedRound.original_payload || "(Path / Query Probe)"}
+                    </pre>
                   </div>
-                  <pre className="p-2.5 rounded-lg bg-rose-950/30 border border-rose-900/60 text-rose-200 font-bold break-all whitespace-pre-wrap">
-                    {selectedRound.payload}
-                  </pre>
+                </>
+              ) : (
+                <div className="py-12 text-center text-slate-500 text-xs">
+                  Chọn một vòng bên Trace để xem Q-values thực từ mạng Dueling-DQN.
                 </div>
-              </div>
+              )}
+            </div>
+          </div>
 
-              {/* Multi-Layer WAF Breakdown */}
-              <div className="bg-slate-950 p-3.5 rounded-xl border border-slate-800 space-y-2">
-                <span className="text-[11px] uppercase tracking-wider text-slate-400 block mb-1">
-                  Đánh Giá Đa Tầng Của Cổng An Ninh AI-WAF:
-                </span>
-                <div className="grid grid-cols-3 gap-2 text-center">
-                  <div className="bg-slate-900 p-2 rounded-lg border border-slate-800">
-                    <span className="text-[10px] text-slate-400 block">Deterministic Rules</span>
-                    <span className={`text-xs font-bold ${selectedRound.waf_threat_score >= 80 ? "text-rose-400" : "text-emerald-400"}`}>
-                      {selectedRound.waf_threat_score >= 80 ? "MATCH (100)" : "CLEAN (0)"}
-                    </span>
-                  </div>
-                  <div className="bg-slate-900 p-2 rounded-lg border border-slate-800">
-                    <span className="text-[10px] text-slate-400 block">XGBoost ML Score</span>
-                    <span className="text-xs font-bold text-amber-400">
-                      {(selectedRound.waf_threat_score * 0.95).toFixed(1)} / 100
-                    </span>
-                  </div>
-                  <div className="bg-slate-900 p-2 rounded-lg border border-slate-800">
-                    <span className="text-[10px] text-slate-400 block">IsolationForest Anomaly</span>
-                    <span className="text-xs font-bold text-cyan-400">
-                      {selectedRound.waf_threat_score >= 70 ? "Outlier (-0.32)" : "Normal (0.15)"}
-                    </span>
-                  </div>
-                </div>
-              </div>
+          {/* Bottom Half: Blue Team v3.0 Anatomy */}
+          <div className="flex-1 min-h-0 bg-slate-900/70 border border-slate-800/80 rounded-xl p-3 shadow flex flex-col overflow-hidden">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-800/80 text-xs font-mono">
+              <span className="font-bold text-purple-400 uppercase tracking-wider flex items-center gap-1.5">
+                <Shield className="w-4 h-4 text-purple-400" />
+                Giải Phẫu Blue Team v3.0
+              </span>
+              <span className="text-[10px] text-slate-400">Rules + 26-D ML + API Guards</span>
             </div>
 
-            {/* Footer */}
-            <div className="pt-3 border-t border-slate-800 flex justify-end">
-              <button
-                onClick={() => setSelectedRound(null)}
-                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold font-mono transition"
-              >
-                Đóng
-              </button>
+            <div className="flex-1 overflow-y-auto mt-2 space-y-2 pr-1 text-xs font-mono">
+              {selectedRound ? (
+                <>
+                  <div>
+                    <span className="text-[11px] text-slate-400 font-semibold block mb-0.5">
+                      InputNormalizer Canonical Output:
+                    </span>
+                    <div className="p-1.5 rounded bg-slate-950 border border-slate-800 text-[10px] text-slate-300 break-all max-h-14 overflow-y-auto">
+                      {selectedRound.normalized_payload || selectedRound.mutated_payload || "(Empty)"}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="p-2 rounded bg-slate-950 border border-slate-800 text-center">
+                      <div className="text-[10px] text-slate-400">Rule / API</div>
+                      <div className="text-sm font-bold text-rose-400 mt-0.5">
+                        {(selectedRound.rule_score ?? 0).toFixed(1)}
+                      </div>
+                    </div>
+                    <div className="p-2 rounded bg-slate-950 border border-slate-800 text-center">
+                      <div className="text-[10px] text-slate-400">XGBoost 26-D</div>
+                      <div className="text-sm font-bold text-cyan-400 mt-0.5">
+                        {(selectedRound.ml_score ?? 0).toFixed(1)}
+                      </div>
+                    </div>
+                    <div className="p-2 rounded bg-slate-950 border border-slate-800 text-center">
+                      <div className="text-[10px] text-slate-400">IForest 26-D</div>
+                      <div className="text-sm font-bold text-emerald-400 mt-0.5">
+                        {(selectedRound.anomaly_score ?? 0).toFixed(1)}
+                      </div>
+                    </div>
+                  </div>
+
+                  {selectedRound.matched_rules && selectedRound.matched_rules.length > 0 && (
+                    <div>
+                      <span className="text-[10px] text-slate-400 block mb-1">Chữ ký &amp; Lá chắn kích hoạt:</span>
+                      <div className="flex flex-wrap gap-1">
+                        {selectedRound.matched_rules.map((rule, rIdx) => (
+                          <span
+                            key={rIdx}
+                            className="px-1.5 py-0.2 rounded bg-rose-950/70 text-rose-300 border border-rose-800 text-[10px] font-bold"
+                          >
+                            {rule}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="p-2 rounded-lg bg-slate-950 border border-slate-800 flex items-center justify-between">
+                    <div>
+                      <span className="text-[10px] text-slate-400 block">Phán quyết WAF ({selectedRound.waf_decision}):</span>
+                      <span
+                        className={`font-bold text-xs ${
+                          selectedRound.waf_blocked ? "text-emerald-400" : "text-rose-400"
+                        }`}
+                      >
+                        {selectedRound.dlp_redacted
+                          ? "CHE GIẤU DỮ LIỆU NHẠY CẢM (DLP)"
+                          : selectedRound.waf_blocked
+                          ? "CHẶN ĐỨNG 403 FORBIDDEN"
+                          : "LỌT LƯỚI 200 OK (BYPASS)"}
+                      </span>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-[10px] text-slate-400 block">Hybrid Risk / Latency:</span>
+                      <span className="text-slate-200 font-bold">
+                        {(selectedRound.waf_threat_score ?? selectedRound.threat_score ?? 0).toFixed(1)} •{" "}
+                        {(selectedRound.latency_ms ?? 0).toFixed(2)} ms
+                      </span>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="py-12 text-center text-slate-500 text-xs">
+                  Chọn một vòng bên Trace để giải phẫu các tầng phòng thủ Blue Team v3.0.
+                </div>
+              )}
             </div>
           </div>
         </div>
-      )}
+      </main>
 
-      {/* 6. Battle History Drawer / Modal */}
+      {/* Battle History Drawer */}
       {isHistoryOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-200"
-          onClick={() => setIsHistoryOpen(false)}
-        >
-          <div
-            className="w-full max-w-3xl bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl p-6 overflow-hidden max-h-[90vh] flex flex-col"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Header */}
-            <div className="flex items-center justify-between pb-4 border-b border-slate-800">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-cyan-950/80 border border-cyan-700 flex items-center justify-center">
-                  <History className="w-4 h-4 text-cyan-400" />
-                </div>
-                <div>
-                  <h3 className="text-base font-bold text-white">
-                    Lịch Sử Các Trận Đấu Đối Kháng AI Arena
-                  </h3>
-                  <span className="text-xs font-mono text-slate-400">
-                    Nhật ký các chiến dịch kiểm thử tự động giữa Red Team và Blue Team
-                  </span>
-                </div>
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex justify-end">
+          <div className="w-full max-w-md h-full bg-slate-900 border-l border-slate-800 p-4 flex flex-col font-mono text-xs">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+              <div className="flex items-center gap-2">
+                <History className="w-4 h-4 text-purple-400" />
+                <span className="font-bold text-white text-sm">Lịch Sử Phiên Pentest &amp; Arena</span>
               </div>
-
               <button
                 onClick={() => setIsHistoryOpen(false)}
-                className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"
-                aria-label="Đóng"
+                className="text-slate-400 hover:text-white cursor-pointer"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </button>
             </div>
 
-            {/* History List */}
-            <div className="flex-1 overflow-y-auto py-4 space-y-3">
+            {historyData && (
+              <div className="grid grid-cols-3 gap-2 my-3 text-center">
+                <div className="p-2 rounded bg-slate-950 border border-slate-800">
+                  <div className="text-[10px] text-slate-400">Tổng phiên</div>
+                  <div className="text-sm font-bold text-white">{historyData.total_battles}</div>
+                </div>
+                <div className="p-2 rounded bg-slate-950 border border-emerald-900/50">
+                  <div className="text-[10px] text-slate-400">Blue Thắng</div>
+                  <div className="text-sm font-bold text-emerald-400">{historyData.blue_wins}</div>
+                </div>
+                <div className="p-2 rounded bg-slate-950 border border-rose-900/50">
+                  <div className="text-[10px] text-slate-400">Red Thắng</div>
+                  <div className="text-sm font-bold text-rose-400">{historyData.red_wins}</div>
+                </div>
+              </div>
+            )}
+
+            <div className="flex-1 overflow-y-auto space-y-2 pr-1">
               {historyData && historyData.battles.length > 0 ? (
-                historyData.battles.map((b) => (
+                historyData.battles.map((b: any, idx: number) => (
                   <div
-                    key={b.battle_id}
-                    className="p-3.5 rounded-xl bg-slate-950/80 border border-slate-800 hover:border-slate-700 transition flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs font-mono"
+                    key={b.battle_id || idx}
+                    className="p-2.5 rounded-lg bg-slate-950/80 border border-slate-800 flex items-center justify-between"
                   >
                     <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-white">{b.battle_id}</span>
-                        <span className="px-2 py-0.5 rounded text-[10px] bg-slate-800 text-slate-300 border border-slate-700">
-                          {b.campaign}
-                        </span>
-                        <span
-                          className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                            b.winner === "BLUE_TEAM"
-                              ? "bg-emerald-950 text-emerald-300 border border-emerald-800"
-                              : "bg-rose-950 text-rose-300 border border-rose-800"
-                          }`}
-                        >
-                          {b.winner === "BLUE_TEAM" ? "BLUE WON" : "RED WON"}
-                        </span>
-                      </div>
-                      <div className="text-[11px] text-slate-400 mt-1 flex items-center gap-2">
-                        <span>{new Date(b.timestamp).toLocaleString("vi-VN")}</span>
-                        <span>•</span>
-                        <span>{b.total_rounds} Hiệp</span>
-                        <span>•</span>
-                        <span>Threat TB: {b.avg_threat_score}/100</span>
+                      <div className="font-bold text-slate-200">{b.battle_id}</div>
+                      <div className="text-[10px] text-slate-400">
+                        Tier: {b.defense_tier || b.target_mode} • Scope: {b.scope || b.campaign}
                       </div>
                     </div>
-
-                    <div className="flex items-center gap-3">
-                      <div className="text-right text-[11px]">
-                        <span className="text-emerald-400 font-bold">{b.blocked_count} Block</span>
-                        <span className="text-slate-500 mx-1">/</span>
-                        <span className="text-rose-400 font-bold">{b.bypass_count} Bypass</span>
-                      </div>
-
-                      <button
-                        onClick={() => handleSelectHistoricalBattle(b)}
-                        className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-white font-semibold transition"
+                    <div className="text-right">
+                      <span
+                        className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                          b.winner === "BLUE_TEAM"
+                            ? "bg-emerald-950 text-emerald-300 border border-emerald-700"
+                            : "bg-rose-950 text-rose-300 border border-rose-700"
+                        }`}
                       >
-                        Tải Trận
-                      </button>
+                        {b.winner}
+                      </span>
+                      <div className="text-[10px] text-slate-400 mt-1">
+                        403: {b.blocked_count} | 200: {b.bypass_count}
+                      </div>
                     </div>
                   </div>
                 ))
               ) : (
-                <div className="py-12 text-center text-slate-500 font-mono text-xs">
-                  Chưa có lịch sử trận đấu nào được lưu trữ.
-                </div>
+                <div className="py-12 text-center text-slate-500">Chưa có phiên lịch sử nào.</div>
               )}
-            </div>
-
-            {/* Footer */}
-            <div className="pt-3 border-t border-slate-800 flex justify-between items-center text-xs font-mono text-slate-400">
-              <span>
-                Tổng trận: <strong className="text-white">{historyData?.total_battles || 0}</strong> •{" "}
-                Red Thắng: <strong className="text-rose-400">{historyData?.red_wins || 0}</strong> •{" "}
-                Blue Thắng: <strong className="text-emerald-400">{historyData?.blue_wins || 0}</strong>
-              </span>
-
-              <button
-                onClick={() => setIsHistoryOpen(false)}
-                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-semibold transition"
-              >
-                Đóng
-              </button>
             </div>
           </div>
         </div>
       )}
+
+      {/* Footer */}
+      <footer className="w-full h-7 shrink-0 border-t border-slate-900 bg-slate-950/90 px-4 text-[11px] font-mono text-slate-500 flex items-center justify-between whitespace-nowrap">
+        <div className="flex items-center gap-3">
+          <span>AI Arena Autonomous Pentest Cockpit</span>
+          <span>•</span>
+          <span className="text-rose-400">PyTorch Dueling-DQN v2.0 (64-D) vs Blue Team Hybrid v3.0</span>
+          <span>•</span>
+          <span className="text-slate-400">Live SSE Stream</span>
+        </div>
+        <div>
+          <span>
+            BFF Proxy: <span className="text-emerald-400 font-bold">CONNECTED (/api/gateway)</span>
+          </span>
+        </div>
+      </footer>
     </div>
   );
 }

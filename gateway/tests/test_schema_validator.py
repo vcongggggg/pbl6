@@ -104,10 +104,28 @@ def test_schema_validator_body_type_mismatch():
 
 def test_schema_validator_enum_mismatch():
     validator = SchemaValidator()
-    # role in user profile update must be user, moderator, or admin
+    # status in order modification must be pending, paid, shipped, or cancelled
+    body = json.dumps({
+        "status": "illegal_forged_state",
+        "shipping_address": "123 Street",
+    }).encode("utf-8")
+    violations = validator.validate_request(
+        method="PATCH",
+        path="/api/v1/vulnerable/orders/1/",
+        body_bytes=body,
+        content_type="application/json",
+    )
+    assert len(violations) == 1
+    assert violations[0].violation_type == "ENUM_MISMATCH"
+    assert violations[0].field == "status"
+
+
+def test_schema_validator_profile_role_property_forbidden():
+    validator = SchemaValidator()
+    # 'role' has been completely removed from self-service profile update schema (Phase A3)
     body = json.dumps({
         "email": "user@example.com",
-        "role": "super_root_hacker",
+        "role": "admin",
     }).encode("utf-8")
     violations = validator.validate_request(
         method="POST",
@@ -116,7 +134,7 @@ def test_schema_validator_enum_mismatch():
         content_type="application/json",
     )
     assert len(violations) == 1
-    assert violations[0].violation_type == "ENUM_MISMATCH"
+    assert violations[0].violation_type == "ADDITIONAL_PROPERTY_NOT_ALLOWED"
     assert violations[0].field == "role"
 
 

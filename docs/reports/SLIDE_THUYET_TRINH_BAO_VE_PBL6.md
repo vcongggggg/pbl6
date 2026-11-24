@@ -18,16 +18,16 @@
 | **02** | Đặt Vấn Đề & Thách Thức An Ninh Web API | Công | OWASP API Top 10, hạn chế WAF tĩnh (bypass/ReDoS) & ML đơn lẻ (Evasion/Zero-Day/Pickle CWE-502) |
 | **03** | Mục Tiêu Nghiên Cứu & Đóng Góp Cốt Lõi | Công | Kiềng 3 chân: Blue Team v2.0 + Red Team Offensive AI + Cyber Range 2 Máy LAN |
 | **04** | Kiến Trúc Thao Trường Đối Kháng Phân Tán | Minh | Máy 1 (WAF :8000, Bookie Django :5000 loopback, SOC :3000) vs Máy 2 (Red Team DQN) |
-| **05** | Đa Giao Thức & Positive Security Model | Công | Multi-Protocol Sniffer (REST/GraphQL/SOAP-XML/JSON-RPC) + OpenAPI 3.0 Schema Validator |
-| **06** | Phòng Thủ Lai v2.0: Rule + XGBoost v2 + IForest v2 | Công | 26-D Unified Extractor, Zero-Pickle `xgb_v2.ubj` + `iforest_v2.npz`, Fail-Closed SHA-256 |
+| **05** | Đa Giao Thức, OpenAPI & 5 Lá Chắn OWASP API v3.0 | Công | Multi-Protocol Sniffer + OpenAPI Schema + 5 API Guards (`SSRF`, `NoSQLi`, `Mass Assignment`, `Stateful BOLA`, `Response DLP`) |
+| **06** | Phòng Thủ Lai v3.0: Rule + XGBoost v2 + IForest v2 | Công | 26-D Unified Extractor, Zero-Pickle `xgb_v2.ubj` + `iforest_v2.npz`, Fail-Closed SHA-256 |
 | **07** | Kiến Trúc Chịu Tải Cao & Gia Cố Bảo Mật | Công | Async Offload + SQLite WAL Group Commit, ReDoS `923->0.89ms`, Next.js BFF `0` Secrets |
-| **08** | SOC Command Center, Kill Chain & XAI | Công | 100% số liệu thật, Attack Sessions 5 bước MITRE, 26-D Evidence Drawer & Explainability |
-| **09** | Tác Tử Red Team Tự Hành & Đấu Trường AI | Minh | Task 10.1–10.4: Recon cycle-guard, AttackGraph 40-D/14-A, DQN `weights_only=True`, `/arena` |
+| **08** | Zero-Scroll SOC Cockpit (`/`), Kill Chain & XAI | Công | 100% số liệu thật, bố cục 3-Tab `100vh`, Attack Sessions 5 bước MITRE & 26-D XAI |
+| **09** | Tác Tử Pentest Tự Hành 5 Pha & Cockpit `/arena` | Minh | OpenAPI Recon -> Attack Graph -> 64-D PyTorch Dueling-DQN v2.0 (26 Actions) -> Live SSE `/arena` |
 | **10** | Thực Nghiệm 1: Đối Sánh ML & Ablation v2.0 | Công | `defense_v2` (46.187 mẫu Zero-Leakage) & Ablation 1.000 mẫu: Hybrid **98.61% F1 / 97.25% Recall / 0.848 ms** |
-| **11** | Thực Nghiệm 2: Zero-Shot CSIC 2010 & Defense-in-Depth | Công | Hạ CSIC FPR `29.60% -> 0.00%`, Precision `100%`, XSS `100%` + 4 trụ cột bảo vệ Hybrid |
-| **12** | Thực Nghiệm 3: Hiệu Năng Tải Cao & Đối Kháng Live | Minh | `253–340 RPS @ C=50`, AI `0.867 ms`, **20/20 DQN Blocked (`0%` Bypass)**, `350+` Tests / `0` Lint |
-| **13** | Kịch Bản Demo Thực Chiến 10 Phút | Cả hai | 4 giai đoạn `demo_rehearsal.py` + Red Team `runner.py` + Đấu Trường AI `/arena` |
-| **14** | Kết Luận & Hướng Phát Triển Tương Lai | Cả hai | Tổng kết 26/26 Findings Closed & Lộ trình Cloud-Native (PostgreSQL/Redis, eBPF/XDP, Online Co-Evolution) |
+| **11** | Thực Nghiệm 2: Zero-Shot CSIC 2010 & Defense-in-Depth | Công | Hạ CSIC FPR `29.60% -> 0.00%`, Precision `100%`, XSS `100%` + 5 trụ cột bảo vệ Hybrid v3.0 |
+| **12** | Thực Nghiệm 3: Tải Cao `C=50` & Ma Trận Đối Kháng 3x3 | Minh | `253–340 RPS @ C=50`; Dueling-DQN đạt **93.3% Evasion** trước WAF tĩnh nhưng **Hybrid v3.0 chặn 100% (45/45)** |
+| **13** | Kịch Bản Demo Thực Chiến 10 Phút (5 Giai Đoạn) | Cả hai | 5 giai đoạn `demo_rehearsal.py` + 3 cấp độ phòng thủ (`No WAF -> Rules -> Hybrid v3.0`) trên `/arena` |
+| **14** | Kết Luận & Hướng Phát Triển Tương Lai | Cả hai | Tổng kết toàn bộ Findings Closed & Lộ trình Cloud-Native (PostgreSQL/Redis, eBPF/XDP, Online Co-Evolution) |
 
 ---
 

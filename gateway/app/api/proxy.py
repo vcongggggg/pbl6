@@ -14,10 +14,11 @@ from app.core.request_id import resolve_request_id
 from app.db.models import WafConfigModel
 from app.db.session import SessionLocal, engine
 from app.security.anomaly import AnomalyDetector, get_anomaly_detector
+from app.security.bola_detector import BOLADetector
 from app.security.decision import DecisionEngine, PolicyAction
 from app.security.engine import RuleEngine
 from app.security.ml_detector import MLDetector, extract_26_from_http
-from app.security.models import DetectionResult
+from app.security.models import AttackType, DetectionResult
 from app.security.protocol_detector import (
     ApiProtocol,
     ApiProtocolDetector,
@@ -25,8 +26,10 @@ from app.security.protocol_detector import (
     UniversalPayloadExtractor,
 )
 from app.security.rate_limiter import SlidingWindowRateLimiter
+from app.security.response_dlp import ResponseDLPGuard
 from app.security.risk_engine import RiskEngine
 from app.security.schema_validator import SchemaValidator, SchemaViolation
+from app.security.scoring import RuleScorer
 from app.services.proxy import ProxyService
 from app.services.security import SecurityEventService
 from app.services.traffic import TrafficService
@@ -43,6 +46,8 @@ _rate_limiter = SlidingWindowRateLimiter()
 _ml_detector = MLDetector()
 _anomaly_detector = get_anomaly_detector()
 _schema_validator = SchemaValidator()
+_bola_detector = BOLADetector()
+_response_dlp = ResponseDLPGuard()
 
 # RAM TTL cache for runtime WAF mode (PERF-PBL6-001: avoids per-request SQLite SELECT)
 _WAF_MODE_CACHE: dict[int, tuple[str | None, float]] = {}
@@ -301,6 +306,16 @@ def _persist_background_logs(
 def get_schema_validator() -> SchemaValidator:
     """Dependency injecting the OpenAPI schema validator instance."""
     return _schema_validator
+
+
+def get_bola_detector() -> BOLADetector:
+    """Dependency injecting the stateful BOLA/IDOR detector instance."""
+    return _bola_detector
+
+
+def get_response_dlp() -> ResponseDLPGuard:
+    """Dependency injecting the outbound response DLP guard instance."""
+    return _response_dlp
 
 
 def get_proxy_service(
@@ -641,7 +656,25 @@ async def proxy_endpoint(
                 },
             )
 
-    # 6. Phase 7: Calculate Weighted Risk Score (Rule 40% + Supervised ML 35% + Anomaly 25%)
+    # 6. Phase 7: Stateful BOLA/IDOR Check + Weighted Risk Score (Rule 40% + Supervised ML 35% + Anomaly 25%)
+    if (
+        active_waf_mode != "OFF"
+        and settings.ablation_mode not in ("ml_only", "anomaly_only")
+    ):
+        bola_res = _bola_detector.inspect(
+            client_ip=client_ip,
+            path=path_norm,
+            method=request.method,
+            session_id=session_id,
+        )
+        if bola_res.is_bola and bola_res.rule_match is not None:
+            detection_result.matches.append(bola_res.rule_match)
+            detection_result.is_attack = True
+            detection_result.total_matches = len(detection_result.matches)
+            detection_result.rule_risk_score = RuleScorer.calculate_score(detection_result.matches)
+            detection_result.highest_severity = RuleScorer.get_highest_severity(detection_result.matches)
+            detection_result.attack_families = RuleScorer.get_attack_families(detection_result.matches)
+
     rule_score = detection_result.rule_risk_score if detection_result else 0.0
     risk_breakdown = risk_engine.calculate_weighted_score(
         rule_score=rule_score,
@@ -861,6 +894,59 @@ async def proxy_endpoint(
             request_id=request_id,
             body_bytes=body_bytes,
         )
+        # Outbound Response DLP Guard (OWASP API3:2023 Excessive Data Exposure)
+        if active_waf_mode != "OFF":
+            dlp_res = _response_dlp.inspect_and_redact(
+                body_bytes=response.body,
+                content_type=response.headers.get("content-type"),
+                status_code=response.status_code,
+                active_waf_mode=active_waf_mode,
+            )
+            if dlp_res.has_leak:
+                if dlp_res.redacted and dlp_res.redacted_bytes is not None:
+                    preserved_headers = [
+                        (k, v)
+                        for k, v in response.headers.raw
+                        if k.decode("latin-1").lower() != "content-length"
+                    ]
+                    response = Response(
+                        content=dlp_res.redacted_bytes,
+                        status_code=response.status_code,
+                    )
+                    for hk_bytes, hv_bytes in preserved_headers:
+                        response.headers.append(
+                            hk_bytes.decode("latin-1"),
+                            hv_bytes.decode("latin-1"),
+                        )
+                    response.headers["X-WAF-DLP-Redacted"] = "true"
+                    response.headers["X-WAF-DLP-Findings"] = str(dlp_res.finding_count)
+                    response_size = len(dlp_res.redacted_bytes)
+                else:
+                    response.headers["X-WAF-DLP-Alert"] = "MONITOR"
+
+                dlp_action = "BLOCKED" if dlp_res.redacted else "MONITOR"
+                if detection_kwargs is None:
+                    detection_kwargs = {
+                        "request_id": request_id,
+                        "client_ip": client_ip,
+                        "detection_result": detection_result,
+                        "action": dlp_action,
+                        "risk_score": 88.0,
+                        "ml_score": risk_breakdown.ml_score,
+                        "anomaly_score": risk_breakdown.anomaly_score,
+                        "details_extra": {
+                            "decision": "DLP_REDACT" if dlp_res.redacted else "MONITOR",
+                            "reason": (
+                                f"Outbound Response DLP intercepted {dlp_res.finding_count} leaked "
+                                f"credential/secret field(s): {', '.join(dlp_res.leaked_fields[:5])}"
+                            ),
+                            "api_protocol": api_protocol.value,
+                            "dlp_leaked_fields": dlp_res.leaked_fields,
+                            "dlp_redacted": dlp_res.redacted,
+                        },
+                        "attack_type_override": AttackType.EXCESSIVE_DATA_EXPOSURE.value,
+                    }
+
         latency_ms = round((time.perf_counter() - req_start) * 1000.0, 3)
         # Attach security headers
         response.headers["X-WAF-Action"] = decision.action.value

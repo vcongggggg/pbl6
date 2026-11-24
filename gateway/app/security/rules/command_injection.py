@@ -50,4 +50,16 @@ def get_command_injection_rules() -> list[RegexRule]:
             ),
             pattern=r"""(?i)(?:(?:curl|wget)\s+[^\n|;&]+\|\s*(?:sh|bash|zsh)|\bnc\s+(?:-\w+\s+)*\d+\.\d+\.\d+\.\d+\s+\d+\s+-e\s+\/bin\/(?:sh|bash)|\/bin\/(?:ba)?sh\s+-i)""",
         ),
+        RegexRule(
+            rule_id="CMD-005",
+            attack_type=AttackType.COMMAND_INJECTION,
+            severity=Severity.CRITICAL,
+            confidence=0.96,
+            description="Shell Quote-Splitting and $IFS Evasion Obfuscation",
+            rationale=(
+                "Detects evasion techniques splitting shell binaries with empty quotes "
+                "(w''hoami, c''at) or substituting spaces with ${IFS}/$IFS."
+            ),
+            pattern=r"""(?i)(?:[;&|`]\s*[a-z]{1,4}(?:''|"")[a-z]{1,8}\b|\$\{?IFS\}?)""",
+        ),
     ]
