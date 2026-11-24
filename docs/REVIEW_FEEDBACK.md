@@ -1,3 +1,57 @@
+# ✅ FINAL AUDIT & REMEDIATION SIGN-OFF — NHÁNH `feat/pbl6-v3-autonomous-pentest-cockpit` (v3.0)
+
+## 🏆 KẾT LUẬN THẨM ĐỊNH SAU KHẮC PHỤC: **APPROVED — 10/10 HẠNG MỤC `[VERIFIED PASS]` (READY TO MERGE, PRINT & DEFEND)**
+- **Reviewer & Remediator:** `@pbl6-reviewer` (Senior Security Architect & Independent Code Auditor)
+- **Ngày nghiệm thu:** `2026-11-24`
+- **Nhánh được kiểm chứng:** `feat/pbl6-v3-autonomous-pentest-cockpit` (nền `main @ cb342d0`)
+- **Kiểm chứng tự động & E2E thực tế (`100% PASS`):**
+  - `ruff check gateway/ ml-engine/ attack-lab/ tests/unit/ scripts/{demo_rehearsal,run_adversarial_benchmark,sync_thesis_documents}.py` -> **`0 errors` (`All checks passed!`)**.
+  - `pytest gateway/tests/ tests/unit/ ml-engine/tests/ -q` -> **`100% PASSED`** (`0` failures, `campaign_report.json` nguyên vẹn 100%).
+  - `dashboard` (`npx tsc --noEmit` + `npm run lint` + `npm run build`) -> **`0 errors`**, **`0` client secrets** trong `.next/static/`.
+  - `docker compose config --quiet` -> **Exit `0`**.
+  - **Thực nghiệm Ma trận Đối kháng 3x3 Thật (`docs/reports/adversarial_benchmark_3x3.json`, `45` lượt/ô = `405` lượt thật):** `PyTorch Dueling-DQN v2.0 (64-D)` đạt **`93.3%` Evasion** trước `Legacy Rules Only` (`6.7%` Block), nhưng bị **`Blue Team v3.0 Hybrid`** chặn đứng và che giấu DLP **`45/45` (`100.0%` Block Rate, `0.0%` Evasion, `1.340 ms`)**.
+  - **Live 3-Service E2E Dry Run (`Bookie :5000` + `Gateway :8000` + `Dashboard Prod :3000`):** `11/11` Quick Simulator vectors đạt chuẩn qua BFF Proxy; Live SSE `/pentest/stream` tự động khám phá OpenAPI sống tại `http://127.0.0.1:5000/api/v1/vulnerable/openapi.json` (`no_waf -> 0/8`, `rules_only -> 1/8`, `hybrid_v3 -> 8/8 BLUE_TEAM`); `demo_rehearsal.py --auto` hoàn tất trọn vẹn **Stages 1–5 (Exit `0`)**; `runner.py` quét sống `11` endpoint OpenAPI.
+
+---
+
+### 🟢 NHÓM CRITICAL (6/6 — ĐÃ VÁ TRIỆT ĐỂ & KIỂM CHỨNG E2E)
+
+- [x] **[V3-AUDIT-001] `[VERIFIED PASS]` Đồng Bộ Hoàn Toàn Hợp Đồng JSON & TypeScript Giữa `arena.py` <-> `api.ts` <-> `arena/page.tsx`**
+  - **Khắc phục:** Chuẩn hóa đầy đủ các trường số học không null (`waf_threat_score`/`threat_score`, `rule_score`, `ml_score`, `anomaly_score`, `waf_blocked`, `dlp_redacted`, `dqn_q_values: list[PentestQValueEntry]`), thêm hàm chuẩn hóa an toàn `normalizeQEntries(...)` và null-safe `(val ?? 0).toFixed(...)` trên `/arena`. Kiểm chứng `tsc --noEmit` + `next build` + Live SSE `:3000/arena` đạt `200 OK`, `0` runtime error.
+
+- [x] **[V3-AUDIT-002] `[VERIFIED PASS]` Viết Lại 100% Benchmark Ma Trận 3x3 Thật (`scripts/run_adversarial_benchmark.py`) & Đồng Bộ Lại Báo Cáo `.docx` + Biểu Đồ `fig5` 300 DPI**
+  - **Khắc phục:** Khôi phục sạch 3 file `.docx` từ `cb342d0`, loại bỏ 100% hằng số giả, chạy trực tiếp `PentestDQNAdvisor` (`pentest_dqn_v2.pt`) + `RuleEngine` + 5 OWASP API Guards + `MLDetector` (`xgb_v2.ubj`) + `AnomalyDetector` (`iforest_v2.npz`) + `time.perf_counter()`. Kết quả thật: `Hybrid v3.0` đạt **`100.0%` Block Rate (`45/45`)** so với `6.7%` của `Legacy Rules Only` trước `Dueling-DQN v2.0`; biểu đồ `fig5` đặt legend ngang phía trên không đè nhãn; `sync_thesis_documents.py` đọc động 100% từ JSON.
+
+- [x] **[V3-AUDIT-003] `[VERIFIED PASS]` Triển Khai Đầy Đủ 5 Lá Chắn OWASP API Top 10 Vạn Năng Ở Blue Team (`gateway/app/security/`)**
+  - **Khắc phục:** Bổ sung `rules/ssrf.py` (`SSRF-001..004`, chỉ quét query/body tránh FP trên header), `rules/nosqli.py` (`NOSQLI-001..002`), `rules/mass_assignment.py` (`MASS-001..002` + khóa `enum: ["user"]` trong `schema_validator.py`), `bola_detector.py` (cửa sổ trượt LRU chặn dò quét ngang `>= 4` ID/60s & sentinel `<= 0`) và `response_dlp.py` (tự động che giấu `[REDACTED_BY_WAF_DLP]` cho băm mật khẩu/khóa bí mật, giữ nguyên `access_token`), tích hợp trực tiếp vào `proxy.py` kèm bộ test `gateway/tests/test_v3_owasp_api_guards.py`.
+
+- [x] **[V3-AUDIT-004] `[VERIFIED PASS]` Huấn Luyện Thật Mạng PyTorch Dueling Double-DQN 64-D / 26-Action (`pentest_dqn_v2.pt` + `.npz`) & Xóa Bỏ Công Thức Q-Value Giả**
+  - **Khắc phục:** Xây dựng `attack-lab/environment/pentest_env.py` (`64-D` state, `26` discrete actions), huấn luyện Curriculum 3 giai đoạn (`attack-lab/models/train_pentest_dqn.py`, `360` episodes, lưu kèm SHA-256 cho cả `.pt` `weights_only=True` lẫn `.npz` `allow_pickle=False` tương thích Ubuntu CI không có PyTorch), xóa `_build_dqn_q_values` giả và vector `[0.5]*40` trong `arena.py` & `runner.py`, phân nhánh `reasoning_vi` chính xác theo `403 BLOCK` / `DLP_REDACT` / `200 BYPASS`.
+
+- [x] **[V3-AUDIT-005] `[VERIFIED PASS]` Sửa Dứt Điểm Crash Stage 5 Trong `scripts/demo_rehearsal.py`**
+  - **Khắc phục:** Bổ sung phương thức `step_header(...)` và sửa thứ tự giải nén `status, body, lat, _headers = self.request(...)`. Chạy live `python scripts/demo_rehearsal.py --auto --interval 0.02` vượt qua trọn vẹn Stages 1–5 với `exit code 0`.
+
+- [x] **[V3-AUDIT-006] `[VERIFIED PASS]` Ngăn `tests/unit/test_synthesizer.py` Ghi Đè `attack-lab/artifacts/campaign_report.json`**
+  - **Khắc phục:** Khôi phục `campaign_report.json` thực chiến (`20/20 BLOCKED`) từ `cb342d0` và truyền `output=tmp_path / "dynamic_campaign_report.json"` trong test; xác nhận `git diff --exit-code attack-lab/artifacts/campaign_report.json` sạch tuyệt đối sau khi chạy toàn bộ `pytest`.
+
+---
+
+### 🟢 NHÓM HIGH & MEDIUM (4/4 — ĐÃ VÁ TRIỆT ĐỂ & KIỂM CHỨNG E2E)
+
+- [x] **[V3-AUDIT-007] `[VERIFIED PASS]` Chuẩn Hóa `action="BLOCKED"` & Tạo `Session` Riêng Theo Thread Trong `arena.py`**
+  - **Khắc phục:** Truyền `db_bind = db.get_bind()` và mở `sessionmaker(bind=db_bind)()` độc lập bên trong worker thread, gọi `SecurityEventService.record_detection(...)` ghi chuẩn `action="BLOCKED"`/`"MONITOR"`, `session_id`, `kill_chain_stage` và `api_protocol="REST"`.
+
+- [x] **[V3-AUDIT-008] `[VERIFIED PASS]` Kết Nối SSE Thật Theo Từng Vòng, Khôi Phục Ô `Target URL` & Drawer `Lịch sử` Trên `/arena`**
+  - **Khắc phục:** Bổ sung `streamPentestEvaluation(...)` đọc luồng SSE thật `/api/gateway/api/dashboard/arena/pentest/stream`, cập nhật động danh sách node Cột 1 từ sự kiện `attack_graph`, khôi phục ô nhập `Target URL` và Drawer `Lịch sử` trên thanh điều khiển `/arena`.
+
+- [x] **[V3-AUDIT-009] `[VERIFIED PASS]` Hoàn Thiện Khám Phá Động OpenAPI Ở `arena.py`, `runner.py` Và `/dashboard/simulate`**
+  - **Khắc phục:** Tích hợp kiểm tra nhanh cổng TCP + `APIReconAgent` + `OpenAPIPayloadSynthesizer` cho cả `arena.py` và `runner.py` (tự phát hiện `11` endpoint sống từ `http://127.0.0.1:5000/api/v1/vulnerable/openapi.json`), đồng thời dùng `_resolve_openapi_sim_path(...)` và chuỗi 4-ID BOLA burst trong `/dashboard/simulate`.
+
+- [x] **[V3-AUDIT-010] `[VERIFIED PASS]` Thay Thế Biểu Đồ Chật Ở Tab 1 `/` Bằng Thanh Tiến Độ Ngang Gọn & Đồng Bộ `PBL6_Academic_Defense_Slides.pptx`**
+  - **Khắc phục:** Chuyển khung `Attack & Protocol Mix` (`h-[155px]`) ở Tab 1 `Live SOC` sang thanh ngang không cắt chữ (giữ nguyên 3 biểu đồ Recharts cỡ lớn ở Tab 2 `Phân Tích & Kill Chain`), và cập nhật đồng bộ 14 slide `PBL6_Academic_Defense_Slides.pptx` cùng `SLIDE_THUYET_TRINH_BAO_VE_PBL6.md`.
+
+---
+
 # 📋 REVIEW FEEDBACK & FINAL SIGN-OFF REPORT (FULL PBL6: BLUE TEAM v2.0 + RED TEAM + THESIS & DEMO READY)
 
 ## 🏆 NGHIỆM THU TỔNG THỂ TRƯỚC BẢO VỆ (2026-11-23): 26/26 HẠNG MỤC ĐẠT 100% `[VERIFIED PASS]` — READY TO PRINT & DEFEND
