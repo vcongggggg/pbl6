@@ -80,7 +80,7 @@ def _run_inprocess_strange_episodes(
     max_rounds: int = 4,
 ) -> dict[str, Any]:
     red_strategies = ["Static Replay", "Random Mutator", "Dueling-DQN v2.0"]
-    blue_tiers = ["No WAF", "Rules Only", "Hybrid v3.0"]
+    blue_tiers = ["No WAF", "Rules Only", "Hybrid v3.2"]
     expanded = [
         (pass_idx + 1, case_idx + 1, dict(c))
         for pass_idx in range(passes)
@@ -128,9 +128,11 @@ def _run_inprocess_strange_episodes(
                     if family == "BOLA_IDOR":
                         payload = uuid_probes[attempt] if "uuid" in baseline or "-" in baseline else str(attempt + 1)
                         action_label = "bola_enum_probe"
+                        used_t = "bola_enum_probe"
                     elif attempt == 0 or red == "Static Replay":
                         payload = baseline
                         action_label = "baseline_probe"
+                        used_t = "baseline"
                     elif red == "Random Mutator":
                         techs = [t for t in TAMPER_CATALOG.get(family, {}).keys() if t not in used_techs]
                         if techs:
@@ -141,6 +143,7 @@ def _run_inprocess_strange_episodes(
                         else:
                             payload = baseline
                             action_label = "baseline_fallback"
+                            used_t = "none"
                     else:
                         valid_specs = get_valid_actions_for_case(
                             family=family,
@@ -182,11 +185,13 @@ def _run_inprocess_strange_episodes(
                             used_techs.append(used_t)
                         elif best_spec.action_id == "probe_ssrf_internal":
                             payload = "http://2130706433:8000/api/dashboard/stats"
+                            used_t = "ssrf_decimal_ip"
                         else:
                             payload = baseline
+                            used_t = "none"
 
                     outcome = evaluator.evaluate_single_request(
-                        blue_tier=blue,
+                        blue_tier="Hybrid v3.0" if blue == "Hybrid v3.2" else blue,
                         case=case,
                         payload=payload,
                         bola_detector=bola_detector,
@@ -207,6 +212,7 @@ def _run_inprocess_strange_episodes(
                         {
                             "round": attempt + 1,
                             "action": action_label,
+                            "applied_transformation": used_t,
                             "payload": payload,
                             "status_code": outcome["status_code"],
                             "blocked": outcome["blocked"],
@@ -380,7 +386,7 @@ def _run_live_http_strange_episodes(
                 raise RuntimeError(f"Gateway on port {port} failed to start in time.")
 
         red_strategies = ["Static Replay", "Random Mutator", "Dueling-DQN v2.0"]
-        blue_tiers = ["No WAF", "Rules Only", "Hybrid v3.0"]
+        blue_tiers = ["No WAF", "Rules Only", "Hybrid v3.2"]
         expanded = [
             (pass_idx + 1, case_idx + 1, dict(c))
             for pass_idx in range(passes)
@@ -436,9 +442,11 @@ def _run_live_http_strange_episodes(
                             if family == "BOLA_IDOR":
                                 payload = uuid_probes[attempt] if ("uuid" in baseline or "-" in baseline) else str(attempt + 1)
                                 action_label = "bola_enum_probe"
+                                used_t = "bola_enum_probe"
                             elif attempt == 0 or red == "Static Replay":
                                 payload = baseline
                                 action_label = "baseline_probe"
+                                used_t = "baseline"
                             elif red == "Random Mutator":
                                 techs = [t for t in TAMPER_CATALOG.get(family, {}).keys() if t not in used_techs]
                                 if techs:
@@ -449,6 +457,7 @@ def _run_live_http_strange_episodes(
                                 else:
                                     payload = baseline
                                     action_label = "baseline_fallback"
+                                    used_t = "none"
                             else:
                                 valid_specs = get_valid_actions_for_case(
                                     family=family,
@@ -481,12 +490,19 @@ def _run_live_http_strange_episodes(
                                 chosen_spec, _ = dqn_advisor.recommend(state_64, valid_specs)
                                 tried_action_ids.add(chosen_spec.action_id)
                                 action_label = chosen_spec.action_id
-                                if chosen_spec.action_id.startswith("mutate_"):
-                                    tech_name = chosen_spec.action_id.replace("mutate_", "")
-                                    payload, used_t = evasion_engine.mutate(payload=baseline, family=family, technique=tech_name)
+                                if chosen_spec.transformation != "none" and family in TAMPER_CATALOG:
+                                    payload, used_t = evasion_engine.mutate(
+                                        payload=baseline,
+                                        family=family,
+                                        technique=chosen_spec.transformation,
+                                    )
                                     used_techs.append(used_t)
+                                elif chosen_spec.action_id == "probe_ssrf_internal":
+                                    payload = "http://2130706433:8000/api/dashboard/stats"
+                                    used_t = "ssrf_decimal_ip"
                                 else:
                                     payload = baseline
+                                    used_t = "none"
 
                             path = endpoint_tpl
                             params_dict: dict[str, Any] | None = None
@@ -535,6 +551,7 @@ def _run_live_http_strange_episodes(
                                 {
                                     "round": attempt + 1,
                                     "action": action_label,
+                                    "applied_transformation": used_t,
                                     "payload": payload,
                                     "status_code": resp.status_code,
                                     "blocked": bool(is_blocked or dlp_flag),
@@ -699,9 +716,11 @@ def main() -> None:
         for m in det_pct20.matches
     ]
 
-    inproc_case2_dqn = [ep for ep in inproc_matrix["Dueling-DQN v2.0"]["Hybrid v3.0"]["episodes"] if ep["case_id"] == 2]
-    inproc_case2_static = [ep for ep in inproc_matrix["Static Replay"]["Hybrid v3.0"]["episodes"] if ep["case_id"] == 2]
-    live_case2_dqn = [ep for ep in live_matrix["Dueling-DQN v2.0"]["Hybrid v3.0"]["episodes"] if ep["case_id"] == 2]
+    inproc_case2_dqn = [ep for ep in inproc_matrix["Dueling-DQN v2.0"]["Hybrid v3.2"]["episodes"] if ep["case_id"] == 2]
+    inproc_case2_random = [ep for ep in inproc_matrix["Random Mutator"]["Hybrid v3.2"]["episodes"] if ep["case_id"] == 2]
+    inproc_case2_static = [ep for ep in inproc_matrix["Static Replay"]["Hybrid v3.2"]["episodes"] if ep["case_id"] == 2]
+    live_case2_dqn = [ep for ep in live_matrix["Dueling-DQN v2.0"]["Hybrid v3.2"]["episodes"] if ep["case_id"] == 2]
+    live_case2_random = [ep for ep in live_matrix["Random Mutator"]["Hybrid v3.2"]["episodes"] if ep["case_id"] == 2]
     live_case2_rules = [ep for ep in live_matrix["Dueling-DQN v2.0"]["Rules Only"]["episodes"] if ep["case_id"] == 2]
 
     case2_report = {
@@ -744,6 +763,10 @@ def main() -> None:
                 "blocked_passes": f"{sum(1 for e in inproc_case2_static if e['blocked'])}/{len(inproc_case2_static)}",
                 "episodes": inproc_case2_static,
             },
+            "in_process_random_mutator_vs_hybrid_v32": {
+                "blocked_passes": f"{sum(1 for e in inproc_case2_random if e['blocked'])}/{len(inproc_case2_random)}",
+                "episodes": inproc_case2_random,
+            },
             "in_process_dueling_dqn_vs_hybrid_v32": {
                 "blocked_passes": f"{sum(1 for e in inproc_case2_dqn if e['blocked'])}/{len(inproc_case2_dqn)}",
                 "episodes": inproc_case2_dqn,
@@ -752,18 +775,23 @@ def main() -> None:
                 "blocked_passes": f"{sum(1 for e in live_case2_rules if e['blocked'])}/{len(live_case2_rules)}",
                 "episodes": live_case2_rules,
             },
+            "live_http_random_mutator_vs_hybrid_v32": {
+                "blocked_passes": f"{sum(1 for e in live_case2_random if e['blocked'])}/{len(live_case2_random)}",
+                "episodes": live_case2_random,
+            },
             "live_http_dueling_dqn_vs_hybrid_v32": {
                 "blocked_passes": f"{sum(1 for e in live_case2_dqn if e['blocked'])}/{len(live_case2_dqn)}",
                 "episodes": live_case2_dqn,
             },
         },
         "strange_suite_54_episode_totals": {
-            "in_process_static_replay_hybrid_v32": inproc_matrix["Static Replay"]["Hybrid v3.0"]["summary"],
-            "in_process_random_mutator_hybrid_v32": inproc_matrix["Random Mutator"]["Hybrid v3.0"]["summary"],
-            "in_process_dueling_dqn_hybrid_v32": inproc_matrix["Dueling-DQN v2.0"]["Hybrid v3.0"]["summary"],
-            "live_http_static_replay_hybrid_v32": live_matrix["Static Replay"]["Hybrid v3.0"]["summary"],
+            "in_process_static_replay_hybrid_v32": inproc_matrix["Static Replay"]["Hybrid v3.2"]["summary"],
+            "in_process_random_mutator_hybrid_v32": inproc_matrix["Random Mutator"]["Hybrid v3.2"]["summary"],
+            "in_process_dueling_dqn_hybrid_v32": inproc_matrix["Dueling-DQN v2.0"]["Hybrid v3.2"]["summary"],
+            "live_http_static_replay_hybrid_v32": live_matrix["Static Replay"]["Hybrid v3.2"]["summary"],
+            "live_http_random_mutator_hybrid_v32": live_matrix["Random Mutator"]["Hybrid v3.2"]["summary"],
             "live_http_dueling_dqn_rules_only_26rules": live_matrix["Dueling-DQN v2.0"]["Rules Only"]["summary"],
-            "live_http_dueling_dqn_hybrid_v32": live_matrix["Dueling-DQN v2.0"]["Hybrid v3.0"]["summary"],
+            "live_http_dueling_dqn_hybrid_v32": live_matrix["Dueling-DQN v2.0"]["Hybrid v3.2"]["summary"],
         },
     }
     CASE2_JSON.write_text(json.dumps(case2_report, indent=2, ensure_ascii=False), encoding="utf-8")

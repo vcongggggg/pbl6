@@ -49,8 +49,13 @@ def _safe_eval_arithmetic(expr_str: str) -> float | None:
 
 _UNQUOTED_ARITHMETIC_RE = re.compile(
     r"""(?i)(?:^|[\s,;(\'\"]|\b\d+\b)\s*(?:OR|AND)\s+"""
-    r"""([0-9\s+\-*\/]+?)\s*(=|!=|<>|\bLIKE\b)\s*([0-9\s+\-*\/]+?)"""
+    r"""([0-9\s+\-*\/]+?)\s*(>=|<=|!=|<>|=|>|<|\bLIKE\b)\s*([0-9\s+\-*\/]+?)"""
     r"""(?=[\s,;)\'\"]|--|#|/\*|$)""",
+    re.IGNORECASE,
+)
+
+_UNQUOTED_BETWEEN_RE = re.compile(
+    r"(?i)(?:^|[\s,;(\'\"]|\b\d+\b)\s*(?:OR|AND)\s+([0-9\s+\-*\/()]+?)\s+(\bNOT\s+BETWEEN\b|\bBETWEEN\b)\s+([0-9\s+\-*\/()]+?)\s+AND\s+([0-9\s+\-*\/()]+?)(?=[\s,;)\'\"]|--|#|/\*|$)",
     re.IGNORECASE,
 )
 
@@ -61,7 +66,7 @@ _TSQL_WAITFOR_RE = re.compile(
 
 
 class UnquotedArithmeticTautologyRule(BaseRule):
-    """Detects unquoted logical/arithmetic tautologies and T-SQL time-delay injection (SQLI-006)."""
+    """Detects unquoted logical/arithmetic/BETWEEN tautologies and T-SQL time-delay injection (SQLI-006)."""
 
     def __init__(self) -> None:
         super().__init__(
@@ -71,7 +76,8 @@ class UnquotedArithmeticTautologyRule(BaseRule):
             confidence=0.95,
             description="Unquoted Logical/Arithmetic Tautology and Time-Delay SQLi",
             rationale=(
-                "Detects blind unquoted arithmetic comparisons (e.g. 105 OR 17-7=10) "
+                "Detects blind unquoted arithmetic, relational, and BETWEEN/NOT BETWEEN "
+                "tautologies (e.g. 105 OR 17-7=10, 105 OR 17-7 BETWEEN 10 AND 10) "
                 "and T-SQL time-delay commands (WAITFOR DELAY/TIME) bypassing standard filters."
             ),
         )
@@ -99,27 +105,77 @@ class UnquotedArithmeticTautologyRule(BaseRule):
                 description=f"{self.description} (Time-Delay Pattern)",
             )
 
-        # 2. Check unquoted arithmetic tautology
-        match = _UNQUOTED_ARITHMETIC_RE.search(input_text)
-        if match:
+        # 2. Check unquoted BETWEEN / NOT BETWEEN arithmetic tautology (O(n) fast-guard + safe AST eval)
+        lower_text = input_text.lower()
+        if "between" in lower_text and "and" in lower_text:
+            for between_m in _UNQUOTED_BETWEEN_RE.finditer(input_text):
+                e_val, op, e_lo, e_hi = between_m.groups()
+                v_expr = _safe_eval_arithmetic(e_val)
+                v_lo = _safe_eval_arithmetic(e_lo)
+                v_hi = _safe_eval_arithmetic(e_hi)
+                if v_expr is not None and v_lo is not None and v_hi is not None:
+                    op_clean = " ".join(op.split()).upper()
+                    lo_bound = min(v_lo, v_hi)
+                    hi_bound = max(v_lo, v_hi)
+                    if op_clean == "BETWEEN":
+                        is_tautology = lo_bound - 1e-5 <= v_expr <= hi_bound + 1e-5
+                    elif op_clean == "NOT BETWEEN":
+                        is_tautology = v_expr < lo_bound - 1e-5 or v_expr > hi_bound + 1e-5
+                    else:
+                        is_tautology = False
+
+                    if is_tautology:
+                        return RuleMatch(
+                            rule_id=self.rule_id,
+                            attack_type=self.attack_type,
+                            severity=self.severity,
+                            confidence=0.98,
+                            location=location,
+                            location_key=location_key,
+                            evidence=clean_evidence(between_m.group(0)),
+                            description=(
+                                f"{self.description} "
+                                f"(Between Tautology: {e_val.strip()} {op_clean} {e_lo.strip()} AND {e_hi.strip()})"
+                            ),
+                        )
+
+        # 3. Check unquoted arithmetic and relational tautology
+        for match in _UNQUOTED_ARITHMETIC_RE.finditer(input_text):
             e1, op, e2 = match.groups()
             v1 = _safe_eval_arithmetic(e1)
             v2 = _safe_eval_arithmetic(e2)
+            op_clean = op.strip().upper()
 
-            is_tautology = False
-            if v1 is not None and v2 is not None:
-                op_clean = op.strip().upper()
-                if op_clean in ("=", "LIKE"):
-                    is_tautology = abs(v1 - v2) < 1e-5
-                elif op_clean in ("!=", "<>"):
-                    is_tautology = abs(v1 - v2) >= 1e-5
+            if op_clean in (">", "<", ">=", "<="):
+                if v1 is None or v2 is None:
+                    continue
+                if op_clean == ">":
+                    is_tautology = v1 > v2
+                elif op_clean == ">=":
+                    is_tautology = v1 >= v2 - 1e-5
+                elif op_clean == "<":
+                    is_tautology = v1 < v2
                 else:
-                    is_tautology = True
-            else:
-                # Still a structured boolean arithmetic injection probe
-                is_tautology = True
+                    is_tautology = v1 <= v2 + 1e-5
 
-            conf = 0.98 if is_tautology else 0.90
+                has_arith_op = any(op_ch in expr for expr in (e1, e2) for op_ch in "+-*/")
+                if not (is_tautology and (has_arith_op or abs(v1 - v2) < 1e-5)):
+                    continue
+                conf = 0.98
+            else:
+                is_tautology = False
+                if v1 is not None and v2 is not None:
+                    if op_clean in ("=", "LIKE"):
+                        is_tautology = abs(v1 - v2) < 1e-5
+                    elif op_clean in ("!=", "<>"):
+                        is_tautology = abs(v1 - v2) >= 1e-5
+                    else:
+                        is_tautology = True
+                else:
+                    # Still a structured boolean arithmetic injection probe
+                    is_tautology = True
+                conf = 0.98 if is_tautology else 0.90
+
             return RuleMatch(
                 rule_id=self.rule_id,
                 attack_type=self.attack_type,

@@ -10,13 +10,13 @@
     "ml_model": "Champion Cost-Sensitive Regularized XGBoost v2.0",
     "anomaly_model": "Calibrated Isolation Forest v2.0 (with bare-root '/' special_char_ratio guard)",
     "feature_dim": 26,
-    "timestamp": "2026-11-24 22:15:25",
+    "timestamp": "2026-11-24 23:08:44",
     "device": "Machine 1 (Blue Team Host)",
     "methodology_note": "Unified 26-D feature extraction (extract_26_from_http) shared once per request in Hybrid mode with 26 hardened rules; each mode measures ONLY its active detector(s) single-pass latency (never summed across separate modes). Blocking decision follows DecisionEngine ACTIVE_BLOCKING (>=80 block, Rule>=85/ML>=90 override, or Dual-AI Consensus). Anomaly Only also reports detection @60.0.",
     "history_snapshot": "docs/reports/history/ablation_results_20261124_192715_fd012c1.json",
     "git_base_sha": "fd012c1d17e42f531b635cbe94c7dd738023ee0f",
-    "cpu_load_pct": 20.4,
-    "last_pointer_update": "2026-11-24T22:15:25.230976"
+    "cpu_load_pct": 17.8,
+    "last_pointer_update": "2026-11-24T23:08:44.085707"
   },
   "modes": {
     "rules_only": {
@@ -26,8 +26,8 @@
       "f1_score_pct": 69.28,
       "fpr_pct": 0.0,
       "youden_j": 0.53,
-      "avg_latency_ms": 0.341,
-      "p95_latency_ms": 0.629,
+      "avg_latency_ms": 0.156,
+      "p95_latency_ms": 0.291,
       "confusion_matrix": {
         "tp": 424,
         "fp": 0,
@@ -44,8 +44,8 @@
       "f1_score_pct": 96.64,
       "fpr_pct": 0.0,
       "youden_j": 0.935,
-      "avg_latency_ms": 0.653,
-      "p95_latency_ms": 0.907,
+      "avg_latency_ms": 0.322,
+      "p95_latency_ms": 0.582,
       "confusion_matrix": {
         "tp": 748,
         "fp": 0,
@@ -62,8 +62,8 @@
       "f1_score_pct": 55.73,
       "fpr_pct": 0.0,
       "youden_j": 0.3862,
-      "avg_latency_ms": 0.596,
-      "p95_latency_ms": 0.991,
+      "avg_latency_ms": 0.268,
+      "p95_latency_ms": 0.458,
       "confusion_matrix": {
         "tp": 309,
         "fp": 0,
@@ -80,8 +80,8 @@
       "f1_score_pct": 98.86,
       "fpr_pct": 0.0,
       "youden_j": 0.9775,
-      "avg_latency_ms": 1.239,
-      "p95_latency_ms": 1.717,
+      "avg_latency_ms": 0.561,
+      "p95_latency_ms": 0.806,
       "confusion_matrix": {
         "tp": 782,
         "fp": 0,
@@ -99,8 +99,8 @@
     "f1_score_pct": 73.22,
     "fpr_pct": 0.0,
     "youden_j": 0.5775,
-    "avg_latency_ms": 0.596,
-    "p95_latency_ms": 0.991,
+    "avg_latency_ms": 0.268,
+    "p95_latency_ms": 0.458,
     "confusion_matrix": {
       "tp": 462,
       "fp": 0,

@@ -8,6 +8,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+# Gateway workers execute single-request inline inference (nthread=1). Without
+# OMP_NUM_THREADS=1, OpenMP initializes a multi-core spin-barrier thread pool on
+# Windows that inflates per-request latency ~2.9x and causes thread contention under
+# concurrent async load; setdefault preserves explicit operator env overrides.
 os.environ.setdefault("OMP_NUM_THREADS", "1")
 
 try:

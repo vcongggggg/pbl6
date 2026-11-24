@@ -3,7 +3,7 @@
 Quantitatively measures and compares the individual and combined effectiveness
 of the 4 defense configurations using the unified 26-D feature pipeline
 (Zero Training-Serving Skew) and Zero-Pickle Blue Team v2.0 artifacts:
-1. Rules Only (Deterministic Signature Engine — 16 hardened OWASP rules)
+1. Rules Only (Deterministic Signature Engine — 26 hardened OWASP rules)
 2. ML Only (Champion Cost-Sensitive Regularized XGBoost v2.0 — xgb_v2.ubj)
 3. Anomaly Only (Calibrated Isolation Forest v2.0 — iforest_v2.npz)
 4. Hybrid Defense (Rule 40% + XGBoost v2.0 35% + IForest v2.0 25% + Override)
@@ -292,6 +292,8 @@ def generate_markdown_report(data: dict[str, Any]) -> None:
     delta_f1 = round(hyb["f1_score_pct"] - ml["f1_score_pct"], 2)
     delta_lat = round(hyb["avg_latency_ms"] - ml["avg_latency_ms"], 3)
 
+    an_cm = an["confusion_matrix"]
+    anom60_cm = anom60["confusion_matrix"]
     n_rules_md = meta.get("active_rules_count", 26)
     md = f"""# BÁO CÁO THỰC NGHIỆM ĐO LƯỜNG ĐÓNG GÓP TỪNG THÀNH PHẦN (ABLATION STUDY — BLUE TEAM v3.2)
 
@@ -316,28 +318,34 @@ def generate_markdown_report(data: dict[str, Any]) -> None:
 
 ---
 
-## 2. Phân Tích Trade-Off Hiệu Năng & Độ Trễ (Blue Team v1.0 -> v2.0)
+## 2. Phân Tích Trade-Off Hiệu Năng & Độ Trễ (Hybrid Defense v3.2 so với Blue Team v1.0)
 
 1. **Bước nhảy vọt về tốc độ nhờ chuyển sang Zero-Pickle (`xgb_v2.ubj` + `iforest_v2.npz`) & Single-Pass 26-D:**
    - Ở **Blue Team v1.0** (`rf_model.joblib` + `iforest_model.joblib`), chế độ Hybrid tiêu tốn **16.10 ms/req** (vượt ngưỡng inline SLA 10 ms), trong đó `Anomaly Only` mất 9.49 ms và chỉ đạt Recall 5.88%.
-   - Ở **Blue Team v2.0**, nhờ thay bằng **XGBoost v2.0 UBJSON** và **Isolation Forest v2.0 NumPy NPZ** kết hợp trích xuất 26-D một lần duy nhất:
+   - Ở **Hybrid Defense v3.2** ({n_rules_md} Hardened Rules + **XGBoost v2.0 UBJSON** + **Isolation Forest v2.0 NumPy NPZ** kết hợp trích xuất 26-D một lần duy nhất):
      - **Rules Only:** `{rl['avg_latency_ms']:.3f} ms/req` (P95 `{rl['p95_latency_ms']:.3f} ms`).
      - **ML Only (XGBoost v2.0):** `{ml['avg_latency_ms']:.3f} ms/req` (P95 `{ml['p95_latency_ms']:.3f} ms`).
-     - **Anomaly Only (IForest v2.0 NPZ):** `{an['avg_latency_ms']:.3f} ms/req` (tăng tốc **>20x** so với 9.49 ms của v1.0; tại ngưỡng cảnh báo `>= 60.0` đạt Recall **`{anom60['recall_pct']:.2f}%`** với FPR chỉ **`{anom60['fpr_pct']:.2f}%`**).
-     - **Hybrid Defense v2.0:** **`{hyb['avg_latency_ms']:.3f} ms/req`** (P95 **`{hyb['p95_latency_ms']:.3f} ms`**) — nằm sâu dưới ngưỡng inline SLA `< 5 ms`, tăng thêm chỉ **`{delta_lat:+.3f} ms`** so với ML thuần!
+     - **Anomaly Only (IForest v2.0 NPZ):** `{an['avg_latency_ms']:.3f} ms/req` (tăng tốc vượt trội so với 9.49 ms của v1.0; tại ngưỡng cảnh báo `>= 60.0` đạt Recall **`{anom60['recall_pct']:.2f}%`** với FPR chỉ **`{anom60['fpr_pct']:.2f}%`**).
+     - **Hybrid Defense v3.2:** **`{hyb['avg_latency_ms']:.3f} ms/req`** (P95 **`{hyb['p95_latency_ms']:.3f} ms`**) — nằm sâu dưới ngưỡng inline SLA `<= 1.5 ms`, tăng thêm chỉ **`{delta_lat:+.3f} ms`** so với ML thuần!
 2. **Chất lượng phòng thủ tổng hợp:**
-   - **Hybrid Defense v2.0** đạt Accuracy **`{hyb['accuracy_pct']:.2f}%`**, Precision **`{hyb['precision_pct']:.2f}%`**, Recall **`{hyb['recall_pct']:.2f}%`**, F1-Score **`{hyb['f1_score_pct']:.2f}%`** (chênh lệch `{delta_f1:+.2f}%` so với ML thuần), FPR **`{hyb['fpr_pct']:.2f}%`** và Youden's Index **`J = {hyb['youden_j']:.4f}`**.
+   - **Hybrid Defense v3.2** đạt Accuracy **`{hyb['accuracy_pct']:.2f}%`**, Precision **`{hyb['precision_pct']:.2f}%`**, Recall **`{hyb['recall_pct']:.2f}%`**, F1-Score **`{hyb['f1_score_pct']:.2f}%`** (chênh lệch `{delta_f1:+.2f}%` so với ML thuần), FPR **`{hyb['fpr_pct']:.2f}%`** và Youden's Index **`J = {hyb['youden_j']:.4f}`**.
+3. **Triệt tiêu FPR của `Anomaly Only` từ `4.00%` (`8/200`) xuống `0.00%` (`0/200`) sau Phase C3 Round 1:**
+   - Ở phiên bản v2.0, `Anomaly Only` ghi nhận FPR **`4.00%` (`8/200`)** do hiện tượng suy biến đường dẫn gốc trần `'/'` (*bare-root `'/'` degeneracy*): 8 truy vấn `GET /` lành tính không có query/body bị tính `special_char_ratio = 1.0` (do `'/'` là ký tự duy nhất) và bị Isolation Forest đánh nhãn ngoại lai.
+   - Sau **Phase C3 Round 1** bổ sung bộ bảo vệ đường dẫn gốc `'/'` (*bare-root guard* trong `AnomalyDetector` / pipeline trích xuất đặc trưng), `Anomaly Only` giảm FPR về **`{an['fpr_pct']:.2f}%` (`{an_cm['fp']}/{an_cm['fp'] + an_cm['tn']}`)** ở ngưỡng chặn `>= 80.0` và **`{anom60['fpr_pct']:.2f}%` (`{anom60_cm['fp']}/{anom60_cm['fp'] + anom60_cm['tn']}`)** ở ngưỡng cảnh báo `>= 60.0` mà vẫn bảo toàn nguyên vẹn Recall `{anom60['recall_pct']:.2f}%`.
 
 ---
 
-## 3. Luận Điểm Học Thuật: Giá Trị Defense-in-Depth Của Kiến Trúc Hybrid v2.0
+## 3. Luận Điểm Học Thuật: Giá Trị Defense-in-Depth Của Kiến Trúc Hybrid Defense v3.2
 
 *(Xem phân tích đầy đủ tại `docs/reports/WHY_HYBRID_DEFENSE.md`)*
 
-1. **Chống tấn công đối kháng (Adversarial Evasion) & Obfuscation:** Rule Engine đã được gia cố (`InputNormalizer` khử Zero-Width Unicode, `/*...*/` multiline, recursive URL decoding, sliding window > 16KB) giúp chặn đứng mọi kỹ thuật né tránh signature và làm loãng vector ML.
-2. **Phát hiện Zero-Day & Out-of-Distribution (OOD):** Calibrated Isolation Forest v2.0 (`.npz`, hiệu chuẩn theo phân vị thực nghiệm) nâng độ nhạy phát hiện bất thường ở ngưỡng cảnh báo `>= 60` từ **5.88% (v1.0)** lên **`{anom60['recall_pct']:.2f}%` (v2.0)** trong khi kiểm soát chặt FPR ở mức **`{anom60['fpr_pct']:.2f}%`**.
+1. **Chống tấn công đối kháng (Adversarial Evasion) & Obfuscation:** Rule Engine ({n_rules_md} rules, bao gồm `SQLI-006`) đã được gia cố (`InputNormalizer` khử Zero-Width Unicode, `/*...*/` multiline, recursive URL decoding, sliding window > 16KB) giúp chặn đứng mọi kỹ thuật né tránh signature và làm loãng vector ML.
+2. **Phát hiện Zero-Day & Out-of-Distribution (OOD):** Calibrated Isolation Forest v2.0 (`.npz`, hiệu chuẩn theo phân vị thực nghiệm) nâng độ nhạy phát hiện bất thường ở ngưỡng cảnh báo `>= 60` từ **5.88% (v1.0)** lên **`{anom60['recall_pct']:.2f}%` (v3.2)** trong khi kiểm soát chặt FPR ở mức **`{anom60['fpr_pct']:.2f}%`**.
 3. **An toàn chuỗi cung ứng & Khả năng chịu lỗi (Fail-Closed & Fail-Safe):** Triệt tiêu 100% rủi ro Deserialization RCE (CWE-502) nhờ định dạng Zero-Pickle + xác thực SHA-256 Fail-Closed trước khi nạp; khi tầng ML gặp sự cố, Gateway tự động áp dụng Fail-Safe penalty và duy trì phòng thủ bằng Rule Engine + Schema Validator.
 """
+
+    if "16 hardened" in md.lower() or "< 5 ms" in md:
+        raise AssertionError("Generated ablation_report.md still contains forbidden stale strings ('16 hardened' or '< 5 ms').")
 
     with open(OUTPUT_MD, "w", encoding="utf-8") as f:
         f.write(md)

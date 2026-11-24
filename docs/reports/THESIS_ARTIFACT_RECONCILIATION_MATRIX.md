@@ -24,8 +24,8 @@
 | 16 | 5. FPR & Controlled Tuning (C3) | Operational FPR (N=1,715 Benign) | `fp_v3_measurement.json` | `aggregate_summary.fp_operational_pct` | `0.00%` | **VERIFIED (DOCX, PPTX, CH4_MD)** |
 | 17 | 5. FPR & Controlled Tuning (C3) | B1000 Strict FPR Post-Tuning (Schema OFF) | `fp_v3_measurement.json` | `corpora.benchmark_1000_diverse_benign.fp_strict_schema_off_pct` | `0.0%` | **VERIFIED (DOCX, PPTX, CH4_MD)** |
 | 18 | 5. FPR & Controlled Tuning (C3) | B1000 Strict FPR Post-Tuning (Schema ON) | `fp_v3_tuning_c3.json` | `rounds[2].b1000_strict_schema_on_pct` | `0.0%` | **VERIFIED (DOCX, CH4_MD)** |
-| 19 | 6. CSIC 2-Hop HTTP Latency (D2) | 2-Hop TCP HTTP Mean Latency (N=3,000) | `latency_e2e_v3_csic.json` | `http_e2e_latency_ms.mean_ms` | `4.203 ms` | **VERIFIED (DOCX, DOCX_CH4, DOCX_FULL, PPTX, CH4_MD)** |
-| 20 | 6. CSIC 2-Hop HTTP Latency (D2) | 2-Hop TCP HTTP p50 / p95 / p99 | `latency_e2e_v3_csic.json` | `http_e2e_latency_ms.{p50_ms,p95_ms,p99_ms}` | `4.043 / 5.443 / 6.261 ms` | **VERIFIED (DOCX, CH4_MD)** |
+| 19 | 6. CSIC 2-Hop HTTP Latency (D2) | 2-Hop TCP HTTP Mean Latency (N=3,000) | `latency_e2e_v3_csic.json` | `http_e2e_latency_ms.mean_ms` | `3.773 ms` | **VERIFIED (DOCX, DOCX_CH4, DOCX_FULL, PPTX, CH4_MD)** |
+| 20 | 6. CSIC 2-Hop HTTP Latency (D2) | 2-Hop TCP HTTP p50 / p95 / p99 | `latency_e2e_v3_csic.json` | `http_e2e_latency_ms.{p50_ms,p95_ms,p99_ms}` | `3.532 / 5.298 / 7.003 ms` | **VERIFIED (DOCX, CH4_MD)** |
 | 21 | 7. Ablation, CSIC & C=50 | Ablation Rules Only F1-Score | `ablation_results.json` | `modes.rules_only.f1_score_pct` | `69.28%` | **VERIFIED (DOCX, CH4_MD)** |
 | 22 | 7. Ablation, CSIC & C=50 | Ablation ML Only F1-Score | `ablation_results.json` | `modes.ml_only.f1_score_pct` | `96.64%` | **VERIFIED (DOCX, CH4_MD)** |
 | 23 | 7. Ablation, CSIC & C=50 | Ablation Hybrid F1-Score & FPR | `ablation_results.json` | `modes.hybrid.{f1_score_pct,fpr_pct}` | `98.86% / 0.00%` | **VERIFIED (DOCX, PPTX, CH4_MD)** |
