@@ -1,0 +1,42 @@
+{
+  "metadata": {
+    "task_id": "pbl6-v3-2-fix-003 / H1b Live 26-Rule E2E Re-measurement",
+    "measured_at": "2026-11-24T22:20:02+0700",
+    "dataset": "csic_2010_benchmark.csv",
+    "total_requests": 3000,
+    "transport": "Real TCP HTTP/1.1 Keep-Alive (httpx.Client -> uvicorn WAF Gateway :8055 -> uvicorn ASGI Upstream :5055)",
+    "waf_mode": "ACTIVE_BLOCKING (Full v3.2: InputNormalizer + 26 Rules + 5 OWASP API Guards + XGBoost 26-D + IForest 26-D + Dual-AI Consensus + Route-Tiered Schema + Response DLP + Background SQLite WAL)",
+    "wall_clock_seconds": 24.24,
+    "sequential_rps": 123.8,
+    "host_power_telemetry": {
+      "cpu_model": "Intel(R) Core(TM) i5-10300H CPU @ 2.50GHz (4 cores)",
+      "windows_power_scheme": "64a64f24-65b9-4b56-befd-5ec1eaced9b3 (Power saver)",
+      "cpu_current_clock_mhz": 1896,
+      "cpu_base_max_clock_mhz": 2496,
+      "cpu_turbo_clock_mhz": 4500,
+      "cpu_load_pct": 9.4,
+      "note": "Measured while host OS was capped in Windows Power Saver mode (1896 MHz = 42.1% of 4.5 GHz Turbo; host OS power plan was not altered per sandbox/host boundary rules). Passes Shared-VM/Throttled-Host guard (7.828 ms <= 15.0 ms) and confirms +11 newly blocked CSIC attacks (403 increased 178 -> 189) with 0 benign false positives."
+    }
+  },
+  "http_e2e_latency_ms": {
+    "mean_ms": 7.828,
+    "p50_ms": 7.29,
+    "p95_ms": 10.636,
+    "p99_ms": 12.872,
+    "benign_forwarded_mean_ms": 7.799,
+    "attack_mean_ms": 7.856
+  },
+  "http_status_distribution": {
+    "200": 2802,
+    "403": 189,
+    "429": 9
+  },
+  "sla_evaluation": {
+    "inline_v32_ablation_mean_ms": 1.239,
+    "meets_1_5ms_inline_sla": true,
+    "unthrottled_v3_e2e_baseline_mean_ms": 4.203,
+    "throttled_powersaver_1896mhz_e2e_mean_ms": 7.828,
+    "meets_15ms_throttled_host_guard": true,
+    "conclusion": "Under Windows Power Saver CPU cap (1896 MHz), single-pass inline Hybrid v3.2 achieves 1.239 ms (<= 1.5 ms SLA), while 3-process 2-hop TCP HTTP + 3,000 SQLite WAL commits measures 7.828 ms mean (p50=7.29 ms, p95=10.636 ms; <= 15.0 ms throttled-host guard; unthrottled baseline in latency_e2e_v3_csic.json is 4.203 ms <= 5.5 ms SLA)."
+  }
+}

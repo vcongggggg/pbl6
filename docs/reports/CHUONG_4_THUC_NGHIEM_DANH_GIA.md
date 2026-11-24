@@ -244,6 +244,6 @@ Tác tử **PyTorch Dueling Double-DQN** (`64-D` state, `26` actions, `seed = 42
 Chương 4 đã cung cấp đầy đủ bằng chứng định lượng trung thực, không rò rỉ dữ liệu và tái lập được 100%:
 1. **Champion XGBoost v2.0 (`xgb_v2.ubj`) & Zero-Leakage (`D3`):** `99.15%` Accuracy, `98.72%` Macro-F1 trên `6.929` mẫu Test độc lập (`0` giao nhau mã băm trên `46.187` mẫu `defense_v2`, CSIC 2010 và B1000).
 2. **Calibrated Isolation Forest v2.0 (`iforest_v2.npz`) & Tinh chỉnh `C3`:** Recall `@60.0` đạt **`57.75%`**; sau tinh chỉnh C3, `B1000 Strict FPR` giảm về **`0.0%`** (`Schema OFF`) và **`0.0%`** (`Schema ON`).
-3. **Ablation Study (`N = 1.000`):** Hybrid Defense đạt **`97.80%` Accuracy, `100.00%` Precision, `97.25%` Recall, `98.61%` F1, `0.00%` Operational FPR** trong **`0.848 ms/req`**.
+3. **Ablation Study v3.2 (`N = 1000`, `26` Rules):** `Rules Only` đạt F1 **`69.28%`**, `ML Only` đạt F1 **`96.64%`**, và `Hybrid Defense` đạt **`98.20%` Accuracy, `100.00%` Precision, `97.75%` Recall, `98.86%` F1, `0.00%` Operational FPR** trong **`1.239 ms/req`**.
 4. **Zero-Shot CSIC 2010 (`N = 3.000`) & HTTP 2-Hop E2E (`D2`):** Operational FPR **`0.00%`**, Precision **`100.00%`**, độ trễ 2-hop TCP HTTP thực tế **`4.203 ms` mean** (`p50 = 4.043 ms`).
 5. **Đối kháng Đa vòng 3x3 (`600`-Ep DQN, In-Process & Live HTTP):** `Blue Team v3.0 Hybrid` chặn **`100.0%` (`45/45`)** trên tập `Familiar` và **`94.4%` (`51/54`)** In-Process / **`94.4%` (`51/54`)** Live HTTP trên tập ngoại miền `Strange`.

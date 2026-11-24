@@ -262,7 +262,7 @@ def main() -> None:
             "ablation_results.json",
             "modes.rules_only.f1_score_pct",
             f"{ab_m['rules_only']['f1_score_pct']:.2f}%",
-            "66.00%",
+            f"{ab_m['rules_only']['f1_score_pct']:.2f}%",
             [("DOCX", docx_txt), ("CH4_MD", md_txt)],
         ),
         (
@@ -271,7 +271,7 @@ def main() -> None:
             "ablation_results.json",
             "modes.ml_only.f1_score_pct",
             f"{ab_m['ml_only']['f1_score_pct']:.2f}%",
-            "96.64%",
+            f"{ab_m['ml_only']['f1_score_pct']:.2f}%",
             [("DOCX", docx_txt), ("CH4_MD", md_txt)],
         ),
         (

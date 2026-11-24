@@ -26,9 +26,9 @@
 | 18 | 5. FPR & Controlled Tuning (C3) | B1000 Strict FPR Post-Tuning (Schema ON) | `fp_v3_tuning_c3.json` | `rounds[2].b1000_strict_schema_on_pct` | `0.0%` | **VERIFIED (DOCX, CH4_MD)** |
 | 19 | 6. CSIC 2-Hop HTTP Latency (D2) | 2-Hop TCP HTTP Mean Latency (N=3,000) | `latency_e2e_v3_csic.json` | `http_e2e_latency_ms.mean_ms` | `4.203 ms` | **VERIFIED (DOCX, DOCX_CH4, DOCX_FULL, PPTX, CH4_MD)** |
 | 20 | 6. CSIC 2-Hop HTTP Latency (D2) | 2-Hop TCP HTTP p50 / p95 / p99 | `latency_e2e_v3_csic.json` | `http_e2e_latency_ms.{p50_ms,p95_ms,p99_ms}` | `4.043 / 5.443 / 6.261 ms` | **VERIFIED (DOCX, CH4_MD)** |
-| 21 | 7. Ablation, CSIC & C=50 | Ablation Rules Only F1-Score | `ablation_results.json` | `modes.rules_only.f1_score_pct` | `66.00%` | **VERIFIED (DOCX, CH4_MD)** |
+| 21 | 7. Ablation, CSIC & C=50 | Ablation Rules Only F1-Score | `ablation_results.json` | `modes.rules_only.f1_score_pct` | `69.28%` | **VERIFIED (DOCX, CH4_MD)** |
 | 22 | 7. Ablation, CSIC & C=50 | Ablation ML Only F1-Score | `ablation_results.json` | `modes.ml_only.f1_score_pct` | `96.64%` | **VERIFIED (DOCX, CH4_MD)** |
-| 23 | 7. Ablation, CSIC & C=50 | Ablation Hybrid F1-Score & FPR | `ablation_results.json` | `modes.hybrid.{f1_score_pct,fpr_pct}` | `98.61% / 0.00%` | **VERIFIED (DOCX, PPTX, CH4_MD)** |
+| 23 | 7. Ablation, CSIC & C=50 | Ablation Hybrid F1-Score & FPR | `ablation_results.json` | `modes.hybrid.{f1_score_pct,fpr_pct}` | `98.86% / 0.00%` | **VERIFIED (DOCX, PPTX, CH4_MD)** |
 | 24 | 7. Ablation, CSIC & C=50 | CSIC 2010 Zero-Shot FPR & Precision | `csic2010_benchmark_results.json` | `hybrid_defense_in_depth.{fpr,precision}` | `0.00% / 100.00%` | **VERIFIED (DOCX, CH4_MD)** |
 | 25 | 7. Ablation, CSIC & C=50 | CSIC 2010 Zero-Shot XSS / SQLi / Tamper | `csic2010_benchmark_results.json` | `categories_hybrid.{XSS,SQLI,ANOMALY_TAMPER}.success_rate` | `100.00% / 49.61% / 5.50%` | **VERIFIED (DOCX, CH4_MD)** |
 | 26 | 7. Ablation, CSIC & C=50 | Disjoint Canonical Hash Overlap (D3) | `zero_leakage_v3_verification.json` | `zero_leakage_verified` | `True (0 overlaps / 46,187 rows)` | **VERIFIED (CH4_MD)** |

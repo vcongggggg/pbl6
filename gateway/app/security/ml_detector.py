@@ -1,10 +1,14 @@
+import json
 import logging
+import os
 import sys
 import threading
 import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+
+os.environ.setdefault("OMP_NUM_THREADS", "1")
 
 try:
     import joblib
@@ -129,6 +133,7 @@ class MLDetector:
         self._model_version: str | None = None
         self._feature_names: list[str] | None = None
         self._attack_threshold: float = 0.5
+        self._compiled_lut: dict[str, Any] | None = None
 
         if model_path:
             self.load_model(model_path, allow_unverified=allow_unverified)
@@ -274,6 +279,7 @@ class MLDetector:
                     "classes",
                     ["BENIGN", "COMMAND_INJECTION", "PATH_TRAVERSAL", "SQL_INJECTION", "XSS"],
                 )
+                self._compiled_lut = self._compile_ubj_branchless_lut(booster)
             else:
                 if joblib is None:
                     logger.warning("joblib is not installed in the current environment. Unable to load model.")
@@ -312,6 +318,95 @@ class MLDetector:
             self._is_loaded = False
             return False
 
+    def _compile_ubj_branchless_lut(self, booster: Any) -> dict[str, Any] | None:
+        """Compiles verified UBJSON trees into flat branchless NumPy lookup tables in RAM.
+
+        Eliminates per-request ctypes JSON config serialization and OpenMP spin-barrier
+        overhead while preserving bit-exact float32 tree split semantics.
+        """
+        if np is None:
+            return None
+        try:
+            raw_model = json.loads(booster.save_raw(raw_format="json"))
+            learner = raw_model["learner"]
+            obj_name = learner.get("objective", {}).get("name", "")
+            if obj_name not in ("multi:softprob", "multi:softmax"):
+                return None
+            model_param = learner["learner_model_param"]
+            num_class = int(model_param["num_class"])
+            if num_class < 2:
+                return None
+            base_raw = str(model_param.get("base_score", "0.5"))
+            base_vals = (
+                json.loads(base_raw)
+                if base_raw.startswith("[")
+                else [float(base_raw)] * num_class
+            )
+            base_logits = np.asarray(base_vals, dtype=np.float64)
+
+            trees = learner["gradient_booster"]["model"]["trees"]
+            n_trees = len(trees)
+            if n_trees == 0 or n_trees % num_class != 0:
+                return None
+            max_nodes = max(len(t["left_children"]) for t in trees)
+            total_slots = n_trees * max_nodes
+
+            flat_feat = np.zeros(total_slots, dtype=np.intp)
+            flat_thresh = np.zeros(total_slots, dtype=np.float32)
+            flat_children = np.zeros((total_slots, 2), dtype=np.intp)
+            flat_weights = np.zeros(total_slots, dtype=np.float32)
+            max_depth = 0
+            max_feat_idx = 0
+
+            for ti, t in enumerate(trees):
+                base = ti * max_nodes
+                lc = t["left_children"]
+                rc = t["right_children"]
+                sc = t["split_conditions"]
+                si = t["split_indices"]
+                for ni in range(len(lc)):
+                    slot = base + ni
+                    if lc[ni] == -1:
+                        flat_children[slot, 0] = slot
+                        flat_children[slot, 1] = slot
+                        flat_weights[slot] = sc[ni]
+                    else:
+                        f_idx = int(si[ni])
+                        if f_idx > max_feat_idx:
+                            max_feat_idx = f_idx
+                        flat_feat[slot] = f_idx
+                        flat_thresh[slot] = sc[ni]
+                        flat_children[slot, 0] = base + lc[ni]
+                        flat_children[slot, 1] = base + rc[ni]
+
+                d = 0
+                stk = [(0, 0)]
+                while stk:
+                    nd, dp = stk.pop()
+                    if dp > d:
+                        d = dp
+                    if lc[nd] != -1:
+                        stk.append((lc[nd], dp + 1))
+                        stk.append((rc[nd], dp + 1))
+                if d > max_depth:
+                    max_depth = d
+
+            return {
+                "booster_id": id(booster),
+                "num_class": num_class,
+                "max_depth": max_depth,
+                "max_feat_idx": max_feat_idx,
+                "root_slots": np.arange(n_trees, dtype=np.intp) * max_nodes,
+                "flat_feat": flat_feat,
+                "flat_thresh": flat_thresh,
+                "flat_children": flat_children,
+                "flat_weights": flat_weights,
+                "base_logits": base_logits,
+            }
+        except Exception as exc:
+            logger.debug(f"Skipping LUT compilation, using native Booster fallback: {exc}")
+            return None
+
     def unload(self) -> None:
         """Unloads the ML model from RAM (used for fallback or testing)."""
         self._model = None
@@ -323,6 +418,7 @@ class MLDetector:
         self._model_version = None
         self._feature_names = None
         self._attack_threshold = 0.5
+        self._compiled_lut = None
 
     def predict(
         self,
@@ -360,7 +456,36 @@ class MLDetector:
 
         try:
             if getattr(self, "_is_ubj", False):
-                if np is not None:
+                lut = getattr(self, "_compiled_lut", None)
+                if (
+                    np is not None
+                    and lut is not None
+                    and lut.get("booster_id") == id(self._model)
+                    and len(feat) > lut["max_feat_idx"]
+                ):
+                    tl = getattr(self, "_thread_local", None)
+                    if tl is None:
+                        tl = threading.local()
+                        self._thread_local = tl
+                    v1d = getattr(tl, "vec1d_buf", None)
+                    if v1d is None or v1d.shape[0] != len(feat):
+                        v1d = np.zeros(len(feat), dtype=np.float32)
+                        tl.vec1d_buf = v1d
+                    v1d[:] = feat
+                    if not np.isnan(v1d).any():
+                        idx = lut["root_slots"]
+                        f_feat = lut["flat_feat"]
+                        f_thresh = lut["flat_thresh"]
+                        f_child = lut["flat_children"]
+                        for _ in range(lut["max_depth"]):
+                            idx = f_child[idx, (v1d[f_feat[idx]] >= f_thresh[idx]).view(np.uint8)]
+                        logits = lut["base_logits"] + lut["flat_weights"][idx].reshape(-1, lut["num_class"]).sum(axis=0)
+                        logits = logits - logits.max()
+                        exp_l = np.exp(logits)
+                        proba_array = exp_l / exp_l.sum()
+                    else:
+                        proba_array = self._model.inplace_predict(v1d.reshape(1, -1))[0]
+                elif np is not None:
                     tl = getattr(self, "_thread_local", None)
                     if tl is None:
                         tl = threading.local()

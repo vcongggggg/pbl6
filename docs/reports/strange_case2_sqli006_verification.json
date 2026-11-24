@@ -1,9 +1,10 @@
 {
   "metadata": {
-    "task_id": "pbl6-v3-2-fix-002",
-    "verification_target": "Strange Suite Case 2 SQLI-006 Activation",
-    "measured_at": "2026-11-24T21:15:00+07:00",
-    "rules_count": 26
+    "task_id": "pbl6-v3-2-fix-003",
+    "verification_target": "Strange Suite Case 2 SQLI-006 Multi-Pass & Scoring Verification",
+    "measured_at": "2026-11-24T22:20:17.787342+07:00",
+    "rules_count": 26,
+    "full_suite_evidence_ref": "docs/reports/strange_suite_v32_full_episodes.json"
   },
   "case_details": {
     "suite": "strange_heldout",
@@ -11,54 +12,718 @@
     "endpoint": "/api/v3/catalog/items",
     "parameter": "category_id",
     "raw_payload": "105 OR 17-7=10",
-    "full_request_url": "/api/v3/catalog/items?category_id=105%20OR%2017-7%3D10",
+    "encoded_query_plus": "category_id=105+OR+17-7%3D10",
+    "encoded_query_pct20": "category_id=105%20OR%2017-7%3D10",
     "attack_family": "SQL_INJECTION"
   },
-  "waf_inspection_layers": {
-    "layer_1_rules": {
-      "matched": true,
-      "rule_score": 92.2,
-      "matched_rules": [
+  "rule_inspection_and_scoring_explanation": {
+    "unique_matched_rule_ids": [
+      "SQLI-006"
+    ],
+    "sqli_006_activated": true,
+    "score_when_query_uses_plus_urlencode_single_match": 88.2,
+    "score_when_query_uses_pct20_encoding_two_locations": 92.2,
+    "why_92_2_vs_88_2": "SQLI-006 has Severity.CRITICAL (weight 90.0) and confidence 0.98, giving a single-match base score of 90.0 * 0.98 = 88.2. In RealMultiRoundWAFEvaluator (fix-001), urllib.parse.urlencode encodes spaces as '+' ('category_id=105+OR+17-7%3D10'): InputNormalizer uses urllib.parse.unquote (keeping '+' in location_key='raw_query'), while urllib.parse.parse_qs decodes '+' to spaces on location_key='category_id', so SQLI-006 matches ONCE (score = 88.2). When spaces are percent-encoded as '%20' ('category_id=105%20OR%2017-7%3D10', as in fix-002's standalone probe), unquote decodes '%20' on location_key='raw_query' AND parse_qs decodes location_key='category_id'; gateway/app/security/engine.py:49-87 deduplicates by (rule_id, location, location_key), recording 2 distinct location matches ('raw_query' and 'category_id') and adding RuleScorer's +4.0 multi_match_bonus (scoring.py:36-37): 88.2 + 4.0 = 92.2.",
+    "distinct_location_matches_on_pct20": [
+      {
+        "rule_id": "SQLI-006",
+        "location": "InspectionLocation.QUERY",
+        "location_key": "raw_query",
+        "severity": "Severity.CRITICAL",
+        "confidence": 0.98,
+        "base_score_contribution": 88.2,
+        "description": "Unquoted Logical/Arithmetic Tautology and Time-Delay SQLi (Arithmetic Tautology: 17-7 = 10)"
+      },
+      {
+        "rule_id": "SQLI-006",
+        "location": "InspectionLocation.QUERY",
+        "location_key": "category_id",
+        "severity": "Severity.CRITICAL",
+        "confidence": 0.98,
+        "base_score_contribution": 88.2,
+        "description": "Unquoted Logical/Arithmetic Tautology and Time-Delay SQLi (Arithmetic Tautology: 17-7 = 10)"
+      }
+    ]
+  },
+  "three_pass_episode_results": {
+    "in_process_static_replay_vs_hybrid_v32": {
+      "blocked_passes": "3/3",
+      "episodes": [
         {
-          "rule_id": "SQLI-006",
-          "description": "Unquoted Logical/Arithmetic Tautology and Time-Delay SQLi (Arithmetic Tautology: 17-7 = 10)",
-          "attack_type": "AttackType.SQL_INJECTION",
-          "location": "InspectionLocation.QUERY",
-          "confidence": 0.98
+          "episode_index": 2,
+          "pass_num": 1,
+          "case_id": 2,
+          "endpoint": "/api/v3/catalog/items",
+          "method": "GET",
+          "family": "SQL_INJECTION",
+          "blocked": true,
+          "bypassed": false,
+          "rounds_executed": 1,
+          "rounds": [
+            {
+              "round": 1,
+              "action": "baseline_probe",
+              "payload": "105 OR 17-7=10",
+              "status_code": 403,
+              "blocked": true,
+              "dlp_redacted": false,
+              "rule_score": 88.2,
+              "ml_score": 4.95,
+              "anomaly_score": 53.14,
+              "threat_score": 88.2,
+              "latency_ms": 1.758
+            }
+          ]
         },
         {
-          "rule_id": "SQLI-006",
-          "description": "Unquoted Logical/Arithmetic Tautology and Time-Delay SQLi (Arithmetic Tautology: 17-7 = 10)",
-          "attack_type": "AttackType.SQL_INJECTION",
-          "location": "InspectionLocation.QUERY",
-          "confidence": 0.98
+          "episode_index": 20,
+          "pass_num": 2,
+          "case_id": 2,
+          "endpoint": "/api/v3/catalog/items",
+          "method": "GET",
+          "family": "SQL_INJECTION",
+          "blocked": true,
+          "bypassed": false,
+          "rounds_executed": 1,
+          "rounds": [
+            {
+              "round": 1,
+              "action": "baseline_probe",
+              "payload": "105 OR 17-7=10",
+              "status_code": 403,
+              "blocked": true,
+              "dlp_redacted": false,
+              "rule_score": 88.2,
+              "ml_score": 4.95,
+              "anomaly_score": 53.14,
+              "threat_score": 88.2,
+              "latency_ms": 1.422
+            }
+          ]
+        },
+        {
+          "episode_index": 38,
+          "pass_num": 3,
+          "case_id": 2,
+          "endpoint": "/api/v3/catalog/items",
+          "method": "GET",
+          "family": "SQL_INJECTION",
+          "blocked": true,
+          "bypassed": false,
+          "rounds_executed": 1,
+          "rounds": [
+            {
+              "round": 1,
+              "action": "baseline_probe",
+              "payload": "105 OR 17-7=10",
+              "status_code": 403,
+              "blocked": true,
+              "dlp_redacted": false,
+              "rule_score": 88.2,
+              "ml_score": 4.95,
+              "anomaly_score": 53.14,
+              "threat_score": 88.2,
+              "latency_ms": 1.375
+            }
+          ]
         }
-      ],
-      "sqli_006_activated": true
+      ]
     },
-    "layer_2_xgboost": {
-      "is_attack": false,
-      "confidence": 0.8318,
-      "attack_type": "BENIGN"
+    "in_process_dueling_dqn_vs_hybrid_v32": {
+      "blocked_passes": "0/3",
+      "episodes": [
+        {
+          "episode_index": 2,
+          "pass_num": 1,
+          "case_id": 2,
+          "endpoint": "/api/v3/catalog/items",
+          "method": "GET",
+          "family": "SQL_INJECTION",
+          "blocked": false,
+          "bypassed": true,
+          "rounds_executed": 2,
+          "rounds": [
+            {
+              "round": 1,
+              "action": "baseline_probe",
+              "payload": "105 OR 17-7=10",
+              "status_code": 403,
+              "blocked": true,
+              "dlp_redacted": false,
+              "rule_score": 88.2,
+              "ml_score": 4.95,
+              "anomaly_score": 53.14,
+              "threat_score": 88.2,
+              "latency_ms": 1.436
+            },
+            {
+              "round": 2,
+              "action": "mutate_sqli_between_operator",
+              "payload": "105 OR 17-7 BETWEEN 10 AND 10",
+              "status_code": 200,
+              "blocked": false,
+              "dlp_redacted": false,
+              "rule_score": 0.0,
+              "ml_score": 0.11,
+              "anomaly_score": 0.22,
+              "threat_score": 0.1,
+              "latency_ms": 1.518
+            }
+          ]
+        },
+        {
+          "episode_index": 20,
+          "pass_num": 2,
+          "case_id": 2,
+          "endpoint": "/api/v3/catalog/items",
+          "method": "GET",
+          "family": "SQL_INJECTION",
+          "blocked": false,
+          "bypassed": true,
+          "rounds_executed": 2,
+          "rounds": [
+            {
+              "round": 1,
+              "action": "baseline_probe",
+              "payload": "105 OR 17-7=10",
+              "status_code": 403,
+              "blocked": true,
+              "dlp_redacted": false,
+              "rule_score": 88.2,
+              "ml_score": 4.95,
+              "anomaly_score": 53.14,
+              "threat_score": 88.2,
+              "latency_ms": 1.459
+            },
+            {
+              "round": 2,
+              "action": "mutate_sqli_between_operator",
+              "payload": "105 OR 17-7 BETWEEN 10 AND 10",
+              "status_code": 200,
+              "blocked": false,
+              "dlp_redacted": false,
+              "rule_score": 0.0,
+              "ml_score": 0.11,
+              "anomaly_score": 0.22,
+              "threat_score": 0.1,
+              "latency_ms": 1.3
+            }
+          ]
+        },
+        {
+          "episode_index": 38,
+          "pass_num": 3,
+          "case_id": 2,
+          "endpoint": "/api/v3/catalog/items",
+          "method": "GET",
+          "family": "SQL_INJECTION",
+          "blocked": false,
+          "bypassed": true,
+          "rounds_executed": 2,
+          "rounds": [
+            {
+              "round": 1,
+              "action": "baseline_probe",
+              "payload": "105 OR 17-7=10",
+              "status_code": 403,
+              "blocked": true,
+              "dlp_redacted": false,
+              "rule_score": 88.2,
+              "ml_score": 4.95,
+              "anomaly_score": 53.14,
+              "threat_score": 88.2,
+              "latency_ms": 1.5
+            },
+            {
+              "round": 2,
+              "action": "mutate_sqli_between_operator",
+              "payload": "105 OR 17-7 BETWEEN 10 AND 10",
+              "status_code": 200,
+              "blocked": false,
+              "dlp_redacted": false,
+              "rule_score": 0.0,
+              "ml_score": 0.11,
+              "anomaly_score": 0.22,
+              "threat_score": 0.1,
+              "latency_ms": 1.323
+            }
+          ]
+        }
+      ]
     },
-    "layer_3_isolation_forest": {
-      "is_anomaly": false,
-      "anomaly_score": 51.48
+    "live_http_dueling_dqn_vs_rules_only_26rules": {
+      "blocked_passes": "3/3",
+      "episodes": [
+        {
+          "episode_index": 2,
+          "pass_num": 1,
+          "case_id": 2,
+          "endpoint": "/api/v3/catalog/items",
+          "method": "GET",
+          "family": "SQL_INJECTION",
+          "blocked": true,
+          "bypassed": false,
+          "rounds_executed": 4,
+          "rounds": [
+            {
+              "round": 1,
+              "action": "baseline_probe",
+              "payload": "105 OR 17-7=10",
+              "status_code": 403,
+              "blocked": true,
+              "dlp_redacted": false,
+              "rule_score": 88.2,
+              "ml_score": null,
+              "anomaly_score": null,
+              "threat_score": 88.2,
+              "latency_ms": 4.14
+            },
+            {
+              "round": 2,
+              "action": "mutate_sqli_versioned_comment",
+              "payload": "105/**/OR/**/17-7=10",
+              "status_code": 403,
+              "blocked": true,
+              "dlp_redacted": false,
+              "rule_score": 92.2,
+              "ml_score": null,
+              "anomaly_score": null,
+              "threat_score": 92.2,
+              "latency_ms": 4.363
+            },
+            {
+              "round": 3,
+              "action": "mutate_sqli_between_operator",
+              "payload": "105/**/OR/**/17-7=10",
+              "status_code": 403,
+              "blocked": true,
+              "dlp_redacted": false,
+              "rule_score": 92.2,
+              "ml_score": null,
+              "anomaly_score": null,
+              "threat_score": 92.2,
+              "latency_ms": 4.203
+            },
+            {
+              "round": 4,
+              "action": "mutate_sqli_double_url_encode",
+              "payload": "105/**/OR/**/17-7=10",
+              "status_code": 403,
+              "blocked": true,
+              "dlp_redacted": false,
+              "rule_score": 92.2,
+              "ml_score": null,
+              "anomaly_score": null,
+              "threat_score": 92.2,
+              "latency_ms": 4.12
+            }
+          ]
+        },
+        {
+          "episode_index": 20,
+          "pass_num": 2,
+          "case_id": 2,
+          "endpoint": "/api/v3/catalog/items",
+          "method": "GET",
+          "family": "SQL_INJECTION",
+          "blocked": true,
+          "bypassed": false,
+          "rounds_executed": 4,
+          "rounds": [
+            {
+              "round": 1,
+              "action": "baseline_probe",
+              "payload": "105 OR 17-7=10",
+              "status_code": 403,
+              "blocked": true,
+              "dlp_redacted": false,
+              "rule_score": 88.2,
+              "ml_score": null,
+              "anomaly_score": null,
+              "threat_score": 88.2,
+              "latency_ms": 4.621
+            },
+            {
+              "round": 2,
+              "action": "mutate_sqli_versioned_comment",
+              "payload": "105/**/OR/**/17-7=10",
+              "status_code": 403,
+              "blocked": true,
+              "dlp_redacted": false,
+              "rule_score": 92.2,
+              "ml_score": null,
+              "anomaly_score": null,
+              "threat_score": 92.2,
+              "latency_ms": 4.884
+            },
+            {
+              "round": 3,
+              "action": "mutate_sqli_between_operator",
+              "payload": "105/**/OR/**/17-7=10",
+              "status_code": 403,
+              "blocked": true,
+              "dlp_redacted": false,
+              "rule_score": 92.2,
+              "ml_score": null,
+              "anomaly_score": null,
+              "threat_score": 92.2,
+              "latency_ms": 4.425
+            },
+            {
+              "round": 4,
+              "action": "mutate_sqli_double_url_encode",
+              "payload": "105/**/OR/**/17-7=10",
+              "status_code": 403,
+              "blocked": true,
+              "dlp_redacted": false,
+              "rule_score": 92.2,
+              "ml_score": null,
+              "anomaly_score": null,
+              "threat_score": 92.2,
+              "latency_ms": 4.977
+            }
+          ]
+        },
+        {
+          "episode_index": 38,
+          "pass_num": 3,
+          "case_id": 2,
+          "endpoint": "/api/v3/catalog/items",
+          "method": "GET",
+          "family": "SQL_INJECTION",
+          "blocked": true,
+          "bypassed": false,
+          "rounds_executed": 4,
+          "rounds": [
+            {
+              "round": 1,
+              "action": "baseline_probe",
+              "payload": "105 OR 17-7=10",
+              "status_code": 403,
+              "blocked": true,
+              "dlp_redacted": false,
+              "rule_score": 88.2,
+              "ml_score": null,
+              "anomaly_score": null,
+              "threat_score": 88.2,
+              "latency_ms": 4.023
+            },
+            {
+              "round": 2,
+              "action": "mutate_sqli_versioned_comment",
+              "payload": "105/**/OR/**/17-7=10",
+              "status_code": 403,
+              "blocked": true,
+              "dlp_redacted": false,
+              "rule_score": 92.2,
+              "ml_score": null,
+              "anomaly_score": null,
+              "threat_score": 92.2,
+              "latency_ms": 4.138
+            },
+            {
+              "round": 3,
+              "action": "mutate_sqli_between_operator",
+              "payload": "105/**/OR/**/17-7=10",
+              "status_code": 403,
+              "blocked": true,
+              "dlp_redacted": false,
+              "rule_score": 92.2,
+              "ml_score": null,
+              "anomaly_score": null,
+              "threat_score": 92.2,
+              "latency_ms": 5.096
+            },
+            {
+              "round": 4,
+              "action": "mutate_sqli_double_url_encode",
+              "payload": "105/**/OR/**/17-7=10",
+              "status_code": 403,
+              "blocked": true,
+              "dlp_redacted": false,
+              "rule_score": 92.2,
+              "ml_score": null,
+              "anomaly_score": null,
+              "threat_score": 92.2,
+              "latency_ms": 4.294
+            }
+          ]
+        }
+      ]
     },
-    "layer_4_decision": {
-      "risk_score": 78.86,
-      "action": "PolicyAction.BLOCK",
-      "is_blocked": true,
-      "reason": "High-confidence attack signature confirmed (Rule: 92.2 >= 85.0) - immediate block enforcement (Torrano-Gimenez 2015).",
-      "blocking_layer": "LAYER_1_DETERMINISTIC_RULES (SQLI-006 unquoted arithmetic tautology)"
+    "live_http_dueling_dqn_vs_hybrid_v32": {
+      "blocked_passes": "3/3",
+      "episodes": [
+        {
+          "episode_index": 2,
+          "pass_num": 1,
+          "case_id": 2,
+          "endpoint": "/api/v3/catalog/items",
+          "method": "GET",
+          "family": "SQL_INJECTION",
+          "blocked": true,
+          "bypassed": false,
+          "rounds_executed": 4,
+          "rounds": [
+            {
+              "round": 1,
+              "action": "baseline_probe",
+              "payload": "105 OR 17-7=10",
+              "status_code": 403,
+              "blocked": true,
+              "dlp_redacted": false,
+              "rule_score": 88.2,
+              "ml_score": 4.95,
+              "anomaly_score": 53.14,
+              "threat_score": 88.2,
+              "latency_ms": 8.067
+            },
+            {
+              "round": 2,
+              "action": "mutate_sqli_between_operator",
+              "payload": "105/**/OR/**/17-7=10",
+              "status_code": 403,
+              "blocked": true,
+              "dlp_redacted": false,
+              "rule_score": 92.2,
+              "ml_score": 99.64,
+              "anomaly_score": 100.0,
+              "threat_score": 96.75,
+              "latency_ms": 6.763
+            },
+            {
+              "round": 3,
+              "action": "mutate_sqli_case_randomize",
+              "payload": "105/**/OR/**/17-7=10",
+              "status_code": 403,
+              "blocked": true,
+              "dlp_redacted": false,
+              "rule_score": 92.2,
+              "ml_score": 99.64,
+              "anomaly_score": 100.0,
+              "threat_score": 96.75,
+              "latency_ms": 5.792
+            },
+            {
+              "round": 4,
+              "action": "mutate_sqli_double_url_encode",
+              "payload": "105/**/OR/**/17-7=10",
+              "status_code": 403,
+              "blocked": true,
+              "dlp_redacted": false,
+              "rule_score": 92.2,
+              "ml_score": 99.64,
+              "anomaly_score": 100.0,
+              "threat_score": 96.75,
+              "latency_ms": 5.231
+            }
+          ]
+        },
+        {
+          "episode_index": 20,
+          "pass_num": 2,
+          "case_id": 2,
+          "endpoint": "/api/v3/catalog/items",
+          "method": "GET",
+          "family": "SQL_INJECTION",
+          "blocked": true,
+          "bypassed": false,
+          "rounds_executed": 4,
+          "rounds": [
+            {
+              "round": 1,
+              "action": "baseline_probe",
+              "payload": "105 OR 17-7=10",
+              "status_code": 403,
+              "blocked": true,
+              "dlp_redacted": false,
+              "rule_score": 88.2,
+              "ml_score": 4.95,
+              "anomaly_score": 53.14,
+              "threat_score": 88.2,
+              "latency_ms": 5.651
+            },
+            {
+              "round": 2,
+              "action": "mutate_sqli_between_operator",
+              "payload": "105/**/OR/**/17-7=10",
+              "status_code": 403,
+              "blocked": true,
+              "dlp_redacted": false,
+              "rule_score": 92.2,
+              "ml_score": 99.64,
+              "anomaly_score": 100.0,
+              "threat_score": 96.75,
+              "latency_ms": 5.442
+            },
+            {
+              "round": 3,
+              "action": "mutate_sqli_case_randomize",
+              "payload": "105/**/OR/**/17-7=10",
+              "status_code": 403,
+              "blocked": true,
+              "dlp_redacted": false,
+              "rule_score": 92.2,
+              "ml_score": 99.64,
+              "anomaly_score": 100.0,
+              "threat_score": 96.75,
+              "latency_ms": 5.692
+            },
+            {
+              "round": 4,
+              "action": "mutate_sqli_double_url_encode",
+              "payload": "105/**/OR/**/17-7=10",
+              "status_code": 403,
+              "blocked": true,
+              "dlp_redacted": false,
+              "rule_score": 92.2,
+              "ml_score": 99.64,
+              "anomaly_score": 100.0,
+              "threat_score": 96.75,
+              "latency_ms": 5.354
+            }
+          ]
+        },
+        {
+          "episode_index": 38,
+          "pass_num": 3,
+          "case_id": 2,
+          "endpoint": "/api/v3/catalog/items",
+          "method": "GET",
+          "family": "SQL_INJECTION",
+          "blocked": true,
+          "bypassed": false,
+          "rounds_executed": 4,
+          "rounds": [
+            {
+              "round": 1,
+              "action": "baseline_probe",
+              "payload": "105 OR 17-7=10",
+              "status_code": 403,
+              "blocked": true,
+              "dlp_redacted": false,
+              "rule_score": 88.2,
+              "ml_score": 4.95,
+              "anomaly_score": 53.14,
+              "threat_score": 88.2,
+              "latency_ms": 7.312
+            },
+            {
+              "round": 2,
+              "action": "mutate_sqli_between_operator",
+              "payload": "105/**/OR/**/17-7=10",
+              "status_code": 403,
+              "blocked": true,
+              "dlp_redacted": false,
+              "rule_score": 92.2,
+              "ml_score": 99.64,
+              "anomaly_score": 100.0,
+              "threat_score": 96.75,
+              "latency_ms": 6.046
+            },
+            {
+              "round": 3,
+              "action": "mutate_sqli_case_randomize",
+              "payload": "105/**/OR/**/17-7=10",
+              "status_code": 403,
+              "blocked": true,
+              "dlp_redacted": false,
+              "rule_score": 92.2,
+              "ml_score": 99.64,
+              "anomaly_score": 100.0,
+              "threat_score": 96.75,
+              "latency_ms": 5.363
+            },
+            {
+              "round": 4,
+              "action": "mutate_sqli_double_url_encode",
+              "payload": "105/**/OR/**/17-7=10",
+              "status_code": 403,
+              "blocked": true,
+              "dlp_redacted": false,
+              "rule_score": 92.2,
+              "ml_score": 99.64,
+              "anomaly_score": 100.0,
+              "threat_score": 96.75,
+              "latency_ms": 5.28
+            }
+          ]
+        }
+      ]
     }
   },
-  "strange_suite_overall_block_rate": {
-    "total_cases": 18,
-    "passes": 3,
-    "total_episodes": 54,
-    "blocked_episodes": 51,
-    "block_rate_pct": 94.44,
-    "case_2_blocked_across_passes": "3/3 (100.0%)"
+  "strange_suite_54_episode_totals": {
+    "in_process_static_replay_hybrid_v32": {
+      "total_cases": 18,
+      "passes_per_case": 3,
+      "total_episodes": 54,
+      "total_probes_dispatched": 63,
+      "blocked_count": 54,
+      "bypass_count": 0,
+      "block_rate_pct": 100.0,
+      "evasion_rate_pct": 0.0,
+      "avg_latency_ms": 1.369,
+      "p95_latency_ms": 1.751
+    },
+    "in_process_random_mutator_hybrid_v32": {
+      "total_cases": 18,
+      "passes_per_case": 3,
+      "total_episodes": 54,
+      "total_probes_dispatched": 214,
+      "blocked_count": 51,
+      "bypass_count": 3,
+      "block_rate_pct": 94.44,
+      "evasion_rate_pct": 5.56,
+      "avg_latency_ms": 1.58,
+      "p95_latency_ms": 2.246
+    },
+    "in_process_dueling_dqn_hybrid_v32": {
+      "total_cases": 18,
+      "passes_per_case": 3,
+      "total_episodes": 54,
+      "total_probes_dispatched": 210,
+      "blocked_count": 51,
+      "bypass_count": 3,
+      "block_rate_pct": 94.44,
+      "evasion_rate_pct": 5.56,
+      "avg_latency_ms": 1.872,
+      "p95_latency_ms": 2.943
+    },
+    "live_http_static_replay_hybrid_v32": {
+      "total_cases": 18,
+      "passes_per_case": 3,
+      "total_episodes": 54,
+      "total_probes_dispatched": 63,
+      "blocked_count": 54,
+      "bypass_count": 0,
+      "block_rate_pct": 100.0,
+      "evasion_rate_pct": 0.0,
+      "avg_latency_ms": 8.808,
+      "p95_latency_ms": 14.051
+    },
+    "live_http_dueling_dqn_rules_only_26rules": {
+      "total_cases": 18,
+      "passes_per_case": 3,
+      "total_episodes": 54,
+      "total_probes_dispatched": 207,
+      "blocked_count": 51,
+      "bypass_count": 3,
+      "block_rate_pct": 94.44,
+      "evasion_rate_pct": 5.56,
+      "avg_latency_ms": 4.607,
+      "p95_latency_ms": 6.401
+    },
+    "live_http_dueling_dqn_hybrid_v32": {
+      "total_cases": 18,
+      "passes_per_case": 3,
+      "total_episodes": 54,
+      "total_probes_dispatched": 216,
+      "blocked_count": 54,
+      "bypass_count": 0,
+      "block_rate_pct": 100.0,
+      "evasion_rate_pct": 0.0,
+      "avg_latency_ms": 5.749,
+      "p95_latency_ms": 7.515
+    }
   }
 }

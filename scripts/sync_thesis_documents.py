@@ -116,6 +116,7 @@ def update_docx_with_v31_sections(
     fp_data: dict[str, Any],
     fp_tune: dict[str, Any],
     lat_data: dict[str, Any],
+    ablation_data: dict[str, Any],
 ) -> None:
     if not docx_path.exists():
         return
@@ -228,8 +229,15 @@ def update_docx_with_v31_sections(
         t3_title.runs[0].bold = True
     _insert_table_before(doc, target_p, _build_matrix_rows(lstg, "2. Gateway Rules Only (ML OFF)", "Độ Trễ HTTP (ms)"))
 
+    ab_m = ablation_data["modes"]
+    ab_rl = ab_m["rules_only"]
+    ab_ml = ab_m["ml_only"]
+    ab_hyb = ab_m["hybrid"]
+    ab_n = ablation_data["metadata"]["total_samples"]
+    ab_rules = ablation_data["metadata"].get("active_rules_count", 26)
+
     summary_p = target_p.insert_paragraph_before(
-        f"Tổng hợp thực nghiệm v3.1: (1) Qua socket HTTP thật (C1), Dueling-DQN v2.0 bị chặn {ldqn_fam_hyb['block_rate_pct']:.1f}% "
+        f"Tổng hợp thực nghiệm v3.1–v3.2: (1) Qua socket HTTP thật (C1), Dueling-DQN v2.0 bị chặn {ldqn_fam_hyb['block_rate_pct']:.1f}% "
         f"({ldqn_fam_hyb['blocked_count']}/{ldqn_fam_hyb['total_episodes']}, trễ TB {ldqn_fam_hyb['avg_latency_ms']:.3f} ms) trên tập Familiar; "
         f"trên tập Strange ngoại miền, Gateway Rules Only chặn {ldqn_stg_rules['block_rate_pct']:.1f}% ({ldqn_stg_rules['blocked_count']}/{ldqn_stg_rules['total_episodes']}) "
         f"trong khi Hybrid v3.0 nâng lên {ldqn_stg_hyb['block_rate_pct']:.1f}% ({ldqn_stg_hyb['blocked_count']}/{ldqn_stg_hyb['total_episodes']}, trễ HTTP TB {ldqn_stg_hyb['avg_latency_ms']:.3f} ms). "
@@ -237,9 +245,13 @@ def update_docx_with_v31_sections(
         f"Strict FPR trên tập B1000 giảm từ {r0['b1000_strict_schema_off_pct']:.1f}% xuống {b1000_fp['fp_strict_schema_off_pct']:.1f}% (Schema OFF) và từ "
         f"{r0['b1000_strict_schema_on_pct']:.1f}% xuống {b1000_fp['fp_strict_schema_on_pct']:.1f}% (Schema ON) mà không giảm Recall; trên tổng {fp_agg['total_benign_evaluated']} "
         f"mẫu lành tính, Operational FPR = {fp_agg['fp_operational_pct']:.2f}%, Strict FPR (Schema OFF) = {fp_agg['fp_strict_schema_off_pct']:.3f}%, Strict FPR (Schema ON) = {fp_agg['fp_strict_schema_on_pct']:.3f}% "
-        f"(giữ schema_validation_enabled=False mặc định do nhóm client REST mở rộng vẫn ghi nhận {api_fp['fp_strict_schema_on_pct']:.2f}% vi phạm hợp đồng cứng). "
+        f"(chế độ route_tiered mặc định kiểm soát chặt vi phạm hợp đồng ở mức {api_fp['fp_strict_schema_on_pct']:.2f}% trên nhóm REST mở rộng với 0% Operational FPR). "
         f"(3) Độ trễ 2-hop TCP HTTP thực tế trên 3.000 mẫu CSIC 2010 đạt mean = {e2e_lat['mean_ms']:.3f} ms "
-        f"(p50 = {e2e_lat['p50_ms']:.3f} ms, p95 = {e2e_lat['p95_ms']:.3f} ms, p99 = {e2e_lat['p99_ms']:.3f} ms), tách bạch rõ với độ trễ in-process engine ({dqn_fam_hyb['avg_latency_ms']:.3f} ms)."
+        f"(p50 = {e2e_lat['p50_ms']:.3f} ms, p95 = {e2e_lat['p95_ms']:.3f} ms, p99 = {e2e_lat['p99_ms']:.3f} ms), tách bạch rõ với độ trễ in-process engine ({dqn_fam_hyb['avg_latency_ms']:.3f} ms). "
+        f"(4) Trên thực nghiệm Ablation Study v3.2 (N = {ab_n}, {ab_rules} Rules + XGBoost 26-D + IForest 26-D + Dual-AI Consensus), "
+        f"cấu hình Rules Only đạt F1 = {ab_rl['f1_score_pct']:.2f}%, ML Only đạt F1 = {ab_ml['f1_score_pct']:.2f}%, và Hybrid đạt "
+        f"Accuracy = {ab_hyb['accuracy_pct']:.2f}%, Precision = {ab_hyb['precision_pct']:.2f}%, Recall = {ab_hyb['recall_pct']:.2f}%, "
+        f"F1 = {ab_hyb['f1_score_pct']:.2f}%, FPR = {ab_hyb['fpr_pct']:.2f}% với độ trễ inline single-pass {ab_hyb['avg_latency_ms']:.3f} ms/req."
     )
     summary_p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
 
@@ -387,6 +399,7 @@ def update_chuong4_markdown(
     fp_data: dict[str, Any],
     fp_tune: dict[str, Any],
     lat_data: dict[str, Any],
+    ablation_data: dict[str, Any],
 ) -> None:
     raw = md_path.read_text(encoding="utf-8")
     anchor = "### 4.7.3."
@@ -411,6 +424,13 @@ def update_chuong4_markdown(
     b1000_fp = fp_data["corpora"]["benchmark_1000_diverse_benign"]
     r0 = fp_tune["rounds"][0]
     e2e_lat = lat_data["http_e2e_latency_ms"]
+
+    ab_m = ablation_data["modes"]
+    ab_rl = ab_m["rules_only"]
+    ab_ml = ab_m["ml_only"]
+    ab_hyb = ab_m["hybrid"]
+    ab_n = ablation_data["metadata"]["total_samples"]
+    ab_rules = ablation_data["metadata"].get("active_rules_count", 26)
 
     def _md_table(rows: list[list[str]]) -> str:
         header = "| " + " | ".join(rows[0]) + " |"
@@ -455,7 +475,7 @@ Tác tử **PyTorch Dueling Double-DQN** (`{dqn_meta['state_dim']}-D` state, `{d
 Chương 4 đã cung cấp đầy đủ bằng chứng định lượng trung thực, không rò rỉ dữ liệu và tái lập được 100%:
 1. **Champion XGBoost v2.0 (`xgb_v2.ubj`) & Zero-Leakage (`D3`):** `99.15%` Accuracy, `98.72%` Macro-F1 trên `6.929` mẫu Test độc lập (`0` giao nhau mã băm trên `46.187` mẫu `defense_v2`, CSIC 2010 và B1000).
 2. **Calibrated Isolation Forest v2.0 (`iforest_v2.npz`) & Tinh chỉnh `C3`:** Recall `@60.0` đạt **`57.75%`**; sau tinh chỉnh C3, `B1000 Strict FPR` giảm về **`{b1000_fp['fp_strict_schema_off_pct']:.1f}%`** (`Schema OFF`) và **`{b1000_fp['fp_strict_schema_on_pct']:.1f}%`** (`Schema ON`).
-3. **Ablation Study (`N = 1.000`):** Hybrid Defense đạt **`97.80%` Accuracy, `100.00%` Precision, `97.25%` Recall, `98.61%` F1, `0.00%` Operational FPR** trong **`0.848 ms/req`**.
+3. **Ablation Study v3.2 (`N = {ab_n}`, `{ab_rules}` Rules):** `Rules Only` đạt F1 **`{ab_rl['f1_score_pct']:.2f}%`**, `ML Only` đạt F1 **`{ab_ml['f1_score_pct']:.2f}%`**, và `Hybrid Defense` đạt **`{ab_hyb['accuracy_pct']:.2f}%` Accuracy, `{ab_hyb['precision_pct']:.2f}%` Precision, `{ab_hyb['recall_pct']:.2f}%` Recall, `{ab_hyb['f1_score_pct']:.2f}%` F1, `{ab_hyb['fpr_pct']:.2f}%` Operational FPR** trong **`{ab_hyb['avg_latency_ms']:.3f} ms/req`**.
 4. **Zero-Shot CSIC 2010 (`N = 3.000`) & HTTP 2-Hop E2E (`D2`):** Operational FPR **`0.00%`**, Precision **`100.00%`**, độ trễ 2-hop TCP HTTP thực tế **`{e2e_lat['mean_ms']:.3f} ms` mean** (`p50 = {e2e_lat['p50_ms']:.3f} ms`).
 5. **Đối kháng Đa vòng 3x3 (`{dqn_meta['episodes_trained']}`-Ep DQN, In-Process & Live HTTP):** `Blue Team v3.0 Hybrid` chặn **`{dqn_fam_hyb['block_rate_pct']:.1f}%` (`{dqn_fam_hyb['blocked_count']}/{dqn_fam_hyb['total_rounds']}`)** trên tập `Familiar` và **`{dqn_stg_hyb['block_rate_pct']:.1f}%` (`{dqn_stg_hyb['blocked_count']}/{dqn_stg_hyb['total_rounds']}`)** In-Process / **`{ldqn_stg_hyb['block_rate_pct']:.1f}%` (`{ldqn_stg_hyb['blocked_count']}/{ldqn_stg_hyb['total_episodes']}`)** Live HTTP trên tập ngoại miền `Strange`.
 """
@@ -484,6 +504,7 @@ def main() -> None:
             fp_data=fp_data,
             fp_tune=fp_tune,
             lat_data=lat_data,
+            ablation_data=ablation_data,
         )
 
     update_defense_pptx(
@@ -505,6 +526,7 @@ def main() -> None:
         fp_data=fp_data,
         fp_tune=fp_tune,
         lat_data=lat_data,
+        ablation_data=ablation_data,
     )
     print("Successfully synchronized ALL Thesis DOCX, PPTX, and Markdown files 100% from JSON artifacts!")
 

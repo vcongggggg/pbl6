@@ -592,8 +592,9 @@ async def proxy_endpoint(
         request_id,
     )
 
-    if schema_violations:
-        violation_details = [v.to_dict() for v in schema_violations]
+    has_penalty_violations = any(v.is_penalty for v in schema_violations)
+    if schema_violations and has_penalty_violations:
+        violation_details = [v.to_dict() for v in schema_violations if v.is_penalty]
         logger.warning(f"Positive security violations [{request_id}]: {violation_details}")
         if strict_schema_blocked:
             body_resp = json.dumps({
