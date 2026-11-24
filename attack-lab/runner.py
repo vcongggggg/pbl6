@@ -12,7 +12,9 @@ import argparse
 import hashlib
 import json
 import logging
+import os
 import sys
+import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Sequence
@@ -629,12 +631,24 @@ def run_campaign(
     Returns:
         Structured dictionary containing summary metrics and per-endpoint battle logs.
     """
-    # Handle parameter aliases
+    # Handle parameter aliases & protect live campaign_report.json from dry-run / pytest overwrites (Phase A4.2)
     target = kwargs.get("target_url", target)
     output = kwargs.get("output_path", output)
+    canonical_live_report = (_RUNNER_DIR / "artifacts" / "campaign_report.json").resolve()
+    in_pytest_or_dry = bool(dry_run or os.environ.get("PYTEST_CURRENT_TEST"))
+
     if output is None:
-        output = _RUNNER_DIR / "artifacts" / "campaign_report.json"
-    output_path = Path(output)
+        output_path = (
+            Path(tempfile.gettempdir()) / "pbl6_dryrun_campaign_report.json"
+            if in_pytest_or_dry
+            else canonical_live_report
+        )
+    else:
+        candidate_out = Path(output)
+        if in_pytest_or_dry and candidate_out.resolve() == canonical_live_report:
+            output_path = Path(tempfile.gettempdir()) / "pbl6_dryrun_campaign_report.json"
+        else:
+            output_path = candidate_out
 
     _surface_path = Path(surface) if surface else (_RUNNER_DIR / "scenarios" / "attack_surface.json")
     default_v2 = _RUNNER_DIR / "models" / "pentest_dqn_v2.pt"

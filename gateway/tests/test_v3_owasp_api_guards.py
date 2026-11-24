@@ -230,3 +230,33 @@ def test_response_dlp_unit_monitor_vs_blocking():
     assert blk.redacted is True
     assert blk.redacted_bytes is not None
     assert REDACTED_PLACEHOLDER in blk.redacted_bytes.decode("utf-8")
+
+
+def test_simulate_target_url_anti_open_proxy_whitelist(client: TestClient):
+    """Phase A4.3: Verifies /dashboard/simulate rejects external/IMDS target_url (CWE-918) and accepts Cyber Range URLs."""
+    headers = {"X-API-Key": "dev-admin-secret-key-change-me"}
+
+    # 1. External public domain -> HTTP 400
+    r_ext = client.post(
+        "/api/dashboard/simulate",
+        headers=headers,
+        json={"attack_type": "SQLI", "target_url": "https://example.com"},
+    )
+    assert r_ext.status_code == 400
+
+    # 2. Cloud metadata IMDS -> HTTP 400
+    r_imds = client.post(
+        "/api/dashboard/simulate",
+        headers=headers,
+        json={"attack_type": "SQLI", "target_url": "http://169.254.169.254"},
+    )
+    assert r_imds.status_code == 400
+
+    # 3. Valid Cyber Range loopback target_url -> HTTP 200
+    r_ok = client.post(
+        "/api/dashboard/simulate",
+        headers=headers,
+        json={"attack_type": "SQLI", "target_url": "http://127.0.0.1:5000"},
+    )
+    assert r_ok.status_code == 200
+    assert r_ok.json()["simulated"] == "SQL_INJECTION"

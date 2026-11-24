@@ -329,3 +329,23 @@ def test_arena_pentest_stream_sse(client: TestClient):
         assert "round" in events_seen
         assert "verdict" in events_seen
         assert "done" in events_seen
+
+
+def test_arena_pentest_default_sync_to_soc_is_false(client: TestClient):
+    """Phase A4.1: Verifies default sync_to_soc is False so exploratory Arena runs do not pollute SOC table."""
+    from app.db.models import SecurityEvent
+    from app.db.session import SessionLocal
+
+    with SessionLocal() as db:
+        before_cnt = db.query(SecurityEvent).count()
+
+    res = client.post(
+        "/api/dashboard/arena/pentest/run",
+        json={"scope": "injection", "max_rounds": 2, "defense_tier": "hybrid_v3"},
+        headers=ADMIN_HEADERS,
+    )
+    assert res.status_code == 200
+
+    with SessionLocal() as db:
+        after_cnt = db.query(SecurityEvent).count()
+    assert after_cnt == before_cnt

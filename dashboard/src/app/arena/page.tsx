@@ -127,7 +127,7 @@ export default function ArenaPage() {
   const [defenseTier, setDefenseTier] = useState<"no_waf" | "rules_only" | "hybrid_v3">("hybrid_v3");
   const [scope, setScope] = useState<string>("full_pentest");
   const [targetUrl, setTargetUrl] = useState<string>("http://127.0.0.1:5000");
-  const [syncToSoc, setSyncToSoc] = useState<boolean>(true);
+  const [syncToSoc, setSyncToSoc] = useState<boolean>(false);
   const [maxRounds] = useState<number>(8);
 
   // Execution & Live SSE Trace States

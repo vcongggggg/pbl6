@@ -25,7 +25,11 @@ router = APIRouter(
 class SimulateRequest(BaseModel):
     attack_type: str = Field(
         ...,
-        description="Type of attack to simulate: SQLI, XSS, PATH, CMD, SSRF, BOLA, MASS, DATA_EXPOSURE, SOAP, GRAPHQL, or BENIGN",
+        description="Type of attack to simulate: SQLI, XSS, PATH, CMD, SSRF, NOSQLI, BOLA, MASS, DATA_EXPOSURE, SOAP, GRAPHQL, or BENIGN",
+    )
+    target_url: str | None = Field(
+        default=None,
+        description="Optional Cyber Range target base URL (loopback / RFC1918 LAN whitelist) for dynamic OpenAPI route discovery",
     )
 
 
@@ -520,12 +524,63 @@ async def get_cyber_range_topology(
     }
 
 
-def _resolve_openapi_sim_path(keyword: str, method: str, fallback_path: str) -> str:
-    """Dynamically resolves an active OpenAPI path matching `keyword` & `method` from SchemaValidator."""
+def _validate_cyber_range_target_url(target_url: str, configured_target: str) -> str:
+    """Enforces CWE-918 anti-open-proxy whitelist on optional simulator target_url."""
+    import ipaddress
+
+    raw = target_url.strip().rstrip("/")
+    parsed = urllib.parse.urlparse(raw)
+    if parsed.scheme not in ("http", "https") or not parsed.hostname:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid target_url: must be an http/https URL within the Cyber Range.",
+        )
+    if parsed.username or parsed.password:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid target_url: embedded credentials are forbidden (CWE-918).",
+        )
+
+    host = parsed.hostname.lower()
+    cfg_host = (urllib.parse.urlparse(configured_target).hostname or "").lower()
+    allowed_named_hosts = {"localhost", "vulnerable-api"}
+    if cfg_host:
+        allowed_named_hosts.add(cfg_host)
+
+    if host in allowed_named_hosts:
+        return raw
+
+    try:
+        ip_obj = ipaddress.ip_address(host)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=400,
+            detail=f"target_url host '{host}' rejected by Cyber Range CWE-918 anti-open-proxy policy.",
+        ) from exc
+
+    if ip_obj.is_link_local or str(ip_obj).startswith("169.254."):
+        raise HTTPException(
+            status_code=400,
+            detail="Cloud link-local metadata addresses are strictly forbidden (CWE-918).",
+        )
+    if not (ip_obj.is_loopback or ip_obj.is_private):
+        raise HTTPException(
+            status_code=400,
+            detail=f"External public IP '{host}' is forbidden by Cyber Range anti-open-proxy policy.",
+        )
+    return raw
+
+
+def _resolve_openapi_sim_path(
+    keyword: str,
+    method: str,
+    fallback_path: str,
+    spec_paths: dict[str, Any] | None = None,
+) -> str:
+    """Dynamically resolves an active OpenAPI path matching `keyword` & `method`."""
     from app.api.proxy import get_schema_validator
 
-    validator = get_schema_validator()
-    paths = (validator._spec or {}).get("paths", {})
+    paths = spec_paths if spec_paths is not None else ((get_schema_validator()._spec or {}).get("paths", {}))
     m_low = method.lower()
     for raw_path, ops in paths.items():
         if isinstance(ops, dict) and m_low in ops and keyword.lower() in raw_path.lower():
@@ -537,18 +592,35 @@ def _resolve_openapi_sim_path(keyword: str, method: str, fallback_path: str) -> 
 async def simulate_attack_request(
     request: Request,
     payload: SimulateRequest,
+    settings: Settings = Depends(get_settings),
 ) -> dict[str, Any]:
     """Fires a genuine HTTP request through the Gateway's proxy using OpenAPI-resolved routes."""
     attack_upper = payload.attack_type.upper()
 
-    search_p = _resolve_openapi_sim_path("search", "get", "/api/v1/vulnerable/books/search/")
-    review_p = _resolve_openapi_sim_path("review", "post", "/api/v1/vulnerable/reviews/")
-    download_p = _resolve_openapi_sim_path("download", "get", "/api/v1/vulnerable/files/download/")
-    ping_p = _resolve_openapi_sim_path("ping", "post", "/api/v1/vulnerable/admin/ping/")
-    ssrf_p = _resolve_openapi_sim_path("fetch", "get", "/api/v1/vulnerable/books/fetch-cover/")
-    order_tpl = _resolve_openapi_sim_path("order", "get", "/api/v1/vulnerable/orders/{order_id}/")
-    profile_p = _resolve_openapi_sim_path("profile", "post", "/api/v1/vulnerable/users/profile/update/")
-    users_p = _resolve_openapi_sim_path("list", "get", "/api/v1/vulnerable/users/list/")
+    dynamic_spec_paths: dict[str, Any] | None = None
+    validated_target: str | None = None
+    if payload.target_url:
+        validated_target = _validate_cyber_range_target_url(payload.target_url, settings.target_api_url)
+        try:
+            async with httpx.AsyncClient(timeout=0.8) as probe_client:
+                for cand in ("/api/v1/vulnerable/openapi.json", "/openapi.json", "/api/schema/"):
+                    r_spec = await probe_client.get(f"{validated_target}{cand}")
+                    if r_spec.status_code == 200:
+                        data = r_spec.json()
+                        if isinstance(data, dict) and isinstance(data.get("paths"), dict):
+                            dynamic_spec_paths = data["paths"]
+                            break
+        except Exception:
+            dynamic_spec_paths = None
+
+    search_p = _resolve_openapi_sim_path("search", "get", "/api/v1/vulnerable/books/search/", dynamic_spec_paths)
+    review_p = _resolve_openapi_sim_path("review", "post", "/api/v1/vulnerable/reviews/", dynamic_spec_paths)
+    download_p = _resolve_openapi_sim_path("download", "get", "/api/v1/vulnerable/files/download/", dynamic_spec_paths)
+    ping_p = _resolve_openapi_sim_path("ping", "post", "/api/v1/vulnerable/admin/ping/", dynamic_spec_paths)
+    ssrf_p = _resolve_openapi_sim_path("fetch", "get", "/api/v1/vulnerable/books/fetch-cover/", dynamic_spec_paths)
+    order_tpl = _resolve_openapi_sim_path("order", "get", "/api/v1/vulnerable/orders/{order_id}/", dynamic_spec_paths)
+    profile_p = _resolve_openapi_sim_path("profile", "post", "/api/v1/vulnerable/users/profile/update/", dynamic_spec_paths)
+    users_p = _resolve_openapi_sim_path("list", "get", "/api/v1/vulnerable/users/list/", dynamic_spec_paths)
 
     transport = httpx.ASGITransport(app=request.app)
     async with httpx.AsyncClient(transport=transport, base_url="http://local-gateway") as client:

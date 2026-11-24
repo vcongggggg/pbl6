@@ -1,0 +1,30 @@
+{
+  "metadata": {
+    "task_id": "pbl6-v3-fix-round-001 / A1.2 (D2)",
+    "measured_at": "2026-11-24T11:49:47+0700",
+    "dataset": "csic_2010_benchmark.csv",
+    "total_requests": 3000,
+    "transport": "Real TCP HTTP/1.1 Keep-Alive (httpx.Client -> uvicorn WAF Gateway :8055 -> uvicorn ASGI Upstream :5055)",
+    "waf_mode": "ACTIVE_BLOCKING (Full v3.0: InputNormalizer + 25 Rules + 5 OWASP API Guards + XGBoost 26-D + IForest 26-D + Response DLP + Background SQLite WAL)",
+    "wall_clock_seconds": 13.86,
+    "sequential_rps": 216.5
+  },
+  "http_e2e_latency_ms": {
+    "mean_ms": 4.465,
+    "p50_ms": 4.252,
+    "p95_ms": 5.888,
+    "p99_ms": 7.26,
+    "benign_forwarded_mean_ms": 4.405,
+    "attack_mean_ms": 4.525
+  },
+  "http_status_distribution": {
+    "200": 2813,
+    "403": 178,
+    "429": 9
+  },
+  "sla_evaluation": {
+    "original_target_ms": 2.5,
+    "meets_2_5ms_target": false,
+    "conclusion": "In-process AI/WAF inspection is ~0.85-1.34 ms, whereas full 2-hop TCP HTTP reverse-proxy round-trip (Client -> Uvicorn WAF -> Uvicorn Upstream + async threadpool hop + SQLite WAL commit) measures 4.465 ms mean (p50=4.252 ms, p95=5.888 ms). Recommended honest dual-tier SLA: <= 1.5 ms inline WAF engine budget and <= 5.5 ms full HTTP 2-hop proxy E2E."
+  }
+}

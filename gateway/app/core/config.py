@@ -48,7 +48,12 @@ class Settings(BaseSettings):
     # ML Fail-Safe & Resilience (Master Plan A3)
     ml_unavailable_risk_penalty: float = 15.0
 
-    # Positive Security Model (Master Plan B1)
+    # Positive Security Model (Master Plan B1 & Phase A3 Empirical Policy Decision):
+    # Kept False by default based on Phase A1.1 empirical measurement (`docs/reports/fp_v3_measurement.json`):
+    # enabling strict OpenAPI contract validation by default raises strict FPR from 4.0% -> 8.5% on
+    # benchmark_1000_diverse and 0.0% -> 26.67% on evolving REST clients sending optional query/body fields.
+    # Universal OWASP API3 Mass Assignment rules (MASS-001/MASS-002) remain active 100% of the time with
+    # 0.0% FPR; operators with frozen OpenAPI contracts may opt in via SCHEMA_VALIDATION_ENABLED=true.
     schema_validation_enabled: bool = False
     schema_strict_mode: bool = False
     schema_violation_penalty: float = 25.0

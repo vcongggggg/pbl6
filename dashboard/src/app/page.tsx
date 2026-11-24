@@ -373,13 +373,13 @@ export default function SOCDashboard() {
             {/* Right Column (4 cols ~ 34%): Compact Telemetry & 1-Click Simulator */}
             <div className="col-span-12 lg:col-span-4 h-full min-h-0 flex flex-col gap-2.5 overflow-hidden">
               {/* Top: 60s Threat Timeline Chart (Compact) */}
-              <div className="h-[175px] shrink-0 bg-slate-900/70 border border-slate-800/80 rounded-xl p-3 shadow flex flex-col min-h-0">
-                <ThreatTimelineChart data={timeline} />
+              <div className="h-[190px] shrink-0 bg-slate-900/70 border border-slate-800/80 rounded-xl p-3 shadow flex flex-col min-h-0 overflow-hidden">
+                <ThreatTimelineChart data={timeline} compact />
               </div>
 
               {/* Middle: Compact Zero-Clipping Horizontal Attack & Protocol Mix Bars */}
-              <div className="h-[155px] shrink-0 bg-slate-900/70 border border-slate-800/80 rounded-xl p-3 shadow flex flex-col justify-between min-h-0">
-                <div className="flex items-center justify-between pb-1.5 border-b border-slate-800/80 text-xs font-mono">
+              <div className="h-[168px] shrink-0 bg-slate-900/70 border border-slate-800/80 rounded-xl p-3 shadow flex flex-col justify-between min-h-0 overflow-hidden">
+                <div className="flex items-center justify-between pb-1.5 border-b border-slate-800/80 text-xs font-mono shrink-0">
                   <span className="text-slate-300 font-semibold flex items-center gap-1.5">
                     <BarChart3 className="w-3.5 h-3.5 text-purple-400" />
                     Attack &amp; Protocol Mix
@@ -391,7 +391,7 @@ export default function SOCDashboard() {
                     Biểu đồ đầy đủ -&gt;
                   </button>
                 </div>
-                <div className="flex-1 grid grid-cols-2 gap-3 mt-2 min-h-0 overflow-hidden text-[10px] font-mono">
+                <div className="flex-1 grid grid-cols-2 gap-3 mt-1.5 min-h-0 overflow-hidden text-[10px] font-mono">
                   {/* Left: Top 3 Attack Families */}
                   <div className="space-y-1.5 overflow-hidden">
                     <div className="text-slate-400 font-semibold uppercase tracking-wider text-[9px]">
@@ -447,10 +447,10 @@ export default function SOCDashboard() {
               {/* Bottom: Quick Live Attack Simulator (OWASP Top 10 + API Guard Probes) */}
               <div className="flex-1 min-h-0 bg-slate-900/70 border border-slate-800/80 rounded-xl p-3 shadow flex flex-col justify-between overflow-y-auto">
                 <div>
-                  <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center justify-between mb-1.5">
                     <span className="text-xs font-bold uppercase tracking-wider text-purple-300 flex items-center gap-1.5 font-mono">
                       <Zap className="w-3.5 h-3.5 text-purple-400" />
-                      Quick Live Simulator
+                      Quick Live Simulator (11 Vectors)
                     </span>
                     <span className="text-[10px] text-emerald-400 font-mono bg-emerald-950/60 border border-emerald-800/50 px-1.5 py-0.2 rounded">
                       Real HTTP Probes
@@ -460,7 +460,7 @@ export default function SOCDashboard() {
                     Bắn request thực qua WAF Gateway — bảng bên trái sẽ cập nhật tức thì:
                   </p>
 
-                  {/* 8 Attack Buttons Grid (2x4) */}
+                  {/* 10 Attack Buttons Grid (2x5) + 1 Benign = 11 Vectors */}
                   <div className="grid grid-cols-2 gap-1.5 text-[11px] font-mono">
                     <button
                       id="sim-sqli"
@@ -518,6 +518,17 @@ export default function SOCDashboard() {
                     </button>
 
                     <button
+                      id="sim-nosqli"
+                      onClick={() => handleSimulate("NOSQLI")}
+                      disabled={isSimulating}
+                      className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-fuchsia-950/50 hover:bg-fuchsia-900/70 text-fuchsia-300 border border-fuchsia-800/50 transition active:scale-95 disabled:opacity-50 cursor-pointer"
+                      title="NoSQL Operator Injection: {'$ne': ''}"
+                    >
+                      <AlertCircle className="w-3 h-3 text-fuchsia-400 shrink-0" />
+                      <span className="truncate">{activeSimulation === "NOSQLI" ? "Firing..." : "NoSQLi Probe"}</span>
+                    </button>
+
+                    <button
                       id="sim-mass"
                       onClick={() => handleSimulate("MASS_ASSIGNMENT")}
                       disabled={isSimulating}
@@ -533,7 +544,7 @@ export default function SOCDashboard() {
                       onClick={() => handleSimulate("BOLA")}
                       disabled={isSimulating}
                       className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-orange-950/50 hover:bg-orange-900/70 text-orange-300 border border-orange-800/50 transition active:scale-95 disabled:opacity-50 cursor-pointer"
-                      title="BOLA / IDOR Enumeration: /api/users/999"
+                      title="BOLA / IDOR Enumeration: /api/v1/vulnerable/orders/{id}"
                     >
                       <KeyRound className="w-3 h-3 text-orange-400 shrink-0" />
                       <span className="truncate">{activeSimulation === "BOLA" ? "Firing..." : "BOLA IDOR"}</span>
@@ -548,6 +559,17 @@ export default function SOCDashboard() {
                     >
                       <FileCode className="w-3 h-3 text-cyan-400 shrink-0" />
                       <span className="truncate">{activeSimulation === "SOAP_XXE" ? "Firing..." : "SOAP XXE"}</span>
+                    </button>
+
+                    <button
+                      id="sim-dlp"
+                      onClick={() => handleSimulate("DATA_EXPOSURE")}
+                      disabled={isSimulating}
+                      className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-sky-950/50 hover:bg-sky-900/70 text-sky-300 border border-sky-800/50 transition active:scale-95 disabled:opacity-50 cursor-pointer"
+                      title="Excessive Data Exposure (Response DLP Redaction)"
+                    >
+                      <Info className="w-3 h-3 text-sky-400 shrink-0" />
+                      <span className="truncate">{activeSimulation === "DATA_EXPOSURE" ? "Firing..." : "Data DLP"}</span>
                     </button>
                   </div>
                 </div>
@@ -573,13 +595,13 @@ export default function SOCDashboard() {
           <div className="h-full flex flex-col gap-3 overflow-y-auto pr-1">
             {/* Top 3 Charts */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 shrink-0">
-              <div className="lg:col-span-6 bg-slate-900/70 border border-slate-800/80 rounded-xl p-4 shadow">
+              <div className="lg:col-span-6">
                 <ThreatTimelineChart data={timeline} />
               </div>
-              <div className="lg:col-span-3 bg-slate-900/70 border border-slate-800/80 rounded-xl p-4 shadow">
+              <div className="lg:col-span-3">
                 <AttackDistributionChart data={distribution} />
               </div>
-              <div className="lg:col-span-3 bg-slate-900/70 border border-slate-800/80 rounded-xl p-4 shadow">
+              <div className="lg:col-span-3">
                 <ProtocolDistributionChart data={protocols} />
               </div>
             </div>

@@ -1,4 +1,4 @@
-﻿import { config } from "@/config/env";
+import { config } from "@/config/env";
 import {
   ArenaBattleResult,
   ArenaHistoryResponse,
@@ -345,7 +345,7 @@ export async function triggerPentestRun(params: PentestRunParams = {}): Promise<
       defense_tier: params.defense_tier || "hybrid_v3",
       scope: params.scope || "full_pentest",
       max_rounds: params.max_rounds || 8,
-      sync_to_soc: params.sync_to_soc !== undefined ? params.sync_to_soc : true,
+      sync_to_soc: params.sync_to_soc !== undefined ? params.sync_to_soc : false,
     }),
   });
   if (!res.ok) {
@@ -372,7 +372,7 @@ export async function streamPentestEvaluation(
     defense_tier: params.defense_tier || "hybrid_v3",
     scope: params.scope || "full_pentest",
     max_rounds: String(params.max_rounds || 8),
-    sync_to_soc: String(params.sync_to_soc !== undefined ? params.sync_to_soc : true),
+    sync_to_soc: String(params.sync_to_soc !== undefined ? params.sync_to_soc : false),
   });
 
   const res = await fetch(`${apiBase}/api/dashboard/arena/pentest/stream?${q.toString()}`, {

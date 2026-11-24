@@ -181,36 +181,51 @@ Chiến dịch đối kháng trực tiếp (`python attack-lab/runner.py --mode 
 ### 4.7.2. Tương quan chuỗi tấn công Cyber Kill Chain & XAI trên SOC Dashboard
 Mọi sự kiện an ninh (cả 403 Blocked, DLP Redacted, Monitor và 429 Rate Limit) đều được gom cụm theo cửa sổ trượt 15 phút bằng khóa băm UTC `Session_ID = HMAC-SHA256(Client_IP || floor(t_utc / 900))`, ánh xạ tự động vào 5 giai đoạn **MITRE Cyber Kill Chain** (`RECONNAISSANCE`, `EXPLOITATION`, `EVASION`, `PRIVILEGE_ABUSE`, `EXFILTRATION`) và hiển thị trực quan không có lỗi N+1 SQL trên giao diện **Attack Sessions Modal** cùng **Đấu Trường Pentest Tự Hành (`/arena`)**.
 
-### 4.7.3. Thực nghiệm Đối kháng Định lượng Ma trận 3x3 (Red Team Strategies vs Blue Team v3.0 Tiers)
-Để kiểm chứng toàn diện cả trí thông minh né tránh của tác tử **PyTorch Dueling Double-DQN v2.0** (`pentest_dqn_v2.pt`, vector trạng thái `64 chiều`, `26 hành động` rời rạc) lẫn năng lực bảo vệ vạn năng của **Blue Team v3.0** (bổ sung 5 lá chắn OWASP API Top 10: `SSRF`, `NoSQL Injection`, `Mass Assignment`, `Stateful BOLA/IDOR Enumeration` và `Outbound Response DLP`), nhóm thực hiện thực nghiệm ma trận đối kháng `3 x 3` (`45 lượt/ô = 405 lượt đánh giá thực tế` tổng hợp động từ đặc tả OpenAPI, kịch bản `scripts/run_adversarial_benchmark.py`, lưu tại `docs/reports/adversarial_benchmark_3x3.json`):
+### 4.7.3. Thực nghiệm Đối kháng Đa vòng Khép kín 3x3: Tập Quen Thuộc (`Familiar`) vs Tập Ngoại Miền (`Strange`)
+Mỗi phiên đối kháng thực thi tối đa `4 vòng khép kín`: vòng 1 gửi payload thăm dò gốc và đo phản hồi thật từ WAF (`status_code`, `rule_score`, `ml_score`, `anomaly_score`, `threat_score`), các vòng 2..4 mã hóa trực tiếp thông số đo được vào vector trạng thái `64 chiều` của **PyTorch Dueling-DQN v2.0** (`0` hằng số giả định). Kết quả được tách bạch trên tập quen thuộc OpenAPI (**`Familiar`**, `15 mẫu x 3 lượt = 45 phiên/ô`) và tập ngoại miền hoàn toàn mới (**`Strange Held-Out`**, `18 mẫu lạ x 3 lượt = 54 phiên/ô`, lưu tại `docs/reports/adversarial_benchmark_3x3.json`):
 
-*Bảng 4.11: Ma trận kết quả thực nghiệm đối kháng định lượng 3x3 trên các điểm cuối OWASP Web & API Top 10 (`N = 45` lượt/ô)*
+*Bảng 4.11a: Ma trận đối kháng đa vòng 3x3 trên tập quen thuộc OpenAPI (`Familiar Suite`, `N = 45` phiên/ô)*
 
-| Chiến Lược Tác Tử Red Team | Cấp Độ Phòng Thủ Blue Team | Block Rate (%) | Evasion Rate (%) | Điểm Rủi Ro TB | Độ Trễ Xử Lý TB (ms) |
+| Chiến Lược Tác Tử Red Team | Cấp Độ Phòng Thủ Blue Team | Block Rate (%) | Evasion Rate (%) | Tổng Probes | Độ Trễ Engine (ms) |
 | :--- | :--- | :---: | :---: | :---: | :---: |
-| **1. Static Replay** *(Payload gốc tĩnh)* | `1. No WAF` *(Direct API)* | `0.0%` (0/45) | `100.0%` | `0.0 / 100` | `0.001 ms` |
-| | `2. Legacy Rules Only` *(Regex tĩnh đơn tầng)* | `40.0%` (18/45) | `60.0%` | `35.2 / 100` | `0.003 ms` |
-| | **`3. Blue Team v3.0 Hybrid`** *(Đa tầng + API Guards)* | **`100.0%` (45/45)** | **`0.0%`** | **`92.7 / 100`** | **`1.234 ms`** |
-| **2. Random Mutator** *(Đột biến ngẫu nhiên)* | `1. No WAF` *(Direct API)* | `0.0%` (0/45) | `100.0%` | `0.0 / 100` | `0.001 ms` |
-| | `2. Legacy Rules Only` *(Regex tĩnh đơn tầng)* | `17.8%` (8/45) | `82.2%` | `15.6 / 100` | `0.003 ms` |
-| | **`3. Blue Team v3.0 Hybrid`** *(Đa tầng + API Guards)* | **`100.0%` (45/45)** | **`0.0%`** | **`92.9 / 100`** | **`2.723 ms`** |
-| **3. PyTorch Dueling-DQN v2.0** *(64-D RL Policy)* | `1. No WAF` *(Direct API)* | `0.0%` (0/45) | `100.0%` | `0.0 / 100` | `0.001 ms` |
-| | `2. Legacy Rules Only` *(Regex tĩnh đơn tầng)* | **`6.7%` (3/45)** | **`93.3%`** | `5.9 / 100` | `0.006 ms` |
-| | **`3. Blue Team v3.0 Hybrid`** *(Đa tầng + API Guards)* | **`100.0%` (45/45)** | **`0.0%`** | **`94.0 / 100`** | **`1.340 ms`** |
+| **1. Static Replay** *(Baseline)* | `1. No WAF` *(Direct API)* | `0.0%` (0/45) | `100.0%` | `63` | `0.000 ms` |
+| | `2. Legacy Rules Only` *(Regex tĩnh)* | `40.0%` (18/45) | `60.0%` | `63` | `0.017 ms` |
+| | **`3. Blue Team v3.0 Hybrid`** | **`100.0%` (45/45)** | **`0.0%`** | `63` | **`1.045 ms`** |
+| **2. Random Mutator** *(Heuristic)* | `1. No WAF` *(Direct API)* | `0.0%` (0/45) | `100.0%` | `63` | `0.000 ms` |
+| | `2. Legacy Rules Only` *(Regex tĩnh)* | `6.7%` (3/45) | `93.3%` | `90` | `0.010 ms` |
+| | **`3. Blue Team v3.0 Hybrid`** | **`100.0%` (45/45)** | **`0.0%`** | `180` | **`1.165 ms`** |
+| **3. PyTorch Dueling-DQN v2.0** | `1. No WAF` *(Direct API)* | `0.0%` (0/45) | `100.0%` | `63` | `0.000 ms` |
+| | `2. Legacy Rules Only` *(Regex tĩnh)* | **`6.7%` (3/45)** | **`93.3%`** | **`87`** | `0.014 ms` |
+| | **`3. Blue Team v3.0 Hybrid`** | **`100.0%` (45/45)** | **`0.0%`** | `180` | **`1.423 ms`** |
 
-![Hình 4.5: Biểu đồ đối sánh Block Rate và Evasion Rate ma trận 3x3](figures/fig5_adversarial_dqn_vs_waf_tiers.png)
+*Bảng 4.11b: Ma trận đối kháng đa vòng 3x3 trên tập ngoại miền mới (`Strange Held-Out Suite`, `N = 54` phiên/ô)*
 
-**Nhận xét khoa học từ ma trận 3x3:**
-1. **Hiệu quả vượt trội của Tác tử Red Team Dueling-DQN v2.0:** Trước tường lửa biểu thức chính quy truyền thống (`Legacy Rules Only`), `Static Replay` bị bắt giữ `40.0%`, `Random Mutator` nâng tỷ lệ vượt rào lên `82.2%`, trong khi **PyTorch Dueling-DQN v2.0** chủ động chọn các phép biến đổi bảo toàn ngữ nghĩa tối ưu (`inline_comment`, `event_handler`, `double_url_encode`, `quote_concatenation`) đẩy tỷ lệ vượt rào lên tới **`93.3%`** (làm sụp đổ hoàn toàn WAF tĩnh xuống còn `6.7%` Block Rate).
-2. **Sức mạnh phòng thủ toàn diện của Blue Team v3.0 Hybrid:** Nhờ kết hợp giải mã chuẩn hóa đệ quy (`InputNormalizer`), 5 lá chắn OWASP API Top 10 phi phụ thuộc ứng dụng đích (`SSRF`, `NoSQLi`, `Mass Assignment`, `Stateful BOLA Enumeration`, `Response DLP`) cùng hai mô hình `XGBoost 26-D` và `Isolation Forest 26-D`, **Blue Team v3.0 chặn đứng và vô hiệu hóa `45/45` (`100.0%`, `0.0%` Evasion)** trước cả 3 chiến lược tấn công với độ trễ nội bộ trung bình chỉ **`1.23–2.72 ms`**.
+| Chiến Lược Tác Tử Red Team | Cấp Độ Phòng Thủ Blue Team | Block Rate (%) | Evasion Rate (%) | Tổng Probes | Độ Trễ Engine (ms) |
+| :--- | :--- | :---: | :---: | :---: | :---: |
+| **1. Static Replay** *(Baseline)* | `1. No WAF` *(Direct API)* | `0.0%` (0/54) | `100.0%` | `63` | `0.000 ms` |
+| | `2. Legacy Rules Only` *(Regex tĩnh)* | `11.1%` (6/54) | `88.9%` | `63` | `0.014 ms` |
+| | **`3. Blue Team v3.0 Hybrid`** | **`94.4%` (51/54)** | **`5.6%`** | `63` | **`1.002 ms`** |
+| **2. Random Mutator** *(Heuristic)* | `1. No WAF` *(Direct API)* | `0.0%` (0/54) | `100.0%` | `63` | `0.000 ms` |
+| | `2. Legacy Rules Only` *(Regex tĩnh)* | `0.0%` (0/54) | `100.0%` | `74` | `0.008 ms` |
+| | **`3. Blue Team v3.0 Hybrid`** | **`94.4%` (51/54)** | **`5.6%`** | `207` | **`1.057 ms`** |
+| **3. PyTorch Dueling-DQN v2.0** | `1. No WAF` *(Direct API)* | `0.0%` (0/54) | `100.0%` | `63` | `0.000 ms` |
+| | `2. Legacy Rules Only` *(Regex tĩnh)* | **`0.0%` (0/54)** | **`100.0%`** | **`69`** | `0.009 ms` |
+| | **`3. Blue Team v3.0 Hybrid`** | **`94.4%` (51/54)** | **`5.6%`** | `207` | **`1.080 ms`** |
+
+![Hình 4.5: Biểu đồ đối sánh Block Rate giữa tập Familiar và tập Strange Held-Out](figures/fig5_adversarial_dqn_vs_waf_tiers.png)
+
+**Nhận xét khoa học & Bằng chứng kiểm định Phase A (`fp_v3_measurement.json`, `latency_e2e_v3_csic.json`, `zero_leakage_v3_verification.json`):**
+1. **Độ tổng quát hóa trên tập ngoại miền (`Strange`):** Trên 18 mẫu tấn công hoàn toàn mới (gồm `<svg/onload>`, `<details ontoggle>`, `pg_sleep`, Gopher SSRF, GCP IMDS, `$regex/$where`, UUID BOLA...), `Legacy Rules Only` sụp đổ xuống `11.1% -> 0.0%` Block Rate, trong khi **Blue Team v3.0 Hybrid vẫn chặn đứng `51/54` (`94.4%`)**, chỉ lọt `5.6%` (`3/54`) ở mẫu blind SQLi số học thuần túy không dấu nháy (`105 OR 17-7=10`). Đồng thời Dueling-DQN đạt cùng trần vượt rào với ít lượt probe hơn Random Mutator (`69` vs `74` probes).
+2. **Đo kiểm False Positive & Chính sách Schema (`A1.1` & `A3`):** Trên `1.715` mẫu lành tính (`1.500` CSIC + `200` B1000 + `15` REST API), 5 lá chắn OWASP API v3.0 đạt **`0` dương tính giả (`Operational FPR = 0.00%`)**. Khi bật `schema_validation_enabled = True`, `Strict FPR` trên tập B1000 tăng từ `4.0% -> 8.5%` (và `26.67%` trên REST client có tham số tùy chọn) — cung cấp cơ sở thực nghiệm vững chắc để giữ `schema_validation_enabled = False` mặc định và xóa hẳn trường nhạy cảm `role` khỏi `BUILTIN_TARGET_SPEC`.
+3. **Phân tách minh bạch Độ trễ Engine vs HTTP 2-Hop E2E (`D2`) & Zero-Leakage (`D3`):** Pipeline AI/WAF nội bộ đạt **`1.00–1.42 ms`**, trong khi độ trễ 2-hop HTTP TCP thực tế qua Uvicorn Gateway -> Upstream trên `3.000` mẫu CSIC 2010 đạt trung bình **`4.465 ms`** (`p50 = 4.252 ms`, `p95 = 5.888 ms`). Kiểm chứng mã băm chuẩn hóa trên toàn bộ `46.187` mẫu `defense_v2` xác nhận **`0` trùng lặp (`zero_leakage_verified = true`)**.
 
 ---
 
 ## 4.8. Tóm Tắt Chương 4
 
 Chương 4 đã cung cấp đầy đủ bằng chứng định lượng trung thực, không rò rỉ dữ liệu và tái lập được 100%:
-1. **Champion XGBoost v2.0 (`xgb_v2.ubj`):** `99.15%` Accuracy, `98.72%` Macro-F1 trên `6.929` mẫu Test độc lập, microbench `0.618 ms/req`, Zero-Pickle.
+1. **Champion XGBoost v2.0 (`xgb_v2.ubj`) & Zero-Leakage (`D3`):** `99.15%` Accuracy, `98.72%` Macro-F1 trên `6.929` mẫu Test độc lập (`0` giao nhau mã băm trên `46.187` mẫu `defense_v2`, CSIC 2010 và B1000).
 2. **Calibrated Isolation Forest v2.0 (`iforest_v2.npz`):** Nâng Recall `@60.0` từ `5.88%` lên **`57.75%`** (FPR `4.00%`) và tăng tốc từ `9.49 ms` xuống **`0.095 ms`**.
-3. **Ablation Study v2.0 (`1.000` mẫu):** Hybrid Defense đạt đỉnh **`97.80%` Accuracy, `100.00%` Precision, `97.25%` Recall, `98.61%` F1, `0.00%` FPR, `J = 0.9725`** trong **`0.848 ms/req`**.
-4. **Zero-Shot CSIC 2010 (`3.000` mẫu):** Giảm FPR từ `29.60%` xuống **`0.00%`**, đạt **`100.00%` Precision**, **`100.00%` Hybrid XSS** và **`49.61%` Hybrid SQLi**.
-5. **Chịu tải cao & Đối kháng Ma trận 3x3 (`v3.0`):** Đạt **`253–340 RPS` ở `C = 50`**; tác tử **PyTorch Dueling-DQN v2.0 (64-D)** đạt **`93.3%` Evasion** trước WAF tĩnh nhưng bị **Blue Team v3.0 Hybrid** chặn đứng **`100.0%` (`45/45`, `0.0%` bypass, `1.34 ms`)** trên toàn bộ 8/8 nhóm lỗ hổng OWASP Web & API Top 10.
+3. **Ablation Study (`N = 1.000`):** Hybrid Defense đạt **`97.80%` Accuracy, `100.00%` Precision, `97.25%` Recall, `98.61%` F1, `0.00%` Operational FPR** trong **`0.848 ms/req`**.
+4. **Zero-Shot CSIC 2010 (`N = 3.000`) & HTTP 2-Hop E2E (`D2`):** Operational FPR **`0.00%`**, Precision **`100.00%`**, độ trễ 2-hop TCP HTTP thực tế **`4.465 ms` mean** (`p50 = 4.252 ms`).
+5. **Đối kháng Đa vòng 3x3 (`v3.0`):** `Blue Team v3.0 Hybrid` chặn **`100.0%` (`45/45`)** trên tập `Familiar` và **`94.4%` (`51/54`)** trên tập ngoại miền `Strange` với **`0.00%` Operational FPR** trên `1.715` mẫu lành tính.

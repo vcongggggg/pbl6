@@ -635,8 +635,8 @@ class PentestRunRequest(BaseModel):
         description="Evaluation scope: 'full_pentest', 'injection', 'api_logic', 'sqli', 'xss', 'path', 'cmd', 'ssrf', 'bola', 'mass_assignment'",
     )
     sync_to_soc: bool = Field(
-        default=True,
-        description="Whether to synchronize incidents to SQLite SecurityEvent table",
+        default=False,
+        description="Whether to synchronize incidents to SQLite SecurityEvent table (default False to keep live SOC clean)",
     )
     max_rounds: int = Field(
         default=8,
@@ -679,13 +679,17 @@ def _resolve_scope_families(raw_scope: str) -> list[str]:
 
 
 def _is_tcp_reachable(url: str, timeout: float = 0.08) -> bool:
-    """Fast non-blocking TCP port check before probing multiple OpenAPI paths."""
+    """Fast non-blocking TCP port check supporting Docker Compose hostnames (e.g. vulnerable-api)."""
+    import os
     import socket
 
     try:
         parsed = urllib.parse.urlparse(url)
         host = parsed.hostname
-        if not host or host == "vulnerable-api":
+        if not host:
+            return False
+        # Skip external DNS lookup only inside offline pytest runs targeting mock hostname
+        if os.environ.get("PYTEST_CURRENT_TEST") and host == "vulnerable-api":
             return False
         port = parsed.port or (443 if parsed.scheme == "https" else 80)
         with socket.create_connection((host, port), timeout=timeout):
@@ -1251,7 +1255,7 @@ async def stream_pentest_evaluation_endpoint(
     defense_tier: str = Query("hybrid_v3"),
     scope: str = Query("full_pentest"),
     max_rounds: int = Query(8, ge=1, le=20),
-    sync_to_soc: bool = Query(True),
+    sync_to_soc: bool = Query(False),
     db: Session = Depends(get_db),
 ):
     """Phát trực tiếp Server-Sent Events (SSE) thời gian thực từng pha và từng vòng đối kháng."""

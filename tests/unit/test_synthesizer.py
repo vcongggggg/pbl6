@@ -192,3 +192,16 @@ def test_synthesizer_from_custom_dict():
     assert order_case["method"] == "GET"
     assert order_case["param_name"] == "id"
     assert order_case["request_type"] == "path"
+
+
+def test_canonical_campaign_report_protected_when_output_omitted():
+    """Phase A4.2: Verifies calling run_campaign(dry_run=True) without output never touches campaign_report.json."""
+    import hashlib
+
+    live_report = _ATTACK_LAB_DIR / "artifacts" / "campaign_report.json"
+    before_hash = hashlib.sha256(live_report.read_bytes()).hexdigest()
+
+    run_campaign(mode="replay", campaign="sqli", dry_run=True, quiet=True)
+
+    after_hash = hashlib.sha256(live_report.read_bytes()).hexdigest()
+    assert before_hash == after_hash
