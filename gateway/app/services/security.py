@@ -36,11 +36,11 @@ def map_to_kill_chain_stage(
         return "EVASION"
     if "RECON" in at or "PROBE" in at or "SCHEMA_VIOLATION" in at or "SCAN" in rules_text:
         return "RECONNAISSANCE"
-    if any(k in at for k in ["SQLI", "XSS", "CMD", "COMMAND_INJECTION", "RCE"]):
+    if any(k in at for k in ["SQLI", "SQL_INJECTION", "NOSQL", "XSS", "CMD", "COMMAND_INJECTION", "RCE"]):
         return "EXPLOITATION"
-    if any(k in at for k in ["BOLA", "IDOR", "AUTH", "BRUTE_FORCE", "RATE_LIMIT", "PRIVILEGE"]):
+    if any(k in at for k in ["BOLA", "IDOR", "MASS_ASSIGNMENT", "AUTH", "BRUTE_FORCE", "RATE_LIMIT", "PRIVILEGE"]):
         return "PRIVILEGE_ABUSE"
-    if any(k in at for k in ["TRAVERSAL", "LFI", "SSRF", "DOWNLOAD", "EXFILTRATION"]):
+    if any(k in at for k in ["TRAVERSAL", "LFI", "SSRF", "DATA_EXPOSURE", "EXCESSIVE_DATA", "DOWNLOAD", "EXFILTRATION"]):
         return "EXFILTRATION"
 
     return "EXPLOITATION"

@@ -12,12 +12,17 @@ class Severity(str, Enum):
 
 
 class AttackType(str, Enum):
-    """Core attack classification categories."""
+    """Core attack classification categories (OWASP Web & API Top 10)."""
 
     SQL_INJECTION = "SQL_INJECTION"
     XSS = "XSS"
     PATH_TRAVERSAL = "PATH_TRAVERSAL"
     COMMAND_INJECTION = "COMMAND_INJECTION"
+    SSRF = "SSRF"
+    NOSQL_INJECTION = "NOSQL_INJECTION"
+    MASS_ASSIGNMENT = "MASS_ASSIGNMENT"
+    BOLA_IDOR = "BOLA_IDOR"
+    EXCESSIVE_DATA_EXPOSURE = "EXCESSIVE_DATA_EXPOSURE"
 
 
 class InspectionLocation(str, Enum):

@@ -198,9 +198,10 @@ BUILTIN_TARGET_SPEC: dict[str, Any] = {
                         "application/json": {
                             "schema": {
                                 "type": "object",
+                                "additionalProperties": False,
                                 "properties": {
                                     "email": {"type": "string"},
-                                    "role": {"type": "string", "enum": ["user", "moderator", "admin"]},
+                                    "role": {"type": "string", "enum": ["user"]},
                                 },
                             }
                         }
