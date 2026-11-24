@@ -1,7 +1,7 @@
 {
   "metadata": {
     "task_id": "pbl6-v3-fix-round-001 / A1.1",
-    "measured_at": "2026-11-24T13:30:42+0700",
+    "measured_at": "2026-11-24T16:39:17+0700",
     "active_rules_total": 25,
     "v3_added_rule_ids": [
       "CMD-005",
@@ -30,21 +30,14 @@
       "benign_samples": 200,
       "fp_operational_count": 0,
       "fp_operational_pct": 0.0,
-      "fp_strict_schema_off_count": 8,
-      "fp_strict_schema_off_pct": 4.0,
-      "fp_strict_schema_on_count": 17,
-      "fp_strict_schema_on_pct": 8.5,
-      "schema_only_additional_fp_count": 9,
+      "fp_strict_schema_off_count": 0,
+      "fp_strict_schema_off_pct": 0.0,
+      "fp_strict_schema_on_count": 0,
+      "fp_strict_schema_on_pct": 0.0,
+      "schema_only_additional_fp_count": 0,
       "triggered_rules": {},
-      "pillar_flag_counts": {
-        "iforest_ge_60": 8,
-        "schema_violation": 9
-      },
-      "schema_violation_breakdown": {
-        "MISSING_FIELD": 12,
-        "ADDITIONAL_PROPERTY_NOT_ALLOWED": 12,
-        "ROUTE_NOT_FOUND": 3
-      }
+      "pillar_flag_counts": {},
+      "schema_violation_breakdown": {}
     },
     "csic2010_benign": {
       "corpus": "csic2010_benign",
@@ -67,16 +60,16 @@
       "fp_operational_pct": 0.0,
       "fp_strict_schema_off_count": 0,
       "fp_strict_schema_off_pct": 0.0,
-      "fp_strict_schema_on_count": 4,
-      "fp_strict_schema_on_pct": 26.67,
-      "schema_only_additional_fp_count": 4,
+      "fp_strict_schema_on_count": 3,
+      "fp_strict_schema_on_pct": 20.0,
+      "schema_only_additional_fp_count": 3,
       "triggered_rules": {},
       "pillar_flag_counts": {
-        "schema_violation": 4
+        "schema_violation": 3
       },
       "schema_violation_breakdown": {
         "MISSING_PARAMETER": 1,
-        "ADDITIONAL_PROPERTY_NOT_ALLOWED": 2,
+        "ADDITIONAL_PROPERTY_NOT_ALLOWED": 1,
         "ROUTE_NOT_FOUND": 1
       }
     }
@@ -85,10 +78,10 @@
     "total_benign_evaluated": 1715,
     "fp_operational_count": 0,
     "fp_operational_pct": 0.0,
-    "fp_strict_schema_off_count": 8,
-    "fp_strict_schema_off_pct": 0.466,
-    "fp_strict_schema_on_count": 21,
-    "fp_strict_schema_on_pct": 1.224,
+    "fp_strict_schema_off_count": 0,
+    "fp_strict_schema_off_pct": 0.0,
+    "fp_strict_schema_on_count": 3,
+    "fp_strict_schema_on_pct": 0.175,
     "v3_new_guards_false_positives": 0
   }
 }

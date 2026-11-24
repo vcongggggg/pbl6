@@ -67,14 +67,22 @@ def main() -> int:
     print(" Starting 3 services: Vulnerable API (5000), Gateway (8000), Dashboard (3000)")
     print("=" * 78)
 
+    import shutil
+    import tempfile
+
+    tmp_dir = Path(tempfile.mkdtemp(prefix="pbl6_c5_rehearsal_"))
+    db_file = tmp_dir / "rehearsal_waf.db"
+
     env = os.environ.copy()
     env["PYTHONIOENCODING"] = "utf-8"
     env["ADMIN_API_KEY"] = "dev-admin-secret-key-change-me"
     env["TARGET_API_URL"] = "http://127.0.0.1:5000"
     env["WAF_MODE"] = "ACTIVE_BLOCKING"
     env["RATE_LIMIT_ENABLED"] = "true"
+    env["DATABASE_URL"] = f"sqlite:///{db_file.as_posix()}"
     env["PORT"] = "3000"
-    env["GATEWAY_URL"] = "http://127.0.0.1:8000"
+    env["BACKEND_URL"] = "http://127.0.0.1:8000"
+    env["NEXT_PUBLIC_API_BASE_URL"] = "http://127.0.0.1:8000"
 
     procs: list[tuple[str, subprocess.Popen[Any]]] = []
 
@@ -169,6 +177,8 @@ def main() -> int:
         for name, proc in procs:
             print(f"  Stopping {name} (PID: {proc.pid})...")
             terminate_process(proc)
+        time.sleep(0.4)
+        shutil.rmtree(tmp_dir, ignore_errors=True)
         print("All services stopped.")
 
 

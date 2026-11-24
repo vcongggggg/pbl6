@@ -816,6 +816,7 @@ async def proxy_endpoint(
             "X-WAF-Action": "BLOCKED",
             "X-WAF-Decision": decision.action.value,
             "X-WAF-Risk-Score": str(decision.risk_score),
+            "X-WAF-Rule-Score": str(round(rule_score, 2)),
             "X-WAF-Mode": active_waf_mode,
             "X-WAF-API-Protocol": api_protocol.value,
         }
@@ -952,6 +953,7 @@ async def proxy_endpoint(
         response.headers["X-WAF-Action"] = decision.action.value
         response.headers["X-WAF-Decision"] = decision.action.value
         response.headers["X-WAF-Risk-Score"] = str(decision.risk_score)
+        response.headers["X-WAF-Rule-Score"] = str(round(rule_score, 2))
         response.headers["X-WAF-API-Protocol"] = api_protocol.value
         if rate_limit_result:
             response.headers["X-RateLimit-Limit"] = str(rate_limit_result.limit)

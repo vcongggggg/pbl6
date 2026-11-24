@@ -382,6 +382,24 @@ class AnomalyDetector:
             )
 
         try:
+            clean_payload = (payload or "").strip()
+            # Bare HTTP root "/" with empty query & empty body has length=1, entropy=0.0,
+            # and special_char_ratio=1.0, which is a degenerate lower-tail point for tree splits
+            # despite carrying zero user parameters or payload content (Phase C3 Round 1 fix).
+            if clean_payload in ("", "/") and (
+                feature_vector is None
+                or (len(feature_vector) >= 2 and float(feature_vector[0]) <= 1.0 and float(feature_vector[1]) == 0.0)
+            ):
+                latency_ms = round((time.perf_counter() - start_time) * 1000.0, 3)
+                return AnomalyResult(
+                    is_anomaly=False,
+                    raw_score=0.15,
+                    anomaly_score=0.0,
+                    latency_ms=latency_ms,
+                    model_loaded=True,
+                    feature_vector=list(feature_vector) if feature_vector is not None else None,
+                )
+
             is_npz = getattr(self, "_is_npz", False)
             expected_dim = 26 if is_npz else getattr(self._model, "n_features_in_", 26 if self._scaler is not None else 17)
             if feature_vector is not None:

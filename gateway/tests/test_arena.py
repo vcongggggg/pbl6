@@ -349,3 +349,35 @@ def test_arena_pentest_default_sync_to_soc_is_false(client: TestClient):
     with SessionLocal() as db:
         after_cnt = db.query(SecurityEvent).count()
     assert after_cnt == before_cnt
+
+
+def test_arena_pentest_live_http_mode_and_cwe918_guard(client: TestClient):
+    """Phase C1: Verifies end-to-end live_http execution mode through /api/proxy and CWE-918 target_url guard."""
+    res = client.post(
+        "/api/dashboard/arena/pentest/run",
+        json={
+            "scope": "injection",
+            "max_rounds": 4,
+            "defense_tier": "hybrid_v3",
+            "execution_mode": "live_http",
+            "target_url": "http://127.0.0.1:5000",
+        },
+        headers=ADMIN_HEADERS,
+    )
+    assert res.status_code == 200
+    data = res.json()
+    assert data["execution_mode"] == "live_http"
+    assert data["blocked_count"] == 4
+    assert data["winner"] == "BLUE_TEAM"
+    for rd in data["rounds"]:
+        assert rd["response_status"] == 403
+        assert rd["rule_score"] > 0.0
+
+    # Reject external internet target_url (CWE-918 protection)
+    res_bad = client.post(
+        "/api/dashboard/arena/pentest/run",
+        json={"scope": "sqli", "max_rounds": 1, "target_url": "https://attacker.example.com"},
+        headers=ADMIN_HEADERS,
+    )
+    assert res_bad.status_code == 400
+

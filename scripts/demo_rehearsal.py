@@ -289,6 +289,7 @@ class DemoRunner:
                 time.sleep(0.25)
 
         total_scenarios = len(blocking_scenarios)
+        self.stats["active_block_total"] = total_scenarios
         print(
             f"\n{GREEN}[PASS] Giai đoạn 3 hoàn tất: {self.stats['blocks_enforced']}/{total_scenarios} tấn công "
             f"bị chặn đứng bằng HTTP 403 Forbidden qua Multi-Layer WAF + 5 OWASP API Guards!{RESET}"
@@ -330,11 +331,12 @@ class DemoRunner:
         status, dash_stats, _, _ = self.request("GET", "/dashboard/stats", admin=True)
 
         print(f"\n{CYAN}{BOLD}" + "=" * 78 + f"{RESET}")
-        print(f"{CYAN}{BOLD}BẢNG TỔNG KẾT DIỄN TẬP BẢO VỆ ĐỒ ÁN (BLUE TEAM v2.0 SCOREBOARD){RESET}")
+        print(f"{CYAN}{BOLD}BẢNG TỔNG KẾT DIỄN TẬP BẢO VỆ ĐỒ ÁN (BLUE TEAM v3.0 SCOREBOARD){RESET}")
         print(f"{CYAN}{BOLD}" + "=" * 78 + f"{RESET}")
         print(f"- Lưu lượng hợp lệ (Baseline HTTP 200):     {GREEN}{self.stats['normal_ok']}/{self.stats['normal_sent']}{RESET}")
         print(f"- Tấn công Monitor-Only được gắn cờ:        {YELLOW}{self.stats['monitor_flagged']}/5{RESET}")
-        print(f"- Tấn công Active Blocking bị chặn 403:     {RED}{self.stats['blocks_enforced']}/5{RESET}")
+        active_total = self.stats.get("active_block_total", 8)
+        print(f"- Tấn công Active Blocking bị chặn 403:     {RED}{self.stats['blocks_enforced']}/{active_total}{RESET}")
         print(f"- Brute-Force bị phạt HTTP 429:             {MAGENTA}{self.stats['rate_limits_triggered']}{RESET}")
         if status == 200 and isinstance(dash_stats, dict):
             print(

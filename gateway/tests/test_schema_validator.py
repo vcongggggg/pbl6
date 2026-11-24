@@ -191,3 +191,31 @@ def test_proxy_positive_security_flag_disabled(client: TestClient):
         # Even with missing parameter, doesn't return 400 from schema validation
         res = client.get("/api/proxy/api/v1/vulnerable/books/search/")
         assert res.headers.get("X-WAF-Schema-Violation") is None
+
+
+def test_c3_fp_tuning_root_anomaly_and_openapi_routes():
+    """Phase C3: Verifies 0.0 anomaly score on bare root '/' and valid schema on /openapi.json & /reviews/."""
+    from app.security.anomaly import AnomalyDetector
+    from app.security.ml_detector import extract_26_from_http
+
+    anom = AnomalyDetector()
+    assert anom.is_loaded is True
+    vec_root = extract_26_from_http(path="/", query_params=None, body=None).tolist()
+    res_root = anom.predict("/", feature_vector=vec_root)
+    assert res_root.is_anomaly is False
+    assert res_root.anomaly_score == 0.0
+
+    validator = SchemaValidator()
+    assert validator.validate_request(method="GET", path="/api/v1/vulnerable/openapi.json") == []
+    assert validator.validate_request(method="GET", path="/api/v1/vulnerable/docs/") == []
+    body_rev = json.dumps({"book_id": 10, "rating": 5, "review_text": "Excellent reference"}).encode("utf-8")
+    assert (
+        validator.validate_request(
+            method="POST",
+            path="/api/v1/vulnerable/reviews/",
+            body_bytes=body_rev,
+            content_type="application/json",
+        )
+        == []
+    )
+
