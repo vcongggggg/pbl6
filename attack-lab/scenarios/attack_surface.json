@@ -1,7 +1,7 @@
 {
   "target_url": "http://127.0.0.1:8000",
-  "spec_source": "C:\\Minh\\TLSVBK\\PBL6\\pbl6\\attack-lab\\scenarios\\vulnerable_openapi_spec.json",
-  "scanned_at": "2026-09-26T07:05:01.390590+00:00",
+  "spec_source": "http://127.0.0.1:8000/api/proxy/api/v1/vulnerable/openapi.json",
+  "scanned_at": "2026-11-23T10:31:21.411472+00:00",
   "openapi_version": "3.0.3",
   "api_title": "Bookie Bookstore Vulnerable API",
   "api_version": "1.0.0",
@@ -15,7 +15,7 @@
       "XSS": 1,
       "PATH_TRAVERSAL": 1,
       "COMMAND_INJECTION": 1,
-      "BOLA_IDOR": 4,
+      "BOLA_IDOR": 2,
       "SSRF": 1
     },
     "category_breakdown": {
@@ -349,14 +349,6 @@
           "target_params": [
             "order_id"
           ]
-        },
-        {
-          "vuln_type": "BOLA_IDOR",
-          "confidence": "HIGH",
-          "reason": "Direct reference to object/record identifier via URI path parameter without verified ACL.",
-          "target_params": [
-            "order_id"
-          ]
         }
       ],
       "primary_category": "BOLA_IDOR"
@@ -415,14 +407,6 @@
         "200": "Order modified"
       },
       "potential_vulnerabilities": [
-        {
-          "vuln_type": "BOLA_IDOR",
-          "confidence": "HIGH",
-          "reason": "Direct reference to object/record identifier via URI path parameter without verified ACL.",
-          "target_params": [
-            "order_id"
-          ]
-        },
         {
           "vuln_type": "BOLA_IDOR",
           "confidence": "HIGH",

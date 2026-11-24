@@ -26,13 +26,24 @@ for _p in [str(_REPO_ROOT), str(_RUNNER_DIR)]:
 
 try:
     from agent.evasion import EvasionEngine
+    from agent.pentest_advisor import PentestDQNAdvisor
+    from agent.recon import APIReconAgent
+    from agent.synthesizer import OpenAPIPayloadSynthesizer
     from agent.tools import DispatchResult, HttpDispatcher
     from environment.actions import ACTIONS, get_action
+    from environment.pentest_env import encode_pentest_state_64d, get_valid_actions_for_case
 except ImportError:
     # Direct fallback imports if executed inside attack-lab directory
     from .agent.evasion import EvasionEngine  # type: ignore
+    from .agent.pentest_advisor import PentestDQNAdvisor  # type: ignore
+    from .agent.recon import APIReconAgent  # type: ignore
+    from .agent.synthesizer import OpenAPIPayloadSynthesizer  # type: ignore
     from .agent.tools import DispatchResult, HttpDispatcher  # type: ignore
     from .environment.actions import ACTIONS, get_action  # type: ignore
+    from .environment.pentest_env import (  # type: ignore
+        encode_pentest_state_64d,
+        get_valid_actions_for_case,
+    )
 
 logger = logging.getLogger("attack_lab.runner")
 
@@ -99,11 +110,30 @@ DEFAULT_TEST_CASES: list[dict[str, Any]] = [
 ]
 
 CAMPAIGN_MAP: dict[str, set[str]] = {
-    "sqli": {"sqli", "sql_injection"},
+    "sqli": {"sqli", "sql_injection", "auth_bypass"},
     "xss": {"xss"},
     "traversal": {"traversal", "path_traversal"},
     "cmd": {"cmd", "command_injection"},
-    "all": {"sqli", "xss", "traversal", "cmd", "sql_injection", "path_traversal", "command_injection"},
+    "ssrf": {"ssrf"},
+    "bola": {"bola", "bola_idor"},
+    "mass_assignment": {"mass_assignment"},
+    "data_exposure": {"data_exposure", "excessive_data_exposure"},
+    "all": {
+        "sqli",
+        "xss",
+        "traversal",
+        "cmd",
+        "ssrf",
+        "bola",
+        "mass_assignment",
+        "data_exposure",
+        "sql_injection",
+        "auth_bypass",
+        "path_traversal",
+        "command_injection",
+        "bola_idor",
+        "excessive_data_exposure",
+    },
 }
 
 
@@ -359,7 +389,7 @@ class DryRunDispatcher:
 
 def filter_test_cases(campaign: str, test_cases: list[dict[str, Any]] | None = None) -> list[dict[str, Any]]:
     """Filter test cases according to the campaign flag."""
-    pool = test_cases or DEFAULT_TEST_CASES
+    pool = test_cases if test_cases is not None else DEFAULT_TEST_CASES
     norm_campaign = campaign.lower()
     if norm_campaign == "all":
         return list(pool)
@@ -402,23 +432,44 @@ def execute_endpoint_test(
     effective_rounds = 1 if mode == "replay" else max_rounds
 
     for attempt in range(1, effective_rounds + 1):
-        # 1. Prepare parameters
+        # 1. Prepare parameters and target path
         params = None
         json_data = None
+        target_path = endpoint
+
         if request_type == "query":
-            params = {param_name: current_payload}
+            params = {}
+            if param_name:
+                params[param_name] = current_payload
             if extra_fields:
                 params.update(extra_fields)
+            if not params:
+                params = None
+        elif request_type == "path":
+            # Parameter in URI path (e.g. /orders/{order_id}/)
+            placeholder = f"{{{param_name}}}"
+            if placeholder in target_path:
+                target_path = target_path.replace(placeholder, str(current_payload))
+            elif "{" in target_path and "}" in target_path:
+                import re
+
+                target_path = re.sub(r"\{[^}]+\}", str(current_payload), target_path)
+            if extra_fields:
+                json_data = dict(extra_fields)
         else:
-            json_data = {param_name: current_payload}
+            json_data = {}
+            if param_name:
+                json_data[param_name] = current_payload
             if extra_fields:
                 json_data.update(extra_fields)
+            if not json_data:
+                json_data = None
 
         # 2. Dispatch request
         try:
             dispatch_res = dispatcher.dispatch(
                 method=method,
-                path=endpoint,
+                path=target_path,
                 params=params,
                 json_data=json_data,
                 bypass_detection_keywords=bypass_keywords,
@@ -462,14 +513,63 @@ def execute_endpoint_test(
         if dispatch_res.is_blocked and attempt < effective_rounds:
             selected_tech: str | None = None
 
-            # Attempt DQN advisor recommendation in ai_agent mode
+            # Real 64-D Dueling-DQN or legacy 40-D DQN recommendation in ai_agent mode (Zero dummy [0.5]*40)
             if mode == "ai_agent" and advisor and advisor.available:
                 try:
                     available_techniques = engine.get_available_techniques(family)
                     unused_techs = [t for t in available_techniques if t not in used_techniques]
-                    if unused_techs:
-                        # Use advisor if applicable
-                        advisor_action = advisor.recommend_action([0.5] * 40, ACTIONS)
+                    if unused_techs and isinstance(advisor, PentestDQNAdvisor):
+                        valid_specs = [
+                            s
+                            for s in get_valid_actions_for_case(
+                                family=family,
+                                phase="evasion",
+                                tried_action_ids=set(),
+                                consecutive_blocks=attempt,
+                                can_pivot=False,
+                            )
+                            if s.transformation in unused_techs
+                        ]
+                        if valid_specs:
+                            state_64 = encode_pentest_state_64d(
+                                phase="evasion",
+                                family=family,
+                                method=method,
+                                request_type=request_type,
+                                attempt_num=attempt,
+                                max_attempts=effective_rounds,
+                                last_status=dispatch_res.status_code,
+                                rule_score=float(dispatch_res.waf_threat_score or 85.0),
+                                threat_score=float(dispatch_res.waf_threat_score or 85.0),
+                                consecutive_blocks=attempt,
+                                available_actions=valid_specs,
+                            )
+                            best_spec, _ = advisor.recommend(state_64, valid_specs, top_k=5)
+                            if best_spec.transformation in available_techniques:
+                                selected_tech = best_spec.transformation
+                    elif unused_techs and hasattr(advisor, "recommend_action"):
+                        real_40d = [
+                            min(attempt / float(max(effective_rounds, 1)), 1.0),
+                            0.0,
+                            0.08,
+                            float(method == "GET"),
+                            float(method == "POST"),
+                            float(method == "PUT"),
+                            float(method == "PATCH"),
+                            float(method == "DELETE"),
+                            0.0,
+                            1.0,
+                            1.0,
+                            float(attempt - 1),
+                            float(dispatch_res.status_code == 403),
+                            0.0,
+                            float(400 <= dispatch_res.status_code < 500 and dispatch_res.status_code != 403),
+                            float(dispatch_res.status_code >= 500),
+                            min(attempt / float(max(effective_rounds, 1)), 1.0),
+                        ]
+                        while len(real_40d) < 40:
+                            real_40d.append(1.0 if len(real_40d) >= 26 else 0.0)
+                        advisor_action = advisor.recommend_action(real_40d[:40], [a.action_id for a in ACTIONS])
                         if advisor_action:
                             spec = get_action(advisor_action)
                             if spec.transformation in available_techniques:
@@ -537,7 +637,8 @@ def run_campaign(
     output_path = Path(output)
 
     _surface_path = Path(surface) if surface else (_RUNNER_DIR / "scenarios" / "attack_surface.json")
-    model_path = Path(model) if model else (_RUNNER_DIR / "models" / "evasion_agent.pt")
+    default_v2 = _RUNNER_DIR / "models" / "pentest_dqn_v2.pt"
+    model_path = Path(model) if model else (default_v2 if default_v2.is_file() else (_RUNNER_DIR / "models" / "evasion_agent.pt"))
 
     logger.info("Initializing campaign runner [mode=%s, campaign=%s, dry_run=%s]", mode, campaign, dry_run)
 
@@ -548,12 +649,35 @@ def run_campaign(
     else:
         dispatcher = HttpDispatcher(base_url=target, timeout=6.0)
 
-    # 2. Initialize Evasion Engine & Model Advisor
+    # 2. Initialize Evasion Engine & Real Trained Dueling-DQN v2 Advisor
     engine = EvasionEngine(dispatcher=dispatcher, max_attempts=max_rounds)
-    advisor = DQNEvasionAdvisor(model_path=model_path) if mode == "ai_agent" else None
+    advisor: Any = None
+    if mode == "ai_agent":
+        if model is None or "pentest_dqn_v2" in str(model_path):
+            v2_adv = PentestDQNAdvisor(model_dir=model_path)
+            advisor = v2_adv if v2_adv.available else DQNEvasionAdvisor(model_path=_RUNNER_DIR / "models" / "evasion_agent.pt")
+        else:
+            advisor = DQNEvasionAdvisor(model_path=model_path)
 
-    # 3. Select Target Endpoints
-    test_cases = filter_test_cases(campaign)
+    # 3. Select Target Endpoints (Live OpenAPI Recon -> Surface File -> Canonical Fallback)
+    if surface:
+        synthesizer = OpenAPIPayloadSynthesizer(attack_surface_source=_surface_path)
+        raw_cases = synthesizer.synthesize_test_cases(campaign=campaign)
+        test_cases = filter_test_cases(campaign, test_cases=raw_cases)
+    elif not dry_run:
+        try:
+            recon_report = APIReconAgent(target_base_url=target, timeout=2.5).run()
+            synthesizer = OpenAPIPayloadSynthesizer(attack_surface_source=recon_report.to_dict())
+            raw_cases = synthesizer.synthesize_test_cases(campaign=campaign)
+            test_cases = filter_test_cases(campaign, test_cases=raw_cases)
+        except Exception:
+            if _surface_path.is_file():
+                synthesizer = OpenAPIPayloadSynthesizer(attack_surface_source=_surface_path)
+                test_cases = filter_test_cases(campaign, test_cases=synthesizer.synthesize_test_cases(campaign=campaign))
+            else:
+                test_cases = filter_test_cases(campaign)
+    else:
+        test_cases = filter_test_cases(campaign)
 
     # 4. Execute Campaign
     results: list[dict[str, Any]] = []
