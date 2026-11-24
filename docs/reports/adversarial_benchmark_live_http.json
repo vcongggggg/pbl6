@@ -1,0 +1,210 @@
+{
+  "metadata": {
+    "benchmark_type": "Live HTTP Socket End-to-End Adversarial Benchmark (C1)",
+    "evaluated_at": "2026-11-24T06:18:18.071944+00:00",
+    "endpoints": {
+      "upstream_target": "http://127.0.0.1:5055",
+      "gateway_hybrid_v3": "http://127.0.0.1:8055",
+      "gateway_rules_only": "http://127.0.0.1:8056"
+    },
+    "max_rounds_per_episode": 4,
+    "familiar_cases_total": 15,
+    "strange_cases_total": 18
+  },
+  "familiar_results": {
+    "Static Replay": {
+      "No WAF": {
+        "total_cases": 15,
+        "blocked_count": 0,
+        "bypass_count": 15,
+        "block_rate_pct": 0.0,
+        "evasion_rate_pct": 100.0,
+        "avg_threat_score": 0.0,
+        "avg_latency_ms": 3.644,
+        "p95_latency_ms": 4.469
+      },
+      "Rules Only": {
+        "total_cases": 15,
+        "blocked_count": 15,
+        "bypass_count": 0,
+        "block_rate_pct": 100.0,
+        "evasion_rate_pct": 0.0,
+        "avg_threat_score": 70.5,
+        "avg_latency_ms": 15.072,
+        "p95_latency_ms": 41.493
+      },
+      "Hybrid v3.0": {
+        "total_cases": 15,
+        "blocked_count": 15,
+        "bypass_count": 0,
+        "block_rate_pct": 100.0,
+        "evasion_rate_pct": 0.0,
+        "avg_threat_score": 75.2,
+        "avg_latency_ms": 11.92,
+        "p95_latency_ms": 22.424
+      }
+    },
+    "Random Mutator": {
+      "No WAF": {
+        "total_cases": 15,
+        "blocked_count": 0,
+        "bypass_count": 15,
+        "block_rate_pct": 0.0,
+        "evasion_rate_pct": 100.0,
+        "avg_threat_score": 0.0,
+        "avg_latency_ms": 2.57,
+        "p95_latency_ms": 3.312
+      },
+      "Rules Only": {
+        "total_cases": 15,
+        "blocked_count": 15,
+        "bypass_count": 0,
+        "block_rate_pct": 100.0,
+        "evasion_rate_pct": 0.0,
+        "avg_threat_score": 80.4,
+        "avg_latency_ms": 10.832,
+        "p95_latency_ms": 20.017
+      },
+      "Hybrid v3.0": {
+        "total_cases": 15,
+        "blocked_count": 15,
+        "bypass_count": 0,
+        "block_rate_pct": 100.0,
+        "evasion_rate_pct": 0.0,
+        "avg_threat_score": 86.9,
+        "avg_latency_ms": 11.024,
+        "p95_latency_ms": 13.49
+      }
+    },
+    "Dueling-DQN v2.0": {
+      "No WAF": {
+        "total_cases": 15,
+        "blocked_count": 0,
+        "bypass_count": 15,
+        "block_rate_pct": 0.0,
+        "evasion_rate_pct": 100.0,
+        "avg_threat_score": 0.0,
+        "avg_latency_ms": 2.786,
+        "p95_latency_ms": 3.296
+      },
+      "Rules Only": {
+        "total_cases": 15,
+        "blocked_count": 15,
+        "bypass_count": 0,
+        "block_rate_pct": 100.0,
+        "evasion_rate_pct": 0.0,
+        "avg_threat_score": 83.4,
+        "avg_latency_ms": 10.867,
+        "p95_latency_ms": 12.362
+      },
+      "Hybrid v3.0": {
+        "total_cases": 15,
+        "blocked_count": 15,
+        "bypass_count": 0,
+        "block_rate_pct": 100.0,
+        "evasion_rate_pct": 0.0,
+        "avg_threat_score": 87.6,
+        "avg_latency_ms": 10.449,
+        "p95_latency_ms": 12.49
+      }
+    }
+  },
+  "strange_results": {
+    "Static Replay": {
+      "No WAF": {
+        "total_cases": 18,
+        "blocked_count": 0,
+        "bypass_count": 18,
+        "block_rate_pct": 0.0,
+        "evasion_rate_pct": 100.0,
+        "avg_threat_score": 0.0,
+        "avg_latency_ms": 2.856,
+        "p95_latency_ms": 3.357
+      },
+      "Rules Only": {
+        "total_cases": 18,
+        "blocked_count": 18,
+        "bypass_count": 0,
+        "block_rate_pct": 100.0,
+        "evasion_rate_pct": 0.0,
+        "avg_threat_score": 68.6,
+        "avg_latency_ms": 10.418,
+        "p95_latency_ms": 11.857
+      },
+      "Hybrid v3.0": {
+        "total_cases": 18,
+        "blocked_count": 18,
+        "bypass_count": 0,
+        "block_rate_pct": 100.0,
+        "evasion_rate_pct": 0.0,
+        "avg_threat_score": 80.0,
+        "avg_latency_ms": 8.983,
+        "p95_latency_ms": 11.555
+      }
+    },
+    "Random Mutator": {
+      "No WAF": {
+        "total_cases": 18,
+        "blocked_count": 0,
+        "bypass_count": 18,
+        "block_rate_pct": 0.0,
+        "evasion_rate_pct": 100.0,
+        "avg_threat_score": 0.0,
+        "avg_latency_ms": 2.805,
+        "p95_latency_ms": 3.36
+      },
+      "Rules Only": {
+        "total_cases": 18,
+        "blocked_count": 18,
+        "bypass_count": 0,
+        "block_rate_pct": 100.0,
+        "evasion_rate_pct": 0.0,
+        "avg_threat_score": 73.0,
+        "avg_latency_ms": 9.876,
+        "p95_latency_ms": 13.172
+      },
+      "Hybrid v3.0": {
+        "total_cases": 18,
+        "blocked_count": 18,
+        "bypass_count": 0,
+        "block_rate_pct": 100.0,
+        "evasion_rate_pct": 0.0,
+        "avg_threat_score": 85.4,
+        "avg_latency_ms": 9.706,
+        "p95_latency_ms": 11.559
+      }
+    },
+    "Dueling-DQN v2.0": {
+      "No WAF": {
+        "total_cases": 18,
+        "blocked_count": 0,
+        "bypass_count": 18,
+        "block_rate_pct": 0.0,
+        "evasion_rate_pct": 100.0,
+        "avg_threat_score": 0.0,
+        "avg_latency_ms": 3.177,
+        "p95_latency_ms": 3.728
+      },
+      "Rules Only": {
+        "total_cases": 18,
+        "blocked_count": 18,
+        "bypass_count": 0,
+        "block_rate_pct": 100.0,
+        "evasion_rate_pct": 0.0,
+        "avg_threat_score": 74.1,
+        "avg_latency_ms": 12.004,
+        "p95_latency_ms": 15.183
+      },
+      "Hybrid v3.0": {
+        "total_cases": 18,
+        "blocked_count": 18,
+        "bypass_count": 0,
+        "block_rate_pct": 100.0,
+        "evasion_rate_pct": 0.0,
+        "avg_threat_score": 89.9,
+        "avg_latency_ms": 11.817,
+        "p95_latency_ms": 14.425
+      }
+    }
+  }
+}

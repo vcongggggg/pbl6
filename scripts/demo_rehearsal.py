@@ -78,8 +78,8 @@ class DemoRunner:
     def banner(self) -> None:
         print(f"{CYAN}{BOLD}")
         print("=" * 78)
-        print("   [SHIELD]  PBL6 CYBER RANGE: 10-MINUTE DEFENSE REHEARSAL (BLUE TEAM v2.0)")
-        print("   Rule Engine + XGBoost v2.0 (26-D UBJSON) + Calibrated IForest v2.0 (NPZ)")
+        print("   [SHIELD]  PBL6 CYBER RANGE: 10-MINUTE DEFENSE REHEARSAL (BLUE TEAM v3.0)")
+        print("   Rule Engine + 5 OWASP API Guards + XGBoost v2.0 + IForest v2.0 + DQN Arena")
         print("=" * 78)
         print(f"{RESET}")
         print(f"Target Gateway: {GREEN}{BOLD}{self.gateway_url}{RESET}")
@@ -264,6 +264,9 @@ class DemoRunner:
             ("Path Traversal Windows/Linux Escape", "GET", "/api/proxy/api/v1/vulnerable/files/download/", {"file": "..\\..\\Windows\\System32\\cmd.exe"}, None, None, None),
             ("Command Injection Pipe + Interpreter", "POST", "/api/proxy/api/v1/vulnerable/admin/ping/", None, {"host": "127.0.0.1; python3 -c 'import os'"}, None, None),
             ("Multi-Protocol SOAP/XML XXE Injection", "POST", "/api/proxy/api/v1/vulnerable/books/search/", None, None, soap_xxe, {"Content-Type": "application/soap+xml", "SOAPAction": '"GetBook"'}),
+            ("OWASP API #7: SSRF Internal Metadata Probe", "GET", "/api/proxy/api/v1/vulnerable/books/fetch-cover/", {"url": "http://127.0.0.1:8000/api/dashboard/stats"}, None, None, None),
+            ("OWASP API #8: NoSQLi JSON Operator ($ne)", "POST", "/api/proxy/api/v1/vulnerable/auth/login/", None, {"username": {"$ne": ""}, "password": "x"}, None, None),
+            ("OWASP API #3: Mass Assignment Privilege (role:admin)", "POST", "/api/proxy/api/v1/vulnerable/users/profile/update/", None, {"role": "admin", "email": "test@dut.udn.vn"}, None, None),
         ]
 
         for desc, method, path, params, json_body, raw_body, extra_hdrs in blocking_scenarios:
@@ -277,17 +280,18 @@ class DemoRunner:
             if status == 403:
                 self.stats["blocks_enforced"] += 1
                 print(
-                    f"  [{RED}403 BLOCKED{RESET}] {desc:<37} | {GREEN}{lat:5.2f}ms{RESET} | "
+                    f"  [{RED}403 BLOCKED{RESET}] {desc:<42} | {GREEN}{lat:5.2f}ms{RESET} | "
                     f"Risk: {risk:<5} | Proto: {proto} | {decision}"
                 )
             else:
-                print(f"  [{YELLOW}HTTP {status}{RESET}] {desc:<37} | {lat:5.2f}ms | Risk: {risk}")
+                print(f"  [{YELLOW}HTTP {status}{RESET}] {desc:<42} | {lat:5.2f}ms | Risk: {risk}")
             if self.auto_mode:
                 time.sleep(0.25)
 
+        total_scenarios = len(blocking_scenarios)
         print(
-            f"\n{GREEN}[PASS] Giai đoạn 3 hoàn tất: {self.stats['blocks_enforced']}/5 tấn công "
-            f"bị chặn đứng bằng HTTP 403 Forbidden!{RESET}"
+            f"\n{GREEN}[PASS] Giai đoạn 3 hoàn tất: {self.stats['blocks_enforced']}/{total_scenarios} tấn công "
+            f"bị chặn đứng bằng HTTP 403 Forbidden qua Multi-Layer WAF + 5 OWASP API Guards!{RESET}"
         )
         self.pause("Sẵn sàng mô phỏng Brute-Force Bão Tải để kiểm chứng HTTP 429 Rate Limiting?")
 
