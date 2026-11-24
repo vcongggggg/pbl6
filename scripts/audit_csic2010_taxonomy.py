@@ -180,14 +180,14 @@ def audit_csic2010() -> dict[str, Any]:
         anom_score = anom_pred.anomaly_score or 0.0
 
         hybrid_risk = 0.40 * rule_score + 0.35 * ml_score + 0.25 * anom_score
-        is_blocked = bool(
+        is_detected_loose = bool(
             rule_score >= 80.0
             or ml_pred.is_attack
             or (anom_score >= 60.0)
             or (hybrid_risk >= 50.0)
         )
 
-        if is_blocked:
+        if is_detected_loose:
             total_blocked += 1
             if tax["is_group_a"]:
                 group_a_blocked += 1
@@ -199,7 +199,7 @@ def audit_csic2010() -> dict[str, Any]:
             "orig_type": orig_type,
             "audited_category": cat,
             "tier": tax["tier"],
-            "is_blocked": is_blocked,
+            "is_detected_loose": is_detected_loose,
         })
 
     sqli_mislabeled_total = sqli_mislabeled_insertar_count + sqli_mislabeled_other_count
@@ -236,6 +236,11 @@ def audit_csic2010() -> dict[str, Any]:
             "total_attack_samples": total_attacks,
             "total_benign_samples": total_benign,
             "audit_methodology": "Recursive URL-decode (depth=3) + regex with strict word boundary (\\b)",
+            "recall_metric_note": (
+                "detection_recall_loose uses broad security monitoring criteria "
+                "(rule_score >= 80 OR ml.is_attack OR anom >= 60.0 OR hybrid_risk >= 50.0). "
+                "This is distinct from operational block recall under DecisionEngine T=80 (85.71%, 168/196)."
+            ),
         },
         "reviewer_sqli_finding_verification": {
             "total_original_sqli_labeled": len(sqli_labeled),

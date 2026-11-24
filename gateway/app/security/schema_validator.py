@@ -86,52 +86,6 @@ BUILTIN_TARGET_SPEC: dict[str, Any] = {
                 },
             }
         },
-        "/api/v1/vulnerable/books/": {
-            "get": {
-                "summary": "List Books Catalog",
-                "parameters": [
-                    {"name": "category", "in": "query", "required": False, "schema": {"type": "string"}},
-                    {"name": "page", "in": "query", "required": False, "schema": {"type": "integer"}},
-                    {"name": "limit", "in": "query", "required": False, "schema": {"type": "integer"}},
-                ],
-            },
-            "post": {
-                "summary": "Create New Book",
-                "requestBody": {
-                    "required": True,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "type": "object",
-                                "properties": {
-                                    "title": {"type": "string"},
-                                    "author": {"type": "string"},
-                                    "price": {"type": "number"},
-                                    "stock": {"type": "integer"},
-                                    "rating": {"type": "number"},
-                                    "description": {"type": "string"},
-                                    "category": {"type": "string"},
-                                },
-                                "required": ["title", "author", "price"],
-                            }
-                        }
-                    },
-                },
-            },
-        },
-        "/api/v1/vulnerable/books/{book_id}/": {
-            "get": {
-                "summary": "Book Detail",
-                "parameters": [
-                    {
-                        "name": "book_id",
-                        "in": "path",
-                        "required": True,
-                        "schema": {"type": "integer"},
-                    }
-                ],
-            }
-        },
         "/api/v1/vulnerable/books/search/": {
             "get": {
                 "summary": "Search Books Catalog",
@@ -184,33 +138,6 @@ BUILTIN_TARGET_SPEC: dict[str, Any] = {
                 },
             },
         },
-        "/api/v1/vulnerable/orders/": {
-            "get": {
-                "summary": "List User Orders",
-                "parameters": [
-                    {"name": "user_id", "in": "query", "required": False, "schema": {"type": "integer"}},
-                ],
-            },
-            "post": {
-                "summary": "Create Order",
-                "requestBody": {
-                    "required": True,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "type": "object",
-                                "properties": {
-                                    "book_id": {"type": "integer"},
-                                    "quantity": {"type": "integer"},
-                                    "shipping_address": {"type": "string"},
-                                },
-                                "required": ["book_id", "quantity"],
-                            }
-                        }
-                    },
-                },
-            },
-        },
         "/api/v1/vulnerable/files/download/": {
             "get": {
                 "summary": "Download System Document",
@@ -242,12 +169,6 @@ BUILTIN_TARGET_SPEC: dict[str, Any] = {
                         }
                     },
                 },
-            }
-        },
-        "/api/v1/vulnerable/admin/health/": {
-            "get": {
-                "summary": "Admin Health Check",
-                "responses": {"200": {"description": "System operational status"}},
             }
         },
         "/api/v1/vulnerable/orders/{order_id}/": {
@@ -327,46 +248,6 @@ BUILTIN_TARGET_SPEC: dict[str, Any] = {
             "get": {
                 "summary": "List Users",
                 "responses": {"200": {"description": "User account listing"}},
-            }
-        },
-        "/api/v1/vulnerable/categories/": {
-            "get": {
-                "summary": "List Categories",
-                "parameters": [
-                    {"name": "category", "in": "query", "required": False, "schema": {"type": "string"}},
-                ],
-            }
-        },
-        "/api/v1/vulnerable/inventory/": {
-            "get": {
-                "summary": "Warehouse Inventory",
-                "parameters": [
-                    {"name": "warehouse_id", "in": "query", "required": False, "schema": {"type": "integer"}},
-                ],
-            }
-        },
-        "/api/v1/vulnerable/shipping/status/": {
-            "get": {
-                "summary": "Shipping Status",
-                "parameters": [
-                    {"name": "tracking_num", "in": "query", "required": False, "schema": {"type": "string"}},
-                ],
-            }
-        },
-        "/api/v1/vulnerable/discounts/": {
-            "get": {
-                "summary": "Discounts",
-                "parameters": [
-                    {"name": "code", "in": "query", "required": False, "schema": {"type": "string"}},
-                ],
-            }
-        },
-        "/api/v1/vulnerable/recommendations/": {
-            "get": {
-                "summary": "Personalized Recommendations",
-                "parameters": [
-                    {"name": "user_id", "in": "query", "required": False, "schema": {"type": "integer"}},
-                ],
             }
         },
         "/api/v1/vulnerable/openapi.json": {
@@ -632,6 +513,32 @@ class SchemaValidator:
                         is_penalty=True,
                     )
                 )
+
+        # Validate undeclared query parameters according to enforcement policy
+        declared_param_names = {p.get("name", "") for p in declared_params if p.get("in") == "query"}
+        for qp in parsed_query:
+            if qp not in declared_param_names:
+                if policy == "strict_all":
+                    violations.append(
+                        SchemaViolation(
+                            field=qp,
+                            reason=f"Query parameter '{qp}' is not declared in OpenAPI contract.",
+                            violation_type="UNDECLARED_PARAMETER",
+                            is_penalty=True,
+                        )
+                    )
+                elif qp in _PAGINATION_TELEMETRY_PARAMS:
+                    # Permitted without penalty under route_tiered policy
+                    pass
+                elif policy == "route_tiered":
+                    violations.append(
+                        SchemaViolation(
+                            field=qp,
+                            reason=f"Query parameter '{qp}' is not declared in OpenAPI contract.",
+                            violation_type="UNDECLARED_PARAMETER",
+                            is_penalty=False,
+                        )
+                    )
 
         return violations
 

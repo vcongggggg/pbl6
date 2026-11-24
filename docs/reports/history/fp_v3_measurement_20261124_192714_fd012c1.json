@@ -1,8 +1,8 @@
 {
   "metadata": {
     "task_id": "pbl6-v3-fix-round-001 / A1.1",
-    "measured_at": "2026-11-24T19:21:56+0700",
-    "active_rules_total": 26,
+    "measured_at": "2026-11-24T16:39:17+0700",
+    "active_rules_total": 25,
     "v3_added_rule_ids": [
       "CMD-005",
       "SSRF-001",
@@ -37,9 +37,7 @@
       "schema_only_additional_fp_count": 0,
       "triggered_rules": {},
       "pillar_flag_counts": {},
-      "schema_violation_breakdown": {
-        "UNDOCUMENTED_ROUTE": 150
-      }
+      "schema_violation_breakdown": {}
     },
     "csic2010_benign": {
       "corpus": "csic2010_benign",
@@ -53,9 +51,7 @@
       "schema_only_additional_fp_count": 0,
       "triggered_rules": {},
       "pillar_flag_counts": {},
-      "schema_violation_breakdown": {
-        "UNDOCUMENTED_ROUTE": 1500
-      }
+      "schema_violation_breakdown": {}
     },
     "bookie_and_rest_api_benign": {
       "corpus": "bookie_and_rest_api_benign",
@@ -64,17 +60,17 @@
       "fp_operational_pct": 0.0,
       "fp_strict_schema_off_count": 0,
       "fp_strict_schema_off_pct": 0.0,
-      "fp_strict_schema_on_count": 2,
-      "fp_strict_schema_on_pct": 13.33,
-      "schema_only_additional_fp_count": 2,
+      "fp_strict_schema_on_count": 3,
+      "fp_strict_schema_on_pct": 20.0,
+      "schema_only_additional_fp_count": 3,
       "triggered_rules": {},
       "pillar_flag_counts": {
-        "schema_violation": 2
+        "schema_violation": 3
       },
       "schema_violation_breakdown": {
         "MISSING_PARAMETER": 1,
         "ADDITIONAL_PROPERTY_NOT_ALLOWED": 1,
-        "UNDOCUMENTED_ROUTE": 1
+        "ROUTE_NOT_FOUND": 1
       }
     }
   },
@@ -84,8 +80,8 @@
     "fp_operational_pct": 0.0,
     "fp_strict_schema_off_count": 0,
     "fp_strict_schema_off_pct": 0.0,
-    "fp_strict_schema_on_count": 2,
-    "fp_strict_schema_on_pct": 0.117,
+    "fp_strict_schema_on_count": 3,
+    "fp_strict_schema_on_pct": 0.175,
     "v3_new_guards_false_positives": 0
   }
 }

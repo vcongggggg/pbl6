@@ -108,3 +108,20 @@ def test_quality_gates_fails_on_missing_or_corrupted_file(tmp_path: Path):
     passed, failures = verify_quality_gates(latency_file=corrupt_file, check_matrix=False)
     assert passed is False
     assert any("Failed to parse" in f for f in failures)
+
+
+def test_quality_gates_fails_on_matrix_mismatch(monkeypatch):
+    """Verifies gate failure when thesis reconciliation matrix detects any discrepancy."""
+    def mock_run(*args, **kwargs):
+        return subprocess.CompletedProcess(
+            args=args[0],
+            returncode=1,
+            stdout="[FAIL] Metric mismatch: 26/27 matched. Discrepancy detected.",
+            stderr="",
+        )
+
+    monkeypatch.setattr(subprocess, "run", mock_run)
+    passed, failures = verify_quality_gates(check_matrix=True, live_check=False)
+    assert passed is False
+    assert any("Gate 4 Failed" in f for f in failures)
+

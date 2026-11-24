@@ -269,10 +269,12 @@ def run_tradeoff_sweep():
             "csic_group_a_recall_pct": chosen["csic_group_a_recall_pct"],
             "b1000_recall_pct": chosen["b1000_recall_pct"],
             "decision_rationale": (
-                "Maintains strict zero operational false positives (0.000%, 0/1715) across all three benign corpora "
-                "while achieving 99.49% zero-shot recall on CSIC Group A True Payload Attacks and 99.88% recall on B1000. "
-                "Dual-AI Consensus eliminates score dilution on blind injection vectors where rule signatures are absent "
-                "without triggering false positive alerts on normal application traffic."
+                f"Maintains strict zero operational false positives ({chosen['fp_operational_pct']:.3f}%, {chosen['fp_operational_count']}/{total_benign}) "
+                f"across all three benign corpora while achieving {chosen['csic_group_a_recall_pct']:.2f}% ({chosen['csic_group_a_blocked']}/{csic_group_a_total}) "
+                f"block recall on CSIC Group A True Payload Attacks, {chosen['csic_total_recall_pct']:.2f}% ({chosen['csic_total_blocked']}/{total_csic_attack}) "
+                f"block recall on CSIC total, and {chosen['b1000_recall_pct']:.2f}% ({chosen['b1000_total_blocked']}/{total_b1000_attack}) on B1000. "
+                "On standard CSIC 2010 and B1000 corpora, Dual-AI Consensus yields identical block metrics to Baseline-80 (168/196, 782/800) "
+                "with 0 false positive regressions, serving as an architectural safeguard against score dilution on evasive vectors."
             ),
         },
         "tradeoff_curve": tradeoff_curve,

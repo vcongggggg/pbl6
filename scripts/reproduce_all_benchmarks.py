@@ -7,8 +7,8 @@ Provides:
 2. Standardization of the 4 Defense Evolution Tiers:
    - Tier 1: No WAF (Direct Upstream Target API, 0% Protection)
    - Tier 2: Legacy Static Regex (5 raw unnormalized regexes, run_adversarial_benchmark.py)
-   - Tier 3: Normalized OWASP API Rules (Gateway v3 Hardened Rules-Only, port :8056, 25 rules + BOLA + DLP)
-   - Tier 4: Multi-Pillar Hybrid v3.2 (Port :8055, 25 Rules + XGBoost + IForest + Dual-AI + Route-Tiered Schema)
+   - Tier 3: Normalized OWASP API Rules (Gateway v3 Hardened Rules-Only, port :8056, 26 rules + BOLA + DLP)
+   - Tier 4: Multi-Pillar Hybrid v3.2 (Port :8055, 26 Rules + XGBoost + IForest + Dual-AI + Route-Tiered Schema)
 3. End-to-end benchmark execution and reconciliation matrix verification.
 """
 
@@ -99,7 +99,7 @@ def print_four_tier_standardization():
   +--------+-------------------------------+-------------------------------------------------------------+
   | Tier 1 | No WAF                        | Direct target API upstream (0% protection baseline).        |
   | Tier 2 | Legacy Static Regex           | 5 raw static regexes without InputNormalizer or OWASP guards|
-  | Tier 3 | Normalized OWASP API Rules    | Gateway v3.0 Hardened (:8056): 25 Rules + BOLA + DLP        |
+  | Tier 3 | Normalized OWASP API Rules    | Gateway v3.0 Hardened (:8056): 26 Rules + BOLA + DLP        |
   | Tier 4 | Multi-Pillar Hybrid + Schema  | Full Platform (:8055): Rules + XGBoost + IForest + Dual-AI  |
   |        | (v3.2 Standard)               | Consensus + Route-Tiered Schema enforcement.                |
   +--------+-------------------------------+-------------------------------------------------------------+
@@ -116,18 +116,8 @@ def main():
     print(f"Git HEAD Commit: {git_sha}")
     print_four_tier_standardization()
 
-    # 1. Run CSIC 2010 Taxonomy & Two-Tier Audit (D2)
-    print("\n[Step 1/5] Auditing CSIC 2010 Two-Tier Taxonomy...")
-    from scripts.audit_csic2010_taxonomy import audit_csic2010
-    audit_csic2010()
-
-    # 2. Run FP-Recall Tradeoff & Dual-AI Consensus Sweep (D2)
-    print("\n[Step 2/5] Sweeping FP-Recall Tradeoff Curve & Dual-AI Consensus...")
-    from scripts.evaluate_fp_recall_tradeoff import run_tradeoff_sweep
-    run_tradeoff_sweep()
-
-    # 3. Snapshot all benchmark artifacts into history/
-    print("\n[Step 3/5] Versioning Artifacts into Immutable History...")
+    # 1. Snapshot all existing canonical artifacts into history/ BEFORE any re-measurement
+    print("\n[Step 1/5] Preserving Existing Artifacts into Immutable History...")
     core_artifacts = [
         REPORTS_DIR / "csic2010_taxonomy_breakdown.json",
         REPORTS_DIR / "fp_recall_tradeoff_v32.json",
@@ -149,6 +139,16 @@ def main():
             logger.warning(f"Artifact {art.name} not found; skipping snapshot.")
 
     print(f"Successfully created {len(snapshots)} immutable snapshots in docs/reports/history/.")
+
+    # 2. Run CSIC 2010 Taxonomy & Two-Tier Audit (D2)
+    print("\n[Step 2/5] Auditing CSIC 2010 Two-Tier Taxonomy...")
+    from scripts.audit_csic2010_taxonomy import audit_csic2010
+    audit_csic2010()
+
+    # 3. Run FP-Recall Tradeoff & Dual-AI Consensus Sweep (D2)
+    print("\n[Step 3/5] Sweeping FP-Recall Tradeoff Curve & Dual-AI Consensus...")
+    from scripts.evaluate_fp_recall_tradeoff import run_tradeoff_sweep
+    run_tradeoff_sweep()
 
     # 4. Programmatic Thesis Reconciliation Matrix Verification (27/27)
     print("\n[Step 4/5] Verifying Thesis Reconciliation Matrix (generate_reconciliation_matrix.py --check)...")

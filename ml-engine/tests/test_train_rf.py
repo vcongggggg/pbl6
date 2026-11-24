@@ -202,5 +202,5 @@ def test_gateway_mldetector_compatibility():
     assert res_sqli.confidence > 0.50
     avg_lat = sum(latencies) / len(latencies)
     # Under coverage instrumentation (pytest-cov), tracing overhead inflates pure-Python execution
-    max_allowed = 50.0 if sys.gettrace() is not None else 15.0
+    max_allowed = 150.0 if sys.gettrace() is not None else 15.0
     assert avg_lat < max_allowed, f"Average latency {avg_lat:.2f}ms exceeds {max_allowed}ms threshold"

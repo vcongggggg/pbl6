@@ -4,10 +4,7 @@
     "total_attack_samples": 1500,
     "total_benign_samples": 1500,
     "audit_methodology": "Recursive URL-decode (depth=3) + regex with strict word boundary (\\b)",
-    "history_snapshot": "docs/reports/history/csic2010_taxonomy_breakdown_20261124_192714_fd012c1.json",
-    "git_base_sha": "fd012c1d17e42f531b635cbe94c7dd738023ee0f",
-    "cpu_load_pct": 43.8,
-    "last_pointer_update": "2026-11-24T19:27:14.816512"
+    "recall_metric_note": "detection_recall_loose uses broad security monitoring criteria (rule_score >= 80 OR ml.is_attack OR anom >= 60.0 OR hybrid_risk >= 50.0). This is distinct from operational block recall under DecisionEngine T=80 (85.71%, 168/196)."
   },
   "reviewer_sqli_finding_verification": {
     "total_original_sqli_labeled": 254,
