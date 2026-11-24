@@ -254,3 +254,177 @@ export async function fetchArenaHistory(): Promise<ArenaHistoryResponse> {
     battles: Array.isArray(data.battles) ? data.battles : [],
   };
 }
+
+// -----------------------------------------------------------------------------
+// Autonomous Pentest API (Sprint 3 & 4)
+// -----------------------------------------------------------------------------
+
+export interface PentestRunParams {
+  target_url?: string;
+  defense_tier?: "no_waf" | "rules_only" | "hybrid_v3";
+  scope?: string;
+  max_rounds?: number;
+  sync_to_soc?: boolean;
+}
+
+export interface PentestQValueEntry {
+  action: string;
+  family: string;
+  transformation?: string;
+  q_value: number;
+  selected?: boolean;
+  masked_in?: boolean;
+}
+
+export interface PentestAttackGraphNode {
+  endpoint: string;
+  method: string;
+  category: string;
+  flaw: string;
+  priority: number;
+  surfaces: string[];
+}
+
+export interface PentestRoundResult {
+  round: number;
+  round_num: number;
+  phase: string;
+  event_type: string;
+  endpoint: string;
+  target_endpoint: string;
+  method: string;
+  attack_type: string;
+  technique: string;
+  mutation_technique: string;
+  original_payload: string;
+  mutated_payload: string;
+  normalized_payload: string;
+  response_status: number;
+  http_status: number;
+  waf_blocked: boolean;
+  dlp_redacted?: boolean;
+  waf_decision: string;
+  waf_threat_score: number;
+  threat_score: number;
+  rule_score: number;
+  matched_rules: string[];
+  ml_score: number;
+  anomaly_score: number;
+  latency_ms: number;
+  winner: "BLUE_TEAM" | "RED_TEAM" | "DRAW";
+  dqn_q_values: PentestQValueEntry[];
+  reasoning_vi: string;
+}
+
+export interface PentestReport {
+  battle_id: string;
+  timestamp?: string;
+  target_url: string;
+  spec_source?: string;
+  defense_tier: string;
+  scope: string;
+  total_rounds: number;
+  blocked_count: number;
+  bypass_count: number;
+  winner: "BLUE_TEAM" | "RED_TEAM" | "DRAW";
+  avg_threat_score: number;
+  avg_latency_ms: number;
+  duration_ms?: number;
+  rounds: PentestRoundResult[];
+  attack_graph?: PentestAttackGraphNode[];
+}
+
+export async function triggerPentestRun(params: PentestRunParams = {}): Promise<PentestReport> {
+  const apiBase = await getApiBase();
+  const headers = await getAdminHeaders();
+  const res = await fetch(`${apiBase}/api/dashboard/arena/pentest/run`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({
+      target_url: params.target_url || "http://127.0.0.1:5000",
+      defense_tier: params.defense_tier || "hybrid_v3",
+      scope: params.scope || "full_pentest",
+      max_rounds: params.max_rounds || 8,
+      sync_to_soc: params.sync_to_soc !== undefined ? params.sync_to_soc : true,
+    }),
+  });
+  if (!res.ok) {
+    throw new Error(`Failed to execute autonomous pentest: HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
+export interface PentestStreamCallbacks {
+  onRecon?: (data: any) => void;
+  onAttackGraph?: (data: { nodes?: PentestAttackGraphNode[]; [k: string]: any }) => void;
+  onRound?: (round: PentestRoundResult) => void;
+  onVerdict?: (verdict: PentestReport) => void;
+}
+
+export async function streamPentestEvaluation(
+  params: PentestRunParams,
+  callbacks: PentestStreamCallbacks,
+  signal?: AbortSignal
+): Promise<void> {
+  const apiBase = await getApiBase();
+  const q = new URLSearchParams({
+    target_url: params.target_url || "http://127.0.0.1:5000",
+    defense_tier: params.defense_tier || "hybrid_v3",
+    scope: params.scope || "full_pentest",
+    max_rounds: String(params.max_rounds || 8),
+    sync_to_soc: String(params.sync_to_soc !== undefined ? params.sync_to_soc : true),
+  });
+
+  const res = await fetch(`${apiBase}/api/dashboard/arena/pentest/stream?${q.toString()}`, {
+    method: "GET",
+    headers: { Accept: "text/event-stream" },
+    cache: "no-store",
+    signal,
+  });
+
+  if (!res.ok || !res.body) {
+    throw new Error(`SSE stream failed: HTTP ${res.status}`);
+  }
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder("utf-8");
+  let buffer = "";
+
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+
+    const blocks = buffer.split("\n\n");
+    buffer = blocks.pop() || "";
+
+    for (const block of blocks) {
+      if (!block.trim()) continue;
+      let eventType = "message";
+      let dataStr = "";
+      for (const line of block.split("\n")) {
+        if (line.startsWith("event:")) {
+          eventType = line.slice(6).trim();
+        } else if (line.startsWith("data:")) {
+          dataStr += line.slice(5).trim();
+        }
+      }
+      if (!dataStr) continue;
+      try {
+        const parsed = JSON.parse(dataStr);
+        if (eventType === "recon") {
+          callbacks.onRecon?.(parsed);
+        } else if (eventType === "attack_graph") {
+          callbacks.onAttackGraph?.(parsed);
+        } else if (eventType === "round" && parsed.round_data) {
+          callbacks.onRound?.(parsed.round_data as PentestRoundResult);
+        } else if (eventType === "verdict") {
+          callbacks.onVerdict?.(parsed as PentestReport);
+        }
+      } catch {
+        // skip malformed frame
+      }
+    }
+  }
+}
+

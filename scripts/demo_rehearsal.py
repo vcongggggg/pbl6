@@ -6,6 +6,7 @@ Scenario Breakdown:
 - Stage 2: OWASP Top 10 Multi-vector Attacks under MONITOR_ONLY (Detection & Telemetry Logging)
 - Stage 3: Active Defense & Fast-Path Mitigation under ACTIVE_BLOCKING (HTTP 403 Forbidden + SOAP XXE)
 - Stage 4: Burst Brute-Force Rate Limiting (HTTP 429 + Retry-After) & Live SOC Scoreboard
+- Stage 5: Autonomous AI Arena Evaluation (Dueling-DQN vs Hybrid WAF v3.0)
 
 Usage:
     python scripts/demo_rehearsal.py --interactive
@@ -364,6 +365,63 @@ class DemoRunner:
         self.stage_2_monitor_only_attacks()
         self.stage_3_active_blocking()
         self.stage_4_rate_limiting_and_scoreboard()
+        self.stage_5_autonomous_arena_evaluation()
+
+    def step_header(self, stage_num: int, title: str, subtitle: str) -> None:
+        print(f"\n{CYAN}{BOLD}" + "=" * 78)
+        print(f" [STAGE {stage_num}] {title}")
+        print(f" {DIM}{subtitle}{RESET}{CYAN}{BOLD}")
+        print("=" * 78 + f"{RESET}")
+
+    def stage_5_autonomous_arena_evaluation(self) -> None:
+        self.step_header(
+            5,
+            "ĐẤU TRƯỜNG ĐỐI KHÁNG TỰ ĐỘNG (AI ARENA & EVASION EVALUATION)",
+            "Kích hoạt chuỗi đối kháng tự động giữa tác tử Red Team Dueling-DQN và Blue Team v3.0",
+        )
+        print(f"{CYAN}Đang gửi yêu cầu kích hoạt AI Pentest Evaluation tới /api/dashboard/arena/pentest/run...{RESET}")
+
+        payload = {
+            "scope": "full_pentest",
+            "max_rounds": 8,
+            "defense_tier": "hybrid_v3",
+            "sync_to_soc": True,
+        }
+        status, body, lat, _headers = self.request(
+            "POST",
+            "/api/dashboard/arena/pentest/run",
+            json_data=payload,
+            admin=True,
+        )
+
+        if status == 200 and isinstance(body, dict):
+            print(f"{GREEN}[OK] Đấu trường hoàn thành với mã kết quả: HTTP 200 OK ({lat:.1f} ms){RESET}")
+            print(f"  - Mã trận đấu:       {CYAN}{body.get('battle_id')}{RESET}")
+            print(f"  - Cấp độ phòng thủ:  {BOLD}{body.get('defense_tier')}{RESET}")
+            print(f"  - Tổng số vòng:      {body.get('total_rounds')}")
+            print(f"  - Số lần chặn/DLP:   {GREEN}{BOLD}{body.get('blocked_count')}{RESET}")
+            print(f"  - Số lần lọt:        {RED}{body.get('bypass_count')}{RESET}")
+            winner_val = body.get("winner", "DRAW")
+            w_color = GREEN if winner_val == "BLUE_TEAM" else (RED if winner_val == "RED_TEAM" else YELLOW)
+            print(f"  - Người chiến thắng: {w_color}{BOLD}{winner_val}{RESET}")
+            print(f"  - Điểm rủi ro TB:    {CYAN}{body.get('avg_threat_score', 0.0):.1f}/100{RESET}")
+            print(f"  - Độ trễ xử lý TB:   {CYAN}{body.get('avg_latency_ms', 0.0):.3f} ms{RESET}")
+
+            print(f"\n{BOLD}Chi tiết từng vòng đối kháng (Dual-Brain Telemetry):{RESET}")
+            for rd in body.get("rounds", [])[:8]:
+                is_defended = bool(rd.get("waf_blocked") or rd.get("response_status") == 403)
+                status_color = GREEN if is_defended else RED
+                badge = "DLP 200" if rd.get("dlp_redacted") else f"HTTP {rd.get('response_status')}"
+                print(
+                    f"  [{rd.get('round_num')}] {status_color}[{badge}]{RESET} "
+                    f"{BOLD}{rd.get('attack_type')}{RESET} ({rd.get('technique')}) -> "
+                    f"Risk={rd.get('waf_threat_score', 0.0):.1f} | Winner={rd.get('winner')} | "
+                    f"{DIM}{rd.get('reasoning_vi', '')[:64]}...{RESET}"
+                )
+        else:
+            print(f"{YELLOW}[WARN] Không thể kích hoạt pentest tự động (HTTP {status}){RESET}")
+
+        print("\n" + "-" * 78)
 
 
 def main() -> None:

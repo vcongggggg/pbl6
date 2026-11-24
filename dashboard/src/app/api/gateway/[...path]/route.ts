@@ -17,7 +17,7 @@ const ALLOWED_DASHBOARD_ENDPOINTS = new Set([
   "arena",
 ]);
 
-const ALLOWED_ARENA_SUBPATHS = new Set(["battle", "live", "history"]);
+const ALLOWED_ARENA_SUBPATHS = new Set(["battle", "live", "history", "pentest"]);
 
 /**
  * Next.js Server-Side BFF (Backend-For-Frontend) Proxy Route (SEC-PBL6-004)
@@ -64,7 +64,12 @@ async function proxyRequest(request: NextRequest, { params }: { params: { path: 
     );
   }
   if (targetEndpoint === "arena") {
-    if (segments.length !== 3 || !ALLOWED_ARENA_SUBPATHS.has(segments[2])) {
+    const isStandardSubpath = segments.length === 3 && ALLOWED_ARENA_SUBPATHS.has(segments[2]);
+    const isPentestSubpath =
+      segments.length === 4 &&
+      segments[2] === "pentest" &&
+      ["run", "stream"].includes(segments[3]);
+    if (!isStandardSubpath && !isPentestSubpath) {
       return NextResponse.json(
         { error: "Forbidden: Invalid Arena endpoint path." },
         { status: 403 }
@@ -121,9 +126,21 @@ async function proxyRequest(request: NextRequest, { params }: { params: { path: 
       cache: "no-store",
     });
 
-    const responseBody = await upstreamRes.text();
     const contentType = upstreamRes.headers.get("content-type") || "application/json";
 
+    // Handle SSE streaming cleanly without buffering the whole response
+    if (contentType.includes("text/event-stream") && upstreamRes.body) {
+      return new NextResponse(upstreamRes.body, {
+        status: upstreamRes.status,
+        headers: {
+          "Content-Type": "text/event-stream",
+          "Cache-Control": "no-cache, no-transform",
+          "Connection": "keep-alive",
+        },
+      });
+    }
+
+    const responseBody = await upstreamRes.text();
     return new NextResponse(responseBody, {
       status: upstreamRes.status,
       headers: {

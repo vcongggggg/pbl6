@@ -207,3 +207,125 @@ def test_arena_history_cache_cap(client: TestClient):
     hist = res_hist.json()
     assert hist["total_battles"] == 50
     assert len(hist["battles"]) == 50
+
+
+def test_arena_pentest_run_hybrid_v3(client: TestClient):
+    """Verifies injection pentest evaluation under hybrid_v3 defense tier where Blue Team dominates."""
+    res = client.post(
+        "/api/dashboard/arena/pentest/run",
+        json={"scope": "injection", "max_rounds": 4, "defense_tier": "hybrid_v3", "sync_to_soc": True},
+        headers=ADMIN_HEADERS,
+    )
+    assert res.status_code == 200
+    data = res.json()
+    assert data["battle_id"].startswith("pentest-")
+    assert data["defense_tier"] == "hybrid_v3"
+    assert data["total_rounds"] == 4
+    assert data["winner"] == "BLUE_TEAM"
+    assert data["blocked_count"] == 4
+    assert data["bypass_count"] == 0
+    assert 0.0 <= data["avg_threat_score"] <= 100.0
+
+    for rd in data["rounds"]:
+        assert rd["response_status"] == 403
+        assert rd["waf_decision"] == "BLOCK"
+        assert rd["winner"] == "BLUE_TEAM"
+        assert len(rd["dqn_q_values"]) == 5
+        assert "Chế độ Hybrid" in rd["reasoning_vi"]
+
+
+def test_arena_pentest_run_full_scope(client: TestClient):
+    """Verifies full 8/8 OWASP Web + API pentest evaluation under hybrid_v3 defense tier."""
+    from app.db.models import SecurityEvent
+    from app.db.session import SessionLocal
+
+    res = client.post(
+        "/api/dashboard/arena/pentest/run",
+        json={"scope": "full_pentest", "max_rounds": 8, "defense_tier": "hybrid_v3", "sync_to_soc": True},
+        headers=ADMIN_HEADERS,
+    )
+    assert res.status_code == 200
+    data = res.json()
+    assert data["total_rounds"] == 8
+    assert data["blocked_count"] == 8
+    assert data["bypass_count"] == 0
+    assert data["winner"] == "BLUE_TEAM"
+    assert isinstance(data["attack_graph"], list) and len(data["attack_graph"]) == 8
+
+    # Verify UI-compatible numeric fields and real Dueling-DQN Q-values
+    for rd in data["rounds"]:
+        assert rd["waf_blocked"] is True
+        assert isinstance(rd["threat_score"], (int, float))
+        assert isinstance(rd["ml_score"], (int, float))
+        assert isinstance(rd["anomaly_score"], (int, float))
+        assert isinstance(rd["dqn_q_values"], list) and len(rd["dqn_q_values"]) >= 1
+        assert "q_value" in rd["dqn_q_values"][0]
+
+    # Verify canonical BLOCKED action & session_id/kill_chain_stage in SOC DB
+    with SessionLocal() as db:
+        ev = (
+            db.query(SecurityEvent)
+            .filter(SecurityEvent.action == "BLOCKED")
+            .order_by(SecurityEvent.id.desc())
+            .first()
+        )
+        assert ev is not None
+        assert ev.session_id is not None
+        assert ev.kill_chain_stage is not None
+
+
+def test_arena_pentest_run_no_waf(client: TestClient):
+    """Verifies pentest evaluation under no_waf defense tier where red team wins 100%."""
+    res = client.post(
+        "/api/dashboard/arena/pentest/run",
+        json={"scope": "injection", "max_rounds": 4, "defense_tier": "no_waf", "sync_to_soc": False},
+        headers=ADMIN_HEADERS,
+    )
+    assert res.status_code == 200
+    data = res.json()
+    assert data["defense_tier"] == "no_waf"
+    assert data["winner"] == "RED_TEAM"
+    assert data["bypass_count"] == 4
+    assert data["blocked_count"] == 0
+    assert data["avg_threat_score"] == 0.0
+
+    for rd in data["rounds"]:
+        assert rd["response_status"] == 200
+        assert rd["waf_decision"] == "ALLOW"
+        assert rd["winner"] == "RED_TEAM"
+
+
+def test_arena_pentest_run_rules_only(client: TestClient):
+    """Verifies pentest evaluation under rules_only defense tier."""
+    res = client.post(
+        "/api/dashboard/arena/pentest/run",
+        json={"scope": "injection", "max_rounds": 4, "defense_tier": "rules_only", "sync_to_soc": False},
+        headers=ADMIN_HEADERS,
+    )
+    assert res.status_code == 200
+    data = res.json()
+    assert data["defense_tier"] == "rules_only"
+    assert data["total_rounds"] == 4
+
+
+def test_arena_pentest_stream_sse(client: TestClient):
+    """Verifies live SSE streaming endpoint (/dashboard/arena/pentest/stream)."""
+    with client.stream(
+        "GET",
+        "/api/dashboard/arena/pentest/stream?max_rounds=2&defense_tier=hybrid_v3",
+        headers=ADMIN_HEADERS,
+    ) as response:
+        assert response.status_code == 200
+        assert "text/event-stream" in response.headers.get("content-type", "")
+
+        events_seen = set()
+        for line in response.iter_lines():
+            if line.startswith("event: "):
+                event_name = line.replace("event: ", "").strip()
+                events_seen.add(event_name)
+
+        assert "recon" in events_seen
+        assert "attack_graph" in events_seen
+        assert "round" in events_seen
+        assert "verdict" in events_seen
+        assert "done" in events_seen

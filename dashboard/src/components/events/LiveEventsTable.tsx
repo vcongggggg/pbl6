@@ -33,6 +33,7 @@ interface LiveEventsTableProps {
   onSelectEvent: (event: SecurityEventItem) => void;
   onExplainEvent?: (event: SecurityEventItem) => void;
   selectedEventId: string | null;
+  className?: string;
 }
 
 export const LiveEventsTable: React.FC<LiveEventsTableProps> = ({
@@ -50,6 +51,7 @@ export const LiveEventsTable: React.FC<LiveEventsTableProps> = ({
   onSelectEvent,
   onExplainEvent,
   selectedEventId,
+  className = "",
 }) => {
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
@@ -127,7 +129,7 @@ export const LiveEventsTable: React.FC<LiveEventsTableProps> = ({
   };
 
   return (
-    <div className="bg-slate-900/70 backdrop-blur-md border border-slate-800/80 rounded-xl p-5 shadow-lg flex flex-col">
+    <div className={`bg-slate-900/70 backdrop-blur-md border border-slate-800/80 rounded-xl p-4 shadow-lg flex flex-col ${className}`}>
       {/* Toolbar: Search, Filters & Export */}
       <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-slate-800/80">
         <div className="flex items-center gap-2">
@@ -220,9 +222,9 @@ export const LiveEventsTable: React.FC<LiveEventsTableProps> = ({
       </div>
 
       {/* Table Container */}
-      <div className="overflow-x-auto mt-2">
+      <div className="overflow-x-auto overflow-y-auto flex-1 min-h-0 mt-2">
         <table className="w-full text-left text-xs font-mono">
-          <thead>
+          <thead className="sticky top-0 bg-slate-900/95 backdrop-blur z-10">
             <tr className="border-b border-slate-800 text-slate-400 font-semibold uppercase text-[11px]">
               <th className="py-2.5 px-3">Time</th>
               <th className="py-2.5 px-3">Client IP (Origin)</th>

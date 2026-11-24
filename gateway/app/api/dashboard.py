@@ -25,7 +25,7 @@ router = APIRouter(
 class SimulateRequest(BaseModel):
     attack_type: str = Field(
         ...,
-        description="Type of attack to simulate: SQLI, XSS, PATH, CMD, or BENIGN",
+        description="Type of attack to simulate: SQLI, XSS, PATH, CMD, SSRF, BOLA, MASS, DATA_EXPOSURE, SOAP, GRAPHQL, or BENIGN",
     )
 
 
@@ -499,7 +499,17 @@ async def get_cyber_range_topology(
             "port": target_port,
             "url": settings.target_api_url,
             "status": target_status,
-            "flaws_monitored": ["SQLi", "XSS", "Path Traversal", "Command Injection", "BOLA"],
+            "flaws_monitored": [
+                "SQLi",
+                "XSS",
+                "Path Traversal",
+                "Command Injection",
+                "SSRF",
+                "NoSQLi",
+                "Mass Assignment",
+                "BOLA/IDOR",
+                "Response DLP",
+            ],
         },
         "soc_monitoring": {
             "name": "SOC Situational Awareness Dashboard",
@@ -510,77 +520,203 @@ async def get_cyber_range_topology(
     }
 
 
+def _resolve_openapi_sim_path(keyword: str, method: str, fallback_path: str) -> str:
+    """Dynamically resolves an active OpenAPI path matching `keyword` & `method` from SchemaValidator."""
+    from app.api.proxy import get_schema_validator
+
+    validator = get_schema_validator()
+    paths = (validator._spec or {}).get("paths", {})
+    m_low = method.lower()
+    for raw_path, ops in paths.items():
+        if isinstance(ops, dict) and m_low in ops and keyword.lower() in raw_path.lower():
+            return raw_path
+    return fallback_path
+
+
 @router.post("/simulate", summary="Execute real test request through proxy", dependencies=[Depends(require_admin)])
 async def simulate_attack_request(
     request: Request,
     payload: SimulateRequest,
 ) -> dict[str, Any]:
-    """Fires a genuine HTTP request through the Gateway's proxy to trigger detection."""
+    """Fires a genuine HTTP request through the Gateway's proxy using OpenAPI-resolved routes."""
     attack_upper = payload.attack_type.upper()
+
+    search_p = _resolve_openapi_sim_path("search", "get", "/api/v1/vulnerable/books/search/")
+    review_p = _resolve_openapi_sim_path("review", "post", "/api/v1/vulnerable/reviews/")
+    download_p = _resolve_openapi_sim_path("download", "get", "/api/v1/vulnerable/files/download/")
+    ping_p = _resolve_openapi_sim_path("ping", "post", "/api/v1/vulnerable/admin/ping/")
+    ssrf_p = _resolve_openapi_sim_path("fetch", "get", "/api/v1/vulnerable/books/fetch-cover/")
+    order_tpl = _resolve_openapi_sim_path("order", "get", "/api/v1/vulnerable/orders/{order_id}/")
+    profile_p = _resolve_openapi_sim_path("profile", "post", "/api/v1/vulnerable/users/profile/update/")
+    users_p = _resolve_openapi_sim_path("list", "get", "/api/v1/vulnerable/users/list/")
 
     transport = httpx.ASGITransport(app=request.app)
     async with httpx.AsyncClient(transport=transport, base_url="http://local-gateway") as client:
         if attack_upper == "SQLI":
             res = await client.get(
-                "/api/proxy/api/v1/vulnerable/books/search/?q=Python%27%20OR%201%3D1--",
-                headers={"User-Agent": "PBL6-Simulator/1.0"},
+                f"/api/proxy{search_p}?q=Python%27%20OR%201%3D1--",
+                headers={"User-Agent": "PBL6-Simulator/3.0"},
             )
             return {
                 "status": "success",
                 "simulated": "SQL_INJECTION",
                 "status_code": res.status_code,
                 "request_id": res.headers.get("X-Request-ID"),
-                "message": "Fired SQL Injection payload (' OR 1=1--) through proxy pipeline.",
+                "message": f"Fired SQL Injection payload (' OR 1=1--) to {search_p}.",
             }
         elif attack_upper == "XSS":
             res = await client.post(
-                "/api/proxy/api/v1/vulnerable/reviews/",
+                f"/api/proxy{review_p}",
                 json={"book_id": 1, "author": "PBL6-Simulator", "comment": "<script>alert('PBL6')</script>"},
-                headers={"User-Agent": "PBL6-Simulator/1.0"},
+                headers={"User-Agent": "PBL6-Simulator/3.0"},
             )
             return {
                 "status": "success",
                 "simulated": "XSS",
                 "status_code": res.status_code,
                 "request_id": res.headers.get("X-Request-ID"),
-                "message": "Fired XSS payload (<script>alert('PBL6')</script>) in JSON body.",
+                "message": f"Fired XSS payload (<script>alert('PBL6')</script>) to {review_p}.",
             }
         elif attack_upper == "PATH":
             res = await client.get(
-                "/api/proxy/api/v1/vulnerable/files/download/?file=..%2f..%2f..%2f..%2fetc%2fpasswd",
-                headers={"User-Agent": "PBL6-Simulator/1.0"},
+                f"/api/proxy{download_p}?file=..%2f..%2f..%2f..%2fetc%2fpasswd",
+                headers={"User-Agent": "PBL6-Simulator/3.0"},
             )
             return {
                 "status": "success",
                 "simulated": "PATH_TRAVERSAL",
                 "status_code": res.status_code,
                 "request_id": res.headers.get("X-Request-ID"),
-                "message": "Fired Path Traversal payload (../../etc/passwd) through query string.",
+                "message": f"Fired Path Traversal payload (../../etc/passwd) to {download_p}.",
             }
         elif attack_upper == "CMD":
             res = await client.post(
-                "/api/proxy/api/v1/vulnerable/admin/ping/",
+                f"/api/proxy{ping_p}",
                 json={"host": "127.0.0.1; whoami"},
-                headers={"User-Agent": "PBL6-Simulator/1.0"},
+                headers={"User-Agent": "PBL6-Simulator/3.0"},
             )
             return {
                 "status": "success",
                 "simulated": "COMMAND_INJECTION",
                 "status_code": res.status_code,
                 "request_id": res.headers.get("X-Request-ID"),
-                "message": "Fired Command Injection payload (; whoami) through request body.",
+                "message": f"Fired Command Injection payload (; whoami) to {ping_p}.",
+            }
+        elif attack_upper == "SSRF":
+            res = await client.get(
+                f"/api/proxy{ssrf_p}?url=http://169.254.169.254/latest/meta-data/",
+                headers={"User-Agent": "PBL6-Simulator/3.0"},
+            )
+            return {
+                "status": "success",
+                "simulated": "SSRF",
+                "status_code": res.status_code,
+                "request_id": res.headers.get("X-Request-ID"),
+                "message": f"Fired Cloud IMDS SSRF payload to {ssrf_p}.",
+            }
+        elif attack_upper in ("NOSQL", "NOSQLI"):
+            login_p = _resolve_openapi_sim_path("login", "post", "/api/v1/vulnerable/auth/login/")
+            res = await client.post(
+                f"/api/proxy{login_p}",
+                json={"username": {"$ne": ""}, "password": {"$gt": ""}},
+                headers={"User-Agent": "PBL6-Simulator/3.0"},
+            )
+            return {
+                "status": "success",
+                "simulated": "NOSQL_INJECTION",
+                "status_code": res.status_code,
+                "request_id": res.headers.get("X-Request-ID"),
+                "message": f"Fired NoSQL Operator Injection ($ne / $gt) to {login_p}.",
+            }
+        elif attack_upper in ("BOLA", "IDOR"):
+            import re as _re
+
+            res = None
+            for oid in (1, 2, 3, 4):
+                resolved_order = _re.sub(r"\{[^}]+\}", str(oid), order_tpl)
+                res = await client.get(
+                    f"/api/proxy{resolved_order}",
+                    headers={"User-Agent": "PBL6-Simulator/3.0"},
+                )
+            assert res is not None
+            return {
+                "status": "success",
+                "simulated": "BOLA_IDOR",
+                "status_code": res.status_code,
+                "request_id": res.headers.get("X-Request-ID"),
+                "message": f"Fired 4-ID horizontal BOLA/IDOR enumeration burst against {order_tpl}.",
+            }
+        elif attack_upper in ("MASS", "MASS_ASSIGNMENT"):
+            res = await client.post(
+                f"/api/proxy{profile_p}",
+                json={"email": "attacker@lab.local", "role": "admin", "is_staff": True, "is_superuser": True},
+                headers={"User-Agent": "PBL6-Simulator/3.0"},
+            )
+            return {
+                "status": "success",
+                "simulated": "MASS_ASSIGNMENT",
+                "status_code": res.status_code,
+                "request_id": res.headers.get("X-Request-ID"),
+                "message": f"Fired Mass Assignment privilege escalation payload to {profile_p}.",
+            }
+        elif attack_upper in ("DATA_EXPOSURE", "EXPOSURE", "DLP"):
+            res = await client.get(
+                f"/api/proxy{users_p}",
+                headers={"User-Agent": "PBL6-Simulator/3.0"},
+            )
+            return {
+                "status": "success",
+                "simulated": "EXCESSIVE_DATA_EXPOSURE",
+                "status_code": res.status_code,
+                "request_id": res.headers.get("X-Request-ID"),
+                "dlp_redacted": res.headers.get("X-WAF-DLP-Redacted") == "true",
+                "request_id_header": res.headers.get("X-Request-ID"),
+                "message": f"Fired Data Exposure probe to {users_p} (Response DLP inspected).",
+            }
+        elif attack_upper in ("SOAP", "SOAP_XXE", "XXE"):
+            xxe_body = (
+                '<?xml version="1.0"?>'
+                '<!DOCTYPE foo [<!ENTITY xxe SYSTEM "file:///etc/passwd">]>'
+                '<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/">'
+                '<soapenv:Body><searchBooks><title>&xxe;</title></searchBooks></soapenv:Body>'
+                "</soapenv:Envelope>"
+            )
+            res = await client.post(
+                f"/api/proxy{review_p}",
+                content=xxe_body.encode("utf-8"),
+                headers={"Content-Type": "application/soap+xml", "User-Agent": "PBL6-Simulator/3.0"},
+            )
+            return {
+                "status": "success",
+                "simulated": "SOAP_XXE",
+                "status_code": res.status_code,
+                "request_id": res.headers.get("X-Request-ID"),
+                "message": "Fired SOAP XML External Entity (XXE) injection payload.",
+            }
+        elif attack_upper in ("GRAPHQL", "GRAPHQL_SQLI"):
+            res = await client.post(
+                f"/api/proxy{review_p}",
+                json={"query": "query { books(q: \"' OR 1=1--\") { id title } }"},
+                headers={"User-Agent": "PBL6-Simulator/3.0"},
+            )
+            return {
+                "status": "success",
+                "simulated": "GRAPHQL_SQLI",
+                "status_code": res.status_code,
+                "request_id": res.headers.get("X-Request-ID"),
+                "message": "Fired GraphQL query with embedded SQL Injection payload.",
             }
         else:  # BENIGN
             res = await client.get(
-                "/api/proxy/api/v1/vulnerable/books/search/?q=Clean+Code",
-                headers={"User-Agent": "PBL6-Simulator/1.0"},
+                f"/api/proxy{search_p}?q=Clean+Code",
+                headers={"User-Agent": "PBL6-Simulator/3.0"},
             )
             return {
                 "status": "success",
                 "simulated": "BENIGN",
                 "status_code": res.status_code,
                 "request_id": res.headers.get("X-Request-ID"),
-                "message": "Fired legitimate benign book search request (Clean Code).",
+                "message": f"Fired legitimate benign book search request (Clean Code) to {search_p}.",
             }
 
 
