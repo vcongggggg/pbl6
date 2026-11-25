@@ -1,7 +1,7 @@
 {
   "metadata": {
     "task_id": "pbl6-v3-fix-round-001 / A1.1",
-    "measured_at": "2026-11-25T11:02:28+0700",
+    "measured_at": "2026-11-25T11:42:55+0700",
     "active_rules_total": 28,
     "v3_added_rule_ids": [
       "CMD-005",
@@ -23,10 +23,10 @@
       "fp_strict_schema_off": "Benign request triggering ANY rule match, ML is_attack, IForest >= 60.0, or Decision != ALLOW (risk >= 30.0) with schema_validation_enabled=False.",
       "fp_strict_schema_on": "Same as fp_strict_schema_off PLUS any OpenAPI SchemaValidator violation (missing param, extra field, undocumented sub-route) with schema_validation_enabled=True."
     },
-    "history_snapshot": "docs/reports/history/fp_v3_measurement_20261125_110741_ce36bb2.json",
-    "git_base_sha": "ce36bb2396d37f7fede33fdc867d2587ccbb0619",
-    "cpu_load_pct": 19.2,
-    "last_pointer_update": "2026-11-25T11:07:42.015688"
+    "history_snapshot": "docs/reports/history/fp_v3_measurement_20261125_114256_2285ec2.json",
+    "git_base_sha": "2285ec2cba55dadddffd1efdfe25ed66525b9d23",
+    "cpu_load_pct": 59.2,
+    "last_pointer_update": "2026-11-25T11:42:56.470627"
   },
   "corpora": {
     "benchmark_1000_diverse_benign": {

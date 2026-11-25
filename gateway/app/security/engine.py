@@ -246,7 +246,7 @@ class RuleEngine:
 
         if isinstance(data, dict):
             pairs = list(data.items())
-        elif isinstance(data, list) and all(isinstance(el, tuple) and len(el) == 2 for el in data):
+        elif isinstance(data, list) and data and all(isinstance(el, tuple) and len(el) == 2 for el in data):
             pairs = data
         else:
             pairs = None
@@ -269,9 +269,23 @@ class RuleEngine:
                     data=item, on_match=on_match, prefix=f"{prefix}[{i}]", depth=depth + 1, max_depth=max_depth
                 )
         elif isinstance(data, (str, int, float, bool)) and data is not None:
+            text_val = str(data)
             self._inspect_text(
-                text=str(data),
+                text=text_val,
                 location=InspectionLocation.BODY,
                 location_key=prefix,
                 on_match=on_match,
             )
+            if isinstance(data, str) and depth < max_depth and data.lstrip().startswith(("{", "[")):
+                try:
+                    nested = json.loads(data, object_pairs_hook=list)
+                except Exception:
+                    nested = None
+                if nested is not None:
+                    self._inspect_json_recursive(
+                        data=nested,
+                        on_match=on_match,
+                        prefix=prefix,
+                        depth=depth + 1,
+                        max_depth=max_depth,
+                    )

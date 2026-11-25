@@ -299,12 +299,12 @@ def main() -> None:
         ),
         (
             "7. Ablation, CSIC & C=50",
-            "CSIC 2010 Zero-Shot XSS / SQLi / Tamper",
+            "CSIC 2010 Two-Tier Overall (Op T=80 / Loose) & Group B",
             "csic2010_benchmark_results.json",
-            "categories_hybrid.{XSS,SQLI,ANOMALY_TAMPER}.success_rate",
-            f"{csic['categories_hybrid']['XSS']['success_rate']:.2f}% / {csic['categories_hybrid']['SQLI']['success_rate']:.2f}% / {csic['categories_hybrid']['ANOMALY_TAMPER']['success_rate']:.2f}%",
-            f"{csic['categories_hybrid']['SQLI']['success_rate']:.2f}%",
-            [("DOCX", docx_txt), ("CH4_MD", md_txt)],
+            "two_tier_parallel_metrics.{overall_1500,group_b_parameter_tampering}",
+            f"{csic['two_tier_parallel_metrics']['overall_1500']['hybrid_operational_t80_recall_pct']:.2f}% Op / {csic['two_tier_parallel_metrics']['overall_1500']['hybrid_loose_recall_pct']:.2f}% Loose / {csic['two_tier_parallel_metrics']['group_b_parameter_tampering']['hybrid_operational_t80']['recall_pct']:.2f}% Group B",
+            f"{csic['two_tier_parallel_metrics']['overall_1500']['hybrid_operational_t80_recall_pct']:.2f}%",
+            [("DOCX", docx_txt), ("PPTX", pptx_txt), ("CH4_MD", md_txt)],
         ),
         (
             "7. Ablation, CSIC & C=50",

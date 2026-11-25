@@ -56,7 +56,7 @@ FEATURE_NAMES: list[str] = CANONICAL_FEATURE_NAMES
 
 _INPUT_NORMALIZER = InputNormalizer()
 _SUSPICIOUS_SYNTAX_RE = re.compile(
-    r"(['\"<>();$|\\{}`=]|/\*|\*/|--|\.\.|\\u00)"
+    r"(['\"<>();$&|\\{}`=]|/\*|\*/|--|\.\.|\\u00)"
 )
 _BENIGN_PARAM_VALUE_RE = re.compile(
     r"^(?:"
@@ -129,11 +129,11 @@ def _extract_http_params(
             parsed_obj: Any = None
             need_norm = False
             try:
-                parsed_obj = json.loads(norm_body)
+                parsed_obj = json.loads(norm_body, object_pairs_hook=list)
             except Exception:
                 if raw_body:
                     try:
-                        parsed_obj = json.loads(raw_body)
+                        parsed_obj = json.loads(raw_body, object_pairs_hook=list)
                         need_norm = True
                     except Exception:
                         parsed_obj = None
@@ -147,8 +147,20 @@ def _extract_http_params(
                         if val:
                             v_norm = _INPUT_NORMALIZER.normalize(val) if need_norm else val
                             params.append((key, v_norm))
+                            if v_norm.lstrip().startswith(("{", "[")):
+                                try:
+                                    nested_val = json.loads(v_norm, object_pairs_hook=list)
+                                except Exception:
+                                    nested_val = None
+                                if nested_val is not None:
+                                    stack.append((key, nested_val))
                     elif isinstance(val, dict):
                         for ck, cv in reversed(list(val.items())):
+                            stack.append((str(ck), cv))
+                    elif isinstance(val, list) and val and all(
+                        isinstance(el, tuple) and len(el) == 2 for el in val
+                    ):
+                        for ck, cv in reversed(val):
                             stack.append((str(ck), cv))
                     elif isinstance(val, list):
                         for item in reversed(val):

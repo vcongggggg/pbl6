@@ -18,7 +18,7 @@ Khắc phục triệt để hiện tượng rò rỉ dữ liệu Train/Test ở 
 | :--- | :---: | :--- | :--- | :--- |
 | **`defense_v2` (Zero-Leakage Multi-Source)** | **47.240** | Train `33.383` / Val `6.928` / Test `6.929` (5 lớp: Benign, SQLi, XSS, Path, CMD) | `0` trùng lặp giữa Train/Val/Test, CSIC 2010 và `benchmark_1000` | Huấn luyện, đối sánh 5 thuật toán ML và đánh giá ma trận nhầm lẫn Test Set. |
 | **`benchmark_1000_diverse.csv`** | **1.000** | 200 Benign + 800 Attacks (200 SQLi, 200 XSS, 200 Path, 200 CMD) | `benchmark1000_overlap = 0` với tập huấn luyện | Ablation Study 4 cấu hình phòng thủ & hiệu chuẩn Isolation Forest v2.0. |
-| **CSIC 2010 HTTP Dataset (Quốc tế)** | **3.000** | 1.500 Benign + 1.500 Attacks (254 SQLi, 65 XSS, 1.181 Tamper) | `csic2010_overlap = 0` (100% Zero-Shot ngoại miền) | Đánh giá năng lực tổng quát hóa liên tập dữ liệu & kiểm soát FPR. |
+| **CSIC 2010 HTTP Dataset (Quốc tế)** | **3.000** | 1.500 Benign + 1.500 Attacks (Two-Tier: Group A 221 [143 SQLi, 78 XSS], Group B 1.279 Tamper) | `csic2010_overlap = 0` (100% Zero-Shot ngoại miền) | Đánh giá năng lực tổng quát hóa liên tập dữ liệu & kiểm soát FPR. |
 | **Live Adversarial Red vs Blue Campaign** | **20 lượt** | 5 endpoint Bookie OWASP x 4 vòng biến dị PyTorch DQN + Tamper | Bắn HTTP sống trực tiếp vào WAF Gateway v2.0 + Bookie API | Đánh giá độ bền đối kháng thực chiến giữa Red Team và Blue Team v2.0. |
 
 ---
@@ -105,19 +105,19 @@ Thời gian suy luận thuần của `iforest_v2.npz` sau khi có vector 26-D ch
 
 ## 4.5. Đánh Giá Tổng Quát Hóa Liên Tập Dữ Liệu (Zero-Shot CSIC 2010 Benchmark)
 
-Kiểm định chéo hoàn toàn **Zero-Shot** (`csic2010_overlap = 0`) trên **3.000 request thực tế** của Viện CSIC Tây Ban Nha **[Ref 14]** (1.500 Benign + 1.500 Attacks) với đường ống **E2b `InputNormalizer` + Per-Parameter Max-Pooling** thu được kết quả bước ngoặt (Bảng 4.7):
+Kiểm định chéo hoàn toàn **Zero-Shot** (`csic2010_overlap = 0`) trên **3.000 request thực tế** của Viện CSIC Tây Ban Nha **[Ref 14]** (1.500 Benign + 1.500 Attacks) với đường ống **E2b `InputNormalizer` + Per-Parameter Max-Pooling** và phân loại **Two-Tier đã kiểm toán (`csic2010_taxonomy_breakdown.json`)** thu được kết quả bước ngoặt (Bảng 4.7):
 
-*Bảng 4.7: Đối sánh Zero-Shot CSIC 2010 giữa Blue Team v1.0 và Blue Team v3.3 (`N = 3.000`)*
+*Bảng 4.7: Đối sánh Zero-Shot CSIC 2010 Two-Tier giữa Blue Team v1.0 và Blue Team v3.3 (`N = 3.000`)*
 
-| Chỉ Số Đánh Giá | Blue Team v1.0 (RF 17-D) | XGBoost v2+ (26-D) | Hybrid v3.3 (3 Tầng) | Nhận Xét Khoa Học Khách Quan |
+| Chỉ Số Đánh Giá (Two-Tier) | Blue Team v1.0 (RF 17-D) | XGBoost v2+ (26-D) | Hybrid v3.3 (3 Tầng) | Nhận Xét Khoa Học Khách Quan |
 | :--- | :---: | :---: | :---: | :--- |
-| **False Positive Rate (FPR)** | **29.60%** (444/1.500 chặn oan) | **0.07%** (1/1.500) | **0.07%** (1/1.500) | **Triệt tiêu overfitting chặn oan; ở ngưỡng Operational T=80 đạt 0.00% FPR (0/1.500).** |
-| **Precision (Độ tin cậy cảnh báo)** | 68.26% | **99.58%** | **99.62%** | Độ tin cậy cảnh báo thực tế cực cao ở FPR `<= 0.5%`. |
-| **XSS Detection Rate (65 mẫu)** | 96.92% (63/65) | **100.00% (65/65)** | **100.00% (65/65)** | **Chặn tuyệt đối 100% XSS ngoại miền Zero-Shot.** |
-| **SQLi Detection Rate (254 mẫu)** | 65.75% (kèm 29.6% FPR) | **48.43% (123/254)** | **50.79% (129/254)** | Bao gồm cả hiệu ứng tách nhãn 2 tầng (133/254 mẫu `modo=insertar` không phải SQLi). |
-| **Anomalous Tamper (1.181 mẫu)** | 61.39% (do chặn bừa) | **4.23% (50/1.181)** | **5.50% (65/1.181)** | Phản ánh trung thực *Domain Shift*; cần tầng Positive Schema OpenAPI riêng (`/tienda1`). |
+| **False Positive Rate (FPR — 1.500 Benign)** | **29.60%** (444/1.500 chặn oan) | **0.07%** (1/1.500) | **0.00% Op T=80** (0/1.500) \| 0.07% Loose (1/1.500) | **Triệt tiêu overfitting chặn oan; Operational DecisionEngine T=80 đạt tuyệt đối 0.00% FPR.** |
+| **Precision & Overall Recall (1.500 Attacks)** | 68.26% Precision | **99.58%** \| 15.87% (238/1.500) | **100.00%** (16.40%, 246/1.500 Op T=80) \| 99.62% (17.27%, 259/1.500 Loose) | Cảnh báo đạt **100.00% Precision** ở T=80; Overall gồm 1.279 mẫu *Domain Shift* Group B. |
+| **Group A True Payload (221: 143 SQLi, 78 XSS)** | Chưa tách Two-Tier (FPR 29.60%) | **93.21% (206/221)** | **100.00% (221/221)** Op T=80 \| 100.00% (221/221) Loose | **Kiểm toán Two-Tier (`unquote_plus` + word-boundary): chặn tuyệt đối 221/221 True Payload.** |
+| **Chi tiết Group A: SQLi (143) & XSS (78)** | Nhãn gốc nhiễu 133 `modo=insertar` | SQLi 89.51% (128/143) \| XSS 100.00% (78/78) | **SQLi 100.00% (143/143) \| XSS 100.00% (78/78)** | Vá triệt để blind-boolean/SSI (75/75), time-delay (61/61), union (7/7) & XSS (78/78). |
+| **Group B Parameter Tampering (1.279 mẫu)** | Chưa phân tách (FPR 29.60%) | 2.50% (32/1.279) | **1.95% (25/1.279)** Op T=80 \| 2.97% (38/1.279) Loose | Phản ánh trung thực *Domain Shift*; bật OpenAPI `/tienda1` nâng Group B lên **66.54%** (Overall **71.47%**) ở 0.00% FPR. |
 
-Kết quả này khẳng định tính liêm chính khoa học cao: **Blue Team v3.3** đạt Loose FPR **`0.07%`**, Precision **`99.62%`**, chặn **`100.00%` XSS** và **`50.79%` SQLi** (trên 254 nhãn gốc CSIC), đồng thời tách bạch 2 tầng ở mục 4.7.5 để đo chính xác **Group A True Payload** vs **Group B Parameter Tampering** qua thực nghiệm OpenAPI `/tienda1`.
+Kết quả này khẳng định tính liêm chính khoa học cao (cập nhật Phase E v3.3 với `InputNormalizer` + Per-Parameter Max-Pooling): **Blue Team v3.3** đạt Operational `DecisionEngine T=80` FPR **`0.00%` (0/1.500)**, Precision **`100.00%`**, **Group A True Payload Recall `100.00% (221/221)`** gồm **`100.00%` Audited SQLi (`143/143`)** và **`100.00%` Audited XSS (`78/78`)**, Overall **`16.40%` (246/1.500)**; ở chế độ Loose Monitoring đạt FPR **`0.07%`**, Precision **`99.62%`**, Group A **`100.00%` (221/221)** và Overall **`17.27%` (259/1.500)**; kết hợp OpenAPI `/tienda1` Schema ở mục 4.7.5 nâng Group B (`1.279` mẫu) lên **`66.54%`** (Overall **`71.47%`**) ở `0.00%` FPR.
 
 ---
 
@@ -257,5 +257,5 @@ Chương 4 đã cung cấp đầy đủ bằng chứng định lượng trung th
 1. **Champion XGBoost v2.0 (`xgb_v2.ubj`) & Zero-Leakage (`D3`):** Retrain XGBoost với `+1185` mẫu sạch trên `33.515` mẫu Train / `6.929` mẫu Test (`0` giao nhau mã băm trên `47.372` mẫu `defense_v2`, CSIC 2010, B1000, Strange v3.3 và Blind Vault v2).
 2. **Calibrated Isolation Forest v2.0 (`iforest_v2.npz`) & Tinh chỉnh `C3`:** Recall `@60.0` đạt **`57.75%`**; sau tinh chỉnh C3, `B1000 Strict FPR` giảm về **`0.0%`** (`Schema OFF`) và **`0.0%`** (`Schema ON`).
 3. **Ablation Study v3.2 (`N = 1000`, `28` Rules):** `Rules Only` đạt F1 **`69.81%`**, `ML Only` đạt F1 **`97.50%`**, và `Hybrid Defense` đạt **`98.20%` Accuracy, `100.00%` Precision, `97.75%` Recall, `98.86%` F1, `0.00%` Operational FPR** trong **`0.730 ms/req`**.
-4. **Zero-Shot CSIC 2010 (`N = 3.000`) & HTTP 2-Hop E2E (`D2`):** Operational FPR **`0.00%`**, Precision **`100.00%`**, độ trễ 2-hop TCP HTTP thực tế **`3.839 ms` mean** (`p50 = 3.584 ms`).
+4. **Zero-Shot CSIC 2010 (`N = 3.000`) & HTTP 2-Hop E2E (`D2`):** Operational `T=80` đạt FPR **`0.00%`**, Precision **`100.00%`**, Group A True Payload Recall **`100.00%` (`221/221`: `143/143` SQLi, `78/78` XSS)**, Overall **`16.40%`**; Loose Monitoring đạt FPR **`0.07%`**, Precision **`99.62%`**, Overall **`17.27%`**; bật OpenAPI `/tienda1` nâng Group B (`1.279`) lên **`66.54%`** (Overall **`71.47%`**); độ trễ 2-hop TCP HTTP thực tế **`3.839 ms` mean** (`p50 = 3.584 ms`).
 5. **Đối kháng Đa vòng 3x3 (`800`-Ep DQN, In-Process & Live HTTP):** Baseline v3.1 (`Blue Team v3.0 Hybrid`) chặn **`100.0%` (`45/45`)** trên tập `Familiar` và **`94.4%` (`51/54`)** In-Process / **`94.4%` (`51/54`)** Live HTTP trên tập ngoại miền `Strange`; trên bản kiểm chứng bổ sung **v3.2 (`26` Rules + `SQLI-006`)** ở `Strange`, `Hybrid v3.2` đạt **`100.00%` (`54/54`)** Static / **`100.00%` (`54/54`)** Random / **`100.00%` (`54/54`)** DQN (In-Process) và **`100.00%` (`54/54`)** Static / **`100.00%` (`54/54`)** Random / **`100.00%` (`54/54`)** DQN (Live HTTP).

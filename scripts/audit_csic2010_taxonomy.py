@@ -583,6 +583,10 @@ def _build_phase_e_comparison(before: dict[str, Any], after: dict[str, Any]) -> 
 
     return {
         "metadata": {
+            "baseline_note": (
+                "before = pre-Phase E baseline commit 2a3969f (NOT Phase E R1 fb2fe46); "
+                "after = current post-fix measurement"
+            ),
             "before_model_path": before.get("metadata", {}).get("model_path"),
             "after_model_path": after.get("metadata", {}).get("model_path"),
             "total_attack_samples": after.get("metadata", {}).get("total_attack_samples"),

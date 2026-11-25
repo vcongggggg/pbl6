@@ -15,7 +15,7 @@ def get_command_injection_rules() -> list[RegexRule]:
                 "Detects shell metacharacters (; | && ||) chained with core OS utilities "
                 "(whoami, id, uname, cat, env, printenv, ls, dir, head, tail, sh, bash, python, etc.)."
             ),
-            pattern=r"""(?i)(?:[;&|`]\s*(?:whoami|id|uname(?:\s+-a)?|cat(?:\s+[/\\]etc)?|netstat|ifconfig|ipconfig|hostname|env|printenv|ls|dir|head|tail|sh|bash|python|python3|perl|php|ruby|awk|sed|sleep|curl|wget|base64)\b)""",
+            pattern=r"""(?i)(?:[;&|`]\s*(?:whoami|id|uname(?:\s+-a)?|cat(?:\s+[/\\]etc)?|netstat|ifconfig|ipconfig|hostname|env|printenv|ls|dir|head|tail|sh|bash|python|python3|perl|php|ruby|awk|sed|sleep|curl|wget|base64|cmd(?:\.exe)?|powershell(?:\.exe)?|pwsh(?:\.exe)?)\b)""",
         ),
         RegexRule(
             rule_id="CMD-002",
@@ -29,8 +29,8 @@ def get_command_injection_rules() -> list[RegexRule]:
         RegexRule(
             rule_id="CMD-003",
             attack_type=AttackType.COMMAND_INJECTION,
-            severity=Severity.HIGH,
-            confidence=0.90,
+            severity=Severity.CRITICAL,
+            confidence=0.95,
             description="Windows Command Shell and PowerShell Execution",
             rationale=(
                 "Detects invocation of cmd.exe /c, PowerShell encoded commands, "

@@ -4,14 +4,14 @@
     "suite_path": "data\\benchmarks\\strange_suite_v33.json",
     "total_cases": 38,
     "passes_per_case": 3,
-    "evaluated_at_utc": "2026-11-25T04:07:05.445061+00:00",
+    "evaluated_at_utc": "2026-11-25T04:42:16.874469+00:00",
     "dqn_backend": "pytorch",
     "dqn_actions_count": 36,
     "ml_model_path": "C:\\Study\\HocKy6\\PBL6\\ml-engine\\artifacts\\xgb_v2.ubj",
-    "history_snapshot": "docs/reports/history/strange_suite_v33_results_20261125_110742_ce36bb2.json",
-    "git_base_sha": "ce36bb2396d37f7fede33fdc867d2587ccbb0619",
-    "cpu_load_pct": 8.3,
-    "last_pointer_update": "2026-11-25T11:07:42.348897"
+    "history_snapshot": "docs/reports/history/strange_suite_v33_results_20261125_114228_2285ec2.json",
+    "git_base_sha": "2285ec2cba55dadddffd1efdfe25ed66525b9d23",
+    "cpu_load_pct": 12.5,
+    "last_pointer_update": "2026-11-25T11:42:28.905046"
   },
   "in_process": {
     "Static Replay": {
@@ -171,7 +171,7 @@
         "evasion_rate_pct": 89.47,
         "avg_threat_score": 9.0,
         "avg_latency_ms": 0.01,
-        "p95_latency_ms": 0.016,
+        "p95_latency_ms": 0.02,
         "bypassed_families": [
           "BOLA_IDOR",
           "COMMAND_INJECTION",
@@ -315,8 +315,8 @@
         "block_rate_pct": 100.0,
         "evasion_rate_pct": 0.0,
         "avg_threat_score": 93.6,
-        "avg_latency_ms": 0.836,
-        "p95_latency_ms": 1.218,
+        "avg_latency_ms": 0.9,
+        "p95_latency_ms": 1.318,
         "bypassed_families": [],
         "bypassed_samples": []
       }
@@ -478,7 +478,7 @@
         "evasion_rate_pct": 98.25,
         "avg_threat_score": 1.5,
         "avg_latency_ms": 0.009,
-        "p95_latency_ms": 0.014,
+        "p95_latency_ms": 0.015,
         "bypassed_families": [
           "BOLA_IDOR",
           "COMMAND_INJECTION",
@@ -622,8 +622,8 @@
         "block_rate_pct": 100.0,
         "evasion_rate_pct": 0.0,
         "avg_threat_score": 93.5,
-        "avg_latency_ms": 0.957,
-        "p95_latency_ms": 1.371,
+        "avg_latency_ms": 1.02,
+        "p95_latency_ms": 1.652,
         "bypassed_families": [],
         "bypassed_samples": []
       }
@@ -784,8 +784,8 @@
         "block_rate_pct": 0.0,
         "evasion_rate_pct": 100.0,
         "avg_threat_score": 0.0,
-        "avg_latency_ms": 0.01,
-        "p95_latency_ms": 0.017,
+        "avg_latency_ms": 0.012,
+        "p95_latency_ms": 0.028,
         "bypassed_families": [
           "BOLA_IDOR",
           "COMMAND_INJECTION",
@@ -929,8 +929,8 @@
         "block_rate_pct": 100.0,
         "evasion_rate_pct": 0.0,
         "avg_threat_score": 93.1,
-        "avg_latency_ms": 0.922,
-        "p95_latency_ms": 1.339,
+        "avg_latency_ms": 0.994,
+        "p95_latency_ms": 1.578,
         "bypassed_families": [],
         "bypassed_samples": []
       }
@@ -948,8 +948,8 @@
         "block_rate_pct": 97.37,
         "evasion_rate_pct": 2.63,
         "avg_threat_score": 84.7,
-        "avg_latency_ms": 2.478,
-        "p95_latency_ms": 3.27,
+        "avg_latency_ms": 2.642,
+        "p95_latency_ms": 3.566,
         "bypassed_families": [
           "SQL_INJECTION"
         ],
@@ -990,8 +990,8 @@
         "block_rate_pct": 100.0,
         "evasion_rate_pct": 0.0,
         "avg_threat_score": 93.7,
-        "avg_latency_ms": 3.16,
-        "p95_latency_ms": 3.859,
+        "avg_latency_ms": 3.518,
+        "p95_latency_ms": 4.792,
         "bypassed_families": [],
         "bypassed_samples": []
       }
@@ -1007,8 +1007,8 @@
         "block_rate_pct": 92.98,
         "evasion_rate_pct": 7.02,
         "avg_threat_score": 79.8,
-        "avg_latency_ms": 2.248,
-        "p95_latency_ms": 3.16,
+        "avg_latency_ms": 2.182,
+        "p95_latency_ms": 3.066,
         "bypassed_families": [
           "COMMAND_INJECTION",
           "SQL_INJECTION"
@@ -1090,8 +1090,8 @@
         "block_rate_pct": 100.0,
         "evasion_rate_pct": 0.0,
         "avg_threat_score": 93.6,
-        "avg_latency_ms": 3.137,
-        "p95_latency_ms": 3.957,
+        "avg_latency_ms": 3.359,
+        "p95_latency_ms": 4.468,
         "bypassed_families": [],
         "bypassed_samples": []
       }
@@ -1107,8 +1107,8 @@
         "block_rate_pct": 92.11,
         "evasion_rate_pct": 7.89,
         "avg_threat_score": 78.6,
-        "avg_latency_ms": 2.064,
-        "p95_latency_ms": 3.158,
+        "avg_latency_ms": 2.089,
+        "p95_latency_ms": 2.973,
         "bypassed_families": [
           "COMMAND_INJECTION",
           "SQL_INJECTION"
@@ -1198,8 +1198,8 @@
         "block_rate_pct": 100.0,
         "evasion_rate_pct": 0.0,
         "avg_threat_score": 92.8,
-        "avg_latency_ms": 3.108,
-        "p95_latency_ms": 4.168,
+        "avg_latency_ms": 3.214,
+        "p95_latency_ms": 4.273,
         "bypassed_families": [],
         "bypassed_samples": []
       }

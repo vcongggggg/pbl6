@@ -30,7 +30,7 @@
 | 22 | 7. Ablation, CSIC & C=50 | Ablation ML Only F1-Score | `ablation_results.json` | `modes.ml_only.f1_score_pct` | `97.50%` | **VERIFIED (DOCX, CH4_MD)** |
 | 23 | 7. Ablation, CSIC & C=50 | Ablation Hybrid F1-Score & FPR | `ablation_results.json` | `modes.hybrid.{f1_score_pct,fpr_pct}` | `98.86% / 0.00%` | **VERIFIED (DOCX, PPTX, CH4_MD)** |
 | 24 | 7. Ablation, CSIC & C=50 | CSIC 2010 Zero-Shot FPR & Precision | `csic2010_benchmark_results.json` | `hybrid_defense_in_depth.{fpr,precision}` | `0.07% / 99.62%` | **VERIFIED (DOCX, PPTX, CH4_MD)** |
-| 25 | 7. Ablation, CSIC & C=50 | CSIC 2010 Zero-Shot XSS / SQLi / Tamper | `csic2010_benchmark_results.json` | `categories_hybrid.{XSS,SQLI,ANOMALY_TAMPER}.success_rate` | `100.00% / 50.79% / 5.50%` | **VERIFIED (DOCX, CH4_MD)** |
+| 25 | 7. Ablation, CSIC & C=50 | CSIC 2010 Two-Tier Overall (Op T=80 / Loose) & Group B | `csic2010_benchmark_results.json` | `two_tier_parallel_metrics.{overall_1500,group_b_parameter_tampering}` | `16.40% Op / 17.27% Loose / 1.95% Group B` | **VERIFIED (DOCX, PPTX, CH4_MD)** |
 | 26 | 7. Ablation, CSIC & C=50 | Disjoint Canonical Hash Overlap (D3 / E4) | `zero_leakage_v3_verification.json` | `zero_leakage_verified` | `True (0 overlaps / 47,372 rows)` | **VERIFIED (CH4_MD)** |
 | 27 | 7. Ablation, CSIC & C=50 | Concurrency C=50 Benign Throughput | `performance_profile_results.json` | `concurrency_benchmark.benign_passthrough[-1].rps` | `340.14 RPS` | **VERIFIED (PPTX)** |
 | 28 | 8. Phase E (v3.3) | E1 Live-HTTP :8056 Greedy DQN Bypass | `pentest_dqn_v2_metadata.json` | `stage4_live_http_metrics.live_http_8056_dqn_bypass_rate_pct` | `25.0%` | **VERIFIED (DOCX, PPTX, CH4_MD)** |

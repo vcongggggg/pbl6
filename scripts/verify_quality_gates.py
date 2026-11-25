@@ -4,7 +4,7 @@ Enforces mandatory CI quality gates against committed evidence and live shared V
 1. Committed E2E HTTP Latency Mean <= 5.5ms (latency_e2e_v3_csic.json)
 2. Committed Inline AI Engine Mean <= 1.5ms (ablation_results.json / performance_profile_results.json)
 3. Operational False Positive Rate == 0.00% (fp_v3_measurement.json & fp_recall_tradeoff_v32.json)
-4. Programmatic Thesis Reconciliation Matrix == 100% matched (27/27 rows)
+4. Programmatic Thesis Reconciliation Matrix == 100% matched (33/33 rows)
 5. Shared VM Anti-Degradation Guard: E2E <= 15.0ms / Inline <= 3.5ms (optional live check)
 """
 

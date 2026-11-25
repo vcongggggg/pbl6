@@ -7,10 +7,10 @@
     "audit_methodology": "Recursive unquote_plus (depth=3) + regex with strict word boundary (\\b)",
     "recall_metric_note": "Reports BOTH loose monitoring criteria (rule >= 80 OR ml.is_attack OR anom >= 60.0 OR hybrid_risk >= 50.0) AND operational DecisionEngine T=80 across Overall 1,500 and Group A.",
     "taxonomy_audit_note": "Group A expanded from 196 (Phase D2) to 221 (Phase E3) strictly because recursive_urldecode switched from urllib.parse.unquote to urllib.parse.unquote_plus: decoding URL form '+' spaces revealed 25 additional genuine CSIC SQLi payloads (118 -> 143 SQLi, e.g. '1%27+OR+%271%27%3D%271' -> \"1' OR '1'='1\") previously masked under Group B Parameter Tampering. In addition, the 75-row legacy SQLI_BLIND_BOOLEAN slice includes 50 HTML SSI directives (<!--#EXEC / <!--#include) matched by the '--' comment token and is preserved intact for apples-to-apples before/after regression accounting alongside csic2010_blind_boolean_per_case_diff.json.",
-    "history_snapshot": "docs/reports/history/csic2010_taxonomy_breakdown_20261125_110741_ce36bb2.json",
-    "git_base_sha": "ce36bb2396d37f7fede33fdc867d2587ccbb0619",
-    "cpu_load_pct": 28.6,
-    "last_pointer_update": "2026-11-25T11:07:41.571790"
+    "history_snapshot": "docs/reports/history/csic2010_taxonomy_breakdown_20261125_114256_2285ec2.json",
+    "git_base_sha": "2285ec2cba55dadddffd1efdfe25ed66525b9d23",
+    "cpu_load_pct": 32.1,
+    "last_pointer_update": "2026-11-25T11:42:56.576047"
   },
   "reviewer_sqli_finding_verification": {
     "total_original_sqli_labeled": 254,

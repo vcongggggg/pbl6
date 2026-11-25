@@ -1,15 +1,16 @@
 {
   "metadata": {
+    "baseline_note": "before = pre-Phase E baseline commit 2a3969f (NOT Phase E R1 fb2fe46); after = current post-fix measurement",
     "before_model_path": "C:\\Study\\HocKy6\\PBL6\\ml-engine\\artifacts\\xgb_v2.ubj",
     "after_model_path": "C:\\Study\\HocKy6\\PBL6\\ml-engine\\artifacts\\xgb_v2.ubj",
     "total_attack_samples": 1500,
     "group_a_total": 221,
     "group_b_total": 1279,
     "total_benign_samples": 1500,
-    "history_snapshot": "docs/reports/history/csic2010_phase_e_comparison_20261125_110741_ce36bb2.json",
-    "git_base_sha": "ce36bb2396d37f7fede33fdc867d2587ccbb0619",
-    "cpu_load_pct": 35.4,
-    "last_pointer_update": "2026-11-25T11:07:41.680727"
+    "history_snapshot": "docs/reports/history/csic2010_phase_e_comparison_20261125_114256_2285ec2.json",
+    "git_base_sha": "2285ec2cba55dadddffd1efdfe25ed66525b9d23",
+    "cpu_load_pct": 16.7,
+    "last_pointer_update": "2026-11-25T11:42:56.679414"
   },
   "parallel_metrics_comparison": {
     "operational_decision_engine_t80": {

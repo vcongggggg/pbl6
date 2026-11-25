@@ -348,3 +348,48 @@ def test_phase_e_fix_f2_rules_normalizer_and_body_inspection():
 
     form_ssi = b"id=2%3C%21--%23include+file%3D%22archivo_secreto%22+--%3E"
     assert eng.inspect_request(path="/tienda1/publico/caracteristicas.jsp", body_bytes=form_ssi).is_attack is True
+
+
+def test_case_14_json_duplicate_key_tamper_powershell_direct_and_nested():
+    """Verifies Case 14 (ws-09 & powershell -NoP -NonI -W Hidden -c whoami) triggers critical block
+    both as direct duplicate-key JSON body and as a nested JSON string field."""
+    import json
+
+    from app.security.decision import DecisionEngine
+    from app.security.engine import RuleEngine
+    from app.security.models import Severity
+    from app.security.risk_engine import RiskEngine
+
+    eng = RuleEngine()
+    risk_eng = RiskEngine()
+    dec_eng = DecisionEngine()
+
+    dup_payload = (
+        '{"comment": "benign_preview", '
+        '"comment": "ws-09 & powershell -NoP -NonI -W Hidden -c whoami"}'
+    )
+    direct_host_alias = (
+        '{"host_alias": "benign_preview", '
+        '"host_alias": "ws-09 & powershell -NoP -NonI -W Hidden -c whoami"}'
+    )
+    nested_json_field = json.dumps({"host_alias": dup_payload}).encode("utf-8")
+
+    for body_bytes in (dup_payload.encode("utf-8"), direct_host_alias.encode("utf-8"), nested_json_field):
+        det = eng.inspect_request(
+            path="/api/v4/endpoint/inventory/sync",
+            body_bytes=body_bytes,
+        )
+        assert det.is_attack is True
+        assert det.highest_severity == Severity.CRITICAL
+        assert det.rule_risk_score >= 85.0
+        assert any(m.rule_id == "CMD-003" for m in det.matches)
+
+        rb = risk_eng.calculate_weighted_score(
+            rule_score=det.rule_risk_score,
+            ml_score=62.6,
+            anomaly_score=32.22,
+            ablation_mode="hybrid",
+        )
+        dec = dec_eng.evaluate(risk_breakdown=rb, waf_mode="ACTIVE_BLOCKING")
+        assert dec.is_blocked is True
+        assert dec.risk_score >= 85.0
