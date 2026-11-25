@@ -1,4 +1,5 @@
 import asyncio
+import csv
 import datetime
 import hashlib
 import json
@@ -702,6 +703,31 @@ class PentestExportRequest(BaseModel):
     replay_report: dict[str, Any] | None = Field(
         default=None,
         description="Optional replay comparison report dictionary to bundle",
+    )
+
+
+class PentestBenchmarkReplayRequest(BaseModel):
+    dataset: str = Field(
+        default="csic2010",
+        description="Benchmark dataset: 'csic2010' or 'benchmark_1000'",
+    )
+    sample_count: int = Field(
+        default=100,
+        ge=1,
+        le=200,
+        description="Number of benchmark requests to replay (1-200)",
+    )
+    mode: str = Field(
+        default="balanced_100",
+        description="Sampling mode: 'balanced_100' (50 benign + 50 attacks) or 'benign_100' (100% benign)",
+    )
+    execution_mode: str = Field(
+        default="in_process",
+        description="Evaluation mode: 'in_process' or 'live_http' (/api/proxy)",
+    )
+    defense_tier: str = Field(
+        default="hybrid_v3",
+        description="Defense tier: 'no_waf', 'rules_only', or 'hybrid_v3'",
     )
 
 
@@ -1776,6 +1802,31 @@ def _get_git_head_sha() -> tuple[str, str]:
             return full_sha, full_sha[:7]
     except Exception:
         pass
+    # Fallback: resolve .git/HEAD directly when git binary is unavailable
+    try:
+        git_dir = _REPO_ROOT / ".git"
+        head_file = git_dir / "HEAD"
+        if head_file.is_file():
+            head_text = head_file.read_text(encoding="utf-8").strip()
+            if head_text.startswith("ref:"):
+                ref_rel = head_text.split(":", 1)[1].strip()
+                ref_file = git_dir / ref_rel
+                if ref_file.is_file():
+                    ref_sha = ref_file.read_text(encoding="utf-8").strip()
+                    if ref_sha:
+                        return ref_sha, ref_sha[:7]
+                packed_refs = git_dir / "packed-refs"
+                if packed_refs.is_file():
+                    for line in packed_refs.read_text(encoding="utf-8").splitlines():
+                        if line.startswith("#") or line.startswith("^") or " " not in line:
+                            continue
+                        sha_part, ref_name = line.split(" ", 1)
+                        if ref_name.strip() == ref_rel and sha_part.strip():
+                            return sha_part.strip(), sha_part.strip()[:7]
+            elif re.fullmatch(r"[0-9a-fA-F]{40}", head_text):
+                return head_text, head_text[:7]
+    except Exception:
+        pass
     return "unknown", "nogit"
 
 
@@ -2276,11 +2327,21 @@ def export_pentest_evidence_endpoint(
     now_utc = datetime.datetime.now(datetime.timezone.utc)
     full_sha, short_sha = _get_git_head_sha()
 
+    sha256_reproduce_cmd = (
+        'python -c "import hashlib,json,sys; '
+        "d=json.loads(open(sys.argv[1],encoding='utf-8').read()); "
+        "exp=d['metadata'].pop('sha256_digest'); "
+        "act=hashlib.sha256(json.dumps(d,sort_keys=True,ensure_ascii=False,separators=(',',':')).encode('utf-8')).hexdigest(); "
+        "print('expected:',exp,'\\nactual:  ',act,'\\nmatch:   ',exp==act); "
+        'sys.exit(0 if exp==act else 1)" <path_to_file>'
+    )
+
     metadata: dict[str, Any] = {
         "task_id": "pbl6-v3-4-phase-f-001",
         "exported_at": now_utc.isoformat(),
         "execution_mode": execution_mode,
         "git_head_sha": full_sha,
+        "sha256_reproduce_cmd": sha256_reproduce_cmd,
     }
     evidence_bundle: dict[str, Any] = {
         "metadata": metadata,
@@ -2310,9 +2371,8 @@ def export_pentest_evidence_endpoint(
         artifact_path = evidence_dir / filename
         counter += 1
 
-    artifact_path.write_text(
-        json.dumps(evidence_bundle, indent=2, ensure_ascii=False) + "\n",
-        encoding="utf-8",
+    artifact_path.write_bytes(
+        (json.dumps(evidence_bundle, indent=2, ensure_ascii=False) + "\n").encode("utf-8")
     )
 
     return {
@@ -2321,3 +2381,399 @@ def export_pentest_evidence_endpoint(
         "sha256": sha256_digest,
         "evidence": evidence_bundle,
     }
+
+
+def _find_benchmark_csv(dataset: str) -> Path:
+    ds = (dataset or "csic2010").strip().lower()
+    if ds == "csic2010":
+        rel = Path("benchmarks") / "csic2010" / "csic_2010_benchmark.csv"
+    elif ds == "benchmark_1000":
+        rel = Path("benchmark_1000_diverse.csv")
+    else:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported benchmark dataset '{dataset}'. Use 'csic2010' or 'benchmark_1000'.",
+        )
+
+    candidates = [
+        _REPO_ROOT / "data" / rel,
+        _GATEWAY_ROOT / "data" / rel,
+        Path("/app/data") / rel,
+    ]
+    for cand in candidates:
+        if cand.is_file():
+            return cand
+    raise HTTPException(
+        status_code=404,
+        detail=f"Benchmark CSV for dataset '{ds}' not found.",
+    )
+
+
+def _load_fp_v3_reference_pct() -> float:
+    candidates = [
+        _REPO_ROOT / "docs" / "reports" / "fp_v3_measurement.json",
+        _GATEWAY_ROOT / "docs" / "reports" / "fp_v3_measurement.json",
+        Path("/app/docs/reports/fp_v3_measurement.json"),
+    ]
+    for cand in candidates:
+        if cand.is_file():
+            try:
+                data = json.loads(cand.read_text(encoding="utf-8"))
+                val = data.get("aggregate_summary", {}).get("fp_operational_pct")
+                if val is not None:
+                    return float(val)
+            except Exception:
+                pass
+    return 0.0
+
+
+def _sample_benchmark_rows(csv_path: Path, sample_count: int, mode: str) -> list[dict[str, str]]:
+    with csv_path.open("r", encoding="utf-8", newline="") as f:
+        rows = list(csv.DictReader(f))
+
+    benign_rows = [r for r in rows if str(r.get("label", "0")).strip() == "0"]
+    attack_rows = [r for r in rows if str(r.get("label", "0")).strip() != "0"]
+
+    norm_mode = (mode or "balanced_100").strip().lower()
+    if norm_mode == "benign_100":
+        return benign_rows[:sample_count]
+
+    benign_target = sample_count // 2
+    attack_target = sample_count - benign_target
+    selected_benign = benign_rows[:benign_target]
+
+    priority_order = ("SQLI", "XSS", "PATH", "CMD")
+    buckets: dict[str, list[dict[str, str]]] = {}
+    other_attacks: list[dict[str, str]] = []
+    for r in attack_rows:
+        at = str(r.get("attack_type", "")).strip().upper()
+        if at in priority_order:
+            buckets.setdefault(at, []).append(r)
+        else:
+            other_attacks.append(r)
+
+    selected_attacks: list[dict[str, str]] = []
+    active_keys = [k for k in priority_order if buckets.get(k)]
+    idx_map = {k: 0 for k in active_keys}
+    while len(selected_attacks) < attack_target and active_keys:
+        next_active: list[str] = []
+        for k in active_keys:
+            if len(selected_attacks) >= attack_target:
+                break
+            pos = idx_map[k]
+            if pos < len(buckets[k]):
+                selected_attacks.append(buckets[k][pos])
+                idx_map[k] = pos + 1
+                if idx_map[k] < len(buckets[k]):
+                    next_active.append(k)
+        active_keys = next_active
+
+    if len(selected_attacks) < attack_target:
+        selected_attacks.extend(other_attacks[: attack_target - len(selected_attacks)])
+
+    return selected_benign + selected_attacks
+
+
+def _parse_benchmark_row_http(row: dict[str, str]) -> tuple[str, str, str | None, str | None, bytes | None, dict[str, Any]]:
+    method = (row.get("method") or "GET").strip().upper()
+    raw_path = (row.get("path") or "/").strip()
+    path_norm = raw_path if raw_path.startswith("/") else f"/{raw_path}"
+    query_str = (row.get("query_params") or "").strip() or None
+    body_text = (row.get("body") or "").strip() or None
+    body_bytes = body_text.encode("utf-8") if body_text else None
+    headers_dict: dict[str, Any] = {}
+    raw_headers = (row.get("headers") or "").strip()
+    if raw_headers:
+        try:
+            parsed_hdrs = json.loads(raw_headers)
+            if isinstance(parsed_hdrs, dict):
+                headers_dict = parsed_hdrs
+        except Exception:
+            headers_dict = {}
+    return method, path_norm, query_str, body_text, body_bytes, headers_dict
+
+
+def _evaluate_benchmark_row_in_process(row: dict[str, str], tier: str) -> dict[str, Any]:
+    method, path_norm, query_str, body_text, body_bytes, headers_dict = _parse_benchmark_row_http(row)
+
+    t0 = time.perf_counter()
+    if tier == "no_waf":
+        waf_blocked = False
+        waf_decision = "ALLOW"
+        http_status = 200
+        threat_score = 0.0
+        matched_rules: list[str] = []
+    elif tier == "rules_only":
+        raw_surface = f"{path_norm}?{query_str or ''} {body_text or ''}"
+        matched_rules = [
+            f"STATIC-RX-{i + 1}"
+            for i, rx in enumerate(_LEGACY_STATIC_REGEXES)
+            if rx.search(raw_surface)
+        ]
+        waf_blocked = bool(matched_rules)
+        waf_decision = "BLOCK" if waf_blocked else "ALLOW"
+        http_status = 403 if waf_blocked else 200
+        threat_score = 88.0 if waf_blocked else 0.0
+    else:
+        detection_result = _rule_engine.inspect_request(
+            path=path_norm,
+            query_params=query_str,
+            headers=headers_dict,
+            body_bytes=body_bytes,
+        )
+        matched_rules = [m.rule_id for m in detection_result.matches] if detection_result else []
+        rule_score = float(detection_result.rule_risk_score if detection_result else 0.0)
+
+        payload_content = " ".join(p for p in (path_norm, query_str or "", body_text or "") if p).strip()
+        if callable(getattr(_ml_detector, "predict_http", None)):
+            ml_result, vec_26 = _ml_detector.predict_http(
+                path=path_norm,
+                query_params=query_str,
+                body=body_text,
+            )
+        else:
+            vec_26 = extract_26_from_http(
+                path=path_norm,
+                query_params=query_str,
+                body=body_text,
+            ).tolist()
+            ml_result = _ml_detector.predict(payload_content, feature_vector=vec_26)
+
+        ml_score = (
+            float(ml_result.risk_score)
+            if (ml_result.model_loaded and ml_result.risk_score is not None)
+            else None
+        )
+        anomaly_result = _anomaly_detector.predict(payload_content, feature_vector=vec_26)
+        anomaly_score = float(anomaly_result.anomaly_score) if anomaly_result.model_loaded else None
+
+        risk_breakdown = _risk_engine.calculate_weighted_score(
+            rule_score=rule_score,
+            ml_score=ml_score,
+            anomaly_score=anomaly_score,
+        )
+        decision = _decision_engine.evaluate(
+            risk_breakdown=risk_breakdown,
+            waf_mode="ACTIVE_BLOCKING",
+        )
+        waf_blocked = bool(decision.is_blocked)
+        waf_decision = "BLOCK" if waf_blocked else "ALLOW"
+        http_status = 403 if waf_blocked else 200
+        threat_score = max(0.0, min(100.0, round(float(decision.risk_score), 1)))
+
+    latency_ms = max(0.01, round((time.perf_counter() - t0) * 1000.0, 3))
+    return {
+        "method": method,
+        "path": path_norm,
+        "query_params": query_str or "",
+        "waf_blocked": waf_blocked,
+        "waf_decision": waf_decision,
+        "http_status": http_status,
+        "threat_score": threat_score,
+        "latency_ms": latency_ms,
+        "matched_rules": matched_rules,
+    }
+
+
+def _build_benchmark_summary(
+    *,
+    dataset: str,
+    csv_path: Path,
+    mode: str,
+    exec_mode: str,
+    tier: str,
+    verdicts: list[dict[str, Any]],
+    started_perf: float,
+) -> dict[str, Any]:
+    benign_count = sum(1 for v in verdicts if v["label"] == 0)
+    attack_count = len(verdicts) - benign_count
+    fp_count = sum(1 for v in verdicts if v["label"] == 0 and v["waf_blocked"])
+    tn_count = sum(1 for v in verdicts if v["label"] == 0 and not v["waf_blocked"])
+    tp_count = sum(1 for v in verdicts if v["label"] != 0 and v["waf_blocked"])
+    fn_count = sum(1 for v in verdicts if v["label"] != 0 and not v["waf_blocked"])
+
+    operational_fpr_pct = round((fp_count / benign_count) * 100.0, 3) if benign_count > 0 else 0.0
+    reference_operational_fpr_pct = _load_fp_v3_reference_pct()
+    matches_fp_measurement = abs(operational_fpr_pct - reference_operational_fpr_pct) <= 1e-6
+    avg_latency_ms = (
+        round(sum(v["latency_ms"] for v in verdicts) / len(verdicts), 3) if verdicts else 0.0
+    )
+    duration_ms = round((time.perf_counter() - started_perf) * 1000.0, 2)
+
+    return {
+        "benchmark_id": f"bench-{uuid.uuid4().hex[:10]}",
+        "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        "dataset": dataset,
+        "dataset_path": str(csv_path),
+        "mode": mode,
+        "execution_mode": exec_mode,
+        "defense_tier": tier,
+        "total_requests": len(verdicts),
+        "benign_count": benign_count,
+        "attack_count": attack_count,
+        "fp_count": fp_count,
+        "tn_count": tn_count,
+        "tp_count": tp_count,
+        "fn_count": fn_count,
+        "blocked_count": tp_count + fp_count,
+        "allowed_count": tn_count + fn_count,
+        "detection_rate_pct": round((tp_count / attack_count) * 100.0, 2) if attack_count > 0 else 0.0,
+        "operational_fpr_pct": operational_fpr_pct,
+        "reference_operational_fpr_pct": reference_operational_fpr_pct,
+        "matches_fp_measurement": matches_fp_measurement,
+        "avg_latency_ms": avg_latency_ms,
+        "duration_ms": duration_ms,
+        "verdicts": verdicts,
+    }
+
+
+def _run_benchmark_replay_in_process_sync(
+    dataset: str,
+    sample_count: int,
+    mode: str,
+    tier: str,
+) -> dict[str, Any]:
+    started_perf = time.perf_counter()
+    csv_path = _find_benchmark_csv(dataset)
+    sampled = _sample_benchmark_rows(csv_path, sample_count, mode)
+
+    verdicts: list[dict[str, Any]] = []
+    for idx, row in enumerate(sampled, start=1):
+        ev = _evaluate_benchmark_row_in_process(row, tier)
+        label_int = int(str(row.get("label", "0")).strip() or "0")
+        attack_type = str(row.get("attack_type") or ("BENIGN" if label_int == 0 else "ATTACK")).strip()
+        verdicts.append(
+            {
+                "index": idx,
+                "method": ev["method"],
+                "path": ev["path"],
+                "query_params": ev["query_params"],
+                "label": label_int,
+                "attack_type": attack_type,
+                "waf_blocked": ev["waf_blocked"],
+                "waf_decision": ev["waf_decision"],
+                "http_status": ev["http_status"],
+                "threat_score": ev["threat_score"],
+                "latency_ms": ev["latency_ms"],
+                "matched_rules": ev["matched_rules"],
+            }
+        )
+
+    return _build_benchmark_summary(
+        dataset=dataset,
+        csv_path=csv_path,
+        mode=mode,
+        exec_mode="in_process",
+        tier=tier,
+        verdicts=verdicts,
+        started_perf=started_perf,
+    )
+
+
+@router.post(
+    "/pentest/replay-benchmark",
+    summary="Replay 100-Request Benchmark Corpus & Reconcile Operational FPR",
+)
+async def replay_benchmark_endpoint(
+    request: Request,
+    body: PentestBenchmarkReplayRequest = Body(default_factory=PentestBenchmarkReplayRequest),
+) -> dict[str, Any]:
+    """Phát lại 100 request chuẩn từ CSIC-2010 hoặc Benchmark-1000 qua Hybrid WAF và đối chiếu Operational FPR."""
+    dataset = (body.dataset or "csic2010").strip().lower()
+    mode = (body.mode or "balanced_100").strip().lower()
+    if mode not in ("balanced_100", "benign_100"):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported benchmark mode '{body.mode}'. Use 'balanced_100' or 'benign_100'.",
+        )
+    tier = (body.defense_tier or "hybrid_v3").strip().lower()
+    if tier not in ("no_waf", "rules_only", "hybrid_v3"):
+        tier = "hybrid_v3"
+    exec_mode = "live_http" if (body.execution_mode or "in_process").strip().lower() == "live_http" else "in_process"
+
+    if exec_mode == "in_process":
+        return await anyio.to_thread.run_sync(
+            _run_benchmark_replay_in_process_sync,
+            dataset,
+            body.sample_count,
+            mode,
+            tier,
+        )
+
+    import httpx
+
+    started_perf = time.perf_counter()
+    csv_path = _find_benchmark_csv(dataset)
+    sampled = _sample_benchmark_rows(csv_path, body.sample_count, mode)
+    verdicts: list[dict[str, Any]] = []
+
+    prev_waf_mode, prev_ablation = _enter_live_http_tier(tier)
+    try:
+        for idx, row in enumerate(sampled, start=1):
+            method, path_norm, query_str, body_text, body_bytes, headers_dict = _parse_benchmark_row_http(row)
+            label_int = int(str(row.get("label", "0")).strip() or "0")
+            attack_type = str(row.get("attack_type") or ("BENIGN" if label_int == 0 else "ATTACK")).strip()
+            clean_headers = {
+                str(k): str(v)
+                for k, v in headers_dict.items()
+                if str(k).lower() not in ("host", "content-length", "connection")
+            }
+            target_proxy_url = f"/api/proxy{path_norm}"
+            if query_str:
+                target_proxy_url = f"{target_proxy_url}?{query_str}"
+
+            client_ip = f"10.88.{(idx // 250) + 1}.{(idx % 250) + 1}"
+            transport = httpx.ASGITransport(app=request.app, client=(client_ip, 12345))
+            t0 = time.perf_counter()
+            async with httpx.AsyncClient(transport=transport, base_url="http://local-gateway") as client:
+                resp = await client.request(
+                    method=method,
+                    url=target_proxy_url,
+                    headers=clean_headers,
+                    content=body_bytes,
+                )
+            latency_ms = max(0.01, round((time.perf_counter() - t0) * 1000.0, 3))
+
+            status_code = resp.status_code
+            waf_blocked = status_code in (403, 429)
+            waf_decision = "BLOCK" if waf_blocked else "ALLOW"
+            resp_json: dict[str, Any] = {}
+            bd: dict[str, Any] = {}
+            if status_code == 403:
+                try:
+                    parsed = resp.json()
+                    if isinstance(parsed, dict):
+                        resp_json = parsed
+                        bd = parsed.get("breakdown") or {}
+                except Exception:
+                    pass
+            matched_rules = _extract_matched_rules_from_403(resp_json, bd, False)
+            threat_score = float(resp.headers.get("x-waf-risk-score") or 0.0)
+            verdicts.append(
+                {
+                    "index": idx,
+                    "method": method,
+                    "path": path_norm,
+                    "query_params": query_str or "",
+                    "label": label_int,
+                    "attack_type": attack_type,
+                    "waf_blocked": waf_blocked,
+                    "waf_decision": waf_decision,
+                    "http_status": status_code,
+                    "threat_score": round(threat_score, 1),
+                    "latency_ms": latency_ms,
+                    "matched_rules": matched_rules,
+                }
+            )
+    finally:
+        _exit_live_http_tier(prev_waf_mode, prev_ablation)
+
+    return _build_benchmark_summary(
+        dataset=dataset,
+        csv_path=csv_path,
+        mode=mode,
+        exec_mode="live_http",
+        tier=tier,
+        verdicts=verdicts,
+        started_perf=started_perf,
+    )

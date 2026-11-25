@@ -14,7 +14,7 @@
 | **Red Team (`attack-lab`)** | PyTorch, HTTPX, Rich | 2.x / 0.27+ | OpenAPI Recon (cycle guard), AttackGraph MDP (`40-D/14-A` -> `74-D/36-A`), Dueling Double-DQN `pentest_dqn_v2.pt` (`weights_only=True`) & `evasion_agent.pt`, CLI Runner. |
 | **SOC Dashboard & AI Arena** | Next.js 14 (App Router), TypeScript, Tailwind CSS, Recharts, Lucide | 14.2.35 / Node 20 | Trung tâm SOC 100% dữ liệu thật + Đấu Trường AI `/arena`, xác thực qua Server-Side BFF Proxy `/api/gateway/*`. |
 | **CSDL & Kiểm Toán** | SQLAlchemy 2.0, SQLite WAL (`QueuePool`) | 2.0.28+ | Lưu trữ `requests`, `security_events` (indexed `api_protocol`/`session_id`), `audit_logs`, `waf_config` với Group Commit. |
-| **DevOps & CI/CD** | Docker Compose, Non-root Dockerfiles, GitHub Actions, Ruff, Pytest | Compose v5 / Ruff | 3 container non-root (`appuser`/`nextjs`), 3 `.dockerignore`, CI tự động kiểm tra lint + 350+ test + Next.js build. |
+| **DevOps & CI/CD** | Docker Compose, Non-root Dockerfiles, GitHub Actions, Ruff, Pytest | Compose v5 / Ruff | 4 container non-root (`vulnerable-api`, `ml-engine`, `gateway`, `dashboard` — `appuser`/`nextjs`), 3 `.dockerignore`, CI tự động kiểm tra lint + 350+ test + Next.js build. |
 
 ---
 
@@ -79,5 +79,5 @@ Do Thành viên B (**Nguyễn Minh**) phát triển và đã được kiểm to�
 
 ## 3.6. Đóng Gói Docker Hardening & CI/CD Tự Động
 
-- **Docker Hardening (`INFRA-PBL6-001`):** Tạo 3 file `.dockerignore` riêng (`gateway/`, `dashboard/`, `vulnerable-api/`); chạy toàn bộ 3 container dưới quyền **non-root** (`USER appuser` / `USER nextjs`); đồng bộ `dashboard/Dockerfile` lên `node:20-alpine` + `npm ci`; khai báo `xgboost>=2.0.0` trong `gateway/pyproject.toml`; đặt mặc định an toàn `WAF_MODE=${WAF_MODE:-ACTIVE_BLOCKING}` trong `docker-compose.yml`.
+- **Docker Hardening (`INFRA-PBL6-001`):** Tạo 3 file `.dockerignore` riêng (`gateway/`, `dashboard/`, `vulnerable-api/`); chạy toàn bộ 4 container (`vulnerable-api`, `ml-engine`, `gateway`, `dashboard`) dưới quyền **non-root** (`USER appuser` / `USER nextjs`); đồng bộ `dashboard/Dockerfile` lên `node:20-alpine` + `npm ci`; khai báo `xgboost>=2.0.0` trong `gateway/pyproject.toml`; đặt mặc định an toàn `WAF_MODE=${WAF_MODE:-ACTIVE_BLOCKING}` trong `docker-compose.yml`.
 - **CI Pipeline (`.github/workflows/ci.yml`):** Tự động chạy `ruff check gateway/ ml-engine/ attack-lab/`, chạy trọn bộ `pytest` trên `gateway/tests/`, `tests/unit/`, `ml-engine/tests/`, và kiểm tra `npm run lint`, `tsc --noEmit`, `next build` trên `dashboard/`.

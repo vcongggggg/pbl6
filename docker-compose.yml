@@ -14,6 +14,7 @@ services:
       - DEBUG=True
       - ALLOWED_HOSTS=*
       - PORT=5000
+      - DEMO_ADMIN_PASSWORD=${DEMO_ADMIN_PASSWORD:-}
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/api/v1/vulnerable/openapi.json')"]
       interval: 10s
@@ -69,6 +70,7 @@ services:
       - TARGET_API_URL=http://vulnerable-api:5000
       - WAF_MODE=${WAF_MODE:-ACTIVE_BLOCKING}
       - ADMIN_API_KEY=${ADMIN_API_KEY:-dev-admin-secret-key-change-me}
+      - GIT_HEAD_SHA=${GIT_HEAD_SHA:-}
       - PYTHONPATH=/app:/app/ml-engine
     volumes:
       - ./data:/app/data

@@ -12,7 +12,7 @@
 | Hạng mục kiểm tra | Trạng thái | Chi tiết kỹ thuật đã xác minh |
 | :--- | :---: | :--- |
 | **`docker-compose.yml` Syntax & Env** | **PASS** | `docker compose config` thoát mã `0` trên repo sạch không cần `.env` |
-| **1-Command Clean Checkout** | **PASS** | `ADMIN_API_KEY=${ADMIN_API_KEY:-dev-admin-secret-key-change-me}` & `WAF_MODE=${WAF_MODE:-ACTIVE_BLOCKING}` có giá trị mặc định inline |
+| **1-Command Clean Checkout** | **PASS** | `ADMIN_API_KEY=${ADMIN_API_KEY:-dev-admin-secret-key-change-me}`, `WAF_MODE=${WAF_MODE:-ACTIVE_BLOCKING}` & `DEMO_ADMIN_PASSWORD=${DEMO_ADMIN_PASSWORD:-}` có giá trị mặc định inline; `vulnerable-api/entrypoint.sh` tự sinh mật khẩu ngẫu nhiên tạm thời (ephemeral) nếu `DEMO_ADMIN_PASSWORD` để trống (không hardcode mật khẩu tĩnh trong image) |
 | **4-Container Topology** | **PASS** | `vulnerable-api` + `ml-engine` + `gateway` + `dashboard` trên mạng bridge `pbl6-network` |
 | **Zero `./attack-lab` Isolation** | **PASS** | Không có bất kỳ volume mount hoặc dependency nào tới `./attack-lab` trong cả 4 container |
 | **ML Engine Sidecar (`pbl6-ml-engine`)** | **PASS** | `python:3.12-slim` mount `:ro` chỉ `./ml-engine/artifacts` & `./ml-engine/features`, xác thực SHA-256 `xgb_v2.ubj` + `iforest_v2.npz`, chạy smoke inference 26-D và phục vụ `GET /health` (`127.0.0.1:8001`) |
@@ -56,6 +56,7 @@
 2. **Chỉ đọc (Read-Only `:ro`) cho AI Artifacts & Feature Extractor:** `./ml-engine/artifacts` (`xgb_v2.ubj`, `iforest_v2.npz`, `*_metadata.json`) và `./ml-engine/features` chỉ được mount `:ro` vào `ml-engine` và `gateway`.
 3. **Tách biệt lưu trữ bền vững (`./data:/app/data`):** Chỉ `gateway` ghi SQLite WAL (`waf_security.db`) vào `./data`.
 4. **Loopback Binding cho dịch vụ nội bộ:** `vulnerable-api` (`127.0.0.1:5000:5000`) và `ml-engine` (`127.0.0.1:8001:8001`) không phơi ra giao diện mạng LAN bên ngoài.
+5. **Quản lý mật khẩu runtime (`DEMO_ADMIN_PASSWORD`):** Biến môi trường `DEMO_ADMIN_PASSWORD` được truyền vào `vulnerable-api` lúc chạy container (`docker-compose.yml` & `.env.example`); khi để trống, `vulnerable-api/entrypoint.sh` tự động sinh mật khẩu ngẫu nhiên tạm thời (ephemeral) tại runtime — tuyệt đối không nhúng mật khẩu cứng trong `Dockerfile` hay tài liệu kiểm định.
 
 ---
 
@@ -89,4 +90,5 @@ docker compose down
 - **Demo Live Arena qua BFF (`/api/gateway/api/dashboard/arena/pentest/*`):**
   - `POST /pentest/run` (`execution_mode=live_http`, `hybrid_v3`, `full_pentest`): `battle_id=pentest-730245caa5`, **`blocked=8/8 (100%)`**, `winner=BLUE_TEAM`.
   - `POST /pentest/replay` (`execution_mode=live_http`): **`matched=8/8 (100.0%)`**.
-  - `POST /pentest/export`: Xuất bằng chứng D4 tại `docs/reports/history/arena_live_20261125_055718_nogit.json` (SHA-256 `08051a469182e6e3a39f340429a8a79c3d475a2b9aa9e599f1cfc938123a5862`).
+  - `POST /pentest/replay-benchmark`: `total=100` (`benign=50`, `attack=50`), `TP=42`, `TN=50`, `FP=0`, **`op_fpr_pct=0.0%` (`matches_fp_measurement=True`)**.
+  - `POST /pentest/export`: Xuất bằng chứng D4 tại `docs/reports/history/arena_live_20261125_064412_ed7e0ef.json` (`git_head_sha=ed7e0efea14978a0d4e64257b694455539b81649`, SHA-256 `ca0ffc73e130f3ec24bdb43356ce4a1aebe2712d59383d180ca392c99d4c9f43`, kiểm chứng tái tạo `REPRODUCE_MATCH=True`).

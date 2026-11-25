@@ -152,7 +152,7 @@ def main() -> None:
     args = parser.parse_args()
 
     print("=" * 80)
-    print("  PBL6 v3.2 QUALITY GATES VERIFICATION (Task D5)")
+    print("  PBL6 v3.4 QUALITY GATES VERIFICATION (Task D5)")
     print("=" * 80)
 
     passed, failures = verify_quality_gates(

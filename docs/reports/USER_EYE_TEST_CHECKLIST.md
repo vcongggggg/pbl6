@@ -24,6 +24,7 @@
    - [ ] `pbl6-gateway`, `pbl6-ml-engine`, `pbl6-vulnerable-api` chạy dưới `uid=1001(appuser)`, `pbl6-dashboard` chạy dưới `uid=1001(nextjs)`.
    - [ ] `http://localhost:8000/dashboard/stats` không kèm `X-API-Key` trả về **`HTTP 401 Unauthorized`**.
    - [ ] Cổng `5000` (Bookie) và `8001` (`ml-engine`) chỉ bind loopback `127.0.0.1` (chặn bypass WAF từ LAN).
+   - [ ] Biến môi trường `DEMO_ADMIN_PASSWORD` (tùy chọn trong `.env`) hoạt động đúng: khi để trống, `vulnerable-api` tự sinh mật khẩu ngẫu nhiên tạm thời lúc khởi động container (không có mật khẩu hardcode trong image).
 
 ---
 
@@ -42,9 +43,12 @@
    - [ ] Thanh 5 pha chạy mượt (`1. Recon -> 2. Attack Graph -> 3. Baseline Probe -> 4. DQN Mutate & Pivot -> 5. Verdict & SOC`); kết quả Live HTTP hiển thị **`8/8`** chặn/redacted DLP (hoặc 100% đúng với rule/ML thực tế).
    - [ ] Chọn từng vòng trong **SSE Pentest Trace**: cột phải hiển thị **`Trained Action Q(s, a) Ranking`**, `InputNormalizer Canonical Output`, `Chữ ký & Lá chắn kích hoạt` (`matched_rules`) và 3 ô điểm **`Rule / API`**, **`XGBoost 26-D`**, **`IForest 26-D`**.
    - [ ] Bấm **`Replay Traffic`** ngay trên thanh điều khiển (hoặc trong drawer `Lịch sử`): xác nhận banner hiển thị tỷ lệ khớp **`8/8 (100.0%)`**.
+   - [ ] Bấm **`Replay 100 Benchmark`**: xác nhận kết quả đối chiếu hiển thị **`Op FPR 0.000%`**, khớp tuyệt đối với [fp_v3_measurement.json](file:///C:/Study/HocKy6/PBL6/docs/reports/fp_v3_measurement.json).
+   - [ ] Bấm **`In Báo Cáo A4`** (`window.print()`): xác nhận trình duyệt mở hộp thoại in A4 bố cục sạch, không cắt ngang bảng/số liệu và ẩn thanh điều khiển thừa.
 
 3. **Kiểm tra Export Evidence & D4 Snapshots:**
-   - [ ] Trên `/arena`, bấm **`Export Evidence (D4)`**: trình duyệt tải xuống tệp `arena_live_*.json` kèm thông báo đường dẫn D4 bất biến (`docs/reports/history/` hoặc `/app/data/arena_evidence/` trong Docker) và mã `SHA-256`.
+   - [ ] Trên `/arena`, bấm **`Export Evidence (D4)`**: trình duyệt tải xuống tệp `arena_live_*.json` kèm thông báo đường dẫn D4 bất biến (`docs/reports/history/` hoặc `/app/data/arena_evidence/` trong Docker), mã `SHA-256` và trường **`sha256_reproduce_cmd`**.
+   - [ ] Chạy đúng lệnh trong **`sha256_reproduce_cmd`** trên tệp D4 vừa xuất và xác nhận mã băm SHA-256 tính lại khớp **100%** với `metadata.sha256_digest` trong file JSON.
    - [ ] Trên **Live Security Events Table** (`/`), bấm **`Export JSON`** hoặc trong **DetectionExplainabilityModal** bấm **`Export Full Explainability JSON`** để kiểm tra tệp JSON đầy đủ `layers`, `threat_intelligence`, `evidence`.
    - [ ] Kiểm tra thư mục bằng chứng D4 đã commit tại [docs/reports/history/](file:///C:/Study/HocKy6/PBL6/docs/reports/history) và xác nhận [THESIS_ARTIFACT_RECONCILIATION_MATRIX.md](file:///C:/Study/HocKy6/PBL6/docs/reports/THESIS_ARTIFACT_RECONCILIATION_MATRIX.md) ghi **`33/33 VERIFIED PASS`**.
 

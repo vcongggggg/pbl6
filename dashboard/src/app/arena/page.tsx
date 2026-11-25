@@ -8,9 +8,11 @@ import {
   fetchPentestCatalog,
   triggerPentestReplay,
   exportPentestEvidence,
+  triggerBenchmarkReplay,
   fetchArenaHistory,
   fetchDashboardStats,
   toggleWafMode,
+  BenchmarkReplayResponse,
   PentestAttackGraphNode,
   PentestCatalogFamily,
   PentestExportResponse,
@@ -38,6 +40,8 @@ import {
   Download,
   FileCheck2,
   Zap,
+  Printer,
+  FlaskConical,
 } from "lucide-react";
 
 const INITIAL_OPENAPI_SURFACES: PentestAttackGraphNode[] = [
@@ -161,6 +165,13 @@ export default function ArenaPage() {
   // History Drawer
   const [isHistoryOpen, setIsHistoryOpen] = useState<boolean>(false);
   const [historyData, setHistoryData] = useState<ArenaHistoryResponse | null>(null);
+
+  // 100-Request Benchmark Replay Drawer (F1a)
+  const [isBenchmarkOpen, setIsBenchmarkOpen] = useState<boolean>(false);
+  const [isBenchmarkRunning, setIsBenchmarkRunning] = useState<boolean>(false);
+  const [benchmarkDataset, setBenchmarkDataset] = useState<"csic2010" | "benchmark_1000">("csic2010");
+  const [benchmarkMode, setBenchmarkMode] = useState<"balanced_100" | "benign_100">("balanced_100");
+  const [benchmarkResult, setBenchmarkResult] = useState<BenchmarkReplayResponse | null>(null);
 
   const loadStats = useCallback(async () => {
     try {
@@ -382,6 +393,32 @@ export default function ArenaPage() {
     }
   };
 
+  const handleRunBenchmarkReplay = async (
+    overrideDataset?: "csic2010" | "benchmark_1000",
+    overrideMode?: "balanced_100" | "benign_100"
+  ) => {
+    if (isBenchmarkRunning) return;
+    const ds = overrideDataset ?? benchmarkDataset;
+    const md = overrideMode ?? benchmarkMode;
+    setIsBenchmarkOpen(true);
+    setIsBenchmarkRunning(true);
+    setErrorMsg(null);
+    try {
+      const res = await triggerBenchmarkReplay({
+        dataset: ds,
+        sample_count: 100,
+        mode: md,
+        execution_mode: "in_process",
+        defense_tier: defenseTier,
+      });
+      setBenchmarkResult(res);
+    } catch (err: any) {
+      setErrorMsg(err?.message || "Không thể chạy Benchmark Replay 100 requests.");
+    } finally {
+      setIsBenchmarkRunning(false);
+    }
+  };
+
   const matchEndpoint = (roundEp: string, nodeEp: string) => {
     if (roundEp === nodeEp) return true;
     if (nodeEp.includes("{")) {
@@ -411,7 +448,8 @@ export default function ArenaPage() {
   const qSpan = Math.max(qMax - qMin, 0.25);
 
   return (
-    <div className="h-screen w-screen flex flex-col overflow-hidden bg-[#07090e] text-slate-100 font-sans selection:bg-rose-500 selection:text-white">
+    <>
+      <div className="h-screen w-screen flex flex-col overflow-hidden bg-[#07090e] text-slate-100 font-sans selection:bg-rose-500 selection:text-white print:hidden">
       <Header
         stats={stats}
         onRefresh={loadStats}
@@ -596,6 +634,31 @@ export default function ArenaPage() {
           >
             <Download className="w-3.5 h-3.5" />
             <span className="text-[11px]">{isExporting ? "Đang Xuất..." : "Export Evidence (D4)"}</span>
+          </button>
+
+          {/* Replay 100 Benchmark Button (F1a) */}
+          <button
+            id="btn-replay-benchmark"
+            onClick={() => handleRunBenchmarkReplay()}
+            disabled={isRunning || isReplaying || isBenchmarkRunning}
+            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-amber-950/90 hover:bg-amber-900/90 border border-amber-600/60 text-amber-200 font-semibold transition disabled:opacity-40 cursor-pointer"
+            title="Phát lại 100 request chuẩn (CSIC-2010 / Benchmark-1000) và đối chiếu Operational FPR"
+          >
+            <FlaskConical className={`w-3.5 h-3.5 ${isBenchmarkRunning ? "animate-pulse" : ""}`} />
+            <span className="text-[11px]">
+              {isBenchmarkRunning ? "Đang Replay 100..." : "Replay 100 Benchmark"}
+            </span>
+          </button>
+
+          {/* Print A4 Report Button (F1b) */}
+          <button
+            id="btn-print-a4"
+            onClick={() => window.print()}
+            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-100 font-semibold transition cursor-pointer"
+            title="In báo cáo chứng cứ A4 (window.print)"
+          >
+            <Printer className="w-3.5 h-3.5 text-cyan-300" />
+            <span className="text-[11px]">In Báo Cáo A4</span>
           </button>
 
           {/* History Button */}
@@ -796,6 +859,35 @@ export default function ArenaPage() {
                 {copiedKey === "sha256" ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
                 <span>SHA256: {exportResult.sha256.slice(0, 10)}...</span>
               </button>
+            </div>
+          )}
+
+          {benchmarkResult && (
+            <div
+              onClick={() => setIsBenchmarkOpen(true)}
+              className="mt-2 p-2 rounded-lg bg-amber-950/50 border border-amber-600/70 text-amber-100 text-xs font-mono flex items-center justify-between gap-2 cursor-pointer hover:bg-amber-950/70 transition"
+              title="Nhấn để mở bảng 100 verdicts Benchmark Replay"
+            >
+              <div className="flex items-center gap-1.5 min-w-0">
+                <FlaskConical className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                <span className="truncate">
+                  {benchmarkResult.dataset} ({benchmarkResult.total_requests} req): TP={benchmarkResult.tp_count}, FP=
+                  {benchmarkResult.fp_count}
+                </span>
+              </div>
+              <span
+                className={`px-2 py-0.5 rounded text-[10px] font-bold shrink-0 border ${
+                  benchmarkResult.matches_fp_measurement
+                    ? "bg-emerald-950/80 text-emerald-300 border-emerald-500/60"
+                    : "bg-rose-950/80 text-rose-300 border-rose-500/60"
+                }`}
+              >
+                Op FPR: {benchmarkResult.operational_fpr_pct.toFixed(3)}% (
+                {benchmarkResult.matches_fp_measurement
+                  ? "Matches fp_v3_measurement.json"
+                  : `Ref: ${benchmarkResult.reference_operational_fpr_pct.toFixed(3)}%`}
+                )
+              </span>
             </div>
           )}
 
@@ -1149,6 +1241,186 @@ export default function ArenaPage() {
         </div>
       )}
 
+      {/* 100-Request Benchmark Replay Modal / Drawer (F1a) */}
+      {isBenchmarkOpen && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-5xl max-h-[88vh] bg-slate-900 border border-slate-700 rounded-xl p-4 flex flex-col font-mono text-xs shadow-2xl">
+            <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-slate-800">
+              <div className="flex items-center gap-2">
+                <FlaskConical className="w-4 h-4 text-amber-400" />
+                <span className="font-bold text-white text-sm">
+                  Replay 100 Benchmark Corpus &amp; Operational FPR Reconciliation
+                </span>
+                {benchmarkResult && (
+                  <span
+                    className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
+                      benchmarkResult.matches_fp_measurement
+                        ? "bg-emerald-950/90 text-emerald-300 border-emerald-600/70"
+                        : "bg-rose-950/90 text-rose-300 border-rose-600/70"
+                    }`}
+                  >
+                    Op FPR: {benchmarkResult.operational_fpr_pct.toFixed(3)}% (
+                    {benchmarkResult.matches_fp_measurement
+                      ? "Matches fp_v3_measurement.json"
+                      : `Ref: ${benchmarkResult.reference_operational_fpr_pct.toFixed(3)}%`}
+                    )
+                  </span>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2">
+                <select
+                  value={benchmarkDataset}
+                  onChange={(e) => {
+                    const nextDs = e.target.value as "csic2010" | "benchmark_1000";
+                    setBenchmarkDataset(nextDs);
+                    handleRunBenchmarkReplay(nextDs, benchmarkMode);
+                  }}
+                  disabled={isBenchmarkRunning}
+                  className="bg-slate-950 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs"
+                >
+                  <option value="csic2010">CSIC 2010</option>
+                  <option value="benchmark_1000">Benchmark 1000</option>
+                </select>
+                <select
+                  value={benchmarkMode}
+                  onChange={(e) => {
+                    const nextMode = e.target.value as "balanced_100" | "benign_100";
+                    setBenchmarkMode(nextMode);
+                    handleRunBenchmarkReplay(benchmarkDataset, nextMode);
+                  }}
+                  disabled={isBenchmarkRunning}
+                  className="bg-slate-950 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs"
+                >
+                  <option value="balanced_100">Balanced 100 (50/50)</option>
+                  <option value="benign_100">Benign 100 (100% Benign)</option>
+                </select>
+                <button
+                  onClick={() => handleRunBenchmarkReplay()}
+                  disabled={isBenchmarkRunning}
+                  className="px-2.5 py-1 rounded bg-amber-600 hover:bg-amber-500 text-white font-bold disabled:opacity-50 cursor-pointer"
+                >
+                  {isBenchmarkRunning ? "Đang chạy..." : "Chạy lại 100 req"}
+                </button>
+                <button
+                  onClick={() => setIsBenchmarkOpen(false)}
+                  className="text-slate-400 hover:text-white cursor-pointer p-1"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            {isBenchmarkRunning && !benchmarkResult ? (
+              <div className="py-16 text-center text-slate-400">
+                Đang phát lại 100 request qua Hybrid WAF v3.0...
+              </div>
+            ) : benchmarkResult ? (
+              <>
+                <div className="grid grid-cols-2 sm:grid-cols-6 gap-2 my-3 text-center">
+                  <div className="p-2 rounded bg-slate-950 border border-slate-800">
+                    <div className="text-[10px] text-slate-400">Total Requests</div>
+                    <div className="text-sm font-bold text-white">{benchmarkResult.total_requests}</div>
+                  </div>
+                  <div className="p-2 rounded bg-slate-950 border border-slate-800">
+                    <div className="text-[10px] text-slate-400">Benign / Attack</div>
+                    <div className="text-sm font-bold text-cyan-300">
+                      {benchmarkResult.benign_count} / {benchmarkResult.attack_count}
+                    </div>
+                  </div>
+                  <div className="p-2 rounded bg-slate-950 border border-emerald-900/50">
+                    <div className="text-[10px] text-slate-400">TP / TN</div>
+                    <div className="text-sm font-bold text-emerald-400">
+                      {benchmarkResult.tp_count} / {benchmarkResult.tn_count}
+                    </div>
+                  </div>
+                  <div className="p-2 rounded bg-slate-950 border border-rose-900/50">
+                    <div className="text-[10px] text-slate-400">FP / FN</div>
+                    <div className="text-sm font-bold text-rose-400">
+                      {benchmarkResult.fp_count} / {benchmarkResult.fn_count}
+                    </div>
+                  </div>
+                  <div className="p-2 rounded bg-slate-950 border border-slate-800">
+                    <div className="text-[10px] text-slate-400">Detection Rate</div>
+                    <div className="text-sm font-bold text-amber-300">
+                      {benchmarkResult.detection_rate_pct.toFixed(1)}%
+                    </div>
+                  </div>
+                  <div className="p-2 rounded bg-slate-950 border border-slate-800">
+                    <div className="text-[10px] text-slate-400">Avg Latency</div>
+                    <div className="text-sm font-bold text-slate-200">
+                      {benchmarkResult.avg_latency_ms.toFixed(2)} ms
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex-1 overflow-y-auto border border-slate-800 rounded-lg">
+                  <table className="w-full text-left border-collapse text-[11px]">
+                    <thead className="bg-slate-950 text-slate-400 sticky top-0">
+                      <tr>
+                        <th className="p-2 border-b border-slate-800">#</th>
+                        <th className="p-2 border-b border-slate-800">Method</th>
+                        <th className="p-2 border-b border-slate-800">Path</th>
+                        <th className="p-2 border-b border-slate-800">Ground Truth</th>
+                        <th className="p-2 border-b border-slate-800">HTTP</th>
+                        <th className="p-2 border-b border-slate-800">Decision</th>
+                        <th className="p-2 border-b border-slate-800">Risk</th>
+                        <th className="p-2 border-b border-slate-800">Latency</th>
+                        <th className="p-2 border-b border-slate-800">Matched Rules</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {benchmarkResult.verdicts.map((v) => (
+                        <tr
+                          key={v.index}
+                          className="border-b border-slate-800/60 hover:bg-slate-800/40"
+                        >
+                          <td className="p-1.5 text-slate-400">{v.index}</td>
+                          <td className="p-1.5 font-bold text-slate-300">{v.method}</td>
+                          <td className="p-1.5 text-slate-200 max-w-[220px] truncate" title={v.path}>
+                            {v.path}
+                          </td>
+                          <td className="p-1.5">
+                            <span
+                              className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                                v.label === 0
+                                  ? "bg-slate-800 text-slate-300"
+                                  : "bg-rose-950/70 text-rose-300 border border-rose-800/60"
+                              }`}
+                            >
+                              {v.attack_type}
+                            </span>
+                          </td>
+                          <td className="p-1.5 text-slate-300">{v.http_status}</td>
+                          <td className="p-1.5">
+                            <span
+                              className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                                v.waf_blocked
+                                  ? "bg-emerald-950/80 text-emerald-300"
+                                  : "bg-slate-800 text-slate-300"
+                              }`}
+                            >
+                              {v.waf_decision}
+                            </span>
+                          </td>
+                          <td className="p-1.5 text-slate-300">{v.threat_score.toFixed(1)}</td>
+                          <td className="p-1.5 text-slate-400">{v.latency_ms.toFixed(2)} ms</td>
+                          <td className="p-1.5 text-amber-300 truncate max-w-[140px]">
+                            {v.matched_rules.length > 0 ? v.matched_rules.join(", ") : "-"}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            ) : (
+              <div className="py-12 text-center text-slate-500">Chưa có dữ liệu benchmark.</div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Footer */}
       <footer className="w-full h-7 shrink-0 border-t border-slate-900 bg-slate-950/90 px-4 text-[11px] font-mono text-slate-500 flex items-center justify-between whitespace-nowrap">
         <div className="flex items-center gap-3">
@@ -1164,6 +1436,170 @@ export default function ArenaPage() {
           </span>
         </div>
       </footer>
-    </div>
+      </div>
+
+      {/* F1b: Printable A4 Evidence Report */}
+      <section id="arena-print-report" className="hidden print:block bg-white text-slate-900 p-4 text-xs font-sans">
+        <div className="border-b-2 border-slate-800 pb-3 mb-4 flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-lg font-bold text-slate-900">
+              PBL6 AI Arena — Autonomous Pentest &amp; Hybrid WAF v3.0 Evidence Report
+            </h1>
+            <p className="text-[11px] text-slate-600 mt-0.5">
+              Immutable Evaluation Summary, Replay Reconciliation &amp; Operational FPR Verification (A4 Portrait)
+            </p>
+          </div>
+          <div className="text-right text-[10px] font-mono text-slate-700">
+            <div>Battle ID: <span className="font-bold">{report?.battle_id || "N/A"}</span></div>
+            <div>Timestamp: {report?.timestamp || benchmarkResult?.timestamp || "N/A"}</div>
+            <div>Mode / Tier: {report?.execution_mode || executionMode} / {report?.defense_tier || defenseTier}</div>
+          </div>
+        </div>
+
+        {/* Cryptographic Provenance */}
+        <div className="border border-slate-300 rounded p-2.5 mb-4 bg-slate-50 text-[10px] font-mono space-y-1">
+          <div>
+            <span className="font-bold">Target URL:</span> {report?.target_url || targetUrl} •{" "}
+            <span className="font-bold">Scope:</span> {report?.scope || scope}
+          </div>
+          <div>
+            <span className="font-bold">git_head_sha:</span>{" "}
+            {exportResult?.evidence?.metadata?.git_head_sha || "Chưa export D4"}
+          </div>
+          <div className="break-all">
+            <span className="font-bold">sha256_digest:</span>{" "}
+            {exportResult?.sha256 || exportResult?.evidence?.metadata?.sha256_digest || "Chưa export D4"}
+          </div>
+        </div>
+
+        {/* KPI Summary */}
+        <div className="grid grid-cols-4 gap-2 mb-4">
+          <div className="border border-slate-300 rounded p-2 text-center">
+            <div className="text-[10px] text-slate-500 uppercase">Blocked / Total</div>
+            <div className="text-sm font-bold text-slate-900">
+              {report ? `${report.blocked_count} / ${report.total_rounds}` : "0 / 0"}
+            </div>
+          </div>
+          <div className="border border-slate-300 rounded p-2 text-center">
+            <div className="text-[10px] text-slate-500 uppercase">Winner</div>
+            <div className="text-sm font-bold text-slate-900">{report?.winner || "N/A"}</div>
+          </div>
+          <div className="border border-slate-300 rounded p-2 text-center">
+            <div className="text-[10px] text-slate-500 uppercase">Avg Threat Score</div>
+            <div className="text-sm font-bold text-slate-900">
+              {report ? `${report.avg_threat_score.toFixed(1)} / 100` : "0.0 / 100"}
+            </div>
+          </div>
+          <div className="border border-slate-300 rounded p-2 text-center">
+            <div className="text-[10px] text-slate-500 uppercase">Avg Latency</div>
+            <div className="text-sm font-bold text-slate-900">
+              {report ? `${report.avg_latency_ms.toFixed(2)} ms` : "0.00 ms"}
+            </div>
+          </div>
+        </div>
+
+        {/* Replay Comparison */}
+        {(report?.replay_comparison || replayReport?.replay_comparison) && (
+          <div className="border border-slate-300 rounded p-2.5 mb-4 text-[11px]">
+            <h2 className="font-bold text-slate-900 mb-1">Deterministic Traffic Replay Comparison</h2>
+            {(() => {
+              const comp = report?.replay_comparison || replayReport?.replay_comparison;
+              if (!comp) return null;
+              return (
+                <div className="font-mono text-[10px]">
+                  Replay Of: <span className="font-bold">{comp.replay_of || "recorded"}</span> | Matched:{" "}
+                  <span className="font-bold">
+                    {comp.matched_verdicts}/{comp.total_replayed}
+                  </span>{" "}
+                  ({comp.match_rate_pct.toFixed(1)}%) | Mismatches: {comp.mismatches.length}
+                </div>
+              );
+            })()}
+          </div>
+        )}
+
+        {/* 100-Request Benchmark FP Reconciliation */}
+        {benchmarkResult && (
+          <div className="border border-slate-300 rounded p-2.5 mb-4 text-[11px]">
+            <h2 className="font-bold text-slate-900 mb-1">
+              100-Request Benchmark Corpus FP Reconciliation ({benchmarkResult.dataset} / {benchmarkResult.mode})
+            </h2>
+            <div className="grid grid-cols-4 gap-2 font-mono text-[10px]">
+              <div>
+                Requests: <span className="font-bold">{benchmarkResult.total_requests}</span> (B=
+                {benchmarkResult.benign_count}, A={benchmarkResult.attack_count})
+              </div>
+              <div>
+                TP={benchmarkResult.tp_count}, TN={benchmarkResult.tn_count}, FP={benchmarkResult.fp_count}, FN=
+                {benchmarkResult.fn_count}
+              </div>
+              <div>
+                Op FPR: <span className="font-bold">{benchmarkResult.operational_fpr_pct.toFixed(3)}%</span> (Ref:{" "}
+                {benchmarkResult.reference_operational_fpr_pct.toFixed(3)}%)
+              </div>
+              <div>
+                Matches fp_v3_measurement:{" "}
+                <span className="font-bold">{benchmarkResult.matches_fp_measurement ? "YES" : "NO"}</span> | Avg:{" "}
+                {benchmarkResult.avg_latency_ms.toFixed(2)} ms
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Per-Round Verdict Table */}
+        <div>
+          <h2 className="font-bold text-slate-900 mb-1.5 text-xs">Per-Round Verdict Trace</h2>
+          <table className="w-full border-collapse border border-slate-300 text-[10px] font-mono">
+            <thead className="bg-slate-100">
+              <tr>
+                <th className="border border-slate-300 p-1 text-left">#</th>
+                <th className="border border-slate-300 p-1 text-left">Attack Type</th>
+                <th className="border border-slate-300 p-1 text-left">Endpoint</th>
+                <th className="border border-slate-300 p-1 text-left">Technique</th>
+                <th className="border border-slate-300 p-1 text-left">HTTP</th>
+                <th className="border border-slate-300 p-1 text-left">Decision</th>
+                <th className="border border-slate-300 p-1 text-left">Risk</th>
+                <th className="border border-slate-300 p-1 text-left">R/ML/IF</th>
+                <th className="border border-slate-300 p-1 text-left">Latency</th>
+                <th className="border border-slate-300 p-1 text-left">Rules</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(report?.rounds ?? traceRounds).length > 0 ? (
+                (report?.rounds ?? traceRounds).map((r, idx) => (
+                  <tr key={r.round_num ?? r.round ?? idx} className="break-inside-avoid">
+                    <td className="border border-slate-300 p-1">{r.round_num ?? r.round ?? idx + 1}</td>
+                    <td className="border border-slate-300 p-1">{r.attack_type}</td>
+                    <td className="border border-slate-300 p-1 break-all">
+                      {r.method} {r.target_endpoint || r.endpoint}
+                    </td>
+                    <td className="border border-slate-300 p-1">{r.mutation_technique || r.technique}</td>
+                    <td className="border border-slate-300 p-1">{r.http_status ?? r.response_status}</td>
+                    <td className="border border-slate-300 p-1 font-bold">{r.waf_decision}</td>
+                    <td className="border border-slate-300 p-1">
+                      {(r.waf_threat_score ?? r.threat_score ?? 0).toFixed(1)}
+                    </td>
+                    <td className="border border-slate-300 p-1">
+                      {(r.rule_score ?? 0).toFixed(0)}/{(r.ml_score ?? 0).toFixed(0)}/
+                      {(r.anomaly_score ?? 0).toFixed(0)}
+                    </td>
+                    <td className="border border-slate-300 p-1">{(r.latency_ms ?? 0).toFixed(2)} ms</td>
+                    <td className="border border-slate-300 p-1">
+                      {r.matched_rules && r.matched_rules.length > 0 ? r.matched_rules.join(", ") : "-"}
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={10} className="border border-slate-300 p-2 text-center text-slate-500">
+                    Chưa có vòng đối kháng Pentest nào được ghi nhận.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </>
   );
 }

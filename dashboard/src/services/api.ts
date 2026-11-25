@@ -397,6 +397,7 @@ export interface PentestExportResponse {
       exported_at: string;
       execution_mode: string;
       git_head_sha: string;
+      sha256_reproduce_cmd?: string;
       sha256_digest: string;
     };
     report: PentestReport;
@@ -477,6 +478,77 @@ export async function exportPentestEvidence(
   });
   if (!res.ok) {
     throw new Error(`Failed to export D4 evidence: HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
+export interface BenchmarkReplayParams {
+  dataset?: "csic2010" | "benchmark_1000";
+  sample_count?: number;
+  mode?: "balanced_100" | "benign_100";
+  execution_mode?: "in_process" | "live_http";
+  defense_tier?: "no_waf" | "rules_only" | "hybrid_v3";
+}
+
+export interface BenchmarkVerdictItem {
+  index: number;
+  method: string;
+  path: string;
+  query_params?: string;
+  label: number;
+  attack_type: string;
+  waf_blocked: boolean;
+  waf_decision: string;
+  http_status: number;
+  threat_score: number;
+  latency_ms: number;
+  matched_rules: string[];
+}
+
+export interface BenchmarkReplayResponse {
+  benchmark_id: string;
+  timestamp: string;
+  dataset: string;
+  dataset_path?: string;
+  mode: string;
+  execution_mode: string;
+  defense_tier: string;
+  total_requests: number;
+  benign_count: number;
+  attack_count: number;
+  fp_count: number;
+  tn_count: number;
+  tp_count: number;
+  fn_count: number;
+  blocked_count: number;
+  allowed_count: number;
+  detection_rate_pct: number;
+  operational_fpr_pct: number;
+  reference_operational_fpr_pct: number;
+  matches_fp_measurement: boolean;
+  avg_latency_ms: number;
+  duration_ms?: number;
+  verdicts: BenchmarkVerdictItem[];
+}
+
+export async function triggerBenchmarkReplay(
+  params: BenchmarkReplayParams = {}
+): Promise<BenchmarkReplayResponse> {
+  const apiBase = await getApiBase();
+  const headers = await getAdminHeaders();
+  const res = await fetch(`${apiBase}/api/dashboard/arena/pentest/replay-benchmark`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({
+      dataset: params.dataset || "csic2010",
+      sample_count: params.sample_count ?? 100,
+      mode: params.mode || "balanced_100",
+      execution_mode: params.execution_mode || "in_process",
+      defense_tier: params.defense_tier || "hybrid_v3",
+    }),
+  });
+  if (!res.ok) {
+    throw new Error(`Failed to replay benchmark corpus: HTTP ${res.status}`);
   }
   return res.json();
 }

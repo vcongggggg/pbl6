@@ -129,4 +129,45 @@ Mỗi tầng trong **4-Tier Evolution** ([defense_evolution_tiers_v32.json](file
 2. **Quy trình Demo trực tiếp trên Dashboard (`http://localhost:3000` & `/arena`):**
    - **Đấu Trường AI Live-HTTP (`/arena` — [arena/page.tsx](file:///C:/Study/HocKy6/PBL6/dashboard/src/app/arena/page.tsx)):** Chọn chế độ **`Live HTTP (/api/proxy)`** (mặc định), chọn cấp độ (`1. No WAF` / `2. Rules Only` / `3. Hybrid v3.0`), chọn họ tấn công hoặc nhập `Custom Payload`, tích `Sync -> SOC`, rồi bấm **`Chạy Pentest AI`** -> toàn bộ đòn đánh đi thật qua Reverse Proxy `/api/proxy` (`8/8` blocked/redacted trên Docker demo sạch, xem trực tiếp bảng `Rule / XGBoost 26-D / IForest 26-D`).
    - **Traffic Replay (`POST /pentest/replay`):** Bấm nút **`Replay Traffic`** ngay trên thanh điều khiển `/arena` (hoặc trong `Lịch sử`) để phát lại đúng các HTTP request đã ghi qua Gateway `/api/proxy`; UI hiển thị huy hiệu đối chiếu (`matched=8/8, 100.0%`).
-   - **Export Evidence (D4) (`POST /pentest/export`):** Bấm **`Export Evidence (D4)`** để ghi file bằng chứng bất biến gắn SHA-256 (`docs/reports/history/arena_live_*.json` trên repo hoặc `/app/data/arena_evidence/` trong Docker — đã kiểm chứng `arena_live_20261125_055718_nogit.json`) đồng thời tải xuống máy, khớp bảng đối chiếu **`33/33 VERIFIED PASS`** tại [THESIS_ARTIFACT_RECONCILIATION_MATRIX.md](file:///C:/Study/HocKy6/PBL6/docs/reports/THESIS_ARTIFACT_RECONCILIATION_MATRIX.md).
+   - **Replay 100 Benchmark (`POST /pentest/replay-benchmark`):** Bấm **`Replay 100 Benchmark`** để chạy lại `100` request thật từ `csic_2010_benchmark.csv` (`50` Benign + `50` Attack, `TP=42`, `TN=50`, `FP=0`, `op_fpr_pct=0.0%`) và đối chiếu trực tiếp khớp `0.000%` trong `fp_v3_measurement.json`.
+   - **Export Evidence (D4) & In A4 (`POST /pentest/export`, `window.print()`):** Bấm **`Export Evidence (D4)`** để ghi file bằng chứng bất biến gắn SHA-256 và `git_head_sha` thật (`docs/reports/history/arena_live_*.json` trên repo hoặc `/app/data/arena_evidence/` trong Docker — đã kiểm chứng `arena_live_20261125_064412_ed7e0ef.json`, SHA-256 `ca0ffc73e130f3ec24bdb43356ce4a1aebe2712d59383d180ca392c99d4c9f43`, tái tạo 100% qua `sha256_reproduce_cmd`) đồng thời tải xuống máy, hoặc bấm **`In Báo Cáo A4`**; toàn bộ khớp bảng đối chiếu **`33/33 VERIFIED PASS`** tại [THESIS_ARTIFACT_RECONCILIATION_MATRIX.md](file:///C:/Study/HocKy6/PBL6/docs/reports/THESIS_ARTIFACT_RECONCILIATION_MATRIX.md).
+
+---
+
+## Q9. Tại sao Stage-3 Reward của Dueling Double-DQN lại mang giá trị âm (`-4.33` / `-5.45`), và vì sao việc ép thưởng Stage 3 thành dương sẽ phá hỏng chuẩn căn chỉnh RL (Reward Hacking)?
+
+### 1. Số liệu thực nghiệm xác minh qua các phiên bản
+- **Mô hình hiện hành (`v3.3`, `74-D` state, `36` actions, `800 episodes`, `seed=42`):**
+  - Cửa sổ biên ([pentest_dqn_v2_metadata.json](file:///C:/Study/HocKy6/PBL6/attack-lab/models/pentest_dqn_v2_metadata.json), `[:30]` cho Stage 1 và `[-30:]` cho Stages 2–3): **`Stage 1 = +48.37`** (bypass `86.11%`) -> **`Stage 2 = +29.27`** (bypass `62.22%`) -> **`Stage 3 = -4.33`** (bypass `16.67%`).
+  - Trung bình toàn stage ([pentest_dqn_v2_convergence.json](file:///C:/Study/HocKy6/PBL6/attack-lab/models/pentest_dqn_v2_convergence.json), `stage_metrics_summary`): `Stage 1 = +48.11`, `Stage 2 = +26.39`, **`Stage 3 Hybrid = -5.45`** (bypass `15.83%`), `Stage 4 Live-HTTP Rules-Only (:8056) = -1.33` (bypass `26.17%`), **`Stage 4 Live-HTTP Hybrid (:8055) = -9.34`** (bypass `7.83%`).
+- **Lịch sử đối chiếu `v3.0` (`64-D/26-A`) trong git:**
+  - Bản `360 episodes` (commit `915211e`): `Stage 1 = +58.0`, **`Stage 3 = -6.69`** (bypass `10.56%`).
+  - Bản `600 episodes` (commit `ec43d91`): `Stage 1 = +45.37`, `Stage 2 = +23.27`, **`Stage 3 = -14.32`** (bypass `0.00%`).
+
+### 2. Cơ chế hàm thưởng MDP & bằng chứng hội tụ hành vi né đòn
+Theo hàm `compute_pentest_reward()` ([pentest_env.py](file:///C:/Study/HocKy6/PBL6/attack-lab/environment/pentest_env.py#L357-L394)):
+- Chỉ khi tấn công vượt qua thành công (`2xx`, không bị WAF chặn hay DLP che) tác tử mới nhận thưởng lớn **`+10.0`**.
+- Mọi lần bị chặn **HTTP 403/400** đều chịu phạt ròng `-1.2 + 2.5 * score_drop` (với `score_drop = max(0.0, prev_threat_score - new_threat_score) / 100.0`); bị **Response DLP** che nhận `-1.2`; bị **HTTP 429** nhận `-2.5`; thử lặp lại hành động đã thất bại (`already_tried`) nhận **`-3.0`**.
+- Hành động chuyển mục tiêu thông minh **`pivot_next_endpoint`** (sau `>= 2` lần bị chặn liên tiếp với `prev_threat_score >= 80.0`) nhận **`+2.2`** (ngược lại chuyển bừa bị `-0.6`).
+- Khi đối đầu **Hybrid v3.x** (tỷ lệ chặn **83%–100%** tùy giai đoạn/mô hình), Blue Team thắng áp đảo trong trò chơi tổng bằng không (**zero-sum competition**). Tác tử Red Team vẫn học tối ưu hóa hành vi rất rõ: số lần thử mù lặp lại **`blind_retries` giảm `42.31%`** (từ **`3.90 -> 2.25`** trong `pentest_dqn_v2_convergence.json`, `stage3_avg_stealth_efficiency = 0.4161` cuối Stage 3 và `0.4311` ở Stage 4), nhưng tổng điểm tích lũy theo episode vẫn âm (`-4.33` / `-5.45` / `-9.34`).
+
+### 3. Vì sao tuyệt đối KHÔNG ép Stage-3 Reward thành dương?
+- Như đã khóa rõ trong [train_pentest_dqn.py](file:///C:/Study/HocKy6/PBL6/attack-lab/models/train_pentest_dqn.py#L1026) (`# Interleave legacy_rules & hybrid_v3 without artificially forcing Stage 3 rewards positive`), việc chỉnh hàm thưởng giả tạo (như tăng thưởng pivot lên `+10` hoặc xóa phạt `403/429`) sẽ gây ra **Reward Hacking**: tác tử học cách "cày điểm dương giả" bằng thao tác pivot vô nghĩa thay vì tìm đột biến vượt rào thực sự. Điểm âm ở Stage 3/4 chính là bằng chứng khách quan nhất khẳng định Blue Team Hybrid thực sự chiếm ưu thế trước RL Red Team.
+
+---
+
+## Q10. Vì sao báo cáo lịch sử từng ghi nhận độ trễ E2E `11.74 ms` — con số này có mâu thuẫn với SLA `<= 5.5 ms` hay không?
+
+### 1. Nguồn gốc thực nghiệm của `11.74 ms` (Outlier do máy đang tải / chưa khóa Power Plan)
+- **Phép đo lịch sử trên máy tải nặng / hạ xung (commit `3959319`, `2026-11-24T13:31:45+0700`, 25 rules, chưa ghi nhận chế độ `High performance`):**
+  - Thực thi `3.000` request CSIC qua 2-hop TCP HTTP mất tổng **`36.25s`** (`82.8 RPS`), cho **`mean = 11.74 ms`** (`p50 = 11.06 ms`, `p95 = 15.967 ms`, `p99 = 19.271 ms`).
+- **Chuỗi phép đo chuẩn trên máy rỗi khóa `High performance` (`Intel Core i5-10300H @ 2.50GHz`, cố định `2496.0 MHz`):**
+  - **25 rules không nghẽn (commit `ec43d91`, `2026-11-24T16:39:44+0700`):** **`4.203 ms`** mean (`p50 = 4.043 ms`, `p95 = 5.443 ms`, `p99 = 6.261 ms`, `13.03s`, `230.2 RPS`).
+  - **26 rules `High performance` (commit `2a3969f`, `2026-11-24T23:09:10+0700`, `cpu_load_pct = 0.0%`):** **`3.773 ms`** mean (`p50 = 3.532 ms`, `p95 = 5.298 ms`, `p99 = 7.003 ms`, `255.6 RPS`). *(Lưu ý tránh nhầm đơn vị: trường `wall_clock_seconds = 11.74` ở commit `2a3969f` là tổng thời gian **11.74 giây** chạy hết 3.000 request, KHÔNG phải độ trễ 11.74 ms/request)*.
+  - **Phase E — 28 rules (commit `2285ec2`, `2026-11-25T11:07:40+0700`, `cpu_load_pct = 6.4%`):** **`3.839 ms`** mean (`p50 = 3.584 ms`, `p95 = 5.53 ms`, `p99 = 6.718 ms`, `11.91s`, `252.0 RPS`).
+  - **Phase F hiện hành — 28 rules + Per-Param Max-Pooling ([latency_e2e_v3_csic.json](file:///C:/Study/HocKy6/PBL6/docs/reports/latency_e2e_v3_csic.json), `2026-11-25T12:58:38+0700`):** **`4.138 ms`** mean (`p50 = 3.777 ms`, `p95 = 6.275 ms`, `p99 = 8.058 ms`, `12.84s`, `233.7 RPS`), với độ trễ AI/WAF nội tiến trình đạt **`0.803 ms`** ([ablation_results.json](file:///C:/Study/HocKy6/PBL6/docs/reports/ablation_results.json)).
+
+### 2. Hợp đồng Dual-Tier SLA & cơ chế dung sai Gate 5 trên VM dùng chung
+- Trong [verify_quality_gates.py](file:///C:/Study/HocKy6/PBL6/scripts/verify_quality_gates.py), hệ thống tách bạch rõ hai cấp kiểm soát để không đánh tráo chuẩn Production với nhiễu phần cứng CI/VM:
+  - **SLA Production không tranh chấp (Uncontended Dual-Tier SLA):** **Gate 1** khóa **`mean <= 5.5 ms`** cho toàn trình 2-hop TCP HTTP (`4.138 ms <= 5.5 ms` -> PASS) và **Gate 2** khóa **`mean <= 1.5 ms`** cho bộ lọc AI/WAF inline (`0.803 ms <= 1.5 ms` -> PASS).
+  - **Gate 5 (Shared VM Anti-Degradation Guard):** Cho phép độ trễ tức thời khi chạy trên máy ảo dùng chung / CI có tranh chấp tài nguyên (`E2E <= 15.0 ms / Inline <= 3.5 ms`). Vì vậy, outlier `11.74 ms` ở bản đo tải nặng ban đầu (`3959319`) vẫn nằm trong ngưỡng dung sai VM dùng chung (`<= 15.0 ms`) do Windows hạ xung/tranh chấp CPU, trong khi SLA vận hành chuẩn trên môi trường không bị bóp xung luôn ổn định ở mức `3.773 – 4.203 ms` (`<= 5.5 ms`).

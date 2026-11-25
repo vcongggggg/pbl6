@@ -1,7 +1,7 @@
 # Web API Security Platform & Autonomous Red Teaming (PBL6 — An Toàn Thông Tin)
 
 > **Đề tài:** Phát hiện và ngăn chặn tấn công Web API thông minh bằng Machine Learning kết hợp Thao trường An ninh Đối kháng (Distributed Cyber Range).
-> **Kiến trúc hiện tại:** **Blue Team v2.0** — High-Concurrency Async Reverse Proxy WAF + Multi-Protocol Sniffer (REST / GraphQL / SOAP / JSON-RPC) + OpenAPI Schema Validator + Champion XGBoost v2.0 (Zero-Pickle UBJSON) + Calibrated Isolation Forest v2.0 (Zero-Pickle NPZ) + Real-time SOC Command Center Dashboard.
+> **Kiến trúc hiện tại:** **Blue Team v3.4** — High-Concurrency Async Reverse Proxy WAF + Multi-Protocol Sniffer (REST / GraphQL / SOAP / JSON-RPC) + Route-Tiered OpenAPI Schema Validator + 28 Hardened Rules + 5 OWASP API Guards + Champion XGBoost v2.0 (Zero-Pickle UBJSON, Per-Parameter Max-Pooling) + Calibrated Isolation Forest v2.0 (Zero-Pickle NPZ) + Dual-AI Consensus + Real-time SOC Command Center & Live Arena (`/arena`).
 
 ---
 
@@ -67,12 +67,12 @@ pbl6/
 ├── dashboard/            # Next.js 14 SOC Command Center (Port 3000)
 │   ├── src/              # App router, KPI Cards, Topology, Protocol Pie/Bar, Events Drawer, XAI Modal
 │   └── Dockerfile
-├── ml-engine/            # AI/ML Pipeline v2.0 (Unified 26-D Features, XGBoost UBJSON, Isolation Forest NPZ, Benchmarks)
-├── attack-lab/           # Offensive AI (agent/recon.py, agent/planner.py, environment/, scenarios/)
-├── scripts/              # Dataset builders, profiling suite (run_gateway_profiling.py), ablation benchmarks
+├── ml-engine/            # AI/ML Pipeline (Unified 26-D Features, XGBoost UBJSON, IForest NPZ, Sidecar Health :8001)
+├── attack-lab/           # Offensive AI (agent/recon.py, agent/planner.py, 74-D/36-A Dueling Double-DQN)
+├── scripts/              # Dataset builders, profiling suite (run_gateway_profiling.py), quality gates
 ├── tests/unit/           # Cross-module unit tests
 ├── docs/                 # Tài liệu kiến trúc, đặc tả API/Dashboard, báo cáo hiệu năng & đánh giá khoa học
-├── docker-compose.yml    # Triển khai 3 container hardened (gateway, dashboard, vulnerable-api)
+├── docker-compose.yml    # Triển khai 4 container hardened (vulnerable-api, ml-engine, gateway, dashboard)
 └── README.md
 ```
 
@@ -80,14 +80,15 @@ pbl6/
 
 ## 4. Khởi Chạy Hệ Thống
 
-### A. Khởi chạy bằng Docker Compose (Khuyến nghị)
+### A. Khởi chạy bằng Docker Compose (Khuyến nghị — 1 Lệnh Checkout Sạch)
 ```bash
-# Thiết lập ADMIN_API_KEY trong .env (WAF_MODE mặc định ACTIVE_BLOCKING)
+# Không cần tạo .env trước; tùy chọn đặt ADMIN_API_KEY & DEMO_ADMIN_PASSWORD (tự sinh ngẫu nhiên tạm thời nếu bỏ trống)
 docker compose up --build -d
 ```
 * **WAF Gateway:** [http://localhost:8000](http://localhost:8000)
-* **SOC Dashboard:** [http://localhost:3000](http://localhost:3000)
-* **Bookie Bookstore Target API:** [http://127.0.0.1:5000](http://127.0.0.1:5000) (chỉ lắng nghe loopback để tránh vượt qua WAF)
+* **SOC Dashboard & Live Arena:** [http://localhost:3000](http://localhost:3000) & [http://localhost:3000/arena](http://localhost:3000/arena) (hỗ trợ `Live HTTP (/api/proxy)`, `Replay Traffic`, `Replay 100 Benchmark`, `Export Evidence (D4)` và `In Báo Cáo A4`)
+* **ML Engine Health Sidecar:** [http://127.0.0.1:8001/health](http://127.0.0.1:8001/health) (cô lập loopback, xác thực SHA-256 + 26-D smoke check)
+* **Bookie Bookstore Target API:** [http://127.0.0.1:5000](http://127.0.0.1:5000) (chỉ lắng nghe loopback để tránh vượt qua WAF; tài khoản demo sử dụng `DEMO_ADMIN_PASSWORD` từ runtime env hoặc tự sinh ngẫu nhiên mỗi lần khởi động)
 
 ### B. Vận hành Thao trường Đối kháng 2 Máy (Cyber Range qua LAN)
 1. **Máy 1 (Blue Team):** Khởi chạy Gateway và Dashboard. Xác định IP mạng LAN (ví dụ `192.168.1.15`).
@@ -112,6 +113,6 @@ python -m pytest gateway/tests/ tests/unit/ ml-engine/tests/
 # 3. Kiểm tra Lint, Typecheck & Build Frontend Next.js
 cd dashboard && npm run lint && npx tsc --noEmit && npm run build
 
-# 4. Chạy đo hiệu năng thực tế Blue Team v2.0 (In-Process ASGI >= 150 RPS @ C=50)
+# 4. Chạy đo hiệu năng thực tế Blue Team v3.4 (In-Process ASGI >= 150 RPS @ C=50)
 python scripts/run_gateway_profiling.py --in-process
 ```

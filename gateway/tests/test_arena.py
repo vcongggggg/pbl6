@@ -549,3 +549,132 @@ def test_arena_docker_isolation_without_attack_lab(client: TestClient, monkeypat
         assert data["rounds"][0]["technique"] == "baseline_probe"
 
 
+def test_arena_pentest_replay_benchmark_100_requests(client: TestClient):
+    """F1a: Verifies 100-request benchmark replay matches fp_v3_measurement.json (0.0% operational FPR)."""
+    # 1. balanced_100 on csic2010: 50 benign + 50 attacks = 100 requests
+    res_bal = client.post(
+        "/api/dashboard/arena/pentest/replay-benchmark",
+        json={
+            "dataset": "csic2010",
+            "sample_count": 100,
+            "mode": "balanced_100",
+            "execution_mode": "in_process",
+            "defense_tier": "hybrid_v3",
+        },
+        headers=ADMIN_HEADERS,
+    )
+    assert res_bal.status_code == 200
+    bal = res_bal.json()
+    assert bal["dataset"] == "csic2010"
+    assert bal["mode"] == "balanced_100"
+    assert bal["total_requests"] == 100
+    assert bal["benign_count"] == 50
+    assert bal["attack_count"] == 50
+    assert len(bal["verdicts"]) == 100
+    assert bal["fp_count"] == 0
+    assert bal["tn_count"] == 50
+    assert bal["tp_count"] > 0
+    assert bal["operational_fpr_pct"] == 0.0
+    assert bal["reference_operational_fpr_pct"] == 0.0
+    assert bal["matches_fp_measurement"] is True
+    assert bal["avg_latency_ms"] >= 0.0
+
+    first_v = bal["verdicts"][0]
+    for key in (
+        "index",
+        "method",
+        "path",
+        "label",
+        "attack_type",
+        "waf_blocked",
+        "waf_decision",
+        "http_status",
+        "threat_score",
+        "latency_ms",
+        "matched_rules",
+    ):
+        assert key in first_v
+
+    # 2. benign_100 on csic2010: 100 benign = 100 requests, 0 FP
+    res_ben = client.post(
+        "/api/dashboard/arena/pentest/replay-benchmark",
+        json={
+            "dataset": "csic2010",
+            "sample_count": 100,
+            "mode": "benign_100",
+            "execution_mode": "in_process",
+            "defense_tier": "hybrid_v3",
+        },
+        headers=ADMIN_HEADERS,
+    )
+    assert res_ben.status_code == 200
+    ben = res_ben.json()
+    assert ben["total_requests"] == 100
+    assert ben["benign_count"] == 100
+    assert ben["attack_count"] == 0
+    assert len(ben["verdicts"]) == 100
+    assert ben["fp_count"] == 0
+    assert ben["tn_count"] == 100
+    assert ben["operational_fpr_pct"] == 0.0
+    assert ben["matches_fp_measurement"] is True
+
+
+def test_arena_export_digest_reproducible_and_git_sha(client: TestClient, tmp_path, monkeypatch):
+    """E1: Verifies real 40-char git_head_sha and byte-exact reproducible canonical SHA-256."""
+    import hashlib
+    import json
+    import re
+    from pathlib import Path
+
+    real_repo_root = Path(__file__).resolve().parents[2]
+    expected_sha, _ = arena._get_git_head_sha()
+    assert re.fullmatch(r"[0-9a-fA-F]{40}", expected_sha), f"Expected 40-char git SHA, got {expected_sha!r}"
+
+    # Verify .git/HEAD direct fallback returns same 40-char SHA even if git binary fails
+    monkeypatch.setattr(
+        arena.subprocess,
+        "check_output",
+        lambda *args, **kwargs: (_ for _ in ()).throw(FileNotFoundError("no git")),
+    )
+    monkeypatch.setattr(arena, "_REPO_ROOT", real_repo_root)
+    fallback_sha, _ = arena._get_git_head_sha()
+    assert fallback_sha == expected_sha
+
+    # Redirect artifact writes to tmp_path so repo stays clean
+    monkeypatch.setattr(arena, "_REPO_ROOT", tmp_path)
+    monkeypatch.setattr(arena, "_GATEWAY_ROOT", tmp_path / "gateway")
+    monkeypatch.setenv("GIT_HEAD_SHA", expected_sha)
+
+    run_res = client.post(
+        "/api/dashboard/arena/pentest/run",
+        json={"scope": "sqli", "max_rounds": 2, "defense_tier": "hybrid_v3", "execution_mode": "in_process"},
+        headers=ADMIN_HEADERS,
+    )
+    assert run_res.status_code == 200
+    report = run_res.json()
+
+    exp_res = client.post(
+        "/api/dashboard/arena/pentest/export",
+        json={"battle_id": report["battle_id"], "report": report},
+        headers=ADMIN_HEADERS,
+    )
+    assert exp_res.status_code == 200
+    exp_data = exp_res.json()
+
+    artifact_file = Path(exp_data["artifact_path"])
+    assert artifact_file.is_file()
+    raw_bytes = artifact_file.read_bytes()
+    assert b"\r\n" not in raw_bytes
+
+    loaded = json.loads(raw_bytes.decode("utf-8"))
+    assert loaded["metadata"]["git_head_sha"] == expected_sha
+    assert "sha256_reproduce_cmd" in loaded["metadata"]
+
+    exp_digest = loaded["metadata"].pop("sha256_digest")
+    actual_digest = hashlib.sha256(
+        json.dumps(loaded, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    ).hexdigest()
+    assert exp_digest == exp_data["sha256"]
+    assert actual_digest == exp_digest
+
+

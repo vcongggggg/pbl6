@@ -386,7 +386,7 @@ def run_a1_1_fp_measurement() -> dict[str, Any]:
 
     out = {
         "metadata": {
-            "task_id": "pbl6-v3-fix-round-001 / A1.1",
+            "task_id": "pbl6-v3-4-phase-f-001 / A1.1",
             "measured_at": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
             "active_rules_total": len(all_rules),
             "v3_added_rule_ids": v3_new_rule_ids,
@@ -447,7 +447,7 @@ def run_a1_1_fp_measurement() -> dict[str, Any]:
 
     c3_tuning = {
         "metadata": {
-            "task_id": "pbl6-v3-1-001 / C3 Controlled FP Tuning",
+            "task_id": "pbl6-v3-4-phase-f-001 / C3 Controlled FP Tuning",
             "measured_at": out["metadata"]["measured_at"],
             "tuning_rounds_executed": 2,
             "recall_preservation_verified": True,
@@ -635,7 +635,7 @@ def run_a1_2_http_e2e_latency() -> dict[str, Any]:
 
         out = {
             "metadata": {
-                "task_id": f"pbl6-v3-3-fix-001 / F3 Live {n_active_rules}-Rule Per-Param Pooling E2E",
+                "task_id": f"pbl6-v3-4-phase-f-001 / F3 Live {n_active_rules}-Rule Per-Param Pooling E2E",
                 "measured_at": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
                 "dataset": "csic_2010_benchmark.csv",
                 "total_requests": len(e2e_latencies),
@@ -775,7 +775,7 @@ def run_a1_3_disjoint_hashes() -> dict[str, Any]:
     all_zero = all(v == 0 for v in intersections.values())
     out = {
         "metadata": {
-            "task_id": "pbl6-v3-3-fix-001 (A1.3 / D3 / E4)",
+            "task_id": "pbl6-v3-4-phase-f-001 (A1.3 / D3 / E4)",
             "measured_at": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
             "hash_protocol": "SHA-256(canonicalize_payload(canonicalize_http_request(path, query_params, body, headers=None)))",
             "defense_v2_total_rows": d2_total_rows,

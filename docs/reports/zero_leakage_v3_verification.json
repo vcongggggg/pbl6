@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "task_id": "pbl6-v3-3-fix-001 (A1.3 / D3 / E4)",
+    "task_id": "pbl6-v3-4-phase-f-001 (A1.3 / D3 / E4)",
     "measured_at": "2026-11-25T11:06:26+0700",
     "hash_protocol": "SHA-256(canonicalize_payload(canonicalize_http_request(path, query_params, body, headers=None)))",
     "defense_v2_total_rows": 47372,

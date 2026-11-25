@@ -22,12 +22,12 @@
 
 ## 2. CHECKLIST CHUẨN BỊ TRƯỚC GIỜ BẢO VỆ (5 PHÚT TRƯỚC KHI LÊN BẢNG)
 
-1. **Khởi động 3 dịch vụ (chọn 1 trong 2 cách):**
+1. **Khởi động cụm dịch vụ (chọn 1 trong 2 cách):**
    - **Cách A — Chạy trực tiếp trên Windows (nhanh nhất, không cần Docker Desktop):**
      ```bash
      python scripts/start_all_services.py --start --prod
      ```
-   - **Cách B — Chạy bằng Docker Compose (3 container non-root hardened):**
+   - **Cách B — Chạy bằng Docker Compose (4 container non-root hardened: `vulnerable-api`, `ml-engine`, `gateway`, `dashboard`):**
      ```bash
      docker compose up --build -d
      docker compose ps

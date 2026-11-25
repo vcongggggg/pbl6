@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "task_id": "pbl6-v3-3-fix-001 / F3 Live 28-Rule Per-Param Pooling E2E",
+    "task_id": "pbl6-v3-4-phase-f-001 / F3 Live 28-Rule Per-Param Pooling E2E",
     "measured_at": "2026-11-25T12:58:38+0700",
     "dataset": "csic_2010_benchmark.csv",
     "total_requests": 3000,
