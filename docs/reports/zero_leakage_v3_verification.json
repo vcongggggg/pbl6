@@ -1,13 +1,13 @@
 {
   "metadata": {
     "task_id": "pbl6-v3-4-phase-f-001 (A1.3 / D3 / E4)",
-    "measured_at": "2026-11-25T11:06:26+0700",
+    "measured_at": "2026-11-25T15:27:06+0700",
     "hash_protocol": "SHA-256(canonicalize_payload(canonicalize_http_request(path, query_params, body, headers=None)))",
     "defense_v2_total_rows": 47372,
-    "history_snapshot": "docs/reports/history/zero_leakage_v3_verification_20261125_110742_ce36bb2.json",
-    "git_base_sha": "ce36bb2396d37f7fede33fdc867d2587ccbb0619",
-    "last_pointer_update": "2026-11-25T11:07:42.237699",
-    "cpu_load_pct": 18.4
+    "history_snapshot": "docs/reports/history/zero_leakage_v3_verification_20261125_152722_8838c47.json",
+    "git_base_sha": "8838c47f884cd48242509b1ab3a91f6e8475c4f3",
+    "last_pointer_update": "2026-11-25T15:27:22.613055",
+    "cpu_load_pct": 0.0
   },
   "datasets": {
     "defense_v2_train": {

@@ -1,17 +1,17 @@
 {
   "metadata": {
     "task_id": "pbl6-v3-4-phase-f-001 / F3 Live 28-Rule Per-Param Pooling E2E",
-    "measured_at": "2026-11-25T12:58:38+0700",
+    "measured_at": "2026-11-25T15:26:59+0700",
     "dataset": "csic_2010_benchmark.csv",
     "total_requests": 3000,
     "transport": "Real TCP HTTP/1.1 Keep-Alive (httpx.Client -> uvicorn WAF Gateway :8055 -> uvicorn ASGI Upstream :5055)",
     "waf_mode": "ACTIVE_BLOCKING (Full v3.3: InputNormalizer + 28 Rules + 5 OWASP API Guards + Per-Param Max-Pooling XGBoost 26-D + IForest 26-D + Dual-AI Consensus + Route-Tiered Schema + Response DLP + Background SQLite WAL)",
-    "wall_clock_seconds": 12.84,
-    "sequential_rps": 233.7,
-    "history_snapshot": "docs/reports/history/latency_e2e_v3_csic_20261125_125839_85b59fc.json",
-    "git_base_sha": "85b59fcd615d5526c9764bbfa5f7f696aad684c7",
-    "cpu_load_pct": 6.2,
-    "last_pointer_update": "2026-11-25T12:58:39.243019",
+    "wall_clock_seconds": 11.77,
+    "sequential_rps": 254.9,
+    "history_snapshot": "docs/reports/history/latency_e2e_v3_csic_20261125_152722_8838c47.json",
+    "git_base_sha": "8838c47f884cd48242509b1ab3a91f6e8475c4f3",
+    "cpu_load_pct": 0.0,
+    "last_pointer_update": "2026-11-25T15:27:22.503220",
     "host_power_telemetry": {
       "platform": "win32",
       "cpu_model": "Intel(R) Core(TM) i5-10300H CPU @ 2.50GHz",
@@ -22,12 +22,12 @@
     }
   },
   "http_e2e_latency_ms": {
-    "mean_ms": 4.138,
-    "p50_ms": 3.777,
-    "p95_ms": 6.275,
-    "p99_ms": 8.058,
-    "benign_forwarded_mean_ms": 4.009,
-    "attack_mean_ms": 4.267
+    "mean_ms": 3.792,
+    "p50_ms": 3.571,
+    "p95_ms": 5.329,
+    "p99_ms": 6.007,
+    "benign_forwarded_mean_ms": 3.675,
+    "attack_mean_ms": 3.909
   },
   "http_status_distribution": {
     "200": 2754,
@@ -38,7 +38,7 @@
     "meets_2_5ms_target": false,
     "dual_tier_e2e_sla_ms": 5.5,
     "meets_5_5ms_dual_tier_sla": true,
-    "inline_v33_ablation_mean_ms": 0.803,
-    "conclusion": "In-process single-pass Hybrid v3.3 inspection measures 0.803 ms mean (<= 1.5 ms inline SLA), whereas full 2-hop TCP HTTP reverse-proxy round-trip (Client -> Uvicorn WAF -> Uvicorn Upstream + async threadpool hop + SQLite WAL commit) measures 4.138 ms mean (p50=3.777 ms, p95=6.275 ms). Verified against dual-tier SLA: <= 1.5 ms inline WAF engine budget and <= 5.5 ms full HTTP 2-hop proxy E2E."
+    "inline_v33_ablation_mean_ms": 0.716,
+    "conclusion": "In-process single-pass Hybrid v3.3 inspection measures 0.716 ms mean (<= 1.5 ms inline SLA), whereas full 2-hop TCP HTTP reverse-proxy round-trip (Client -> Uvicorn WAF -> Uvicorn Upstream + async threadpool hop + SQLite WAL commit) measures 3.792 ms mean (p50=3.571 ms, p95=5.329 ms). Verified against dual-tier SLA: <= 1.5 ms inline WAF engine budget and <= 5.5 ms full HTTP 2-hop proxy E2E."
   }
 }

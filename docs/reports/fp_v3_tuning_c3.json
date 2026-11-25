@@ -1,15 +1,15 @@
 {
   "metadata": {
     "task_id": "pbl6-v3-4-phase-f-001 / C3 Controlled FP Tuning",
-    "measured_at": "2026-11-25T12:37:33+0700",
+    "measured_at": "2026-11-25T15:26:35+0700",
     "tuning_rounds_executed": 2,
     "recall_preservation_verified": true,
     "schema_validation_enabled_default": true,
     "schema_enforcement_policy_default": "route_tiered",
-    "history_snapshot": "docs/reports/history/fp_v3_tuning_c3_20261125_123734_85b59fc.json",
-    "git_base_sha": "85b59fcd615d5526c9764bbfa5f7f696aad684c7",
-    "cpu_load_pct": 12.0,
-    "last_pointer_update": "2026-11-25T12:37:34.640396"
+    "history_snapshot": "docs/reports/history/fp_v3_tuning_c3_20261125_153451_8838c47.json",
+    "git_base_sha": "8838c47f884cd48242509b1ab3a91f6e8475c4f3",
+    "cpu_load_pct": 12.5,
+    "last_pointer_update": "2026-11-25T15:34:52.115879"
   },
   "rest_corpus_strict_fp_breakdown": {
     "corpus": "bookie_and_rest_api_benign",
