@@ -24,7 +24,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -e gateway/
-          pip install pytest pytest-asyncio pytest-cov respx ruff joblib numpy scikit-learn pandas xgboost
+          pip install pytest pytest-asyncio pytest-cov respx ruff joblib numpy scikit-learn pandas xgboost python-docx python-pptx
 
       - name: Run Ruff Linter (Full Codebase)
         run: |
