@@ -1785,14 +1785,41 @@ def _lookup_recorded_battle(battle_id: str | None) -> dict[str, Any] | None:
     return _BATTLE_HISTORY[0] if _BATTLE_HISTORY else None
 
 
+def _resolve_git_dirs(repo_root: Path) -> tuple[Path, Path | None]:
+    """Resolves (git_dir, common_git_dir) for both normal repos and linked git worktrees."""
+    dot_git = repo_root / ".git"
+    if dot_git.is_dir():
+        return dot_git, dot_git
+    if dot_git.is_file():
+        lines = dot_git.read_text(encoding="utf-8", errors="replace").splitlines()
+        for line in lines:
+            stripped = line.strip()
+            if stripped.lower().startswith("gitdir:"):
+                raw_target = stripped.split(":", 1)[1].strip()
+                git_dir = Path(raw_target)
+                if not git_dir.is_absolute():
+                    git_dir = (repo_root / git_dir).resolve()
+                common_dir: Path | None = None
+                common_file = git_dir / "commondir"
+                if common_file.is_file():
+                    raw_common = common_file.read_text(encoding="utf-8", errors="replace").strip()
+                    if raw_common:
+                        cand = Path(raw_common)
+                        common_dir = cand if cand.is_absolute() else (git_dir / cand).resolve()
+                if common_dir is None and git_dir.parent.name == "worktrees":
+                    common_dir = git_dir.parent.parent
+                return git_dir, common_dir
+    return dot_git, None
+
+
 def _get_git_head_sha() -> tuple[str, str]:
-    """Returns (full_sha, short_sha) safely even inside minimal containers without git."""
+    """Returns (full_sha, short_sha) safely even inside minimal containers or git worktrees."""
     env_sha = (os.environ.get("GIT_HEAD_SHA") or os.environ.get("GIT_SHA") or "").strip()
     if env_sha:
         return env_sha, env_sha[:7]
     try:
         full_sha = subprocess.check_output(
-            ["git", "rev-parse", "HEAD"],
+            ["git", "-C", str(_REPO_ROOT), "rev-parse", "HEAD"],
             cwd=str(_REPO_ROOT),
             stderr=subprocess.DEVNULL,
             timeout=1.5,
@@ -1802,27 +1829,32 @@ def _get_git_head_sha() -> tuple[str, str]:
             return full_sha, full_sha[:7]
     except Exception:
         pass
-    # Fallback: resolve .git/HEAD directly when git binary is unavailable
+    # Fallback: resolve .git/HEAD (or linked worktree .git gitdir + commondir) when git binary is unavailable
     try:
-        git_dir = _REPO_ROOT / ".git"
+        git_dir, common_dir = _resolve_git_dirs(_REPO_ROOT)
         head_file = git_dir / "HEAD"
+        if not head_file.is_file() and common_dir is not None:
+            head_file = common_dir / "HEAD"
         if head_file.is_file():
             head_text = head_file.read_text(encoding="utf-8").strip()
             if head_text.startswith("ref:"):
                 ref_rel = head_text.split(":", 1)[1].strip()
-                ref_file = git_dir / ref_rel
-                if ref_file.is_file():
-                    ref_sha = ref_file.read_text(encoding="utf-8").strip()
-                    if ref_sha:
-                        return ref_sha, ref_sha[:7]
-                packed_refs = git_dir / "packed-refs"
-                if packed_refs.is_file():
-                    for line in packed_refs.read_text(encoding="utf-8").splitlines():
-                        if line.startswith("#") or line.startswith("^") or " " not in line:
-                            continue
-                        sha_part, ref_name = line.split(" ", 1)
-                        if ref_name.strip() == ref_rel and sha_part.strip():
-                            return sha_part.strip(), sha_part.strip()[:7]
+                search_dirs = [d for d in (git_dir, common_dir) if d is not None]
+                for search_dir in search_dirs:
+                    ref_file = search_dir / ref_rel
+                    if ref_file.is_file():
+                        ref_sha = ref_file.read_text(encoding="utf-8").strip()
+                        if ref_sha:
+                            return ref_sha, ref_sha[:7]
+                for search_dir in search_dirs:
+                    packed_refs = search_dir / "packed-refs"
+                    if packed_refs.is_file():
+                        for line in packed_refs.read_text(encoding="utf-8").splitlines():
+                            if line.startswith("#") or line.startswith("^") or " " not in line:
+                                continue
+                            sha_part, ref_name = line.split(" ", 1)
+                            if ref_name.strip() == ref_rel and sha_part.strip():
+                                return sha_part.strip(), sha_part.strip()[:7]
             elif re.fullmatch(r"[0-9a-fA-F]{40}", head_text):
                 return head_text, head_text[:7]
     except Exception:

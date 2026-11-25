@@ -640,6 +640,23 @@ def test_arena_export_digest_reproducible_and_git_sha(client: TestClient, tmp_pa
     fallback_sha, _ = arena._get_git_head_sha()
     assert fallback_sha == expected_sha
 
+    # Verify linked git worktree (.git file with gitdir + commondir) resolves cleanly without git binary
+    wt_root = tmp_path / "linked_worktree"
+    wt_root.mkdir()
+    common_git = tmp_path / "main_repo_git"
+    wt_git = common_git / "worktrees" / "audit-wt"
+    (common_git / "refs" / "heads").mkdir(parents=True)
+    wt_git.mkdir(parents=True)
+    (wt_root / ".git").write_text(f"gitdir: {wt_git}\n", encoding="utf-8")
+    (wt_git / "HEAD").write_text("ref: refs/heads/feat/test-wt\n", encoding="utf-8")
+    (wt_git / "commondir").write_text("../..\n", encoding="utf-8")
+    (common_git / "refs" / "heads" / "feat" / "test-wt").parent.mkdir(parents=True, exist_ok=True)
+    (common_git / "refs" / "heads" / "feat" / "test-wt").write_text(f"{expected_sha}\n", encoding="utf-8")
+    monkeypatch.setattr(arena, "_REPO_ROOT", wt_root)
+    wt_fallback_sha, wt_short = arena._get_git_head_sha()
+    assert wt_fallback_sha == expected_sha
+    assert wt_short == expected_sha[:7]
+
     # Redirect artifact writes to tmp_path so repo stays clean
     monkeypatch.setattr(arena, "_REPO_ROOT", tmp_path)
     monkeypatch.setattr(arena, "_GATEWAY_ROOT", tmp_path / "gateway")
