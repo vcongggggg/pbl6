@@ -6,27 +6,24 @@
 
 ## CHECKLIST 1: KHỞI ĐỘNG 1 LỆNH DOCKER COMPOSE & KIỂM TRA CÔ LẬP
 
-1. **Chuẩn bị biến môi trường (nếu máy chưa có `.env`):**
-   ```powershell
-   Copy-Item .env.example .env
-   ```
-2. **Build và khởi chạy cụm 3 container:**
+1. **Khởi chạy 1 lệnh ngay từ bản checkout sạch (KHÔNG bắt buộc copy `.env`, mặc định fallback an toàn):**
    ```powershell
    docker compose up --build -d
    docker compose ps
    ```
-   - [ ] Cả 3 container **`pbl6-vulnerable-api`**, **`pbl6-gateway`**, **`pbl6-dashboard`** ở trạng thái `Up (healthy)`.
-3. **Kiểm tra tách biệt `./attack-lab`, Non-Root UID 1001 & khóa API:**
+   - [ ] Cả **4 container** **`pbl6-vulnerable-api`**, **`pbl6-ml-engine`**, **`pbl6-gateway`**, **`pbl6-dashboard`** ở trạng thái `Up (healthy)` (`docker compose ps`).
+   - [ ] `curl.exe -s http://127.0.0.1:8001/health` trả về `"status": "ok"`, `"sha256_verified": true`; `curl.exe -s http://127.0.0.1:8000/health` trả về `"ml_status": "available"`.
+2. **Kiểm tra tách biệt `./attack-lab`, Non-Root UID 1001 & khóa API:**
    ```powershell
    docker inspect pbl6-gateway --format "{{json .Mounts}}"
    docker exec pbl6-gateway id
    docker exec pbl6-dashboard id
    curl -i http://localhost:8000/dashboard/stats
    ```
-   - [ ] Danh sách mount của `pbl6-gateway` **chỉ gồm** `./data`, `./ml-engine/artifacts` (`ro`), `./ml-engine/features` (`ro`) — **tuyệt đối KHÔNG có `./attack-lab`**.
-   - [ ] `pbl6-gateway` chạy dưới `uid=1001(appuser)`, `pbl6-dashboard` chạy dưới `uid=1001(nextjs)`.
+   - [ ] Danh sách mount của `pbl6-gateway` **chỉ gồm** `./data`, `./ml-engine/artifacts` (`ro`), `./ml-engine/features` (`ro`) — **tuyệt đối KHÔNG có `./attack-lab`** (`docker exec pbl6-gateway ls /app` không chứa `attack-lab`).
+   - [ ] `pbl6-gateway`, `pbl6-ml-engine`, `pbl6-vulnerable-api` chạy dưới `uid=1001(appuser)`, `pbl6-dashboard` chạy dưới `uid=1001(nextjs)`.
    - [ ] `http://localhost:8000/dashboard/stats` không kèm `X-API-Key` trả về **`HTTP 401 Unauthorized`**.
-   - [ ] Cổng `5000` của Bookie chỉ bind loopback `127.0.0.1:5000:5000` (kiểm tra `docker compose ps`).
+   - [ ] Cổng `5000` (Bookie) và `8001` (`ml-engine`) chỉ bind loopback `127.0.0.1` (chặn bypass WAF từ LAN).
 
 ---
 
@@ -40,20 +37,15 @@
    - [ ] Bấm **`Inspect`** trên một sự kiện bị chặn -> mở **Payload Evidence Drawer** -> chuyển sang tab **`26-Feature Vector`** xác nhận 26 giá trị số học thật hiển thị đầy đủ (không có `NaN` hay mảng rỗng).
    - [ ] Bấm **`Explain`** -> mở **DetectionExplainabilityModal** kiểm tra điểm phân rã `Rule (40%) + Supervised ML (35%) + Isolation Forest (25%)`.
 
-2. **Kiểm tra Live Arena (`/arena` -> tab `Red Team Pentest AI`):**
-   - [ ] Chọn cấp độ **`3. Hybrid v3.0`**, tích chọn **`Sync -> SOC`**, giữ Target `http://127.0.0.1:5000` và bấm **`Chạy Pentest AI`**.
-   - [ ] Thanh 5 pha chạy mượt (`1. Recon (OpenAPI) -> 2. Attack Graph -> 3. Baseline Probe -> 4. DQN Mutate & Pivot -> 5. Verdict & SOC`).
-   - [ ] Chọn từng vòng trong **SSE Pentest Trace**: cột phải hiển thị **`Trained Action Q(s, a) Ranking`**, `InputNormalizer Canonical Output` và 3 ô điểm **`Rule / API`**, **`XGBoost 26-D`**, **`IForest 26-D`**.
-   - [ ] Kiểm tra luồng **Live HTTP `/api/proxy`** (thực hiện Replay cùng payload qua Reverse Proxy):
-     ```powershell
-     # Kiểm chứng Arena ở chế độ execution_mode="live_http" qua Next.js BFF (hoặc gửi trực tiếp qua /api/proxy):
-     curl -i "http://localhost:8000/api/proxy/api/v1/vulnerable/books/search/?q=1%27%20OR%201%3D1--"
-     ```
-     - [ ] Phản hồi trả về **`HTTP 403 Forbidden`** (RFC 7807) và ghi sự kiện khớp **100% verdict** với vòng tương ứng trên **Live Security Events Table** (`http://localhost:3000/`).
+2. **Kiểm tra Live Arena, Traffic Replay & Custom Payload (`/arena`):**
+   - [ ] Xác nhận nút chế độ đang chọn **`Live HTTP (/api/proxy)`**, chọn cấp độ **`3. Hybrid v3.0`**, chọn phạm vi (`Full Pentest 8/8` hoặc từng họ tấn công + nhập `Custom Payload` nếu muốn thử tay) và bấm **`Chạy Pentest AI`**.
+   - [ ] Thanh 5 pha chạy mượt (`1. Recon -> 2. Attack Graph -> 3. Baseline Probe -> 4. DQN Mutate & Pivot -> 5. Verdict & SOC`); kết quả Live HTTP hiển thị **`8/8`** chặn/redacted DLP (hoặc 100% đúng với rule/ML thực tế).
+   - [ ] Chọn từng vòng trong **SSE Pentest Trace**: cột phải hiển thị **`Trained Action Q(s, a) Ranking`**, `InputNormalizer Canonical Output`, `Chữ ký & Lá chắn kích hoạt` (`matched_rules`) và 3 ô điểm **`Rule / API`**, **`XGBoost 26-D`**, **`IForest 26-D`**.
+   - [ ] Bấm **`Replay Traffic`** ngay trên thanh điều khiển (hoặc trong drawer `Lịch sử`): xác nhận banner hiển thị tỷ lệ khớp **`8/8 (100.0%)`**.
 
 3. **Kiểm tra Export Evidence & D4 Snapshots:**
-   - [ ] Trên **Live Security Events Table**, bấm **`Export JSON`** -> trình duyệt tải xuống tệp `security_events_*.json` mở được bằng JSON viewer.
-   - [ ] Trong **DetectionExplainabilityModal**, bấm **`Export Full Explainability JSON`** -> xác nhận có đủ `layers`, `threat_intelligence` (CWE/CAPEC/MITRE) và `evidence` (`raw_input` vs `canonical_input`).
+   - [ ] Trên `/arena`, bấm **`Export Evidence (D4)`**: trình duyệt tải xuống tệp `arena_live_*.json` kèm thông báo đường dẫn D4 bất biến (`docs/reports/history/` hoặc `/app/data/arena_evidence/` trong Docker) và mã `SHA-256`.
+   - [ ] Trên **Live Security Events Table** (`/`), bấm **`Export JSON`** hoặc trong **DetectionExplainabilityModal** bấm **`Export Full Explainability JSON`** để kiểm tra tệp JSON đầy đủ `layers`, `threat_intelligence`, `evidence`.
    - [ ] Kiểm tra thư mục bằng chứng D4 đã commit tại [docs/reports/history/](file:///C:/Study/HocKy6/PBL6/docs/reports/history) và xác nhận [THESIS_ARTIFACT_RECONCILIATION_MATRIX.md](file:///C:/Study/HocKy6/PBL6/docs/reports/THESIS_ARTIFACT_RECONCILIATION_MATRIX.md) ghi **`33/33 VERIFIED PASS`**.
 
 ---
