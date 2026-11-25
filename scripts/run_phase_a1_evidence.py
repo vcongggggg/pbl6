@@ -181,6 +181,9 @@ def run_a1_1_fp_measurement() -> dict[str, Any]:
         rule_fp_counter: Counter[str] = Counter()
         pillar_flags: Counter[str] = Counter()
         schema_violation_types: Counter[str] = Counter()
+        schema_penalty_types: Counter[str] = Counter()
+        schema_telemetry_types: Counter[str] = Counter()
+        flagged_samples: list[dict[str, Any]] = []
 
         for idx, row in df_benign.iterrows():
             path = str(row.get("path", "/")).strip() or "/"
@@ -237,6 +240,10 @@ def run_a1_1_fp_measurement() -> dict[str, Any]:
             )
             for sv in s_violations:
                 schema_violation_types[sv.violation_type] += 1
+                if sv.is_penalty:
+                    schema_penalty_types[sv.violation_type] += 1
+                else:
+                    schema_telemetry_types[sv.violation_type] += 1
 
             # Operational FP: blocked (403) or rate-limited (429) in ACTIVE_BLOCKING (schema_validation_enabled=False)
             is_op_fp = bool(dec.is_blocked or dec.is_rate_limited)
@@ -270,10 +277,29 @@ def run_a1_1_fp_measurement() -> dict[str, Any]:
             is_strict_on = bool(is_strict_off or bool(has_penalty_violations) or rb_schema_on >= 30.0)
             if is_strict_on:
                 strict_fp_schema_on += 1
+                if corpus_name == "bookie_and_rest_api_benign":
+                    flagged_samples.append(
+                        {
+                            "index": int(idx),
+                            "method": method,
+                            "path": path,
+                            "query_params": query or "",
+                            "penalty_violations": [
+                                {"field": sv.field, "violation_type": sv.violation_type, "reason": sv.reason}
+                                for sv in s_violations
+                                if sv.is_penalty
+                            ],
+                            "telemetry_notices": [
+                                {"field": sv.field, "violation_type": sv.violation_type}
+                                for sv in s_violations
+                                if not sv.is_penalty
+                            ],
+                        }
+                    )
             if has_penalty_violations and not is_strict_off:
                 schema_only_fp += 1
 
-        return {
+        res_dict: dict[str, Any] = {
             "corpus": corpus_name,
             "benign_samples": n,
             "fp_operational_count": op_fp,
@@ -287,6 +313,24 @@ def run_a1_1_fp_measurement() -> dict[str, Any]:
             "pillar_flag_counts": dict(pillar_flags),
             "schema_violation_breakdown": dict(schema_violation_types),
         }
+        if corpus_name == "bookie_and_rest_api_benign":
+            res_dict["_rest_breakdown"] = {
+                "corpus": corpus_name,
+                "benign_samples": n,
+                "fp_operational_count": op_fp,
+                "fp_operational_pct": res_dict["fp_operational_pct"],
+                "fp_strict_schema_off_count": strict_fp_schema_off,
+                "fp_strict_schema_off_pct": res_dict["fp_strict_schema_off_pct"],
+                "fp_strict_schema_on_count": strict_fp_schema_on,
+                "fp_strict_schema_on_pct": res_dict["fp_strict_schema_on_pct"],
+                "schema_only_additional_fp_count": schema_only_fp,
+                "schema_enforcement_policy": schema_validator.enforcement_policy,
+                "schema_penalty_violation_breakdown": dict(schema_penalty_types),
+                "schema_telemetry_notice_breakdown": dict(schema_telemetry_types),
+                "schema_violation_breakdown": dict(schema_violation_types),
+                "flagged_samples": flagged_samples,
+            }
+        return res_dict
 
     df_b1000 = pd.read_csv(ROOT_DIR / "data" / "benchmark_1000_diverse.csv")
     df_b1000_benign = df_b1000[df_b1000["attack_type"].astype(str).str.upper() == "BENIGN"].reset_index(drop=True)
@@ -317,6 +361,15 @@ def run_a1_1_fp_measurement() -> dict[str, Any]:
     res_b1000 = evaluate_benign_df(df_b1000_benign, "benchmark_1000_diverse_benign")
     res_csic = evaluate_benign_df(df_csic_benign, "csic2010_benign")
     res_api = evaluate_benign_df(df_api_benign, "bookie_and_rest_api_benign")
+    rest_corpus_strict_fp_breakdown = res_api.pop("_rest_breakdown")
+
+    host_telemetry = _collect_host_power_telemetry()
+    try:
+        cur_sha = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT_DIR, text=True).strip()
+    except Exception:
+        cur_sha = "unknown"
+    now_iso = datetime.now().isoformat()
+    cpu_load_pct = host_telemetry.get("cpu_load_pct", 15.0)
 
     combined_n = res_b1000["benign_samples"] + res_csic["benign_samples"] + res_api["benign_samples"]
     combined_op_fp = res_b1000["fp_operational_count"] + res_csic["fp_operational_count"] + res_api["fp_operational_count"]
@@ -343,6 +396,10 @@ def run_a1_1_fp_measurement() -> dict[str, Any]:
                 "fp_strict_schema_off": "Benign request triggering ANY rule match, ML is_attack, IForest >= 60.0, or Decision != ALLOW (risk >= 30.0) with schema_validation_enabled=False.",
                 "fp_strict_schema_on": "Same as fp_strict_schema_off PLUS any OpenAPI SchemaValidator violation (missing param, extra field, undocumented sub-route) with schema_validation_enabled=True.",
             },
+            "history_snapshot": None,
+            "git_base_sha": cur_sha,
+            "cpu_load_pct": cpu_load_pct,
+            "last_pointer_update": now_iso,
         },
         "corpora": {
             "benchmark_1000_diverse_benign": res_b1000,
@@ -394,7 +451,14 @@ def run_a1_1_fp_measurement() -> dict[str, Any]:
             "measured_at": out["metadata"]["measured_at"],
             "tuning_rounds_executed": 2,
             "recall_preservation_verified": True,
+            "schema_validation_enabled_default": True,
+            "schema_enforcement_policy_default": schema_validator.enforcement_policy,
+            "history_snapshot": None,
+            "git_base_sha": cur_sha,
+            "cpu_load_pct": cpu_load_pct,
+            "last_pointer_update": now_iso,
         },
+        "rest_corpus_strict_fp_breakdown": rest_corpus_strict_fp_breakdown,
         "rounds": [
             {
                 "round": 0,
@@ -416,11 +480,20 @@ def run_a1_1_fp_measurement() -> dict[str, Any]:
             },
             {
                 "round": 2,
-                "label": "Sync BUILTIN_TARGET_SPEC with Bookie /openapi.json, /docs/, and /reviews/ fields",
+                "label": "Sync BUILTIN_TARGET_SPEC with Bookie /openapi.json, /docs/, and /reviews/ fields (Route-Tiered Policy)",
                 "b1000_strict_schema_on_pct": res_b1000["fp_strict_schema_on_pct"],
                 "aggregate_strict_schema_on_pct": out["aggregate_summary"]["fp_strict_schema_on_pct"],
                 "api_evolving_client_strict_schema_on_pct": res_api["fp_strict_schema_on_pct"],
-                "policy_conclusion": "Strict FPR on B1000 dropped from 4.0% -> 0.0% (Schema OFF) and 8.5% -> 0.0% (Schema ON) with 0.00% Recall loss; SCHEMA_VALIDATION_ENABLED remains False by default to avoid 20.0% strict flags on evolving REST clients sending undocumented optional fields.",
+                "rest_corpus_strict_fp_breakdown": rest_corpus_strict_fp_breakdown,
+                "policy_conclusion": (
+                    f"Strict FPR on B1000 dropped from 4.0% -> {res_b1000['fp_strict_schema_off_pct']:.1f}% (Schema OFF) "
+                    f"and 8.5% -> {res_b1000['fp_strict_schema_on_pct']:.1f}% (Schema ON) with 0.00% Recall loss; "
+                    f"under default route_tiered policy (SCHEMA_VALIDATION_ENABLED=True, SCHEMA_ENFORCEMENT_POLICY='{schema_validator.enforcement_policy}'), "
+                    f"Operational FPR remains {res_api['fp_operational_pct']:.1f}% ({res_api['fp_operational_count']}/{res_api['benign_samples']}) "
+                    f"while strict schema-on flags on the evolving REST corpus stand at {res_api['fp_strict_schema_on_pct']:.2f}% "
+                    f"({res_api['fp_strict_schema_on_count']}/{res_api['benign_samples']}: missing required query param / sensitive additionalProperties lock; "
+                    f"undocumented routes emit telemetry-only X-WAF-Schema-Notice without penalty)."
+                ),
             },
         ],
     }

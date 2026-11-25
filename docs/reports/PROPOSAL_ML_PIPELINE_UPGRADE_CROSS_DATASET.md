@@ -7,6 +7,8 @@
 > **Căn cứ thực nghiệm:** Báo cáo kiểm định chéo CSIC 2010 (`csic2010_benchmark_results.json`)  
 > **Tiêu chuẩn tham chiếu:** NIST SP 800-115, ISO/IEC 27004, Google MLOps Best Practices  
 
+> **Lưu ý trạng thái lịch sử:** Tài liệu này là đề xuất thiết kế nâng cấp từ `v1.0` lên `v2.0` (đã hoàn thành và được mở rộng tiếp lên **Blue Team v3.3** với `47.372` mẫu `defense_v2` Zero-Leakage, `28` Hardened Rules, Per-Parameter Max-Pooling, CSIC Two-Tier Group A `100.00% (221/221)` @ `0.00%` FPR, và `/tienda1` Schema `71.47%` Overall — xem [CHUONG_4_THUC_NGHIEM_DANH_GIA.md](file:///C:/Study/HocKy6/PBL6/docs/reports/CHUONG_4_THUC_NGHIEM_DANH_GIA.md) và [DEFENSE_QA_HANDBOOK.md](file:///C:/Study/HocKy6/PBL6/docs/reports/DEFENSE_QA_HANDBOOK.md)).
+
 ---
 
 ## 1. TỔNG QUAN: HOÀN TOÀN KHẢ THI VÀ LÀ BƯỚC ĐI ĐẮT GIÁ VỀ HỌC THUẬT!

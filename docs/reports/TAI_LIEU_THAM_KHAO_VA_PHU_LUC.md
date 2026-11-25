@@ -48,13 +48,13 @@
 | **BFF** | Backend-For-Frontend | Tầng proxy phía máy chủ Next.js (`/api/gateway/*`) chèn `X-API-Key` an toàn, không lộ secret ra trình duyệt. |
 | **BOLA / IDOR** | Broken Object Level Authorization | Lỗ hổng phân quyền mức đối tượng (OWASP API1:2023). |
 | **CWE-502** | Deserialization of Untrusted Data | Lỗ hổng thực thi mã khi giải tuần tự hóa dữ liệu Pickle không tin cậy — được triệt tiêu bằng Zero-Pickle UBJSON/NPZ và `weights_only=True`. |
-| **DQN** | Deep Q-Network | Mạng nơ-ron học tăng cường sâu có Action Masking (`evasion_agent.pt`) của Red Team. |
+| **DQN** | Deep Q-Network | Mạng nơ-ron học tăng cường sâu có Action Masking (`pentest_dqn_v2.pt` 74-D/36-A & `evasion_agent.pt` 40-D/14-A) của Red Team. |
 | **FPR / TPR** | False Positive Rate / True Positive Rate | Tỷ lệ báo động giả trên mẫu sạch / Tỷ lệ phát hiện chính xác mã độc (Recall). |
 | **iForest** | Isolation Forest | Thuật toán học không giám sát phát hiện dị biệt Zero-Day (`iforest_v2.npz`). |
-| **MDP** | Markov Decision Process | Quy trình quyết định Markov mô hình hóa chuỗi tấn công né tránh WAF (40-D state, 14 actions). |
+| **MDP** | Markov Decision Process | Quy trình quyết định Markov mô hình hóa chuỗi tấn công né tránh WAF (`40-D/14-A` -> `74-D/36-A`). |
 | **ReDoS** | Regular Expression Denial of Service | Lỗ hổng quay lui hàm mũ/bậc hai của biểu thức chính quy gây treo CPU. |
-| **RPS** | Requests Per Second | Thông lượng yêu cầu xử lý mỗi giây (Blue Team v2.0 đạt `253–340 RPS @ C=50`). |
-| **SLA** | Service Level Agreement | Cam kết độ trễ và chất lượng dịch vụ (`AI <= 2.5 ms`, `Full WAF <= 5 ms`, `Throughput >= 150 RPS`). |
+| **RPS** | Requests Per Second | Thông lượng yêu cầu xử lý mỗi giây (Blue Team đạt `253–340 RPS @ C=50`). |
+| **SLA** | Service Level Agreement | Cam kết độ trễ và chất lượng dịch vụ (Dual-Tier: `Inline <= 1.5 ms`, `2-Hop HTTP E2E <= 5.5 ms`, `Throughput >= 150 RPS`). |
 | **UBJSON / NPZ** | Universal Binary JSON / NumPy Zip Archive | Hai định dạng lưu trữ mô hình **Zero-Pickle** cho XGBoost v2.0 và Isolation Forest v2.0. |
 | **WAF** | Web Application Firewall | Tường lửa ứng dụng web Tầng 7 bảo vệ Web API. |
 | **WAL** | Write-Ahead Logging | Chế độ nhật ký đồng thời của SQLite kết hợp `busy_timeout=5000` và Leader-Follower Group Commit. |

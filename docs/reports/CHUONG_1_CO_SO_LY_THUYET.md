@@ -71,7 +71,7 @@ Kế thừa nghiên cứu nền tảng của C. Torrano-Gimenez et al. (Wiley SC
       Obj(t) = sum_{i=1..N} L(y_i, y_hat_i^(t-1) + f_t(x_i)) + Omega(f_t)
       Omega(f) = gamma * T + 0.5 * lambda * sum_{j=1..T} w_j^2
 
-- **Ưu thế kỹ thuật vượt trội ở Blue Team v2.0:** XGBoost v2.0 hỗ trợ tuần tự hóa **Zero-Pickle UBJSON (`xgb_v2.ubj`)**, loại bỏ hoàn toàn nguy cơ thực thi mã tùy ý CWE-502, đồng thời đạt tốc độ suy luận micro-benchmark **`0.618 ms/req`** (nhanh hơn **17x** so với Random Forest `.joblib` 10.78 ms) với độ chính xác Test Set **99.15%** và Macro-F1 **98.72%**.
+- **Ưu thế kỹ thuật vượt trội ở Blue Team v2.0–v3.3:** XGBoost v2.0 hỗ trợ tuần tự hóa **Zero-Pickle UBJSON (`xgb_v2.ubj`)**, loại bỏ hoàn toàn nguy cơ thực thi mã tùy ý CWE-502, đồng thời đạt tốc độ suy luận **`0.439 ms/req`** (`0.618 ms` trên gateway micro-benchmark) với độ chính xác Test Set sau tái huấn luyện Zero-Leakage (`N = 6.929`) đạt **99.16%** và Macro-F1 **98.77%**.
 
 ### 1.3.3. Học máy không giám sát — Calibrated Isolation Forest v2.0 (Zero-Pickle NPZ)
 Để phát hiện các payload dị biệt / Zero-Day nằm ngoài 5 nhãn đã học, hệ thống sử dụng thuật toán **Isolation Forest (iForest)** của Liu et al. (IEEE ICDM 2008) **[Ref 11]**. Điểm bất thường lý thuyết dựa trên độ sâu đường đi trung bình E(h(x)) trên các cây cô lập nhị phân ngẫu nhiên:
@@ -105,9 +105,9 @@ Theo khảo sát chuẩn mực của M. Yamin et al. (*Elsevier Computers & Secu
 
 ### 1.4.2. Trò chơi an ninh đối kháng (Adversarial Security Game) & Markov Decision Process (MDP)
 Dựa trên mô hình hình thức của Katz & Lindell **[Ref 03]** và lý thuyết Học tăng cường của Sutton & Barto **[Ref 17]** cùng Mnih et al. (Nature 2015) **[Ref 18]**, bài toán kiểm thử né tránh WAF được mô hình hóa thành trò chơi đối kháng giữa Tác tử Red Team A và Cổng phòng thủ Blue Team C trên quy trình MDP `(S, A, P, R, gamma)`:
-- **Không gian trạng thái (State Space S — 40 chiều):** Kết hợp 17 đặc trưng tiến trình & telemetry endpoint (phương thức HTTP, mã phản hồi 403/4xx/5xx, số tham số, tiến độ phiên), vector one-hot họ lỗ hổng và mặt nạ hành động hợp lệ (14-D Action Mask).
-- **Không gian hành động (Action Space A — 14 hành động rời rạc):** Bao gồm các pha trinh sát, thăm dò chuẩn và các toán tử đột biến bảo toàn ngữ nghĩa (SQL inline comment, case randomization, BETWEEN substitution, versioned comment `/*!50000...*/`, double URL encoding, XSS event handler/HTML entity, nested traversal `....//`, null byte, CMD `${IFS}`/quote concatenation/subshell).
-- **Mạng nơ-ron PyTorch DQN có Action Masking (`40 -> 128 -> 128 -> 14`):** Xấp xỉ hàm giá trị tối ưu Q*(s, a) qua phương trình Bellman và lọc bỏ mọi hành động không hợp lệ bằng mặt nạ `-1e9` trước bước `argmax`, được lưu và xác thực bằng `torch.load(..., weights_only=True)` + mã băm SHA-256.
+- **Không gian trạng thái & hành động tiến hóa qua các phiên bản:** Từ nguyên mẫu Task 10.2 (`40-D` state, `14` actions, `evasion_agent.pt`) mở rộng lên v3.0 (`64-D` state, `26` actions) và hoàn thiện ở **Phase E v3.3 (`pentest_dqn_v2.pt` / `.npz`) với `74` chiều trạng thái (`74-D`) và `36` hành động rời rạc (`36` actions)** kết hợp 17+ đặc trưng tiến trình/telemetry, one-hot họ lỗ hổng và mặt nạ hành động hợp lệ (Action Mask).
+- **Không gian hành động (Action Space A — 14 -> 36 hành động rời rạc):** Bao gồm các pha trinh sát, thăm dò chuẩn và các toán tử đột biến bảo toàn ngữ nghĩa (SQL inline comment, case randomization, `BETWEEN` substitution, scientific-float `1e0UNION`, versioned comment `/*!50000...*/`, double URL encoding, XSS event handler/HTML entity, nested traversal `....//`, CMD `${IFS}`/quote concatenation/wildcard-globbing `/???/c?t`, JSON duplicate-key tamper).
+- **Mạng nơ-ron PyTorch Dueling Double-DQN có Action Masking (`74 -> 128 -> 128 -> V(s) + A(s,a)`):** Xấp xỉ hàm giá trị tối ưu Q*(s, a) qua phương trình Bellman, huấn luyện theo giáo trình 4 giai đoạn (`800 episodes`: `600` RAM + `200` Live-HTTP `:8056/:8055`) và lọc bỏ mọi hành động không hợp lệ bằng mặt nạ `-1e9` trước bước `argmax`, được lưu và xác thực bằng `torch.load(..., weights_only=True)` + mã băm SHA-256 (kèm bản suy luận NumPy `.npz` cho môi trường CI).
 
 ---
 
@@ -116,10 +116,10 @@ Dựa trên mô hình hình thức của Katz & Lindell **[Ref 03]** và lý thu
 Việc kiểm định khoa học tuân thủ nghiêm ngặt **OWASP Benchmark Project** **[Ref 08]**, **NIST SP 800-115** **[Ref 09]** và **ISO/IEC 27004:2016**, tuyệt đối không sử dụng số liệu mô phỏng hay rò rỉ dữ liệu Train/Test:
 - **Các chỉ số phân loại:** `Accuracy`, `Precision`, `Recall (TPR)`, `False Positive Rate (FPR)`, `F1-Score (Macro & Binary)` và **Youden's Index `J = TPR - FPR`** (mục tiêu `J >= 0.90`, `FPR <= 1.0%` trên tập kiểm thử độc lập).
 - **Tiêu chuẩn Zero-Leakage & Cross-Dataset Generalization:** Phân tách dữ liệu theo mã băm chuẩn hóa (Canonical Hash Disjoint Split) bảo đảm `0` mẫu trùng lặp giữa Train/Val/Test và tập chuẩn quốc tế **CSIC 2010** **[Ref 14]** cũng như tập kiểm định `benchmark_1000_diverse.csv`.
-- **Ngân sách độ trễ & Thông lượng (SLA):** Độ trễ pipeline nội bộ AI/WAF `<= 5 ms/req`, thông lượng xử lý đồng thời của Gateway `>= 150 RPS` ở mức tải đồng thời `C = 50` không nghẽn Event Loop **[Ref 05]**.
+- **Ngân sách độ trễ & Thông lượng (Dual-Tier SLA):** Độ trễ xử lý nội bộ inline của engine AI/WAF `<= 1.5 ms/req`, độ trễ toàn trình 2-hop TCP HTTP proxy E2E `<= 5.5 ms/req`, thông lượng xử lý đồng thời của Gateway `>= 150 RPS` ở mức tải đồng thời `C = 50` không nghẽn Event Loop **[Ref 05]**.
 
 ---
 
 ## 1.6. TỔNG KẾT CHƯƠNG 1
 
-Chương 1 đã xây dựng hệ thống cơ sở lý thuyết chặt chẽ gồm 20 tài liệu học thuật và tiêu chuẩn công nghiệp quốc tế, định hình toàn bộ nền tảng cho kiến trúc **Blue Team v2.0** (Unified 26-D Feature Vector, Zero-Pickle XGBoost v2.0 + Calibrated Isolation Forest v2.0, Multi-Protocol Defense-in-Depth) và **Red Team Offensive AI** (OpenAPI Recon, Attack Graph MDP, PyTorch DQN với Action Masking) sẽ được thiết kế và cài đặt trong Chương 2 và Chương 3.
+Chương 1 đã xây dựng hệ thống cơ sở lý thuyết chặt chẽ gồm 20 tài liệu học thuật và tiêu chuẩn công nghiệp quốc tế, định hình toàn bộ nền tảng cho kiến trúc **Blue Team v2.0–v3.3** (Unified 26-D Feature Vector + Per-Parameter Max-Pooling, Zero-Pickle XGBoost v2.0 + Calibrated Isolation Forest v2.0, 28 Hardened Rules & 5 OWASP API Guards, Multi-Protocol Defense-in-Depth) và **Red Team Offensive AI** (OpenAPI Recon, Attack Graph MDP, PyTorch Dueling Double-DQN `74-D/36-A` với Action Masking) sẽ được thiết kế và cài đặt trong Chương 2 và Chương 3.

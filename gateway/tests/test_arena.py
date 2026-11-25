@@ -381,3 +381,171 @@ def test_arena_pentest_live_http_mode_and_cwe918_guard(client: TestClient):
     )
     assert res_bad.status_code == 400
 
+
+def test_arena_pentest_catalog_and_live_http_custom_payload(client: TestClient):
+    """Phase F1: Verifies attack catalog, custom_payload + selected_families, and SSE live_http stream."""
+    cat_res = client.get("/api/dashboard/arena/pentest/catalog", headers=ADMIN_HEADERS)
+    assert cat_res.status_code == 200
+    cat = cat_res.json()
+    families = {item["family"]: item for item in cat["families"]}
+    assert "SQL_INJECTION" in families
+    assert families["SQL_INJECTION"]["baseline_payload"]
+    assert len(families["SQL_INJECTION"]["techniques"]) >= 4
+
+    custom_sqli = "' UNION SELECT username, password FROM users--"
+    run_res = client.post(
+        "/api/dashboard/arena/pentest/run",
+        json={
+            "scope": "full_pentest",
+            "selected_families": ["SQL_INJECTION"],
+            "custom_payload": custom_sqli,
+            "max_rounds": 2,
+            "defense_tier": "hybrid_v3",
+            "execution_mode": "live_http",
+            "target_url": "http://127.0.0.1:5000",
+        },
+        headers=ADMIN_HEADERS,
+    )
+    assert run_res.status_code == 200
+    data = run_res.json()
+    assert data["execution_mode"] == "live_http"
+    assert data["total_rounds"] == 2
+    assert data["blocked_count"] == 2
+    assert data["rounds"][0]["attack_type"] == "SQL_INJECTION"
+    assert data["rounds"][0]["original_payload"] == custom_sqli
+    assert data["rounds"][0]["mutated_payload"] == custom_sqli
+    assert data["rounds"][0]["response_status"] == 403
+
+    # Also verify SSE streaming endpoint supports execution_mode=live_http
+    with client.stream(
+        "GET",
+        "/api/dashboard/arena/pentest/stream?scope=sqli&max_rounds=2&defense_tier=hybrid_v3&execution_mode=live_http",
+        headers=ADMIN_HEADERS,
+    ) as stream_res:
+        assert stream_res.status_code == 200
+        events_seen = set()
+        for line in stream_res.iter_lines():
+            if line.startswith("event: "):
+                events_seen.add(line.replace("event: ", "").strip())
+        assert {"recon", "attack_graph", "round", "verdict", "done"}.issubset(events_seen)
+
+
+def test_arena_pentest_replay_matching_verdicts(client: TestClient):
+    """Phase F1: Verifies deterministic traffic replay and replay_comparison match rate."""
+    arena._BATTLE_HISTORY.clear()
+    arena._CURRENT_OR_LAST_PENTEST = None
+
+    # 404 when no recorded traffic exists
+    empty_replay = client.post("/api/dashboard/arena/pentest/replay", json={}, headers=ADMIN_HEADERS)
+    assert empty_replay.status_code == 404
+
+    run_res = client.post(
+        "/api/dashboard/arena/pentest/run",
+        json={
+            "scope": "injection",
+            "max_rounds": 4,
+            "defense_tier": "hybrid_v3",
+            "execution_mode": "live_http",
+            "target_url": "http://127.0.0.1:5000",
+        },
+        headers=ADMIN_HEADERS,
+    )
+    assert run_res.status_code == 200
+    orig = run_res.json()
+
+    replay_res = client.post(
+        "/api/dashboard/arena/pentest/replay",
+        json={
+            "battle_id": orig["battle_id"],
+            "defense_tier": "hybrid_v3",
+            "execution_mode": "live_http",
+            "target_url": "http://127.0.0.1:5000",
+        },
+        headers=ADMIN_HEADERS,
+    )
+    assert replay_res.status_code == 200
+    replayed = replay_res.json()
+    assert replayed["battle_id"].startswith("replay-")
+    assert replayed["execution_mode"] == "live_http"
+    comp = replayed["replay_comparison"]
+    assert comp["replay_of"] == orig["battle_id"]
+    assert comp["total_replayed"] == 4
+    assert comp["matched_verdicts"] == 4
+    assert comp["match_rate_pct"] == 100.0
+    assert comp["mismatches"] == []
+
+
+def test_arena_pentest_export_d4_evidence(client: TestClient, tmp_path, monkeypatch):
+    """Phase F1: Verifies D4 immutable evidence export and SHA-256 digest without polluting repo."""
+    monkeypatch.setattr(arena, "_REPO_ROOT", tmp_path)
+    monkeypatch.setattr(arena, "_GATEWAY_ROOT", tmp_path / "gateway")
+
+    run_res = client.post(
+        "/api/dashboard/arena/pentest/run",
+        json={
+            "scope": "sqli",
+            "max_rounds": 2,
+            "defense_tier": "hybrid_v3",
+            "execution_mode": "live_http",
+        },
+        headers=ADMIN_HEADERS,
+    )
+    assert run_res.status_code == 200
+    report = run_res.json()
+
+    # 1. Without docs/reports/history -> safely writes to tmp_path/data/arena_evidence
+    exp1 = client.post(
+        "/api/dashboard/arena/pentest/export",
+        json={"battle_id": report["battle_id"], "report": report},
+        headers=ADMIN_HEADERS,
+    )
+    assert exp1.status_code == 200
+    d1 = exp1.json()
+    assert d1["filename"].startswith("arena_live_") and d1["filename"].endswith(".json")
+    assert len(d1["sha256"]) == 64
+    assert "arena_evidence" in d1["artifact_path"]
+    assert d1["evidence"]["metadata"]["task_id"] == "pbl6-v3-4-phase-f-001"
+    assert d1["evidence"]["metadata"]["sha256_digest"] == d1["sha256"]
+    assert d1["evidence"]["metadata"]["execution_mode"] == "live_http"
+    assert (tmp_path / "data" / "arena_evidence" / d1["filename"]).is_file()
+
+    # 2. With docs/reports/history present -> writes to docs/reports/history
+    history_dir = tmp_path / "docs" / "reports" / "history"
+    history_dir.mkdir(parents=True, exist_ok=True)
+    exp2 = client.post(
+        "/api/dashboard/arena/pentest/export",
+        json={"report": report},
+        headers=ADMIN_HEADERS,
+    )
+    assert exp2.status_code == 200
+    d2 = exp2.json()
+    assert (history_dir / d2["filename"]).is_file()
+
+
+def test_arena_docker_isolation_without_attack_lab(client: TestClient, monkeypatch):
+    """Phase F1/F2: Ensures Arena works seamlessly when ./attack-lab is absent in Docker."""
+    monkeypatch.setattr(arena, "_PENTEST_ADVISOR", None)
+    monkeypatch.setattr(arena, "get_valid_actions_for_case", None)
+    monkeypatch.setattr(arena, "encode_pentest_state_64d", None)
+    monkeypatch.setattr(arena, "APIReconAgent", None)
+    monkeypatch.setattr(arena, "OpenAPIPayloadSynthesizer", None)
+
+    for mode in ("in_process", "live_http"):
+        res = client.post(
+            "/api/dashboard/arena/pentest/run",
+            json={
+                "scope": "injection",
+                "max_rounds": 4,
+                "defense_tier": "hybrid_v3",
+                "execution_mode": mode,
+            },
+            headers=ADMIN_HEADERS,
+        )
+        assert res.status_code == 200
+        data = res.json()
+        assert data["execution_mode"] == mode
+        assert data["total_rounds"] == 4
+        assert data["blocked_count"] == 4
+        assert data["rounds"][0]["technique"] == "baseline_probe"
+
+

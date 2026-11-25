@@ -5,10 +5,15 @@ import { Header } from "@/components/Header";
 import {
   triggerPentestRun,
   streamPentestEvaluation,
+  fetchPentestCatalog,
+  triggerPentestReplay,
+  exportPentestEvidence,
   fetchArenaHistory,
   fetchDashboardStats,
   toggleWafMode,
   PentestAttackGraphNode,
+  PentestCatalogFamily,
+  PentestExportResponse,
   PentestQValueEntry,
   PentestReport,
   PentestRoundResult,
@@ -29,6 +34,10 @@ import {
   History,
   X,
   Globe,
+  Repeat,
+  Download,
+  FileCheck2,
+  Zap,
 } from "lucide-react";
 
 const INITIAL_OPENAPI_SURFACES: PentestAttackGraphNode[] = [
@@ -125,17 +134,24 @@ export default function ArenaPage() {
 
   // Pentest Configuration
   const [defenseTier, setDefenseTier] = useState<"no_waf" | "rules_only" | "hybrid_v3">("hybrid_v3");
+  const [executionMode, setExecutionMode] = useState<"live_http" | "in_process">("live_http");
   const [scope, setScope] = useState<string>("full_pentest");
+  const [customPayload, setCustomPayload] = useState<string>("");
+  const [catalogFamilies, setCatalogFamilies] = useState<PentestCatalogFamily[]>([]);
   const [targetUrl, setTargetUrl] = useState<string>("http://127.0.0.1:5000");
   const [syncToSoc, setSyncToSoc] = useState<boolean>(false);
   const [maxRounds] = useState<number>(8);
 
   // Execution & Live SSE Trace States
   const [isRunning, setIsRunning] = useState<boolean>(false);
+  const [isReplaying, setIsReplaying] = useState<boolean>(false);
+  const [isExporting, setIsExporting] = useState<boolean>(false);
   const [currentPhase, setCurrentPhase] = useState<number>(0);
   const [specSource, setSpecSource] = useState<string>("OpenAPI Ready");
   const [surfaceNodes, setSurfaceNodes] = useState<PentestAttackGraphNode[]>(INITIAL_OPENAPI_SURFACES);
   const [report, setReport] = useState<PentestReport | null>(null);
+  const [replayReport, setReplayReport] = useState<PentestReport | null>(null);
+  const [exportResult, setExportResult] = useState<PentestExportResponse | null>(null);
   const [traceRounds, setTraceRounds] = useState<PentestRoundResult[]>([]);
   const [selectedRound, setSelectedRound] = useState<PentestRoundResult | null>(null);
   const [filterEndpoint, setFilterEndpoint] = useState<string>("ALL");
@@ -159,6 +175,15 @@ export default function ArenaPage() {
 
   useEffect(() => {
     loadStats();
+    fetchPentestCatalog()
+      .then((cat) => {
+        if (Array.isArray(cat?.families)) {
+          setCatalogFamilies(cat.families);
+        }
+      })
+      .catch(() => {
+        // ignore offline catalog fetch
+      });
   }, [loadStats]);
 
   const loadHistory = async () => {
@@ -177,6 +202,18 @@ export default function ArenaPage() {
     setTimeout(() => setCopiedKey(null), 1800);
   };
 
+  const triggerJsonDownload = (filename: string, payload: unknown) => {
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = filename;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+  };
+
   const handleToggleWafMode = async () => {
     setIsTogglingWaf(true);
     try {
@@ -189,11 +226,17 @@ export default function ArenaPage() {
     }
   };
 
+  const isSingleFamilyScope = catalogFamilies.some((f) => f.family === scope);
+  const activeFamilySample =
+    catalogFamilies.find((f) => f.family === scope)?.baseline_payload || "";
+
   const handleRunPentest = async () => {
-    if (isRunning) return;
+    if (isRunning || isReplaying) return;
     setIsRunning(true);
     setErrorMsg(null);
     setReport(null);
+    setReplayReport(null);
+    setExportResult(null);
     setTraceRounds([]);
     setSelectedRound(null);
     setFilterEndpoint("ALL");
@@ -205,6 +248,9 @@ export default function ArenaPage() {
       scope,
       max_rounds: maxRounds,
       sync_to_soc: syncToSoc,
+      execution_mode: executionMode,
+      custom_payload: customPayload.trim() ? customPayload : undefined,
+      selected_families: isSingleFamilyScope ? [scope] : undefined,
     };
 
     try {
@@ -278,6 +324,64 @@ export default function ArenaPage() {
     }
   };
 
+  const handleReplayTraffic = async (sourceBattle?: { battle_id?: string; rounds?: PentestRoundResult[] }) => {
+    if (isRunning || isReplaying) return;
+    const roundsToReplay = sourceBattle?.rounds ?? (traceRounds.length > 0 ? traceRounds : null);
+    const battleIdToReplay = sourceBattle?.battle_id ?? report?.battle_id ?? null;
+    if (!battleIdToReplay && (!roundsToReplay || roundsToReplay.length === 0)) return;
+
+    setIsReplaying(true);
+    setErrorMsg(null);
+    setExportResult(null);
+    try {
+      const replayed = await triggerPentestReplay({
+        battle_id: battleIdToReplay,
+        rounds: roundsToReplay,
+        defense_tier: defenseTier,
+        execution_mode: executionMode,
+        target_url: targetUrl.trim() || "http://127.0.0.1:5000",
+      });
+      setReplayReport(replayed);
+      setReport(replayed);
+      setTraceRounds(replayed.rounds || []);
+      if (replayed.rounds && replayed.rounds.length > 0) {
+        setSelectedRound(replayed.rounds[0]);
+      }
+      setCurrentPhase(5);
+      setIsHistoryOpen(false);
+    } catch (err: any) {
+      setErrorMsg(err?.message || "Không thể Replay traffic.");
+    } finally {
+      setIsReplaying(false);
+    }
+  };
+
+  const handleExportEvidence = async (
+    targetReport?: PentestReport | null,
+    targetBattleId?: string | null
+  ) => {
+    if (isRunning || isExporting) return;
+    const effectiveReport = targetReport ?? report;
+    const effectiveBattleId = targetBattleId ?? effectiveReport?.battle_id ?? null;
+    if (!effectiveReport && !effectiveBattleId) return;
+
+    setIsExporting(true);
+    setErrorMsg(null);
+    try {
+      const exported = await exportPentestEvidence({
+        battle_id: effectiveBattleId,
+        report: effectiveReport ?? null,
+        replay_report: targetReport ? null : replayReport,
+      });
+      setExportResult(exported);
+      triggerJsonDownload(exported.filename, exported.evidence);
+    } catch (err: any) {
+      setErrorMsg(err?.message || "Không thể xuất bằng chứng D4.");
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   const matchEndpoint = (roundEp: string, nodeEp: string) => {
     if (roundEp === nodeEp) return true;
     if (nodeEp.includes("{")) {
@@ -316,8 +420,8 @@ export default function ArenaPage() {
       />
 
       {/* Command Strip & 5-Phase Stepper */}
-      <div className="h-16 shrink-0 bg-slate-900/80 border-b border-slate-800/80 px-4 flex items-center justify-between gap-3 text-xs font-mono whitespace-nowrap overflow-x-auto">
-        <div className="flex items-center gap-2">
+      <div className="min-h-14 shrink-0 bg-slate-900/80 border-b border-slate-800/80 px-4 py-1.5 flex flex-wrap items-center justify-between gap-2 text-xs font-mono whitespace-nowrap">
+        <div className="flex flex-wrap items-center gap-2">
           {/* Editable Target API URL */}
           <div className="flex items-center gap-1.5 bg-slate-950/90 px-2.5 py-1 rounded-lg border border-slate-800">
             <Globe className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
@@ -327,10 +431,42 @@ export default function ArenaPage() {
               type="text"
               value={targetUrl}
               onChange={(e) => setTargetUrl(e.target.value)}
-              disabled={isRunning}
+              disabled={isRunning || isReplaying}
               placeholder="http://127.0.0.1:5000"
-              className="w-40 bg-transparent text-slate-200 focus:outline-none text-xs font-mono"
+              className="w-36 bg-transparent text-slate-200 focus:outline-none text-xs font-mono"
             />
+          </div>
+
+          {/* Execution Mode Toggle */}
+          <div className="flex items-center bg-slate-950/90 p-1 rounded-lg border border-slate-800">
+            <span className="text-[11px] text-slate-400 px-1.5 font-semibold flex items-center gap-1">
+              <Zap className="w-3 h-3 text-cyan-400" />
+              Mode:
+            </span>
+            <button
+              id="btn-mode-live-http"
+              onClick={() => setExecutionMode("live_http")}
+              disabled={isRunning || isReplaying}
+              className={`px-2 py-0.5 rounded text-[11px] transition cursor-pointer font-semibold ${
+                executionMode === "live_http"
+                  ? "bg-cyan-950/90 text-cyan-300 border border-cyan-500/60 shadow-sm"
+                  : "text-slate-400 hover:text-white"
+              }`}
+            >
+              Live HTTP (/api/proxy)
+            </button>
+            <button
+              id="btn-mode-in-process"
+              onClick={() => setExecutionMode("in_process")}
+              disabled={isRunning || isReplaying}
+              className={`px-2 py-0.5 rounded text-[11px] transition cursor-pointer font-semibold ${
+                executionMode === "in_process"
+                  ? "bg-slate-800 text-slate-200 border border-slate-600 shadow-sm"
+                  : "text-slate-400 hover:text-white"
+              }`}
+            >
+              In-Process
+            </button>
           </div>
 
           {/* 3-Tier Progressive Defense Switch */}
@@ -338,8 +474,8 @@ export default function ArenaPage() {
             <span className="text-[11px] text-slate-400 px-1.5 font-semibold">Cấp độ:</span>
             <button
               onClick={() => setDefenseTier("no_waf")}
-              disabled={isRunning}
-              className={`px-2 py-1 rounded text-xs transition cursor-pointer font-semibold ${
+              disabled={isRunning || isReplaying}
+              className={`px-2 py-0.5 rounded text-xs transition cursor-pointer font-semibold ${
                 defenseTier === "no_waf"
                   ? "bg-rose-950/90 text-rose-300 border border-rose-600/60 shadow-sm"
                   : "text-slate-400 hover:text-white"
@@ -349,8 +485,8 @@ export default function ArenaPage() {
             </button>
             <button
               onClick={() => setDefenseTier("rules_only")}
-              disabled={isRunning}
-              className={`px-2 py-1 rounded text-xs transition cursor-pointer font-semibold ${
+              disabled={isRunning || isReplaying}
+              className={`px-2 py-0.5 rounded text-xs transition cursor-pointer font-semibold ${
                 defenseTier === "rules_only"
                   ? "bg-amber-950/90 text-amber-300 border border-amber-600/60 shadow-sm"
                   : "text-slate-400 hover:text-white"
@@ -360,8 +496,8 @@ export default function ArenaPage() {
             </button>
             <button
               onClick={() => setDefenseTier("hybrid_v3")}
-              disabled={isRunning}
-              className={`px-2 py-1 rounded text-xs transition cursor-pointer font-semibold ${
+              disabled={isRunning || isReplaying}
+              className={`px-2 py-0.5 rounded text-xs transition cursor-pointer font-semibold ${
                 defenseTier === "hybrid_v3"
                   ? "bg-purple-950/90 text-purple-200 border border-purple-500/60 shadow-sm"
                   : "text-slate-400 hover:text-white"
@@ -371,19 +507,39 @@ export default function ArenaPage() {
             </button>
           </div>
 
-          {/* Scope Selector */}
+          {/* Scope / Selectable Family Selector */}
           <div className="flex items-center bg-slate-950/90 px-2.5 py-1 rounded-lg border border-slate-800">
             <span className="text-slate-400 text-[11px] mr-1">Phạm vi:</span>
             <select
+              id="select-pentest-scope"
               value={scope}
               onChange={(e) => setScope(e.target.value)}
-              disabled={isRunning}
+              disabled={isRunning || isReplaying}
               className="bg-transparent text-slate-200 focus:outline-none text-xs cursor-pointer font-mono"
             >
               <option value="full_pentest" className="bg-slate-900">Full Pentest (8/8)</option>
               <option value="injection" className="bg-slate-900">OWASP Injections</option>
               <option value="api_logic" className="bg-slate-900">OWASP API Logic</option>
+              {catalogFamilies.map((fam) => (
+                <option key={fam.family} value={fam.family} className="bg-slate-900">
+                  {fam.family} ({fam.method})
+                </option>
+              ))}
             </select>
+          </div>
+
+          {/* Optional Custom Payload Input */}
+          <div className="flex items-center gap-1.5 bg-slate-950/90 px-2.5 py-1 rounded-lg border border-slate-800">
+            <span className="text-[11px] text-slate-400">Payload:</span>
+            <input
+              id="input-custom-payload"
+              type="text"
+              value={customPayload}
+              onChange={(e) => setCustomPayload(e.target.value)}
+              disabled={isRunning || isReplaying}
+              placeholder={activeFamilySample || "Custom payload (tuỳ chọn)..."}
+              className="w-40 bg-transparent text-amber-300 placeholder:text-slate-600 focus:outline-none text-xs font-mono"
+            />
           </div>
 
           {/* Sync SOC */}
@@ -392,7 +548,7 @@ export default function ArenaPage() {
               type="checkbox"
               checked={syncToSoc}
               onChange={(e) => setSyncToSoc(e.target.checked)}
-              disabled={isRunning}
+              disabled={isRunning || isReplaying}
               className="accent-purple-500 rounded cursor-pointer"
             />
             <span className="text-[11px] text-slate-300">Sync -&gt; SOC</span>
@@ -402,8 +558,8 @@ export default function ArenaPage() {
           <button
             id="btn-run-pentest"
             onClick={handleRunPentest}
-            disabled={isRunning}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-bold transition active:scale-95 disabled:opacity-50 cursor-pointer shadow-[0_0_15px_rgba(244,63,94,0.4)]"
+            disabled={isRunning || isReplaying}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-bold transition active:scale-95 disabled:opacity-50 cursor-pointer shadow-[0_0_15px_rgba(244,63,94,0.4)]"
           >
             {isRunning ? (
               <>
@@ -418,6 +574,30 @@ export default function ArenaPage() {
             )}
           </button>
 
+          {/* Replay Traffic Button */}
+          <button
+            id="btn-replay-traffic"
+            onClick={() => handleReplayTraffic()}
+            disabled={isRunning || isReplaying || (!report && traceRounds.length === 0)}
+            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-cyan-950/90 hover:bg-cyan-900/90 border border-cyan-600/60 text-cyan-200 font-semibold transition disabled:opacity-40 cursor-pointer"
+            title="Phát lại tuần tự các request đã ghi nhận để kiểm chứng tính nhất quán"
+          >
+            <Repeat className={`w-3.5 h-3.5 ${isReplaying ? "animate-spin" : ""}`} />
+            <span className="text-[11px]">{isReplaying ? "Đang Replay..." : "Replay Traffic"}</span>
+          </button>
+
+          {/* Export Evidence (D4) Button */}
+          <button
+            id="btn-export-evidence"
+            onClick={() => handleExportEvidence()}
+            disabled={isRunning || isExporting || !report}
+            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-emerald-950/90 hover:bg-emerald-900/90 border border-emerald-600/60 text-emerald-200 font-semibold transition disabled:opacity-40 cursor-pointer"
+            title="Xuất gói bằng chứng D4 bất biến kèm SHA-256"
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span className="text-[11px]">{isExporting ? "Đang Xuất..." : "Export Evidence (D4)"}</span>
+          </button>
+
           {/* History Button */}
           <button
             onClick={loadHistory}
@@ -430,7 +610,7 @@ export default function ArenaPage() {
         </div>
 
         {/* 5-Phase Stepper */}
-        <div className="flex items-center gap-1 bg-slate-950/90 px-2.5 py-1.5 rounded-lg border border-slate-800 shrink-0">
+        <div className="flex items-center gap-1 bg-slate-950/90 px-2.5 py-1 rounded-lg border border-slate-800 shrink-0">
           {stepperPhases.map((phase, idx) => {
             const isActive = currentPhase === phase.num;
             const isDone = currentPhase > phase.num;
@@ -576,6 +756,46 @@ export default function ArenaPage() {
           {errorMsg && (
             <div className="mt-2 p-2 rounded bg-rose-950/70 border border-rose-700 text-rose-200 text-xs font-mono">
               {errorMsg}
+            </div>
+          )}
+
+          {report?.replay_comparison && (
+            <div className="mt-2 p-2 rounded-lg bg-cyan-950/60 border border-cyan-600/70 text-cyan-200 text-xs font-mono flex items-center justify-between gap-2">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <Repeat className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                <span className="truncate">
+                  Replay of <span className="font-bold">{report.replay_comparison.replay_of || "recorded"}</span>:{" "}
+                  <span className="font-bold text-white">
+                    {report.replay_comparison.matched_verdicts}/{report.replay_comparison.total_replayed}
+                  </span>{" "}
+                  verdicts matched
+                </span>
+              </div>
+              <span className="px-2 py-0.5 rounded bg-cyan-900/80 border border-cyan-500/50 text-[10px] font-bold shrink-0">
+                {report.replay_comparison.match_rate_pct.toFixed(1)}%
+              </span>
+            </div>
+          )}
+
+          {exportResult && (
+            <div className="mt-2 p-2 rounded-lg bg-emerald-950/60 border border-emerald-600/70 text-emerald-200 text-xs font-mono flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5 font-bold text-emerald-300">
+                  <FileCheck2 className="w-3.5 h-3.5 shrink-0" />
+                  <span className="truncate">D4 Saved: {exportResult.filename}</span>
+                </div>
+                <div className="text-[10px] text-emerald-400/90 truncate" title={exportResult.artifact_path}>
+                  {exportResult.artifact_path}
+                </div>
+              </div>
+              <button
+                onClick={() => copyToClipboard(exportResult.sha256, "sha256")}
+                className="px-2 py-0.5 rounded bg-emerald-900/80 border border-emerald-500/50 text-[10px] font-bold flex items-center gap-1 shrink-0 cursor-pointer"
+                title={`SHA-256: ${exportResult.sha256}`}
+              >
+                {copiedKey === "sha256" ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                <span>SHA256: {exportResult.sha256.slice(0, 10)}...</span>
+              </button>
             </div>
           )}
 
@@ -875,27 +1095,49 @@ export default function ArenaPage() {
                 historyData.battles.map((b: any, idx: number) => (
                   <div
                     key={b.battle_id || idx}
-                    className="p-2.5 rounded-lg bg-slate-950/80 border border-slate-800 flex items-center justify-between"
+                    className="p-2.5 rounded-lg bg-slate-950/80 border border-slate-800 space-y-2"
                   >
-                    <div>
-                      <div className="font-bold text-slate-200">{b.battle_id}</div>
-                      <div className="text-[10px] text-slate-400">
-                        Tier: {b.defense_tier || b.target_mode} • Scope: {b.scope || b.campaign}
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className="font-bold text-slate-200 truncate">{b.battle_id}</div>
+                        <div className="text-[10px] text-slate-400 truncate">
+                          Tier: {b.defense_tier || b.target_mode} • Scope: {b.scope || b.campaign}
+                          {b.execution_mode ? ` • ${b.execution_mode}` : ""}
+                        </div>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <span
+                          className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                            b.winner === "BLUE_TEAM"
+                              ? "bg-emerald-950 text-emerald-300 border border-emerald-700"
+                              : "bg-rose-950 text-rose-300 border border-rose-700"
+                          }`}
+                        >
+                          {b.winner}
+                        </span>
+                        <div className="text-[10px] text-slate-400 mt-1">
+                          403: {b.blocked_count} | 200: {b.bypass_count}
+                        </div>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <span
-                        className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                          b.winner === "BLUE_TEAM"
-                            ? "bg-emerald-950 text-emerald-300 border border-emerald-700"
-                            : "bg-rose-950 text-rose-300 border border-rose-700"
-                        }`}
+
+                    <div className="flex items-center justify-end gap-1.5 pt-1 border-t border-slate-800/80">
+                      <button
+                        onClick={() => handleReplayTraffic({ battle_id: b.battle_id, rounds: b.rounds })}
+                        disabled={isRunning || isReplaying}
+                        className="px-2 py-1 rounded bg-cyan-950/80 hover:bg-cyan-900 border border-cyan-700/60 text-cyan-200 text-[10px] font-semibold flex items-center gap-1 disabled:opacity-40 cursor-pointer"
                       >
-                        {b.winner}
-                      </span>
-                      <div className="text-[10px] text-slate-400 mt-1">
-                        403: {b.blocked_count} | 200: {b.bypass_count}
-                      </div>
+                        <Repeat className="w-3 h-3" />
+                        <span>Replay</span>
+                      </button>
+                      <button
+                        onClick={() => handleExportEvidence(b, b.battle_id)}
+                        disabled={isRunning || isExporting}
+                        className="px-2 py-1 rounded bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-700/60 text-emerald-200 text-[10px] font-semibold flex items-center gap-1 disabled:opacity-40 cursor-pointer"
+                      >
+                        <Download className="w-3 h-3" />
+                        <span>Export (D4)</span>
+                      </button>
                     </div>
                   </div>
                 ))

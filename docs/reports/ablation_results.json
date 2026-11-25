@@ -10,13 +10,13 @@
     "ml_model": "Champion Cost-Sensitive Regularized XGBoost v2.0",
     "anomaly_model": "Calibrated Isolation Forest v2.0 (with bare-root '/' special_char_ratio guard)",
     "feature_dim": 26,
-    "timestamp": "2026-11-25 11:02:04",
+    "timestamp": "2026-11-25 12:58:04",
     "device": "Machine 1 (Blue Team Host)",
     "methodology_note": "Blue Team v3.3 URL-normalized per-parameter max-pooling (normalize_http_for_ml + MLDetector.predict_http) with unified 26-D feature extraction (extract_26_from_http) shared once per request in Hybrid mode with 28 hardened rules; each mode measures ONLY its active detector(s) single-pass latency (never summed across separate modes). Blocking decision follows DecisionEngine ACTIVE_BLOCKING (>=80 block, Rule>=85/ML>=90 override, or Dual-AI Consensus). Anomaly Only also reports detection @60.0.",
-    "history_snapshot": "docs/reports/history/ablation_results_20261125_110741_ce36bb2.json",
-    "git_base_sha": "ce36bb2396d37f7fede33fdc867d2587ccbb0619",
-    "cpu_load_pct": 24.6,
-    "last_pointer_update": "2026-11-25T11:07:41.357439"
+    "history_snapshot": "docs/reports/history/ablation_results_20261125_125839_85b59fc.json",
+    "git_base_sha": "85b59fcd615d5526c9764bbfa5f7f696aad684c7",
+    "cpu_load_pct": 18.8,
+    "last_pointer_update": "2026-11-25T12:58:39.132695"
   },
   "modes": {
     "rules_only": {
@@ -26,8 +26,8 @@
       "f1_score_pct": 69.81,
       "fpr_pct": 0.0,
       "youden_j": 0.5363,
-      "avg_latency_ms": 0.169,
-      "p95_latency_ms": 0.299,
+      "avg_latency_ms": 0.178,
+      "p95_latency_ms": 0.317,
       "confusion_matrix": {
         "tp": 429,
         "fp": 0,
@@ -44,8 +44,8 @@
       "f1_score_pct": 97.5,
       "fpr_pct": 0.0,
       "youden_j": 0.9513,
-      "avg_latency_ms": 0.428,
-      "p95_latency_ms": 0.854,
+      "avg_latency_ms": 0.461,
+      "p95_latency_ms": 0.942,
       "confusion_matrix": {
         "tp": 761,
         "fp": 0,
@@ -62,8 +62,8 @@
       "f1_score_pct": 55.73,
       "fpr_pct": 0.0,
       "youden_j": 0.3862,
-      "avg_latency_ms": 0.261,
-      "p95_latency_ms": 0.422,
+      "avg_latency_ms": 0.297,
+      "p95_latency_ms": 0.496,
       "confusion_matrix": {
         "tp": 309,
         "fp": 0,
@@ -80,8 +80,8 @@
       "f1_score_pct": 98.86,
       "fpr_pct": 0.0,
       "youden_j": 0.9775,
-      "avg_latency_ms": 0.73,
-      "p95_latency_ms": 1.298,
+      "avg_latency_ms": 0.803,
+      "p95_latency_ms": 1.465,
       "confusion_matrix": {
         "tp": 782,
         "fp": 0,
@@ -99,8 +99,8 @@
     "f1_score_pct": 73.22,
     "fpr_pct": 0.0,
     "youden_j": 0.5775,
-    "avg_latency_ms": 0.261,
-    "p95_latency_ms": 0.422,
+    "avg_latency_ms": 0.297,
+    "p95_latency_ms": 0.496,
     "confusion_matrix": {
       "tp": 462,
       "fp": 0,

@@ -1,6 +1,6 @@
-# HƯỚNG DẪN KỊCH BẢN THUYẾT TRÌNH & DIỄN TẬP THỰC CHIẾN 10 PHÚT (BLUE TEAM v2.0)
+# HƯỚNG DẪN KỊCH BẢN THUYẾT TRÌNH & DIỄN TẬP THỰC CHIẾN 10 PHÚT (BLUE TEAM v3.3)
 
-- **Dự án:** Web API Security Platform & Adaptive Hybrid WAF (PBL6 — Blue Team v2.0)
+- **Dự án:** Web API Security Platform & Adaptive Hybrid WAF (PBL6 — Blue Team v3.3 + Red Team Offensive AI)
 - **Thời lượng kịch bản:** Đúng **10 Phút** bảo vệ trực tiếp trước Hội đồng Chấm Đồ Án
 - **Công cụ điều khiển:** `scripts/start_all_services.py` & `scripts/demo_rehearsal.py`
 - **Tác giả:** Nguyễn Văn Công (`vcongggggg` — Blue Team) & Nguyễn Minh (`naocavang08` — Red Team)
@@ -11,12 +11,12 @@
 
 | Thời gian | Phân đoạn kịch bản | Thao tác trên máy chiếu / Terminal | Trọng tâm trình bày trước Hội đồng |
 | :---: | :--- | :--- | :--- |
-| **0:00 - 1:00** | **Khởi động & Kiến trúc** | Chạy `python scripts/start_all_services.py --check`; mở Dashboard `http://localhost:3000`. | Giới thiệu mô hình Thao trường Đối kháng Phân tán (Máy 1 Blue Team v2.0 vs Máy 2 Red Team), 100% dữ liệu thật, không telemetry giả. |
-| **1:00 - 2:30** | **Giai đoạn 1: Baseline Traffic** | Chạy `python scripts/demo_rehearsal.py --interactive`, thực hiện Stage 1. | 5/5 request hợp lệ (GET tìm sách, OpenAPI 3.0, POST JSON review) đều đạt `HTTP 200 OK`, `0% False Positive`. |
-| **2:30 - 5:00** | **Giai đoạn 2: Monitor-Only** | Chạy Stage 2 (tự động chuyển WAF sang `MONITOR_ONLY` qua `X-API-Key` & ghi `AuditLog`). | 5/5 tấn công OWASP (SQLi Auth Bypass, SQLi UNION, XSS, Path Traversal, CMD RCE) bị gắn cờ `MONITOR`, hiện trực tiếp trên Live Events Table. |
-| **5:00 - 7:30** | **Giai đoạn 3: Active Blocking** | Chạy Stage 3 (chuyển sang `ACTIVE_BLOCKING`). | Chặn đứng 5/5 tấn công né tránh nâng cao (SQLi `UNION/**/SELECT`, XSS `<details ontoggle>`, Windows LFI, CMD `; python3`, và **SOAP/XML XXE**) bằng `HTTP 403 Forbidden` (RFC 7807) trong ~1–3 ms. |
+| **0:00 - 1:00** | **Khởi động & Kiến trúc** | Chạy `python scripts/start_all_services.py --check` (hoặc `docker compose up --build -d`); mở Dashboard `http://localhost:3000`. | Giới thiệu mô hình Thao trường Đối kháng Phân tán (Máy 1 Blue Team v3.3 vs Máy 2 Red Team), 100% dữ liệu thật, không telemetry giả, container non-root không mount `./attack-lab`. |
+| **1:00 - 2:30** | **Giai đoạn 1: Baseline Traffic** | Chạy `python scripts/demo_rehearsal.py --interactive`, thực hiện Stage 1. | 5/5 request hợp lệ (GET tìm sách, OpenAPI 3.0, POST JSON review) đều đạt `HTTP 200 OK`, `0.00%` Operational FPR (`N=1.715`). |
+| **2:30 - 5:00** | **Giai đoạn 2: Monitor-Only** | Chạy Stage 2 (tự động chuyển WAF sang `MONITOR_ONLY` qua `X-API-Key` & ghi `AuditLog`). | 5/5 tấn công OWASP (SQLi Auth Bypass, SQLi UNION, XSS, Path Traversal, CMD RCE) bị gắn cờ `MONITOR`, hiện trực tiếp trên `Live Security Events Table`. |
+| **5:00 - 7:30** | **Giai đoạn 3: Active Blocking & Arena** | Chạy Stage 3 (chuyển sang `ACTIVE_BLOCKING`) hoặc mở `/arena` chọn `3. Hybrid v3.0`. | Chặn đứng tấn công né tránh nâng cao (SQLi `UNION/**/SELECT`, `1e0UNION`, XSS `<details ontoggle>`, CMD `/???/c?t`, JSON duplicate-key và **SOAP/XML XXE**) bằng `HTTP 403 Forbidden` (RFC 7807) trong ~`0.80 ms` inline / `4.14 ms` HTTP 2-hop E2E. |
 | **7:30 - 9:00** | **Giai đoạn 4: Rate Limiting** | Chạy Stage 4 (gửi 14 request brute-force xoay `User-Agent` vào `/auth/login/`). | Chứng minh cơ chế **IP Hard Cap (10 req/min)** chống xoay token/UA, phạt ngay **`HTTP 429 Too Many Requests`** kèm `Retry-After`. |
-| **9:00 - 10:00** | **SOC XAI & Kill Chain** | Trên Dashboard `http://localhost:3000`: mở **Attack Sessions**, **Evidence Drawer (26-D)** và **Explainability Modal**. | Chứng minh giải trình minh bạch: 26 đặc trưng thật, điểm `Rule + XGBoost v2.0 + IForest v2.0`, phân bổ đa giao thức và chuỗi Cyber Kill Chain. |
+| **9:00 - 10:00** | **SOC XAI, Kill Chain & Export** | Trên Dashboard `http://localhost:3000`: mở **Kill Chain Sessions**, **Payload Evidence Drawer (26-D)**, **Explain (`DetectionExplainabilityModal`)** và bấm `Export JSON` / `Export Full Explainability JSON`. | Chứng minh giải trình minh bạch: 26 đặc trưng thật + Per-Parameter Max-Pooling, điểm `Rule (28 rules) + XGBoost v2.0 + IForest v2.0`, phân bổ đa giao thức và chuỗi Cyber Kill Chain. |
 
 ---
 

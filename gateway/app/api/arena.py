@@ -1,8 +1,11 @@
 import asyncio
 import datetime
+import hashlib
 import json
 import logging
+import os
 import re
+import subprocess
 import sys
 import time
 import urllib.parse
@@ -11,7 +14,7 @@ from pathlib import Path
 from typing import Any
 
 import anyio
-from fastapi import APIRouter, Body, Depends, Query, Request
+from fastapi import APIRouter, Body, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session, sessionmaker
 from starlette.responses import StreamingResponse
@@ -34,6 +37,7 @@ from app.security.normalizer import InputNormalizer
 from app.services.security import SecurityEventService
 
 # Connect Red Team attack-lab advisor, OpenAPI recon & synthesizer (zero training-serving skew)
+_GATEWAY_ROOT = Path(__file__).resolve().parents[2]
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 _ATTACK_LAB_ROOT = _REPO_ROOT / "attack-lab"
 for _p in (str(_REPO_ROOT), str(_ATTACK_LAB_ROOT)):
@@ -48,6 +52,11 @@ try:
 
     _PENTEST_ADVISOR = PentestDQNAdvisor()
 except Exception as _adv_err:  # pragma: no cover
+    PentestDQNAdvisor = None  # type: ignore
+    APIReconAgent = None  # type: ignore
+    OpenAPIPayloadSynthesizer = None  # type: ignore
+    encode_pentest_state_64d = None  # type: ignore
+    get_valid_actions_for_case = None  # type: ignore
     _PENTEST_ADVISOR = None  # type: ignore
     logging.getLogger("waf.gateway.api.arena").warning("PentestDQNAdvisor init warning: %s", _adv_err)
 
@@ -648,6 +657,52 @@ class PentestRunRequest(BaseModel):
         default="in_process",
         description="Evaluation mode: 'in_process' (deterministic engine) or 'live_http' (end-to-end /api/proxy pipeline)",
     )
+    custom_payload: str | None = Field(
+        default=None,
+        description="Optional custom attack payload overriding the baseline probe for selected families",
+    )
+    selected_families: list[str] | None = Field(
+        default=None,
+        description="Optional explicit list of attack families (e.g. ['SQL_INJECTION', 'XSS']) overriding scope",
+    )
+
+
+class PentestReplayRequest(BaseModel):
+    battle_id: str | None = Field(
+        default=None,
+        description="Recorded battle_id from _BATTLE_HISTORY to replay",
+    )
+    rounds: list[dict[str, Any]] | None = Field(
+        default=None,
+        description="Optional explicit list of recorded round payloads to replay",
+    )
+    defense_tier: str | None = Field(
+        default=None,
+        description="Optional defense tier override: 'no_waf', 'rules_only', or 'hybrid_v3'",
+    )
+    execution_mode: str | None = Field(
+        default="live_http",
+        description="Replay execution mode: 'live_http' (/api/proxy) or 'in_process'",
+    )
+    target_url: str | None = Field(
+        default=None,
+        description="Optional target URL override (CWE-918 validated)",
+    )
+
+
+class PentestExportRequest(BaseModel):
+    battle_id: str | None = Field(
+        default=None,
+        description="Optional battle_id to export from history",
+    )
+    report: dict[str, Any] | None = Field(
+        default=None,
+        description="Optional pentest report dictionary to export",
+    )
+    replay_report: dict[str, Any] | None = Field(
+        default=None,
+        description="Optional replay comparison report dictionary to bundle",
+    )
 
 
 def _resolve_scope_families(raw_scope: str) -> list[str]:
@@ -670,6 +725,8 @@ def _resolve_scope_families(raw_scope: str) -> list[str]:
         return ["BOLA_IDOR"]
     if "mass" in sc:
         return ["MASS_ASSIGNMENT"]
+    if "excess" in sc or "data_exposure" in sc:
+        return ["EXCESSIVE_DATA_EXPOSURE"]
     return [
         "SQL_INJECTION",
         "XSS",
@@ -680,6 +737,34 @@ def _resolve_scope_families(raw_scope: str) -> list[str]:
         "MASS_ASSIGNMENT",
         "EXCESSIVE_DATA_EXPOSURE",
     ]
+
+
+def _resolve_selected_families(raw_scope: str, selected_families: list[str] | None = None) -> list[str]:
+    if selected_families:
+        resolved: list[str] = []
+        for item in selected_families:
+            token = (item or "").strip()
+            if not token:
+                continue
+            upper = token.upper()
+            if upper in ATTACK_CONFIGS:
+                candidates = [upper]
+            else:
+                candidates = _resolve_scope_families(token)
+            for fam in candidates:
+                if fam in ATTACK_CONFIGS and fam not in resolved:
+                    resolved.append(fam)
+        if resolved:
+            return resolved
+    return _resolve_scope_families(raw_scope)
+
+
+def _validate_arena_target_url(target_url: str | None) -> str:
+    from app.api.dashboard import _validate_cyber_range_target_url
+    from app.core.config import get_settings
+
+    raw = (target_url or "").strip() or "http://127.0.0.1:5000"
+    return _validate_cyber_range_target_url(raw, get_settings().target_api_url)
 
 
 def _is_tcp_reachable(url: str, timeout: float = 0.08) -> bool:
@@ -806,28 +891,20 @@ def _apply_family_mutation(family: str, baseline: str, transformation: str) -> s
     return fn(baseline) if fn is not None else baseline
 
 
-def _evaluate_single_pentest_round(
+def _select_pentest_payload(
     *,
-    round_num: int,
-    total_rounds: int,
-    case: dict[str, Any],
+    family: str,
+    method: str,
+    rtype: str,
+    baseline_payload: str,
     endpoint_index: int,
     total_endpoints: int,
+    total_rounds: int,
     tier: str,
     family_state: dict[str, Any],
-    sync_to_soc: bool,
-    db_bind: Any,
-    client_ip: str,
-) -> dict[str, Any]:
-    """Executes one round using real 64-D Dueling-DQN inference and authentic WAF evaluation."""
-    family = case["family"]
-    endpoint_tpl = case["endpoint"]
-    method = case["method"]
-    param = case["param"]
-    rtype = case["request_type"]
-    extra = dict(case.get("extra_fields", {}))
-    baseline_payload = str(case["baseline"])
-
+    custom_payload: str | None = None,
+) -> tuple[str, str, str, list[dict[str, Any]]]:
+    """Selects attack technique and mutated payload via 64-D Dueling-DQN or safe ATTACK_CONFIGS fallback."""
     tried_ids: set[str] = family_state.setdefault("tried_ids", set())
     consec_blocks: int = int(family_state.get("consec_blocks", 0))
     prev_status: int | None = family_state.get("last_status")
@@ -838,74 +915,155 @@ def _evaluate_single_pentest_round(
     prev_dlp: bool = bool(family_state.get("dlp_redacted", False))
     fam_attempt: int = int(family_state.get("attempts", 0))
 
-    # Select action via REAL trained 64-D Dueling-DQN forward pass
-    dqn_phase = "probe" if (tier == "no_waf" and fam_attempt == 0) else "evasion"
-    valid_specs = get_valid_actions_for_case(
-        family=family,
-        phase=dqn_phase,
-        tried_action_ids=tried_ids,
-        consecutive_blocks=consec_blocks,
-        can_pivot=False,
-    )
-    state_64 = encode_pentest_state_64d(
-        phase=dqn_phase,
-        family=family,
-        method=method,
-        request_type=rtype,
-        endpoint_index=endpoint_index,
-        total_endpoints=total_endpoints,
-        attempt_num=fam_attempt,
-        max_attempts=max(total_rounds, 4),
-        last_status=prev_status,
-        rule_score=prev_rule,
-        ml_score=prev_ml,
-        anomaly_score=prev_anom,
-        threat_score=prev_threat,
-        prev_threat_score=prev_threat,
-        dlp_redacted=prev_dlp,
-        consecutive_blocks=consec_blocks,
-        tried_action_ids=tried_ids,
-        available_actions=valid_specs,
-    )
+    has_custom = custom_payload is not None and custom_payload != ""
+    effective_baseline = custom_payload if has_custom else baseline_payload
+    dqn_q_values: list[dict[str, Any]] = []
 
-    if _PENTEST_ADVISOR is not None and _PENTEST_ADVISOR.available:
+    if (
+        get_valid_actions_for_case is not None
+        and encode_pentest_state_64d is not None
+        and _PENTEST_ADVISOR is not None
+        and _PENTEST_ADVISOR.available
+    ):
+        dqn_phase = "probe" if (tier == "no_waf" and fam_attempt == 0) else "evasion"
+        valid_specs = get_valid_actions_for_case(
+            family=family,
+            phase=dqn_phase,
+            tried_action_ids=tried_ids,
+            consecutive_blocks=consec_blocks,
+            can_pivot=False,
+        )
+        state_64 = encode_pentest_state_64d(
+            phase=dqn_phase,
+            family=family,
+            method=method,
+            request_type=rtype,
+            endpoint_index=endpoint_index,
+            total_endpoints=total_endpoints,
+            attempt_num=fam_attempt,
+            max_attempts=max(total_rounds, 4),
+            last_status=prev_status,
+            rule_score=prev_rule,
+            ml_score=prev_ml,
+            anomaly_score=prev_anom,
+            threat_score=prev_threat,
+            prev_threat_score=prev_threat,
+            dlp_redacted=prev_dlp,
+            consecutive_blocks=consec_blocks,
+            tried_action_ids=tried_ids,
+            available_actions=valid_specs,
+        )
         chosen_spec, dqn_q_values = _PENTEST_ADVISOR.recommend(state_64, valid_specs, top_k=5)
+        if has_custom and fam_attempt == 0:
+            return effective_baseline, "custom_payload", effective_baseline, dqn_q_values
         tech_name = (
             chosen_spec.transformation
             if chosen_spec.transformation != "none"
             else chosen_spec.action_id
         )
         tried_ids.add(chosen_spec.action_id)
-        mutated_payload = _apply_family_mutation(family, baseline_payload, chosen_spec.transformation)
-    else:  # pragma: no cover
-        cfg = ATTACK_CONFIGS.get(family, ATTACK_CONFIGS["SQL_INJECTION"])
-        tech_name, tech_fn = cfg["techniques"][min(fam_attempt, len(cfg["techniques"]) - 1)]
-        mutated_payload = tech_fn(baseline_payload)
-        dqn_q_values = []
+        mutated_payload = _apply_family_mutation(family, effective_baseline, chosen_spec.transformation)
+        return effective_baseline, tech_name, mutated_payload, dqn_q_values
 
-    _, normalized_payload = InputNormalizer.get_canonical_representations(mutated_payload)
+    if has_custom and fam_attempt == 0:
+        return effective_baseline, "custom_payload", effective_baseline, dqn_q_values
 
-    # Resolve concrete HTTP path, query, and JSON body
+    cfg = ATTACK_CONFIGS.get(family, ATTACK_CONFIGS["SQL_INJECTION"])
+    techniques = cfg.get("techniques") or [("baseline_probe", lambda p: p)]
+    tech_name, tech_fn = techniques[min(fam_attempt, len(techniques) - 1)]
+    mutated_payload = tech_fn(effective_baseline)
+    return effective_baseline, tech_name, mutated_payload, dqn_q_values
+
+
+def _build_http_surface_args(
+    *,
+    endpoint_tpl: str,
+    method: str,
+    param: str,
+    rtype: str,
+    extra: dict[str, Any],
+    payload_str: str,
+) -> tuple[str, dict[str, Any] | None, dict[str, Any] | None, str | None, str | None, bytes | None]:
+    """Resolves concrete HTTP path, query params, and JSON body for both in-process and live_http modes."""
     resolved_path = endpoint_tpl
+    params_dict: dict[str, Any] | None = None
+    json_obj: dict[str, Any] | None = None
     query_str: str | None = None
     body_text: str | None = None
     body_bytes: bytes | None = None
 
     if rtype == "path" or "{" in endpoint_tpl:
-        resolved_path = re.sub(r"\{[^}]+\}", str(mutated_payload or "1"), endpoint_tpl)
+        resolved_path = re.sub(r"\{[^}]+\}", str(payload_str or "1"), endpoint_tpl)
         if extra and method in ("POST", "PUT", "PATCH"):
-            body_text = json.dumps(extra)
+            json_obj = dict(extra)
+            body_text = json.dumps(json_obj)
             body_bytes = body_text.encode("utf-8")
     elif method == "GET":
+        if "?" in resolved_path:
+            base_p, existing_q = resolved_path.split("?", 1)
+            resolved_path = base_p
+            parsed_q = dict(urllib.parse.parse_qsl(existing_q, keep_blank_values=True))
+        else:
+            parsed_q = {}
         if param:
-            query_str = urllib.parse.urlencode({param: mutated_payload})
+            params_dict = {**extra, **parsed_q, param: payload_str}
+        elif parsed_q or extra:
+            params_dict = {**extra, **parsed_q}
+        if params_dict:
+            query_str = urllib.parse.urlencode(params_dict)
     else:
-        body_obj = dict(extra)
-        if param:
-            body_obj[param] = mutated_payload
-        body_text = json.dumps(body_obj)
+        json_obj = {**extra, param: payload_str} if param else dict(extra)
+        body_text = json.dumps(json_obj)
         body_bytes = body_text.encode("utf-8")
 
+    return resolved_path, params_dict, json_obj, query_str, body_text, body_bytes
+
+
+def _extract_matched_rules_from_403(
+    resp_json: dict[str, Any] | None,
+    bd: dict[str, Any] | None,
+    dlp_redacted: bool,
+) -> list[str]:
+    """Extracts matched WAF rule IDs cleanly from HTTP 403 JSON breakdown."""
+    rules: list[str] = []
+    bd_dict = bd if isinstance(bd, dict) else {}
+    rj_dict = resp_json if isinstance(resp_json, dict) else {}
+
+    raw_matched = bd_dict.get("matched_rules")
+    if not isinstance(raw_matched, list):
+        raw_matched = rj_dict.get("matched_rules")
+    if isinstance(raw_matched, list):
+        rules = [str(r) for r in raw_matched if r]
+    else:
+        raw_matches = bd_dict.get("rule_matches")
+        if not isinstance(raw_matches, list):
+            raw_matches = rj_dict.get("rule_matches")
+        if isinstance(raw_matches, list):
+            rules = [
+                str(m.get("rule_id"))
+                for m in raw_matches
+                if isinstance(m, dict) and m.get("rule_id")
+            ]
+
+    if dlp_redacted and "DLP-001" not in rules:
+        rules.append("DLP-001")
+    return rules
+
+
+def _inspect_in_process_waf(
+    *,
+    family: str,
+    endpoint_tpl: str,
+    resolved_path: str,
+    method: str,
+    query_str: str | None,
+    body_text: str | None,
+    body_bytes: bytes | None,
+    tech_name: str,
+    tier: str,
+    client_ip: str,
+) -> dict[str, Any]:
+    """Runs deterministic in-process WAF evaluation for a single request across defense tiers."""
     start_time = time.perf_counter()
     dlp_redacted = False
     detection_result = None
@@ -925,9 +1083,7 @@ def _evaluate_single_pentest_round(
             f"Chế độ Không WAF: Tác tử Dueling-DQN thực thi '{tech_name}' vào '{resolved_path}', "
             "máy chủ đích phản hồi trực tiếp HTTP 200 OK (lọt lưới hoàn toàn)."
         )
-
     elif tier == "rules_only":
-        # Legacy single-pass static regex WAF (no recursive normalizer, no ML, no stateful API guards)
         raw_surface = f"{resolved_path}?{query_str or ''} {body_text or ''}"
         matched_static = [f"STATIC-RX-{i + 1}" for i, rx in enumerate(_LEGACY_STATIC_REGEXES) if rx.search(raw_surface)]
         matched_rules = matched_static
@@ -940,7 +1096,6 @@ def _evaluate_single_pentest_round(
         waf_decision = "BLOCK" if waf_blocked else "ALLOW"
         winner = "BLUE_TEAM" if waf_blocked else "RED_TEAM"
         latency_ms = max(0.02, round((time.perf_counter() - start_time) * 1000.0, 3))
-
         if waf_blocked:
             reasoning_vi = (
                 f"Chế độ Luật Tĩnh: Tập regex cơ bản bắt được mẫu tĩnh ({', '.join(matched_rules)}) "
@@ -951,17 +1106,13 @@ def _evaluate_single_pentest_round(
                 f"Chế độ Luật Tĩnh: Đột biến '{tech_name}' từ Dueling-DQN hoặc lỗ hổng logic API ({family}) "
                 "vượt qua tập regex tĩnh không có chuẩn hóa đệ quy & ML -> Bypass HTTP 200!"
             )
-
     else:
-        # Full Blue Team v3.0 Hybrid: Normalizer + OWASP Web/API Rules + Stateful BOLA + XGBoost 26-D + IForest 26-D + DLP
         detection_result = _rule_engine.inspect_request(
             path=resolved_path,
             query_params=query_str,
             headers={},
             body_bytes=body_bytes,
         )
-
-        # Stateful BOLA / IDOR enumeration check on parameterized object endpoints
         if family == "BOLA_IDOR" or "{" in endpoint_tpl or "/orders/" in resolved_path:
             local_bola = BOLADetector(window_seconds=60.0, enumeration_threshold=4)
             bola_res = None
@@ -1004,7 +1155,6 @@ def _evaluate_single_pentest_round(
             waf_mode="ACTIVE_BLOCKING",
         )
 
-        # Outbound Response DLP check when upstream returns sensitive credential listings
         if not decision.is_blocked and family == "EXCESSIVE_DATA_EXPOSURE":
             sim_upstream_json = json.dumps(
                 {
@@ -1063,6 +1213,99 @@ def _evaluate_single_pentest_round(
                 f"Request được phép đi qua (HTTP 200 OK)."
             )
 
+    return {
+        "detection_result": detection_result,
+        "response_status": response_status,
+        "waf_blocked": waf_blocked,
+        "dlp_redacted": dlp_redacted,
+        "waf_decision": waf_decision,
+        "waf_threat_score": waf_threat_score,
+        "rule_score": rule_score,
+        "matched_rules": matched_rules,
+        "ml_score_val": ml_score_val,
+        "anomaly_score_val": anomaly_score_val,
+        "latency_ms": latency_ms,
+        "winner": winner,
+        "reasoning_vi": reasoning_vi,
+    }
+
+
+def _evaluate_single_pentest_round(
+    *,
+    round_num: int,
+    total_rounds: int,
+    case: dict[str, Any],
+    endpoint_index: int,
+    total_endpoints: int,
+    tier: str,
+    family_state: dict[str, Any],
+    sync_to_soc: bool,
+    db_bind: Any,
+    client_ip: str,
+    custom_payload: str | None = None,
+) -> dict[str, Any]:
+    """Executes one round using real 64-D Dueling-DQN inference and authentic WAF evaluation."""
+    family = case["family"]
+    endpoint_tpl = case["endpoint"]
+    method = case["method"]
+    param = case["param"]
+    rtype = case["request_type"]
+    extra = dict(case.get("extra_fields", {}))
+    baseline_payload = str(case["baseline"])
+
+    consec_blocks = int(family_state.get("consec_blocks", 0))
+    fam_attempt = int(family_state.get("attempts", 0))
+
+    effective_baseline, tech_name, mutated_payload, dqn_q_values = _select_pentest_payload(
+        family=family,
+        method=method,
+        rtype=rtype,
+        baseline_payload=baseline_payload,
+        endpoint_index=endpoint_index,
+        total_endpoints=total_endpoints,
+        total_rounds=total_rounds,
+        tier=tier,
+        family_state=family_state,
+        custom_payload=custom_payload,
+    )
+
+    _, normalized_payload = InputNormalizer.get_canonical_representations(mutated_payload)
+    resolved_path, _params_dict, _json_obj, query_str, body_text, body_bytes = _build_http_surface_args(
+        endpoint_tpl=endpoint_tpl,
+        method=method,
+        param=param,
+        rtype=rtype,
+        extra=extra,
+        payload_str=mutated_payload,
+    )
+
+    eval_res = _inspect_in_process_waf(
+        family=family,
+        endpoint_tpl=endpoint_tpl,
+        resolved_path=resolved_path,
+        method=method,
+        query_str=query_str,
+        body_text=body_text,
+        body_bytes=body_bytes,
+        tech_name=tech_name,
+        tier=tier,
+        client_ip=client_ip,
+    )
+
+    response_status = eval_res["response_status"]
+    waf_blocked = eval_res["waf_blocked"]
+    dlp_redacted = eval_res["dlp_redacted"]
+    waf_decision = eval_res["waf_decision"]
+    waf_threat_score = eval_res["waf_threat_score"]
+    rule_score = eval_res["rule_score"]
+    matched_rules = eval_res["matched_rules"]
+    ml_score_val = eval_res["ml_score_val"]
+    anomaly_score_val = eval_res["anomaly_score_val"]
+    latency_ms = eval_res["latency_ms"]
+    winner = eval_res["winner"]
+    reasoning_vi = eval_res["reasoning_vi"]
+    detection_result = eval_res["detection_result"]
+
     # Update per-family RL memory for multi-round stateful adaptation
     family_state["attempts"] = fam_attempt + 1
     family_state["last_status"] = response_status
@@ -1115,7 +1358,7 @@ def _evaluate_single_pentest_round(
         "method": method,
         "technique": tech_name,
         "mutation_technique": tech_name,
-        "original_payload": baseline_payload,
+        "original_payload": effective_baseline,
         "mutated_payload": mutated_payload,
         "normalized_payload": normalized_payload,
         "response_status": response_status,
@@ -1132,6 +1375,7 @@ def _evaluate_single_pentest_round(
         "latency_ms": latency_ms,
         "winner": winner,
         "dqn_q_values": dqn_q_values,
+        "execution_mode": "in_process",
         "reasoning_vi": reasoning_vi,
     }
 
@@ -1144,6 +1388,9 @@ def _finalize_pentest_report(
     graph_nodes: list[dict[str, Any]],
     rounds_data: list[dict[str, Any]],
     started_perf: float,
+    execution_mode: str | None = None,
+    battle_id_prefix: str = "pentest",
+    extra_fields: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     global _CURRENT_OR_LAST_PENTEST, _BATTLE_HISTORY
 
@@ -1165,9 +1412,10 @@ def _finalize_pentest_report(
         else 0.0
     )
     duration_ms = round((time.perf_counter() - started_perf) * 1000.0, 2)
+    resolved_exec_mode = (execution_mode or body.execution_mode or "in_process").strip().lower()
 
-    report = {
-        "battle_id": f"pentest-{uuid.uuid4().hex[:10]}",
+    report: dict[str, Any] = {
+        "battle_id": f"{battle_id_prefix}-{uuid.uuid4().hex[:10]}",
         "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
         "target_url": body.target_url,
         "spec_source": spec_source,
@@ -1175,6 +1423,7 @@ def _finalize_pentest_report(
         "target_mode": tier,
         "scope": body.scope,
         "campaign": body.scope,
+        "execution_mode": resolved_exec_mode,
         "total_rounds": len(rounds_data),
         "blocked_count": blocked_cnt,
         "bypass_count": bypass_cnt,
@@ -1186,6 +1435,9 @@ def _finalize_pentest_report(
         "attack_graph": graph_nodes,
         "rounds": rounds_data,
     }
+    if extra_fields:
+        report.update(extra_fields)
+
     _CURRENT_OR_LAST_PENTEST = report
     _BATTLE_HISTORY.insert(0, report)
     if len(_BATTLE_HISTORY) > _MAX_HISTORY_ENTRIES:
@@ -1200,7 +1452,7 @@ def _run_pentest_evaluation(
 ) -> dict[str, Any]:
     """Executes autonomous 5-phase pentest evaluation off the event loop."""
     started_perf = time.perf_counter()
-    selected_families = _resolve_scope_families(body.scope)
+    selected_families = _resolve_selected_families(body.scope, body.selected_families)
     tier = (body.defense_tier or "hybrid_v3").lower().strip()
     if tier not in ("no_waf", "rules_only", "hybrid_v3"):
         tier = "hybrid_v3"
@@ -1227,6 +1479,7 @@ def _run_pentest_evaluation(
             sync_to_soc=body.sync_to_soc,
             db_bind=db_bind,
             client_ip=client_ip,
+            custom_payload=body.custom_payload,
         )
         rounds_data.append(rd)
 
@@ -1237,32 +1490,16 @@ def _run_pentest_evaluation(
         graph_nodes=graph_nodes,
         rounds_data=rounds_data,
         started_perf=started_perf,
+        execution_mode="in_process",
     )
 
 
-async def _run_live_http_pentest_evaluation(
-    request: Request,
-    body: PentestRunRequest,
-    caller_ip: str,
-) -> dict[str, Any]:
-    """Executes Pentest Arena rounds through the real ASGI HTTP /api/proxy pipeline (Phase C1)."""
-    import httpx
-
+def _enter_live_http_tier(tier: str) -> tuple[str | None, str]:
+    """Configures gateway waf_mode & ablation_mode for a live_http run, returning previous values."""
+    from app.api.proxy import invalidate_waf_mode_cache
+    from app.core.config import get_settings
     from app.db.models import WafConfigModel
     from app.db.session import SessionLocal
-
-    started_perf = time.perf_counter()
-    selected_families = _resolve_scope_families(body.scope)
-    tier = (body.defense_tier or "hybrid_v3").lower().strip()
-    if tier not in ("no_waf", "rules_only", "hybrid_v3"):
-        tier = "hybrid_v3"
-
-    ordered_cases, graph_nodes, spec_source = await anyio.to_thread.run_sync(
-        _discover_openapi_pentest_plan, body.target_url, selected_families
-    )
-    num_rounds = max(1, min(body.max_rounds, 20))
-    rounds_data: list[dict[str, Any]] = []
-    per_family_state: dict[str, dict[str, Any]] = {}
 
     with SessionLocal() as cfg_db:
         cfg_row = cfg_db.query(WafConfigModel).filter(WafConfigModel.key == "waf_mode").first()
@@ -1274,195 +1511,322 @@ async def _run_live_http_pentest_evaluation(
             cfg_db.add(WafConfigModel(key="waf_mode", value=desired_mode))
         cfg_db.commit()
 
-    from app.api.proxy import invalidate_waf_mode_cache
-    from app.core.config import get_settings
-
     invalidate_waf_mode_cache()
     settings = get_settings()
     prev_ablation = settings.ablation_mode
     settings.ablation_mode = "rules_only" if tier == "rules_only" else "hybrid"
+    return prev_waf_mode, prev_ablation
 
+
+def _exit_live_http_tier(prev_waf_mode: str | None, prev_ablation: str) -> None:
+    """Restores gateway waf_mode & ablation_mode after a live_http run."""
+    from app.api.proxy import invalidate_waf_mode_cache
+    from app.core.config import get_settings
+    from app.db.models import WafConfigModel
+    from app.db.session import SessionLocal
+
+    settings = get_settings()
+    settings.ablation_mode = prev_ablation
+    with SessionLocal() as restore_db:
+        cfg_row = restore_db.query(WafConfigModel).filter(WafConfigModel.key == "waf_mode").first()
+        if prev_waf_mode is None and cfg_row is not None:
+            restore_db.delete(cfg_row)
+        elif cfg_row is not None:
+            cfg_row.value = prev_waf_mode
+        restore_db.commit()
+    invalidate_waf_mode_cache()
+
+
+async def _execute_single_live_http_round(
+    *,
+    client: Any,
+    round_num: int,
+    total_rounds: int,
+    case: dict[str, Any],
+    endpoint_index: int,
+    total_endpoints: int,
+    tier: str,
+    family_state: dict[str, Any],
+    custom_payload: str | None = None,
+    fixed_payload: str | None = None,
+    fixed_technique: str | None = None,
+    fixed_dqn_q_values: list[dict[str, Any]] | None = None,
+    ip_octet: int = 1,
+) -> dict[str, Any]:
+    """Executes one Pentest Arena round through the real ASGI HTTP /api/proxy pipeline."""
+    family = case["family"]
+    endpoint_tpl = case["endpoint"]
+    method = case["method"]
+    param = case["param"]
+    rtype = case["request_type"]
+    extra = dict(case.get("extra_fields", {}))
+    baseline_payload = str(case["baseline"])
+
+    consec_blocks = int(family_state.get("consec_blocks", 0))
+    fam_attempt = int(family_state.get("attempts", 0))
+
+    if fixed_payload is not None:
+        effective_baseline = baseline_payload
+        tech_name = fixed_technique or "replay"
+        mutated_payload = fixed_payload
+        dqn_q_values = fixed_dqn_q_values or []
+    else:
+        effective_baseline, tech_name, mutated_payload, dqn_q_values = _select_pentest_payload(
+            family=family,
+            method=method,
+            rtype=rtype,
+            baseline_payload=baseline_payload,
+            endpoint_index=endpoint_index,
+            total_endpoints=total_endpoints,
+            total_rounds=total_rounds,
+            tier=tier,
+            family_state=family_state,
+            custom_payload=custom_payload,
+        )
+
+    _, normalized_payload = InputNormalizer.get_canonical_representations(mutated_payload)
+    resolved_path, params_dict, json_obj, _q, _bt, _bb = _build_http_surface_args(
+        endpoint_tpl=endpoint_tpl,
+        method=method,
+        param=param,
+        rtype=rtype,
+        extra=extra,
+        payload_str=mutated_payload,
+    )
+
+    t0 = time.perf_counter()
+    if family == "BOLA_IDOR" and tier != "no_waf":
+        resp = None
+        for oid in ("1", "2", "3", "4"):
+            p_try = (
+                re.sub(r"\{[^}]+\}", oid, endpoint_tpl)
+                if "{" in endpoint_tpl
+                else re.sub(r"/\d+(/?)$", rf"/{oid}\1", resolved_path)
+            )
+            resp = await client.request(
+                method=method,
+                url=f"/api/proxy{p_try}",
+                headers={"X-Forwarded-For": f"10.99.{ip_octet}.{round_num}", "User-Agent": "PBL6-ArenaLiveHTTP/3.1"},
+            )
+        assert resp is not None
+    else:
+        resp = await client.request(
+            method=method,
+            url=f"/api/proxy{resolved_path}",
+            params=params_dict,
+            json=json_obj,
+            headers={"X-Forwarded-For": f"10.99.{ip_octet + 1}.{round_num}", "User-Agent": "PBL6-ArenaLiveHTTP/3.1"},
+        )
+    latency_ms = round((time.perf_counter() - t0) * 1000.0, 3)
+
+    hdrs = resp.headers
+    status_code = resp.status_code
+    dlp_redacted = hdrs.get("x-waf-dlp-redacted", "false").lower() == "true"
+    waf_blocked = status_code in (403, 429) or dlp_redacted
+
+    resp_json: dict[str, Any] = {}
+    bd: dict[str, Any] = {}
+    if status_code == 403:
+        try:
+            parsed = resp.json()
+            if isinstance(parsed, dict):
+                resp_json = parsed
+                bd = parsed.get("breakdown") or {}
+        except Exception:
+            resp_json = {}
+            bd = {}
+
+    matched_rules = _extract_matched_rules_from_403(resp_json, bd, dlp_redacted)
+    rule_score = float(hdrs.get("x-waf-rule-score") or bd.get("rule_score") or 0.0)
+    ml_score_val = float(hdrs.get("x-waf-ml-score") or bd.get("ml_score") or 0.0)
+    anomaly_score_val = float(hdrs.get("x-waf-anomaly-score") or bd.get("anomaly_score") or 0.0)
+    waf_threat_score = float(hdrs.get("x-waf-risk-score") or (88.0 if dlp_redacted else 0.0))
+    waf_decision = "BLOCK" if status_code in (403, 429) else ("DLP_REDACT" if dlp_redacted else "ALLOW")
+    winner = "BLUE_TEAM" if waf_blocked else "RED_TEAM"
+
+    family_state["attempts"] = fam_attempt + 1
+    family_state["last_status"] = status_code
+    family_state["rule_score"] = rule_score
+    family_state["ml_score"] = ml_score_val if tier == "hybrid_v3" else None
+    family_state["anomaly_score"] = anomaly_score_val if tier == "hybrid_v3" else None
+    family_state["threat_score"] = waf_threat_score
+    family_state["dlp_redacted"] = dlp_redacted
+    family_state["consec_blocks"] = (consec_blocks + 1) if waf_blocked else 0
+
+    phase_label = "PROBE" if round_num == 1 else "DQN_MUTATE"
+    return {
+        "round_num": round_num,
+        "round": round_num,
+        "phase": phase_label,
+        "event_type": phase_label,
+        "attack_type": family,
+        "endpoint": resolved_path,
+        "target_endpoint": resolved_path,
+        "method": method,
+        "technique": tech_name,
+        "mutation_technique": tech_name,
+        "original_payload": effective_baseline,
+        "mutated_payload": mutated_payload,
+        "normalized_payload": normalized_payload,
+        "response_status": status_code,
+        "http_status": status_code,
+        "waf_blocked": waf_blocked,
+        "dlp_redacted": dlp_redacted,
+        "waf_decision": waf_decision,
+        "waf_threat_score": round(waf_threat_score, 1),
+        "threat_score": round(waf_threat_score, 1),
+        "rule_score": round(rule_score, 1),
+        "matched_rules": matched_rules,
+        "ml_score": round(ml_score_val, 2),
+        "anomaly_score": round(anomaly_score_val, 2),
+        "latency_ms": latency_ms,
+        "winner": winner,
+        "dqn_q_values": dqn_q_values,
+        "execution_mode": "live_http",
+        "reasoning_vi": (
+            f"[Live HTTP /api/proxy] {method} {resolved_path} -> HTTP {status_code} "
+            f"(Risk={waf_threat_score:.1f}/100, Rule={rule_score:.1f}, ML={ml_score_val:.1f})."
+        ),
+    }
+
+
+async def _run_live_http_pentest_evaluation(
+    request: Request,
+    body: PentestRunRequest,
+    caller_ip: str,
+) -> dict[str, Any]:
+    """Executes Pentest Arena rounds through the real ASGI HTTP /api/proxy pipeline (Phase C1)."""
+    import httpx
+
+    started_perf = time.perf_counter()
+    selected_families = _resolve_selected_families(body.scope, body.selected_families)
+    tier = (body.defense_tier or "hybrid_v3").lower().strip()
+    if tier not in ("no_waf", "rules_only", "hybrid_v3"):
+        tier = "hybrid_v3"
+
+    ordered_cases, graph_nodes, spec_source = await anyio.to_thread.run_sync(
+        _discover_openapi_pentest_plan, body.target_url, selected_families
+    )
+    num_rounds = max(1, min(body.max_rounds, 20))
+    rounds_data: list[dict[str, Any]] = []
+    per_family_state: dict[str, dict[str, Any]] = {}
+
+    prev_waf_mode, prev_ablation = _enter_live_http_tier(tier)
     try:
         transport = httpx.ASGITransport(app=request.app)
         async with httpx.AsyncClient(transport=transport, base_url="http://local-gateway") as client:
             for r in range(1, num_rounds + 1):
                 ep_idx = (r - 1) % len(ordered_cases)
                 case = ordered_cases[ep_idx]
-                family = case["family"]
-                f_state = per_family_state.setdefault(family, {})
-                tried_ids: set[str] = f_state.setdefault("tried_ids", set())
-                consec_blocks = int(f_state.get("consec_blocks", 0))
-                fam_attempt = int(f_state.get("attempts", 0))
-
-                dqn_phase = "probe" if (tier == "no_waf" and fam_attempt == 0) else "evasion"
-                valid_specs = get_valid_actions_for_case(
-                    family=family,
-                    phase=dqn_phase,
-                    tried_action_ids=tried_ids,
-                    consecutive_blocks=consec_blocks,
-                    can_pivot=False,
-                )
-                state_64 = encode_pentest_state_64d(
-                    phase=dqn_phase,
-                    family=family,
-                    method=case["method"],
-                    request_type=case["request_type"],
+                f_state = per_family_state.setdefault(case["family"], {})
+                rd = await _execute_single_live_http_round(
+                    client=client,
+                    round_num=r,
+                    total_rounds=num_rounds,
+                    case=case,
                     endpoint_index=ep_idx,
                     total_endpoints=len(ordered_cases),
-                    attempt_num=fam_attempt,
-                    max_attempts=max(num_rounds, 4),
-                    last_status=f_state.get("last_status"),
-                    rule_score=float(f_state.get("rule_score", 0.0)),
-                    ml_score=f_state.get("ml_score"),
-                    anomaly_score=f_state.get("anomaly_score"),
-                    threat_score=float(f_state.get("threat_score", 0.0)),
-                    prev_threat_score=float(f_state.get("threat_score", 0.0)),
-                    dlp_redacted=bool(f_state.get("dlp_redacted", False)),
-                    consecutive_blocks=consec_blocks,
-                    tried_action_ids=tried_ids,
-                    available_actions=valid_specs,
+                    tier=tier,
+                    family_state=f_state,
+                    custom_payload=body.custom_payload,
+                    ip_octet=0,
                 )
-                if _PENTEST_ADVISOR is not None and _PENTEST_ADVISOR.available:
-                    chosen_spec, dqn_q_values = _PENTEST_ADVISOR.recommend(state_64, valid_specs, top_k=5)
-                    tech_name = (
-                        chosen_spec.transformation
-                        if chosen_spec.transformation != "none"
-                        else chosen_spec.action_id
-                    )
-                    tried_ids.add(chosen_spec.action_id)
-                    mutated_payload = _apply_family_mutation(family, str(case["baseline"]), chosen_spec.transformation)
-                else:  # pragma: no cover
-                    tech_name = "baseline_probe"
-                    mutated_payload = str(case["baseline"])
-                    dqn_q_values = []
-
-                _, normalized_payload = InputNormalizer.get_canonical_representations(mutated_payload)
-                endpoint_tpl = case["endpoint"]
-                method = case["method"]
-                param = case["param"]
-                rtype = case["request_type"]
-                extra = dict(case.get("extra_fields", {}))
-
-                resolved_path = endpoint_tpl
-                params_dict: dict[str, Any] | None = None
-                json_obj: dict[str, Any] | None = None
-                if rtype == "path" or "{" in endpoint_tpl:
-                    resolved_path = re.sub(r"\{[^}]+\}", str(mutated_payload or "1"), endpoint_tpl)
-                    if extra and method in ("POST", "PUT", "PATCH"):
-                        json_obj = extra
-                elif method == "GET":
-                    if param:
-                        params_dict = {**extra, param: mutated_payload}
-                else:
-                    json_obj = {**extra, param: mutated_payload} if param else dict(extra)
-
-                t0 = time.perf_counter()
-                if family == "BOLA_IDOR" and tier != "no_waf":
-                    resp = None
-                    for oid in ("1", "2", "3", "4"):
-                        p_try = re.sub(r"\{[^}]+\}", oid, endpoint_tpl) if "{" in endpoint_tpl else re.sub(r"/\d+(/?)$", rf"/{oid}\1", resolved_path)
-                        resp = await client.request(
-                            method=method,
-                            url=f"/api/proxy{p_try}",
-                            headers={"X-Forwarded-For": f"10.99.0.{r}", "User-Agent": "PBL6-ArenaLiveHTTP/3.1"},
-                        )
-                    assert resp is not None
-                else:
-                    resp = await client.request(
-                        method=method,
-                        url=f"/api/proxy{resolved_path}",
-                        params=params_dict,
-                        json=json_obj,
-                        headers={"X-Forwarded-For": f"10.99.1.{r}", "User-Agent": "PBL6-ArenaLiveHTTP/3.1"},
-                    )
-                latency_ms = round((time.perf_counter() - t0) * 1000.0, 3)
-
-                hdrs = resp.headers
-                status_code = resp.status_code
-                dlp_redacted = hdrs.get("x-waf-dlp-redacted", "false").lower() == "true"
-                waf_blocked = status_code in (403, 429) or dlp_redacted
-
-                bd: dict[str, Any] = {}
-                if status_code == 403:
-                    try:
-                        bd = resp.json().get("breakdown") or {}
-                    except Exception:
-                        bd = {}
-
-                rule_score = float(hdrs.get("x-waf-rule-score") or bd.get("rule_score") or 0.0)
-                ml_score_val = float(hdrs.get("x-waf-ml-score") or bd.get("ml_score") or 0.0)
-                anomaly_score_val = float(hdrs.get("x-waf-anomaly-score") or bd.get("anomaly_score") or 0.0)
-                waf_threat_score = float(hdrs.get("x-waf-risk-score") or (88.0 if dlp_redacted else 0.0))
-                waf_decision = "BLOCK" if status_code in (403, 429) else ("DLP_REDACT" if dlp_redacted else "ALLOW")
-                winner = "BLUE_TEAM" if waf_blocked else "RED_TEAM"
-
-                f_state["attempts"] = fam_attempt + 1
-                f_state["last_status"] = status_code
-                f_state["rule_score"] = rule_score
-                f_state["ml_score"] = ml_score_val if tier == "hybrid_v3" else None
-                f_state["anomaly_score"] = anomaly_score_val if tier == "hybrid_v3" else None
-                f_state["threat_score"] = waf_threat_score
-                f_state["dlp_redacted"] = dlp_redacted
-                f_state["consec_blocks"] = (consec_blocks + 1) if waf_blocked else 0
-
-                phase_label = "PROBE" if r == 1 else "DQN_MUTATE"
-                rounds_data.append(
-                    {
-                        "round_num": r,
-                        "round": r,
-                        "phase": phase_label,
-                        "event_type": phase_label,
-                        "attack_type": family,
-                        "endpoint": resolved_path,
-                        "target_endpoint": resolved_path,
-                        "method": method,
-                        "technique": tech_name,
-                        "mutation_technique": tech_name,
-                        "original_payload": str(case["baseline"]),
-                        "mutated_payload": mutated_payload,
-                        "normalized_payload": normalized_payload,
-                        "response_status": status_code,
-                        "http_status": status_code,
-                        "waf_blocked": waf_blocked,
-                        "dlp_redacted": dlp_redacted,
-                        "waf_decision": waf_decision,
-                        "waf_threat_score": round(waf_threat_score, 1),
-                        "threat_score": round(waf_threat_score, 1),
-                        "rule_score": round(rule_score, 1),
-                        "matched_rules": [],
-                        "ml_score": round(ml_score_val, 2),
-                        "anomaly_score": round(anomaly_score_val, 2),
-                        "latency_ms": latency_ms,
-                        "winner": winner,
-                        "dqn_q_values": dqn_q_values,
-                        "execution_mode": "live_http",
-                        "reasoning_vi": (
-                            f"[Live HTTP /api/proxy] {method} {resolved_path} -> HTTP {status_code} "
-                            f"(Risk={waf_threat_score:.1f}/100, Rule={rule_score:.1f}, ML={ml_score_val:.1f})."
-                        ),
-                    }
-                )
+                rounds_data.append(rd)
     finally:
-        settings.ablation_mode = prev_ablation
-        with SessionLocal() as restore_db:
-            cfg_row = restore_db.query(WafConfigModel).filter(WafConfigModel.key == "waf_mode").first()
-            if prev_waf_mode is None and cfg_row is not None:
-                restore_db.delete(cfg_row)
-            elif cfg_row is not None:
-                cfg_row.value = prev_waf_mode
-            restore_db.commit()
-        invalidate_waf_mode_cache()
+        _exit_live_http_tier(prev_waf_mode, prev_ablation)
 
-    report = _finalize_pentest_report(
+    return _finalize_pentest_report(
         body=body,
         tier=tier,
         spec_source=spec_source,
         graph_nodes=graph_nodes,
         rounds_data=rounds_data,
         started_perf=started_perf,
+        execution_mode="live_http",
     )
-    report["execution_mode"] = "live_http"
-    return report
+
+
+def _lookup_recorded_battle(battle_id: str | None) -> dict[str, Any] | None:
+    if battle_id:
+        for b in _BATTLE_HISTORY:
+            if b.get("battle_id") == battle_id:
+                return b
+        if _CURRENT_OR_LAST_PENTEST and _CURRENT_OR_LAST_PENTEST.get("battle_id") == battle_id:
+            return _CURRENT_OR_LAST_PENTEST
+        return None
+    if _CURRENT_OR_LAST_PENTEST is not None:
+        return _CURRENT_OR_LAST_PENTEST
+    return _BATTLE_HISTORY[0] if _BATTLE_HISTORY else None
+
+
+def _get_git_head_sha() -> tuple[str, str]:
+    """Returns (full_sha, short_sha) safely even inside minimal containers without git."""
+    env_sha = (os.environ.get("GIT_HEAD_SHA") or os.environ.get("GIT_SHA") or "").strip()
+    if env_sha:
+        return env_sha, env_sha[:7]
+    try:
+        full_sha = subprocess.check_output(
+            ["git", "rev-parse", "HEAD"],
+            cwd=str(_REPO_ROOT),
+            stderr=subprocess.DEVNULL,
+            timeout=1.5,
+            text=True,
+        ).strip()
+        if full_sha:
+            return full_sha, full_sha[:7]
+    except Exception:
+        pass
+    return "unknown", "nogit"
+
+
+def _resolve_evidence_dir() -> Path:
+    """Writes to docs/reports/history if writable; otherwise falls back to data/arena_evidence."""
+    docs_history = _REPO_ROOT / "docs" / "reports" / "history"
+    if docs_history.is_dir() and os.access(docs_history, os.W_OK):
+        return docs_history
+
+    candidates = []
+    if _REPO_ROOT != _REPO_ROOT.parent:
+        candidates.append(_REPO_ROOT / "data" / "arena_evidence")
+    candidates.append(_GATEWAY_ROOT / "data" / "arena_evidence")
+
+    for cand in candidates:
+        try:
+            cand.mkdir(parents=True, exist_ok=True)
+            if os.access(cand, os.W_OK):
+                return cand
+        except OSError:
+            continue
+    return candidates[-1]
+
+
+@router.get("/pentest/catalog", summary="Get Selectable Attack Families & Baseline Payloads")
+def get_pentest_catalog() -> dict[str, Any]:
+    """Trả về danh mục các họ tấn công và payload mẫu phục vụ Live HTTP Arena selector."""
+    families = [
+        {
+            "family": fam,
+            "category": (
+                "Injection"
+                if fam in ("SQL_INJECTION", "XSS", "PATH_TRAVERSAL", "COMMAND_INJECTION")
+                else "API Logic"
+            ),
+            "endpoint": cfg["endpoint"],
+            "method": cfg["method"],
+            "param": cfg["param"],
+            "baseline_payload": cfg["baseline"],
+            "techniques": [name for name, _fn in cfg.get("techniques", [])],
+        }
+        for fam, cfg in ATTACK_CONFIGS.items()
+    ]
+    return {
+        "families": families,
+        "scopes": [
+            {"id": "full_pentest", "label": "Full Pentest (8/8)"},
+            {"id": "injection", "label": "OWASP Injections"},
+            {"id": "api_logic", "label": "OWASP API Logic"},
+        ],
+    }
 
 
 @router.post("/pentest/run", summary="Run Full Autonomous Pentest Evaluation")
@@ -1472,11 +1836,8 @@ async def run_pentest_evaluation_endpoint(
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
     """Chạy đánh giá đối kháng toàn trình (OpenAPI Recon, Attack Graph, Probe, Dueling-DQN, Verdict)."""
-    from app.api.dashboard import _validate_cyber_range_target_url
-    from app.core.config import get_settings
-
     if body.target_url:
-        body.target_url = _validate_cyber_range_target_url(body.target_url, get_settings().target_api_url)
+        body.target_url = _validate_arena_target_url(body.target_url)
 
     caller_ip = (request.client.host if request.client else None) or "127.0.0.1"
     if (body.execution_mode or "in_process").strip().lower() == "live_http":
@@ -1494,22 +1855,37 @@ async def stream_pentest_evaluation_endpoint(
     scope: str = Query("full_pentest"),
     max_rounds: int = Query(8, ge=1, le=20),
     sync_to_soc: bool = Query(False),
+    execution_mode: str = Query("in_process"),
+    custom_payload: str | None = Query(None),
+    selected_families: str | None = Query(None),
     db: Session = Depends(get_db),
 ):
     """Phát trực tiếp Server-Sent Events (SSE) thời gian thực từng pha và từng vòng đối kháng."""
+    validated_url = _validate_arena_target_url(target_url)
+    parsed_families = (
+        [f.strip() for f in selected_families.split(",") if f.strip()]
+        if selected_families
+        else None
+    )
+    exec_mode = "live_http" if (execution_mode or "in_process").strip().lower() == "live_http" else "in_process"
     req = PentestRunRequest(
-        target_url=target_url,
+        target_url=validated_url,
         defense_tier=defense_tier,
         scope=scope,
         max_rounds=max_rounds,
         sync_to_soc=sync_to_soc,
+        execution_mode=exec_mode,
+        custom_payload=custom_payload,
+        selected_families=parsed_families,
     )
     db_bind = db.get_bind() if db is not None else default_db_engine
     caller_ip = (request.client.host if request.client else None) or "127.0.0.1"
 
     async def sse_event_generator():
+        import httpx
+
         started_perf = time.perf_counter()
-        selected_families = _resolve_scope_families(req.scope)
+        resolved_families = _resolve_selected_families(req.scope, req.selected_families)
         tier = (req.defense_tier or "hybrid_v3").lower().strip()
         if tier not in ("no_waf", "rules_only", "hybrid_v3"):
             tier = "hybrid_v3"
@@ -1517,7 +1893,7 @@ async def stream_pentest_evaluation_endpoint(
         ordered_cases, graph_nodes, spec_source = await anyio.to_thread.run_sync(
             _discover_openapi_pentest_plan,
             req.target_url,
-            selected_families,
+            resolved_families,
         )
 
         # Phase 1: RECON
@@ -1525,9 +1901,10 @@ async def stream_pentest_evaluation_endpoint(
             "type": "RECON",
             "phase": "1. Reconnaissance",
             "status": "completed",
-            "target_url": target_url,
+            "target_url": validated_url,
             "spec_source": spec_source,
-            "message": f"Khám phá OpenAPI từ {target_url} ({len(graph_nodes)} bề mặt tấn công).",
+            "execution_mode": exec_mode,
+            "message": f"Khám phá OpenAPI từ {validated_url} ({len(graph_nodes)} bề mặt tấn công).",
             "endpoints_count": len(graph_nodes),
             "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
         }
@@ -1553,33 +1930,67 @@ async def stream_pentest_evaluation_endpoint(
         rounds_data: list[dict[str, Any]] = []
         per_family_state: dict[str, dict[str, Any]] = {}
 
-        for r in range(1, num_rounds + 1):
-            ep_idx = (r - 1) % len(ordered_cases)
-            case = ordered_cases[ep_idx]
-            f_state = per_family_state.setdefault(case["family"], {})
-            rd = await anyio.to_thread.run_sync(
-                lambda r_i=r, c_i=case, e_i=ep_idx, fs=f_state: _evaluate_single_pentest_round(
-                    round_num=r_i,
-                    total_rounds=num_rounds,
-                    case=c_i,
-                    endpoint_index=e_i,
-                    total_endpoints=len(ordered_cases),
-                    tier=tier,
-                    family_state=fs,
-                    sync_to_soc=req.sync_to_soc,
-                    db_bind=db_bind,
-                    client_ip=caller_ip,
+        if exec_mode == "live_http":
+            prev_waf_mode, prev_ablation = _enter_live_http_tier(tier)
+            try:
+                transport = httpx.ASGITransport(app=request.app)
+                async with httpx.AsyncClient(transport=transport, base_url="http://local-gateway") as client:
+                    for r in range(1, num_rounds + 1):
+                        ep_idx = (r - 1) % len(ordered_cases)
+                        case = ordered_cases[ep_idx]
+                        f_state = per_family_state.setdefault(case["family"], {})
+                        rd = await _execute_single_live_http_round(
+                            client=client,
+                            round_num=r,
+                            total_rounds=num_rounds,
+                            case=case,
+                            endpoint_index=ep_idx,
+                            total_endpoints=len(ordered_cases),
+                            tier=tier,
+                            family_state=f_state,
+                            custom_payload=req.custom_payload,
+                            ip_octet=0,
+                        )
+                        rounds_data.append(rd)
+                        rd_payload = {
+                            "type": "ROUND",
+                            "phase": f"Round {rd['round_num']}/{num_rounds}",
+                            "round_data": rd,
+                            "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+                        }
+                        yield f"event: round\ndata: {json.dumps(rd_payload, ensure_ascii=False)}\n\n"
+                        await asyncio.sleep(0.02)
+            finally:
+                _exit_live_http_tier(prev_waf_mode, prev_ablation)
+        else:
+            for r in range(1, num_rounds + 1):
+                ep_idx = (r - 1) % len(ordered_cases)
+                case = ordered_cases[ep_idx]
+                f_state = per_family_state.setdefault(case["family"], {})
+                rd = await anyio.to_thread.run_sync(
+                    lambda r_i=r, c_i=case, e_i=ep_idx, fs=f_state: _evaluate_single_pentest_round(
+                        round_num=r_i,
+                        total_rounds=num_rounds,
+                        case=c_i,
+                        endpoint_index=e_i,
+                        total_endpoints=len(ordered_cases),
+                        tier=tier,
+                        family_state=fs,
+                        sync_to_soc=req.sync_to_soc,
+                        db_bind=db_bind,
+                        client_ip=caller_ip,
+                        custom_payload=req.custom_payload,
+                    )
                 )
-            )
-            rounds_data.append(rd)
-            rd_payload = {
-                "type": "ROUND",
-                "phase": f"Round {rd['round_num']}/{num_rounds}",
-                "round_data": rd,
-                "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
-            }
-            yield f"event: round\ndata: {json.dumps(rd_payload, ensure_ascii=False)}\n\n"
-            await asyncio.sleep(0.02)
+                rounds_data.append(rd)
+                rd_payload = {
+                    "type": "ROUND",
+                    "phase": f"Round {rd['round_num']}/{num_rounds}",
+                    "round_data": rd,
+                    "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+                }
+                yield f"event: round\ndata: {json.dumps(rd_payload, ensure_ascii=False)}\n\n"
+                await asyncio.sleep(0.02)
 
         # Phase 5: VERDICT
         report = _finalize_pentest_report(
@@ -1589,6 +2000,7 @@ async def stream_pentest_evaluation_endpoint(
             graph_nodes=graph_nodes,
             rounds_data=rounds_data,
             started_perf=started_perf,
+            execution_mode=exec_mode,
         )
         verdict_evt = {
             **report,
@@ -1607,3 +2019,305 @@ async def stream_pentest_evaluation_endpoint(
             "X-Accel-Buffering": "no",
         },
     )
+
+
+@router.post("/pentest/replay", summary="Deterministically Replay Recorded Arena Traffic")
+async def replay_pentest_traffic_endpoint(
+    request: Request,
+    body: PentestReplayRequest = Body(default_factory=PentestReplayRequest),
+) -> dict[str, Any]:
+    """Phát lại tuần tự các vòng tấn công đã ghi nhận qua /api/proxy hoặc in-process để kiểm chứng tính nhất quán."""
+    import httpx
+
+    started_perf = time.perf_counter()
+    source_battle = _lookup_recorded_battle(body.battle_id)
+    if body.battle_id and source_battle is None and body.rounds is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Recorded battle '{body.battle_id}' not found in arena history.",
+        )
+
+    source_rounds = body.rounds if body.rounds is not None else (
+        source_battle.get("rounds", []) if source_battle else []
+    )
+    if not source_rounds:
+        raise HTTPException(
+            status_code=404,
+            detail="No recorded traffic rounds available to replay.",
+        )
+
+    target_url = _validate_arena_target_url(
+        body.target_url or (source_battle or {}).get("target_url") or "http://127.0.0.1:5000"
+    )
+    tier = (body.defense_tier or (source_battle or {}).get("defense_tier") or "hybrid_v3").strip().lower()
+    if tier not in ("no_waf", "rules_only", "hybrid_v3"):
+        tier = "hybrid_v3"
+
+    raw_exec_mode = body.execution_mode or (source_battle or {}).get("execution_mode") or "live_http"
+    exec_mode = "live_http" if raw_exec_mode.strip().lower() == "live_http" else "in_process"
+    caller_ip = (request.client.host if request.client else None) or "127.0.0.1"
+
+    replayed_rounds: list[dict[str, Any]] = []
+    per_family_state: dict[str, dict[str, Any]] = {}
+
+    if exec_mode == "live_http":
+        prev_waf_mode, prev_ablation = _enter_live_http_tier(tier)
+        try:
+            transport = httpx.ASGITransport(app=request.app)
+            async with httpx.AsyncClient(transport=transport, base_url="http://local-gateway") as client:
+                for idx, orig_rd in enumerate(source_rounds, start=1):
+                    family = str(orig_rd.get("attack_type") or "SQL_INJECTION").upper()
+                    cfg = ATTACK_CONFIGS.get(family, ATTACK_CONFIGS["SQL_INJECTION"])
+                    endpoint_val = str(
+                        orig_rd.get("target_endpoint")
+                        or orig_rd.get("endpoint")
+                        or cfg["endpoint"]
+                    )
+                    method_val = str(orig_rd.get("method") or cfg["method"]).upper()
+                    replay_payload = str(
+                        orig_rd.get("mutated_payload")
+                        if orig_rd.get("mutated_payload") is not None
+                        else (
+                            orig_rd.get("payload")
+                            if orig_rd.get("payload") is not None
+                            else orig_rd.get("original_payload") or cfg["baseline"]
+                        )
+                    )
+                    orig_baseline = str(orig_rd.get("original_payload") or replay_payload)
+                    case = {
+                        "family": family,
+                        "endpoint": endpoint_val,
+                        "method": method_val,
+                        "param": cfg.get("param", "q"),
+                        "request_type": "path" if "{" in endpoint_val else ("query" if method_val == "GET" else "json"),
+                        "extra_fields": dict(cfg.get("extra_fields", {})),
+                        "baseline": orig_baseline,
+                    }
+                    f_state = per_family_state.setdefault(family, {})
+                    new_rd = await _execute_single_live_http_round(
+                        client=client,
+                        round_num=idx,
+                        total_rounds=len(source_rounds),
+                        case=case,
+                        endpoint_index=0,
+                        total_endpoints=1,
+                        tier=tier,
+                        family_state=f_state,
+                        fixed_payload=replay_payload,
+                        fixed_technique=str(orig_rd.get("mutation_technique") or orig_rd.get("technique") or "replay"),
+                        fixed_dqn_q_values=orig_rd.get("dqn_q_values") if isinstance(orig_rd.get("dqn_q_values"), list) else [],
+                        ip_octet=10,
+                    )
+                    replayed_rounds.append(new_rd)
+        finally:
+            _exit_live_http_tier(prev_waf_mode, prev_ablation)
+    else:
+        for idx, orig_rd in enumerate(source_rounds, start=1):
+            family = str(orig_rd.get("attack_type") or "SQL_INJECTION").upper()
+            cfg = ATTACK_CONFIGS.get(family, ATTACK_CONFIGS["SQL_INJECTION"])
+            endpoint_val = str(
+                orig_rd.get("target_endpoint")
+                or orig_rd.get("endpoint")
+                or cfg["endpoint"]
+            )
+            method_val = str(orig_rd.get("method") or cfg["method"]).upper()
+            replay_payload = str(
+                orig_rd.get("mutated_payload")
+                if orig_rd.get("mutated_payload") is not None
+                else (
+                    orig_rd.get("payload")
+                    if orig_rd.get("payload") is not None
+                    else orig_rd.get("original_payload") or cfg["baseline"]
+                )
+            )
+            orig_baseline = str(orig_rd.get("original_payload") or replay_payload)
+            tech_name = str(orig_rd.get("mutation_technique") or orig_rd.get("technique") or "replay")
+            rtype = "path" if "{" in endpoint_val else ("query" if method_val == "GET" else "json")
+            _, normalized_payload = InputNormalizer.get_canonical_representations(replay_payload)
+            resolved_path, _pd, _jo, query_str, body_text, body_bytes = _build_http_surface_args(
+                endpoint_tpl=endpoint_val,
+                method=method_val,
+                param=cfg.get("param", "q"),
+                rtype=rtype,
+                extra=dict(cfg.get("extra_fields", {})),
+                payload_str=replay_payload,
+            )
+            eval_res = await anyio.to_thread.run_sync(
+                lambda fp=family, ev=endpoint_val, rp=resolved_path, mv=method_val, qs=query_str, bt=body_text, bb=body_bytes, tn=tech_name: _inspect_in_process_waf(
+                    family=fp,
+                    endpoint_tpl=ev,
+                    resolved_path=rp,
+                    method=mv,
+                    query_str=qs,
+                    body_text=bt,
+                    body_bytes=bb,
+                    tech_name=tn,
+                    tier=tier,
+                    client_ip=caller_ip,
+                )
+            )
+            phase_label = "PROBE" if idx == 1 else "DQN_MUTATE"
+            replayed_rounds.append(
+                {
+                    "round_num": idx,
+                    "round": idx,
+                    "phase": phase_label,
+                    "event_type": phase_label,
+                    "attack_type": family,
+                    "endpoint": resolved_path,
+                    "target_endpoint": resolved_path,
+                    "method": method_val,
+                    "technique": tech_name,
+                    "mutation_technique": tech_name,
+                    "original_payload": orig_baseline,
+                    "mutated_payload": replay_payload,
+                    "normalized_payload": normalized_payload,
+                    "response_status": eval_res["response_status"],
+                    "http_status": eval_res["response_status"],
+                    "waf_blocked": eval_res["waf_blocked"],
+                    "dlp_redacted": eval_res["dlp_redacted"],
+                    "waf_decision": eval_res["waf_decision"],
+                    "waf_threat_score": round(eval_res["waf_threat_score"], 1),
+                    "threat_score": round(eval_res["waf_threat_score"], 1),
+                    "rule_score": round(eval_res["rule_score"], 1),
+                    "matched_rules": eval_res["matched_rules"],
+                    "ml_score": round(eval_res["ml_score_val"], 2),
+                    "anomaly_score": round(eval_res["anomaly_score_val"], 2),
+                    "latency_ms": eval_res["latency_ms"],
+                    "winner": eval_res["winner"],
+                    "dqn_q_values": orig_rd.get("dqn_q_values") if isinstance(orig_rd.get("dqn_q_values"), list) else [],
+                    "execution_mode": "in_process",
+                    "reasoning_vi": f"[Replay] {eval_res['reasoning_vi']}",
+                }
+            )
+
+    mismatches: list[dict[str, Any]] = []
+    for idx, (orig_rd, new_rd) in enumerate(zip(source_rounds, replayed_rounds), start=1):
+        orig_status = orig_rd.get("response_status", orig_rd.get("http_status"))
+        orig_decision = orig_rd.get("waf_decision")
+        orig_blocked = orig_rd.get("waf_blocked")
+
+        if orig_decision is not None and orig_status is not None:
+            is_match = (orig_decision == new_rd["waf_decision"]) and (int(orig_status) == int(new_rd["response_status"]))
+        elif orig_status is not None:
+            is_match = int(orig_status) == int(new_rd["response_status"])
+        elif orig_blocked is not None:
+            is_match = bool(orig_blocked) == bool(new_rd["waf_blocked"])
+        else:
+            is_match = True
+
+        if not is_match:
+            mismatches.append(
+                {
+                    "round_num": idx,
+                    "attack_type": new_rd["attack_type"],
+                    "endpoint": new_rd["endpoint"],
+                    "original_status": orig_status,
+                    "replayed_status": new_rd["response_status"],
+                    "original_decision": orig_decision,
+                    "replayed_decision": new_rd["waf_decision"],
+                }
+            )
+
+    total_replayed = len(replayed_rounds)
+    matched_verdicts = total_replayed - len(mismatches)
+    match_rate_pct = round((matched_verdicts / total_replayed) * 100.0, 2) if total_replayed > 0 else 0.0
+    replay_of_id = body.battle_id or (source_battle or {}).get("battle_id")
+    replay_comparison = {
+        "replay_of": replay_of_id,
+        "total_replayed": total_replayed,
+        "matched_verdicts": matched_verdicts,
+        "match_rate_pct": match_rate_pct,
+        "mismatches": mismatches,
+    }
+
+    synth_req = PentestRunRequest(
+        target_url=target_url,
+        defense_tier=tier,
+        scope=str((source_battle or {}).get("scope") or "replay"),
+        max_rounds=min(20, max(1, total_replayed)),
+        sync_to_soc=False,
+        execution_mode=exec_mode,
+    )
+    graph_nodes = list((source_battle or {}).get("attack_graph") or [])
+    return _finalize_pentest_report(
+        body=synth_req,
+        tier=tier,
+        spec_source=str((source_battle or {}).get("spec_source") or "traffic_replay"),
+        graph_nodes=graph_nodes,
+        rounds_data=replayed_rounds,
+        started_perf=started_perf,
+        execution_mode=exec_mode,
+        battle_id_prefix="replay",
+        extra_fields={"replay_comparison": replay_comparison},
+    )
+
+
+@router.post("/pentest/export", summary="Export D4 Immutable Live Arena Evidence Bundle")
+def export_pentest_evidence_endpoint(
+    body: PentestExportRequest = Body(default_factory=PentestExportRequest),
+) -> dict[str, Any]:
+    """Xuất gói bằng chứng D4 bất biến kèm SHA-256 digest ra docs/reports/history hoặc data/arena_evidence."""
+    report = body.report
+    if report is None:
+        report = _lookup_recorded_battle(body.battle_id)
+        if report is None:
+            raise HTTPException(
+                status_code=404,
+                detail="No pentest report found to export as D4 evidence.",
+            )
+
+    replay_report = body.replay_report
+    execution_mode = str(
+        report.get("execution_mode")
+        or (replay_report or {}).get("execution_mode")
+        or "in_process"
+    )
+    now_utc = datetime.datetime.now(datetime.timezone.utc)
+    full_sha, short_sha = _get_git_head_sha()
+
+    metadata: dict[str, Any] = {
+        "task_id": "pbl6-v3-4-phase-f-001",
+        "exported_at": now_utc.isoformat(),
+        "execution_mode": execution_mode,
+        "git_head_sha": full_sha,
+    }
+    evidence_bundle: dict[str, Any] = {
+        "metadata": metadata,
+        "report": report,
+    }
+    if replay_report is not None:
+        evidence_bundle["replay_report"] = replay_report
+
+    canonical_json = json.dumps(
+        evidence_bundle,
+        sort_keys=True,
+        ensure_ascii=False,
+        separators=(",", ":"),
+    )
+    sha256_digest = hashlib.sha256(canonical_json.encode("utf-8")).hexdigest()
+    metadata["sha256_digest"] = sha256_digest
+
+    evidence_dir = _resolve_evidence_dir()
+    evidence_dir.mkdir(parents=True, exist_ok=True)
+    ts_part = now_utc.strftime("%Y%m%d_%H%M%S")
+    base_name = f"arena_live_{ts_part}_{short_sha}"
+    filename = f"{base_name}.json"
+    artifact_path = evidence_dir / filename
+    counter = 1
+    while artifact_path.exists():
+        filename = f"{base_name}_{counter}.json"
+        artifact_path = evidence_dir / filename
+        counter += 1
+
+    artifact_path.write_text(
+        json.dumps(evidence_bundle, indent=2, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+
+    return {
+        "filename": filename,
+        "artifact_path": str(artifact_path),
+        "sha256": sha256_digest,
+        "evidence": evidence_bundle,
+    }

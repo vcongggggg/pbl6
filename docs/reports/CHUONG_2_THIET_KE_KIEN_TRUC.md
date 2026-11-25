@@ -9,8 +9,8 @@ Các hệ thống Web API hiện đại trao đổi dữ liệu có cấu trúc 
 
 Đề tài xây dựng **Nền tảng Giám sát, Phát hiện và Ngăn chặn Tấn công Web API dựa trên AI/ML kết hợp Môi trường Thao trường Mạng Đối kháng Phân tán (Distributed Cyber Range)** gồm 3 phân hệ đồng bộ:
 1. **Ứng dụng Mục tiêu (`vulnerable-api` — Bookie Bookstore):** Hệ thống Web API thương mại điện tử tự phát triển bằng **Python Django** (lắng nghe cô lập trên `127.0.0.1:5000`), tích hợp 8 nhóm lỗ hổng kinh điển chuẩn OWASP Web & API Top 10 kèm đặc tả OpenAPI 3.0.
-2. **Hệ thống Phòng thủ Chủ động Blue Team v2.0 (`gateway` + `ml-engine` + `dashboard`):** Cổng WAF Reverse Proxy bất đồng bộ chịu tải cao (FastAPI, Port 8000), tích hợp Multi-Protocol Sniffer, Positive Security OpenAPI Schema Validator, 16 Hardened Signatures, bộ trích xuất thống nhất 26 đặc trưng, **Champion XGBoost v2.0 (UBJSON)** + **Calibrated Isolation Forest v2.0 (NPZ)**, Sliding Window Rate Limiter chống bypass (LRU 50,000 + IP Hard Cap), bảng kiểm toán `AuditLog`, cùng Trung tâm Chỉ huy SOC & Đấu Trường AI (`dashboard`, Next.js 14, Port 3000) bảo vệ qua Server-Side BFF Proxy.
-3. **Tác tử Tấn công Tự hành Red Team (`attack-lab`):** Vận hành độc lập trên Máy 2 qua mạng LAN, gồm bộ trinh sát OpenAPI (`recon.py` có bảo vệ chống vòng lặp `$ref`), mô hình hóa Đồ thị Tấn công (`environment/`), động cơ biến dị bảo toàn ngữ nghĩa (`evasion.py`), mô hình PyTorch DQN (`evasion_agent.pt`) và bộ điều phối chiến dịch (`runner.py`).
+2. **Hệ thống Phòng thủ Chủ động Blue Team (`gateway` + `ml-engine` + `dashboard` — tiến hóa v2.0 -> v3.3):** Cổng WAF Reverse Proxy bất đồng bộ chịu tải cao (FastAPI, Port 8000), tích hợp Multi-Protocol Sniffer, Positive Security OpenAPI Schema Validator (chế độ `route_tiered`), **28 Hardened Signatures** (tiến hóa từ 16 luật nền v2.0 -> 26 luật v3.2 -> 28 luật v3.3), bộ trích xuất thống nhất 26 đặc trưng kèm **Per-Parameter Max-Pooling (`predict_http`)**, **Champion XGBoost v2.0 (UBJSON)** + **Calibrated Isolation Forest v2.0 (NPZ)**, Dual-AI Consensus, 5 lá chắn OWASP API Top 10, Sliding Window Rate Limiter chống bypass (LRU 50,000 + IP Hard Cap), bảng kiểm toán `AuditLog`, cùng Trung tâm Chỉ huy SOC & Đấu Trường AI (`dashboard`, Next.js 14, Port 3000) bảo vệ qua Server-Side BFF Proxy.
+3. **Tác tử Tấn công Tự hành Red Team (`attack-lab`):** Vận hành độc lập trên Máy 2 qua mạng LAN, gồm bộ trinh sát OpenAPI (`recon.py` có bảo vệ chống vòng lặp `$ref`), mô hình hóa Đồ thị Tấn công (`environment/`), động cơ biến dị bảo toàn ngữ nghĩa (`evasion.py`), mô hình PyTorch Dueling Double-DQN (`pentest_dqn_v2.pt` 74-D/36-action kế thừa từ `evasion_agent.pt` 40-D/14-action) và bộ điều phối chiến dịch (`runner.py`).
 
 ### 2.1.2. Yêu cầu chức năng (Functional Requirements — FR)
 
@@ -20,11 +20,11 @@ Các hệ thống Web API hiện đại trao đổi dữ liệu có cấu trúc 
 | :--- | :--- | :--- | :--- |
 | **FR-01** | **Chặn bắt Reverse Proxy & Kiểm soát Body** | Chặn bắt toàn bộ HTTP/1.1 tới `/api/proxy/*`, gán `X-Request-ID`, giới hạn kích thước body `<= 1 MB` (kể cả chunked transfer -> HTTP 413), thanh lọc `X-API-Key` trước khi chuyển tiếp, bảo toàn đa giá trị `Set-Cookie`. | `gateway` (Proxy) |
 | **FR-02** | **Nhận diện Đa giao thức & Bóc tách** | Phân loại chính xác `REST`, `GRAPHQL`, `SOAP_XML`, `JSON_RPC`, `GENERIC_WEB`; bóc tách `<![CDATA[...]]>` / lá văn bản XML, phát hiện XXE trên cả query/body và GraphQL Deep Nesting DoS. | `gateway` (`protocol_detector`) |
-| **FR-03** | **Positive Security OpenAPI Validator** | Kiểm chứng HTTP method, kiểu path param, query param, `Content-Type`, JSON body và chặn `additionalProperties` (Mass Assignment); tôn trọng `WAF_MODE` và ghi `SecurityEvent`. | `gateway` (`schema_validator`) |
-| **FR-04** | **Phát hiện Đa tầng (Rule + ML + Anomaly)** | Tầng 1: `InputNormalizer` (đệ quy URL, HTML, Unicode NFC, khử Zero-Width & comment đa dòng) + 16 luật OWASP an toàn ReDoS với Sliding Window > 16 KB. Tầng 2: `XGBoost v2.0` (26-D UBJSON). Tầng 3: `Calibrated IForest v2.0` (26-D NPZ). | `gateway` + `ml-engine` |
-| **FR-05** | **Đánh giá Rủi ro, Chính sách & Rate Limit** | Hợp nhất điểm `0–100` (`0.40*Rule + 0.35*ML + 0.25*Anomaly` + High-Confidence Override); thực thi `ALLOW` (<30), `MONITOR` (30–59), `RATE_LIMIT` (60–79 -> HTTP 429), `BLOCK` (>=80 -> HTTP 403 RFC 7807); Sliding Window LRU 50,000 + IP Hard Cap chống xoay token/UA. | `gateway` (Risk / Rate Limit) |
+| **FR-03** | **Positive Security OpenAPI Validator** | Kiểm chứng HTTP method, kiểu path param, query param, `Content-Type`, JSON body và chặn `additionalProperties` (Mass Assignment) theo chính sách **`route_tiered`** mặc định (`strict_all` khi kiểm định OpenAPI chuyên sâu); tôn trọng `WAF_MODE` và ghi `SecurityEvent`. | `gateway` (`schema_validator`) |
+| **FR-04** | **Phát hiện Đa tầng (Rule + ML + Anomaly)** | Tầng 1: `InputNormalizer` (đệ quy URL/`unquote_plus`, HTML, Unicode NFC, khử Zero-Width & comment đa dòng) + **28 luật OWASP** an toàn ReDoS với Sliding Window > 16 KB, đệ quy JSON `object_pairs_hook=list` (chống duplicate key) & `parse_qs` form. Tầng 2: `XGBoost v2.0` (26-D UBJSON + Per-Parameter Max-Pooling). Tầng 3: `Calibrated IForest v2.0` (26-D NPZ). | `gateway` + `ml-engine` |
+| **FR-05** | **Đánh giá Rủi ro, Chính sách & Rate Limit** | Hợp nhất điểm `0–100` (`0.40*Rule + 0.35*ML + 0.25*Anomaly` + High-Confidence Override `Rule >= 85` / `ML >= 90` + **Dual-AI Consensus `ML >= 70 & Anomaly >= 70`**); thực thi `ALLOW` (<30), `MONITOR` (30–59), `RATE_LIMIT` (60–79 -> HTTP 429), `BLOCK` (>=80 -> HTTP 403 RFC 7807); Sliding Window LRU 50,000 + IP Hard Cap. | `gateway` (Risk / Rate Limit) |
 | **FR-06** | **Ứng dụng Mục tiêu Bookie Bookstore** | 8 kịch bản lỗ hổng OWASP Web/API trên Django (`127.0.0.1:5000`), kiểm chứng HMAC VNPay bằng `hmac.compare_digest`, xuất bản đặc tả OpenAPI 3.0 tại `/api/v1/vulnerable/openapi.json`. | `vulnerable-api` |
-| **FR-07** | **Tác tử Red Team Tự hành & DQN Evasion** | Trinh sát OpenAPI (có cycle guard `$ref`), lập Đồ thị Tấn công MDP (40-D state, 14 actions), điều phối chiến dịch đối kháng bằng PyTorch DQN (`evasion_agent.pt`, `weights_only=True` + SHA-256) và 14 toán tử biến dị ngữ nghĩa. | `attack-lab` |
+| **FR-07** | **Tác tử Red Team Tự hành & DQN Evasion** | Trinh sát OpenAPI (có cycle guard `$ref`), lập Đồ thị Tấn công MDP (nâng cấp từ 40-D/14-A lên **74-D state, 36 actions**), điều phối chiến dịch đối kháng bằng PyTorch Dueling Double-DQN (`pentest_dqn_v2.pt`, `weights_only=True` + SHA-256) và toán tử biến dị ngữ nghĩa. | `attack-lab` |
 | **FR-08** | **SOC Command Center & AI Arena UI** | Next.js 14 giao tiếp 100% qua Server-Side BFF Proxy (`/api/gateway/*`, `0` secret trên trình duyệt): KPI thật, Real-Time 60s RPS, Topology phân tán, Protocol Distribution, Attack Sessions Kill Chain, Evidence Drawer 26-D, XAI Modal và màn hình Đấu Trường AI (`/arena`). | `dashboard` |
 
 ### 2.1.3. Yêu cầu phi chức năng (Non-Functional Requirements — NFR)
@@ -33,7 +33,7 @@ Các hệ thống Web API hiện đại trao đổi dữ liệu có cấu trúc 
 
 | Mã NFR | Tiêu Chí | Chỉ Số Mục Tiêu (SLA) | Cơ Chế Đảm Bảo Kiến Trúc |
 | :--- | :--- | :--- | :--- |
-| **NFR-01** | **Độ trễ xử lý nội bộ (Inline Latency)** | Pipeline AI (`26-D + XGBoost + IForest`) `<= 2.5 ms/req`; Toàn bộ kiểm tra WAF `<= 5.0 ms/req`; Chống ReDoS `< 20 ms` trên chuỗi 50 KB. | Zero-Pickle `xgb_v2.ubj` + `iforest_v2.npz`, single-pass 26-D extraction, regex không quay lui bậc hai. |
+| **NFR-01** | **Độ trễ xử lý nội bộ & E2E (Dual-Tier SLA)** | Inline WAF/AI engine `<= 1.5 ms/req`; Toàn trình 2-hop TCP HTTP E2E `<= 5.5 ms/req`; Chống ReDoS `< 20 ms` trên chuỗi 50 KB. | Zero-Pickle `xgb_v2.ubj` + `iforest_v2.npz`, single-pass 26-D extraction, regex không quay lui bậc hai, bất đồng bộ Async ASGI. |
 | **NFR-02** | **Thông lượng đồng thời (Throughput)** | `>= 150 RPS` tại mức tải đồng thời `C = 50` không rơi gói, không khóa nghẽn Event Loop. | `anyio.to_thread.run_sync`, pure ASGI middleware, RAM TTL cache `waf_mode`, SQLite WAL Leader-Follower Group Commit (`busy_timeout=5000`). |
 | **NFR-03** | **Hiệu năng An ninh & Liêm chính Khoa học** | Detection Recall `>= 95%`, Benign FPR `<= 1.0%`, Youden's Index `J >= 0.90`, `0` Data Leakage, `0` telemetry giả lập. | Zero-Leakage `defense_v2` split, Zero Training-Serving Skew, 100% số liệu thật từ SQLite/Backend. |
 | **NFR-04** | **An toàn Chuỗi Cung Ứng & Phòng vệ Fail-Closed** | `0` Pickle trong runtime defense; xác thực SHA-256 Fail-Closed trước nạp model; lỗi RuleEngine xử lý Fail-Closed (`HTTP 403`); khóa mọi `/dashboard/*` bằng `X-API-Key`. | UBJSON + NPZ (`allow_pickle=False`), `torch.load(..., weights_only=True)`, `require_admin` + Next.js BFF Proxy. |
@@ -48,8 +48,8 @@ Hệ thống tách biệt rõ vai trò giữa **Máy 1 (Blue Team — Phòng th�
 ```text
 +---------------------------------------------------------------------------------+
 |                MÁY 2: RED TEAM HOST (ATTACKER — Nguyễn Minh)                    |
-|  [OpenAPI Recon (cycle guard)] -> [Attack Graph MDP (40-D, 14 actions)]         |
-|  -> [PyTorch DQN Agent (evasion_agent.pt, SHA-256 + weights_only=True)]         |
+|  | [OpenAPI Recon (cycle guard)] -> [Attack Graph MDP (74-D, 36 actions)]         |
+|  -> [PyTorch Dueling-DQN v2 (pentest_dqn_v2.pt, SHA-256 + weights_only=True)]   |
 |  -> [Semantic Tamper EvasionEngine & CLI Runner (attack-lab/runner.py)]         |
 +----------------------------------------+----------------------------------------+
                                          | HTTP/1.1 qua mạng LAN (192.168.1.0/24)
@@ -58,14 +58,14 @@ Hệ thống tách biệt rõ vai trò giữa **Máy 1 (Blue Team — Phòng th�
 |                MÁY 1: BLUE TEAM HOST (DEFENDER — Nguyễn Văn Công)               |
 |                                                                                 |
 |  +---------------------------------------------------------------------------+  |
-|  | WAF GATEWAY v2.0 (FastAPI Async, 0.0.0.0:8000, Pure ASGI + Thread Offload)|  |
+|  | WAF GATEWAY v3.3 (FastAPI Async, 0.0.0.0:8000, Pure ASGI + Thread Offload)|  |
 |  |  1. Request ID + Body Limit (<= 1MB, HTTP 413) + RAM TTL Cache (waf_mode) |  |
 |  |  2. Sliding Window Rate Limiter (LRU 50,000 + IP Hard Cap -> HTTP 429)    |  |
 |  |  3. Multi-Protocol Sniffer (REST/GraphQL/SOAP-XML/JSON-RPC) & Decapsul.   |  |
-|  |  4. InputNormalizer + 16 Hardened Rules (Sliding Window > 16KB, No ReDoS) |  |
-|  |  5. OpenAPI 3.0 Positive Security Schema Validator                        |  |
-|  |  6. Unified 26-D Feature Extractor -> XGBoost v2.0 (UBJ) + IForest v2(NPZ)|  |
-|  |  7. Hybrid Risk (0.40/0.35/0.25 + Override) -> ALLOW/MONITOR/429/BLOCK 403|  |
+|  |  4. InputNormalizer + 28 Hardened Rules (JSON dup-key + Form + >16KB)     |  |
+|  |  5. OpenAPI 3.0 Positive Security Schema Validator (route_tiered)         |  |
+|  |  6. Unified 26-D + Per-Param Max-Pooling -> XGBoost (UBJ) + IForest (NPZ) |  |
+|  |  7. Hybrid Risk (0.40/0.35/0.25 + Dual-AI/Override) -> ALLOW/429/BLOCK 403 |  |
 |  +-----------------+-------------------------------+-------------------------+  |
 |                    | ALLOW (X-API-Key stripped)    | BackgroundTasks GroupCommit|
 |                    v                               v                            |
@@ -104,9 +104,9 @@ Nhằm loại bỏ hoàn toàn hiện tượng nghẽn Asyncio Event Loop, `gate
 3. **Offload tác vụ CPU-bound (`anyio.to_thread.run_sync`):** Toàn bộ chuỗi kiểm tra (Protocol Sniffer, InputNormalizer, RuleEngine, SchemaValidator, 26-D Extraction, XGBoost v2.0, IForest v2.0) chạy trên worker thread pool độc lập, giữ Event Loop rảnh để phục vụ hàng trăm kết nối HTTP đồng thời.
 4. **SQLite WAL Leader-Follower Group Commit qua `BackgroundTasks`:** Ghi `RequestLog` và `SecurityEvent` theo lô (batch commit) ngoài đường dẫn phản hồi HTTP, kết hợp `QueuePool(pool_size=8, max_overflow=16)`, `PRAGMA journal_mode=WAL`, `PRAGMA synchronous=NORMAL` và `PRAGMA busy_timeout=5000`.
 
-### 2.3.2. Bộ Chuẩn hóa Đầu vào & 16 Luật Chữ ký Gia cố (Anti-Evasion & Anti-ReDoS)
-- **`InputNormalizer`:** Giải mã URL đệ quy (tối đa 5 vòng), giải mã HTML entities, chuẩn hóa Unicode NFC, gỡ bỏ ký tự vô hình Zero-Width (`[\u200b-\u200f\ufeff]`), chuẩn hóa chú thích nội tuyến đa dòng `/*...*/` (`re.DOTALL`) thành khoảng trắng.
-- **Chống tràn bộ đệm & ReDoS:** Áp dụng cơ chế **Sliding Window** quét toàn phần chuỗi > 16 KB (không cắt cụt phần đuôi), duyệt sâu JSON đến độ sâu giới hạn an toàn, xử lý byte không phải UTF-8 bằng chế độ fail-closed an toàn, và viết lại mẫu `XSS-002` dùng `[^<>]*` với nhóm `on[a-z]{3,20}\s*=` (triệt tiêu quay lui `O(n^2)` từ 923 ms xuống < 1 ms).
+### 2.3.2. Bộ Chuẩn hóa Đầu vào & 28 Luật Chữ ký Gia cố (Anti-Evasion & Anti-ReDoS)
+- **`InputNormalizer`:** Giải mã URL đệ quy (tối đa 3 vòng tại `InputNormalizer` và `unquote_plus` trong pipeline ML/form), giải mã HTML entities, chuẩn hóa Unicode NFKC, gỡ bỏ ký tự vô hình Zero-Width (`[\u200b-\u200f\ufeff]`), chuẩn hóa chú thích nội tuyến đa dòng `/*...*/` (`re.DOTALL`) thành khoảng trắng.
+- **Chống tràn bộ đệm, ReDoS & JSON Duplicate-Key Tamper:** Áp dụng cơ chế **Sliding Window** quét toàn phần chuỗi > 16 KB (không cắt cụt phần đuôi), phân tích JSON bằng **`json.loads(..., object_pairs_hook=list)`** và duyệt đệ quy cả chuỗi JSON lồng nhau (`max_depth=32`) để tránh khóa trùng bị ghi đè, giải mã biểu mẫu `application/x-www-form-urlencoded` theo từng tham số (`parse_qs`), xử lý byte không phải UTF-8 bằng chế độ fail-closed an toàn, và viết lại mẫu `XSS-002` dùng `[^<>]*` với nhóm `on[a-z]{3,20}\s*=` (triệt tiêu quay lui `O(n^2)` từ 923 ms xuống < 1 ms). Ngoài 16 luật nền v2.0, hệ thống mở rộng lên **28 luật** gồm các lá chắn API (`SSRF-001..004`, `NOSQLI-001..002`, `MASS-001..002`), `SQLI-006` (`BETWEEN` tautology), `SQLI-007` (scientific-float `1e0UNION`, `CHAR/CHR`, subquery) và `CMD-006` (wildcard-globbing `/???/c?t` + chỉ thị SSI `<!--#exec / <!--#include`).
 - **Mở rộng bề mặt kiểm tra:** Quét đầy đủ path, query, body, các payload bóc tách từ SOAP CDATA/GraphQL/JSON-RPC và tiêu đề nhạy cảm bao gồm `Cookie`, `User-Agent`, `Referer`.
 
 ### 2.3.3. Đặc tả Không gian 26 Đặc trưng Thống nhất (Unified 26-D Feature Vector)
@@ -123,7 +123,7 @@ Mọi mô hình AI trong Blue Team v2.0 (`xgb_v2.ubj` và `iforest_v2.npz`) cùn
 | `0 <= Risk < 30` | `ALLOW` | `200 OK` | Chuyển tiếp tới Bookie API; gắn `X-WAF-Risk-Score`, `X-WAF-API-Protocol`. |
 | `30 <= Risk < 60` | `MONITOR` | `200 OK` | Chuyển tiếp tới Upstream, đồng thời ghi `SecurityEvent` (nhãn `MONITOR`) vào SQLite WAL. |
 | `60 <= Risk < 80` (hoặc vượt quota) | `RATE_LIMIT` | `429 Too Many Requests` | Áp dụng `risk_penalty=True` / khóa tạm thời kèm `Retry-After` chuẩn RFC 6585 & RFC 7807. |
-| `Risk >= 80` hoặc `Rule >= 85` hoặc `ML >= 90` hoặc XXE/Schema Strict | `BLOCK` | `403 Forbidden` | Ngắt kết nối ngay tại Gateway (khi `ACTIVE_BLOCKING`), ghi `SecurityEvent` (`BLOCKED`) & đo thực `response_time_ms`. |
+| `Risk >= 80` hoặc `Rule >= 85` hoặc `ML >= 90` hoặc Dual-AI (`ML >= 70 & Anomaly >= 70`) hoặc XXE/Schema Strict | `BLOCK` | `403 Forbidden` | Ngắt kết nối ngay tại Gateway (khi `ACTIVE_BLOCKING`), ghi `SecurityEvent` (`BLOCKED`) & đo thực `response_time_ms`. |
 
 Bộ điều tiết tần suất **Sliding Window Rate Limiter** lưu trữ bằng `OrderedDict` với cơ chế **LRU Cap = 50,000 khóa** (chống tràn RAM OOM DoS) và áp dụng **IP Hard Cap** (10 req/phút trên `/auth/login/`, 60 req/phút mặc định) bất kể kẻ tấn công xoay vòng `User-Agent` hay `Bearer Token`.
 
@@ -151,8 +151,8 @@ Nhóm nghiên cứu tự xây dựng hoàn chỉnh hệ thống Web API thương
 ## 2.5. Thiết Kế Hệ Thống Tác Tử Red Team & Đấu Trường AI (`attack-lab` + `/arena`)
 
 1. **Module Trinh sát Tự động (`attack-lab/agent/recon.py` — Task 10.1):** Quét OpenAPI 3.0 từ Gateway, tích hợp `seen_refs` cycle guard chống lỗi đệ quy vô hạn trên `$ref` vòng tròn, xuất bản đồ bề mặt tấn công `attack_surface.json`.
-2. **Môi trường Đồ thị Tấn công (`attack-lab/environment/` — Task 10.2):** Biểu diễn tập endpoint thành đồ thị có hướng `AttackGraph`, cung cấp vector quan sát cố định **40 chiều** và từ điển **14 hành động rời rạc** có mặt nạ hợp lệ (`action_mask`).
-3. **Động cơ Biến dị & PyTorch DQN (`evasion.py`, `tools.py`, `runner.py` — Task 10.3 & 10.4):** Kết hợp 14 bộ biến dị bảo toàn ngữ nghĩa cho 4 họ tấn công với mạng DQN nội bộ (`evasion_agent.pt`, `40 -> 128 -> 128 -> 14`) có xác thực SHA-256 Fail-Closed và `weights_only=True`.
+2. **Môi trường Đồ thị Tấn công (`attack-lab/environment/` — Task 10.2 & v3.3):** Biểu diễn tập endpoint thành đồ thị có hướng `AttackGraph`, nâng cấp từ nguyên mẫu **40 chiều / 14 hành động** lên **74 chiều trạng thái (`74-D`) và 36 hành động rời rạc (`36` actions)** có mặt nạ hợp lệ (`action_mask`).
+3. **Động cơ Biến dị & PyTorch Dueling Double-DQN (`evasion.py`, `tools.py`, `runner.py` — Task 10.3, 10.4 & Phase E):** Kết hợp toán tử biến dị bảo toàn ngữ nghĩa cho các họ tấn công với mạng Dueling Double-DQN (`pentest_dqn_v2.pt` 800 episodes, kèm bản `evasion_agent.pt` gốc) có xác thực SHA-256 Fail-Closed và `weights_only=True`.
 4. **Đấu Trường AI Trực Quan (`gateway/app/api/arena.py` + `dashboard/src/app/arena/page.tsx`):** Cho phép điều phối trực tiếp trận đấu Red Team vs Blue Team v2.0 ngay trên SOC Dashboard (bảo vệ bằng `require_admin` qua BFF Proxy, đo độ trễ thực bằng `perf_counter`, dùng đúng pipeline 26-D và hiển thị lịch sử đối đầu theo thời gian thực).
 
 ---

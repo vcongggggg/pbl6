@@ -42,6 +42,7 @@ AUG_MANIFEST_JSON = REPORTS_DIR / "phase_e_augmentation_manifest.json"
 ZERO_LEAKAGE_JSON = REPORTS_DIR / "zero_leakage_v3_verification.json"
 STRANGE_V33_JSON = REPORTS_DIR / "strange_suite_v33_results.json"
 BLIND_VAULT_JSON = REPORTS_DIR / "blind_heldout_vault_v2_results.json"
+BLIND_VAULT_POSTFIX2_JSON = REPORTS_DIR / "blind_heldout_vault_v2_postfix2_results.json"
 FP_JSON = REPORTS_DIR / "fp_v3_measurement.json"
 FP_TUNE_JSON = REPORTS_DIR / "fp_v3_tuning_c3.json"
 LAT_JSON = REPORTS_DIR / "latency_e2e_v3_csic.json"
@@ -516,6 +517,7 @@ def update_docx_with_v31_sections(
     csic_tienda1_data: dict[str, Any] | None = None,
     strange_v33_data: dict[str, Any] | None = None,
     blind_vault_data: dict[str, Any] | None = None,
+    blind_vault_postfix2_data: dict[str, Any] | None = None,
 ) -> None:
     if not docx_path.exists():
         return
@@ -708,6 +710,14 @@ def update_docx_with_v31_sections(
         bv_lh_rul = blind_vault_data["live_http"]["Dueling-DQN v2.0"]["Rules Only"]
         bv_sha = blind_vault_data["metadata"]["lock_verification"]["vault_file_sha256"]
 
+        bv_pf2_note = ""
+        if blind_vault_postfix2_data:
+            pf2_dqn = blind_vault_postfix2_data["live_http"]["Dueling-DQN v2.0"]["Hybrid v3.3"]
+            bv_pf2_note = (
+                f"; sau vá F2b (postfix2), cả 6 ô Hybrid đạt {pf2_dqn['block_rate_pct']:.2f}% "
+                f"({pf2_dqn['blocked_count']}/{pf2_dqn['total_episodes']})"
+            )
+
         p_e = target_p.insert_paragraph_before(
             f"(E1) Curriculum 4 Stages (600 RAM {wt['stage1_3_ram_sec']:.3f}s + 200 Live-HTTP :8056/:8055 {wt['stage4_live_http_sec']:.3f}s, "
             f"tổng {wt['total_sec']:.3f}s) với không gian {dqn_meta['action_dim']} actions ({dqn_meta['state_dim']}-D state): "
@@ -726,7 +736,7 @@ def update_docx_with_v31_sections(
             f"(E4) Strange Suite mở rộng ({strange_v33_data['metadata']['total_cases']} cases, Live-HTTP DQN vs :8056 = {st33_lh_rul['block_rate_pct']:.2f}%, "
             f"vs Hybrid v3.3 = {st33_lh_hyb['block_rate_pct']:.2f}% ({st33_lh_hyb['blocked_count']}/{st33_lh_hyb['total_episodes']})); "
             f"Blind Held-Out Vault v2 ({blind_vault_data['metadata']['total_cases']} cases, SHA-256 khóa trước {bv_sha[:12]}..., đo 1 lần): "
-            f"DQN vs :8056 = {bv_lh_rul['block_rate_pct']:.2f}%, vs Hybrid v3.3 = {bv_lh_hyb['block_rate_pct']:.2f}% ({bv_lh_hyb['blocked_count']}/{bv_lh_hyb['total_episodes']})."
+            f"DQN vs :8056 = {bv_lh_rul['block_rate_pct']:.2f}%, vs Hybrid v3.3 = {bv_lh_hyb['block_rate_pct']:.2f}% ({bv_lh_hyb['blocked_count']}/{bv_lh_hyb['total_episodes']}){bv_pf2_note}."
         )
         p_e.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
 
@@ -794,6 +804,7 @@ def update_defense_pptx(
     csic_tienda1_data: dict[str, Any] | None = None,
     strange_v33_data: dict[str, Any] | None = None,
     blind_vault_data: dict[str, Any] | None = None,
+    blind_vault_postfix2_data: dict[str, Any] | None = None,
 ) -> None:
     if not pptx_path.exists():
         return
@@ -831,7 +842,7 @@ def update_defense_pptx(
     _set_shape_text_preserving_first_run(
         s5[8],
         f"• 5 Lá chắn OWASP API vạn năng: SSRF, NoSQLi, Mass Assignment, Stateful BOLA & Outbound Response DLP (Operational FPR = {fp_agg['fp_operational_pct']:.2f}%, Strict FPR B1000 = {b1000_fp['fp_strict_schema_off_pct']:.1f}% trên N={fp_agg['total_benign_evaluated']}).\n"
-        "• Chính sách Schema thực nghiệm: Xóa trường role khỏi spec; mặc định tắt SCHEMA_VALIDATION_ENABLED để bảo toàn tương thích REST mở rộng.",
+        "• Chính sách Schema thực nghiệm (route_tiered mặc định): Kiểm soát chặt route OpenAPI & additionalProperties nhạy cảm, bỏ qua route ngoài spec để giữ 0.00% Operational FPR.",
     )
 
     s8 = prs.slides[7].shapes
@@ -940,9 +951,13 @@ def update_defense_pptx(
     if strange_v33_data and blind_vault_data:
         st33_lh = strange_v33_data["live_http"]["Dueling-DQN v2.0"]["Hybrid v3.3"]
         bv_lh = blind_vault_data["live_http"]["Dueling-DQN v2.0"]["Hybrid v3.3"]
+        pf2_str = ""
+        if blind_vault_postfix2_data:
+            pf2_lh = blind_vault_postfix2_data["live_http"]["Dueling-DQN v2.0"]["Hybrid v3.3"]
+            pf2_str = f" (postfix2: {pf2_lh['blocked_count']}/{pf2_lh['total_episodes']})"
         st33_str = (
             f"\n• Phase E v3.3 Live-HTTP: Strange 38c DQN vs Hybrid = {st33_lh['block_rate_pct']:.2f}% ({st33_lh['blocked_count']}/{st33_lh['total_episodes']}) | "
-            f"Blind Vault 30c DQN vs Hybrid = {bv_lh['block_rate_pct']:.2f}% ({bv_lh['blocked_count']}/{bv_lh['total_episodes']})."
+            f"Blind Vault 30c DQN vs Hybrid = {bv_lh['block_rate_pct']:.2f}% ({bv_lh['blocked_count']}/{bv_lh['total_episodes']}){pf2_str}."
         )
     _set_shape_text_preserving_first_run(
         s12[6],
@@ -993,6 +1008,7 @@ def update_chuong4_markdown(
     csic_tienda1_data: dict[str, Any] | None = None,
     strange_v33_data: dict[str, Any] | None = None,
     blind_vault_data: dict[str, Any] | None = None,
+    blind_vault_postfix2_data: dict[str, Any] | None = None,
 ) -> None:
     raw = md_path.read_text(encoding="utf-8")
     anchor = "### 4.7.3."
@@ -1084,7 +1100,16 @@ def update_chuong4_markdown(
     d2_tr_fmt = f"{d2_tr:,}".replace(",", ".")
     d2_va_fmt = f"{d2_va:,}".replace(",", ".")
     d2_te_fmt = f"{d2_te:,}".replace(",", ".")
-    prefix = prefix.replace("**46.187**", f"**{d2_tot_fmt}**").replace("Train `32.330`", f"Train `{d2_tr_fmt}`").replace("Val `6.928`", f"Val `{d2_va_fmt}`").replace("Test `6.929`", f"Test `{d2_te_fmt}`").replace("46.187", d2_tot_fmt)
+    prefix = (
+        prefix.replace("**46.187**", f"**{d2_tot_fmt}**")
+        .replace("**47.240**", f"**{d2_tot_fmt}**")
+        .replace("Train `32.330`", f"Train `{d2_tr_fmt}`")
+        .replace("Train `33.383`", f"Train `{d2_tr_fmt}`")
+        .replace("Val `6.928`", f"Val `{d2_va_fmt}`")
+        .replace("Test `6.929`", f"Test `{d2_te_fmt}`")
+        .replace("46.187", d2_tot_fmt)
+        .replace("47.240", d2_tot_fmt)
+    )
 
     cm_tax = _extract_csic_two_tier_metrics(csic_data, csic_tax_data, csic_tienda1_data)
     ml_m = cm_tax["ml_m"]
@@ -1194,7 +1219,12 @@ Tác tử **PyTorch Dueling Double-DQN** (`{dqn_meta['state_dim']}-D` state, `{d
         f"- **E1 (4-Stage DQN {dqn_meta['action_dim']} Actions / {dqn_meta['state_dim']}-D):** Huấn luyện `800 episodes` (`{dqn_meta['training_wall_clock_seconds']['stage1_3_ram_sec']:.3f}s` RAM + `{dqn_meta['training_wall_clock_seconds']['stage4_live_http_sec']:.3f}s` Live-HTTP `:8056`/`:8055`, tổng **`{dqn_meta['training_wall_clock_seconds']['total_sec']:.3f}s`**). Đánh giá greedy `eps=0.0` qua HTTP thật ghi nhận tỷ lệ DQN vượt `:8056` Rules-Only = **`{dqn_meta['stage4_live_http_metrics']['live_http_8056_dqn_bypass_rate_pct']:.1f}%`** (`{dqn_meta['stage4_live_http_metrics']['live_http_8056_dqn_bypass_count']}/{dqn_meta['stage4_live_http_metrics']['training_cases_evaluated']}`) so với `:8055` Hybrid = **`{dqn_meta['stage4_live_http_metrics']['live_http_8055_dqn_bypass_rate_pct']:.2f}%`** (`stage4_sandbox_bypasses = {dqn_meta['stage4_live_http_metrics']['stage4_sandbox_bypasses_recorded']}`).\n"
         f"- **E2 (`InputNormalizer` + Per-Parameter Max-Pooling & Zero-Leakage Retrain):** Bổ sung **`{aug_data['added_total_rows']}` mẫu Zero-Leakage** (`{aug_data['added_by_source']['phase_e_e2a_sandbox']}` E2a sandbox + `{aug_data['added_by_source']['phase_e_e3_group_a_synth']}` E3 Group A; `0` trùng lặp hash trên `{d2_tot_fmt}` dòng `defense_v2`), đạt độ trễ inline Hybrid **`{ab_hyb['avg_latency_ms']:.3f} ms/req`** (`<= 1.5 ms`) và **`{fp_agg['fp_operational_pct']:.2f}%` Operational FPR** (`N = {fp_agg['total_benign_evaluated']}`).\n"
         f"- **E3 (CSIC Two-Tier Song Song + Thực Nghiệm `/tienda1` SchemaValidator):** Trên đủ `1.500` mẫu gốc CSIC đạt **`{csic_tax_data['parallel_metrics']['operational_decision_engine_t80']['overall_1500_recall_pct']:.2f}%`** (Op T=80) / **`{csic_tax_data['parallel_metrics']['loose_monitoring']['overall_1500_recall_pct']:.2f}%`** (Loose), còn **Group A True Payload** (`{csic_tax_data['two_tier_breakdown']['group_a_true_payload']['count']}` mẫu) đạt **`{csic_tax_data['parallel_metrics']['operational_decision_engine_t80']['group_a_recall_pct']:.2f}% ({csic_tax_data['parallel_metrics']['operational_decision_engine_t80']['group_a_blocked']}/{csic_tax_data['two_tier_breakdown']['group_a_true_payload']['count']})`** ở `0.00%` FPR (`{csic_tax_data['parallel_metrics']['loose_monitoring']['group_a_recall_pct']:.2f}%` Loose). Nạp schema OpenAPI `/tienda1` (suy dẫn chỉ từ Benign) nâng Group B từ `{csic_tienda1_data['operational_decision_engine_t80']['baseline_hybrid_schema_off']['group_b_parameter_tampering']['recall_pct']:.2f}%` lên **`{csic_tienda1_data['operational_decision_engine_t80']['hybrid_plus_tienda1_schema_strict']['group_b_parameter_tampering']['recall_pct']:.2f}%`** (Overall **`{csic_tienda1_data['operational_decision_engine_t80']['hybrid_plus_tienda1_schema_strict']['overall_1500']['recall_pct']:.2f}%`** ở `0.00%` FPR).\n"
-        f"- **E4 (`Strange Suite v3.3` {strange_v33_data['metadata']['total_cases']} Cases & `Blind Held-Out Vault v2` {blind_vault_data['metadata']['total_cases']} Cases):** Trên `Strange v3.3`, Live-HTTP DQN vượt `:8056` đạt block **`{strange_v33_data['live_http']['Dueling-DQN v2.0']['Rules Only']['block_rate_pct']:.2f}%`**, còn `:8055` Hybrid v3.3 chặn **`{strange_v33_data['live_http']['Dueling-DQN v2.0']['Hybrid v3.3']['block_rate_pct']:.2f}% ({strange_v33_data['live_http']['Dueling-DQN v2.0']['Hybrid v3.3']['blocked_count']}/{strange_v33_data['live_http']['Dueling-DQN v2.0']['Hybrid v3.3']['total_episodes']})`**. Trên `Blind Vault v2` (khóa SHA-256 `{blind_vault_data['metadata']['lock_verification']['vault_file_sha256'][:12]}...`, đo 1 lần), Live-HTTP DQN vs `:8056` = `{blind_vault_data['live_http']['Dueling-DQN v2.0']['Rules Only']['block_rate_pct']:.2f}%`, còn `:8055` Hybrid v3.3 = **`{blind_vault_data['live_http']['Dueling-DQN v2.0']['Hybrid v3.3']['block_rate_pct']:.2f}% ({blind_vault_data['live_http']['Dueling-DQN v2.0']['Hybrid v3.3']['blocked_count']}/{blind_vault_data['live_http']['Dueling-DQN v2.0']['Hybrid v3.3']['total_episodes']})`**."
+        f"- **E4 (`Strange Suite v3.3` {strange_v33_data['metadata']['total_cases']} Cases & `Blind Held-Out Vault v2` {blind_vault_data['metadata']['total_cases']} Cases):** Trên `Strange v3.3`, Live-HTTP DQN vượt `:8056` đạt block **`{strange_v33_data['live_http']['Dueling-DQN v2.0']['Rules Only']['block_rate_pct']:.2f}%`**, còn `:8055` Hybrid v3.3 chặn **`{strange_v33_data['live_http']['Dueling-DQN v2.0']['Hybrid v3.3']['block_rate_pct']:.2f}% ({strange_v33_data['live_http']['Dueling-DQN v2.0']['Hybrid v3.3']['blocked_count']}/{strange_v33_data['live_http']['Dueling-DQN v2.0']['Hybrid v3.3']['total_episodes']})`**. Trên `Blind Vault v2` (khóa SHA-256 `{blind_vault_data['metadata']['lock_verification']['vault_file_sha256'][:12]}...`, đo 1 lần), Live-HTTP DQN vs `:8056` = `{blind_vault_data['live_http']['Dueling-DQN v2.0']['Rules Only']['block_rate_pct']:.2f}%`, còn `:8055` Hybrid v3.3 = **`{blind_vault_data['live_http']['Dueling-DQN v2.0']['Hybrid v3.3']['block_rate_pct']:.2f}% ({blind_vault_data['live_http']['Dueling-DQN v2.0']['Hybrid v3.3']['blocked_count']}/{blind_vault_data['live_http']['Dueling-DQN v2.0']['Hybrid v3.3']['total_episodes']})`**"
+        + (
+            f" (Static Replay `{blind_vault_data['live_http']['Static Replay']['Hybrid v3.3']['blocked_count']}/{blind_vault_data['live_http']['Static Replay']['Hybrid v3.3']['total_episodes']}`; sau kiểm chứng `postfix2` đạt **`{blind_vault_postfix2_data['live_http']['Dueling-DQN v2.0']['Hybrid v3.3']['block_rate_pct']:.2f}% ({blind_vault_postfix2_data['live_http']['Dueling-DQN v2.0']['Hybrid v3.3']['blocked_count']}/{blind_vault_postfix2_data['live_http']['Dueling-DQN v2.0']['Hybrid v3.3']['total_episodes']})`** trên cả 6 ô Hybrid)."
+            if blind_vault_postfix2_data
+            else "."
+        )
         if (aug_data and csic_tax_data and csic_tienda1_data and strange_v33_data and blind_vault_data)
         else ""
     ) + f"""
@@ -1232,6 +1262,9 @@ def main() -> None:
     csic_tienda1_data = json.loads(CSIC_TIENDA1_JSON.read_text(encoding="utf-8")) if CSIC_TIENDA1_JSON.exists() else None
     strange_v33_data = json.loads(STRANGE_V33_JSON.read_text(encoding="utf-8")) if STRANGE_V33_JSON.exists() else None
     blind_vault_data = json.loads(BLIND_VAULT_JSON.read_text(encoding="utf-8")) if BLIND_VAULT_JSON.exists() else None
+    blind_vault_postfix2_data = (
+        json.loads(BLIND_VAULT_POSTFIX2_JSON.read_text(encoding="utf-8")) if BLIND_VAULT_POSTFIX2_JSON.exists() else None
+    )
 
     for doc_path in TARGET_DOCS:
         update_docx_with_v31_sections(
@@ -1251,6 +1284,7 @@ def main() -> None:
             csic_tienda1_data=csic_tienda1_data,
             strange_v33_data=strange_v33_data,
             blind_vault_data=blind_vault_data,
+            blind_vault_postfix2_data=blind_vault_postfix2_data,
         )
 
     update_defense_pptx(
@@ -1268,6 +1302,7 @@ def main() -> None:
         csic_tienda1_data=csic_tienda1_data,
         strange_v33_data=strange_v33_data,
         blind_vault_data=blind_vault_data,
+        blind_vault_postfix2_data=blind_vault_postfix2_data,
     )
     update_chuong4_markdown(
         CH4_MD,
@@ -1286,6 +1321,7 @@ def main() -> None:
         csic_tienda1_data=csic_tienda1_data,
         strange_v33_data=strange_v33_data,
         blind_vault_data=blind_vault_data,
+        blind_vault_postfix2_data=blind_vault_postfix2_data,
     )
     print("Successfully synchronized ALL Thesis DOCX, PPTX, and Markdown files 100% from JSON artifacts!")
 
