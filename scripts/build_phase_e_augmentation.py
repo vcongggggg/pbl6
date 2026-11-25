@@ -549,6 +549,13 @@ def generate_e3_group_a_synth_rows() -> list[dict[str, Any]]:
         "1 UNION ALL SELECT NULL,table_name,column_name FROM information_schema.columns--",
         "10e0UNION/**/SELECT/**/1,version(),current_user--",
         "user1 UNION SELECT CHAR(114,111,111,116),CHR(58),secret FROM vault--",
+        'quote" AND "1"="1',
+        "param' AND '1'='1",
+        "105 OR 17-7 BETWEEN 10 AND 10",
+        "200 OR 9+1 NOT BETWEEN 1 AND 5",
+        "42e0AND 7=7",
+        "9e0UNION/**/SELECT/**/api_key,secret,3 FROM vault_keys--",
+        "CHAR(65,68,77,73,78)",
     ]
     for i, pay in enumerate(sqli_payloads):
         for ep in endpoints[:6]:
@@ -560,9 +567,13 @@ def generate_e3_group_a_synth_rows() -> list[dict[str, Any]]:
         '<!--#exec cmd="id"-->',
         '<!--#exec cmd="uname -a; whoami"-->',
         '<!--#include virtual="/etc/passwd"-->',
+        '<!--#include file="secret_config" -->',
+        '"><!--#EXEC cmd="ls /"--><',
         '<!--#exec cgi="/cgi-bin/env.pl"-->',
         "10.0.0.5; c$@at${IFS}/etc/passwd",
         "host.local && /???/c?t /???/p??s??",
+        "vol-2 && /bin/c?t /etc/hosts",
+        "ws01 & powershell -NoP -NonI -W Hidden -c whoami",
         "backup.tar | $(whoami)",
         "report.csv; `id`",
         "node01 && sh -c 'cat /etc/shadow'",

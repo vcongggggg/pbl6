@@ -1,42 +1,42 @@
 {
   "LogisticRegression": {
-    "accuracy": 0.9623,
-    "precision_macro": 0.9465,
-    "recall_macro": 0.9381,
-    "f1_macro": 0.9418,
-    "fit_time_s": 2.19,
+    "accuracy": 0.9586,
+    "precision_macro": 0.9362,
+    "recall_macro": 0.9383,
+    "f1_macro": 0.9365,
+    "fit_time_s": 2.21,
     "latency_ms_per_req": 0.0002
   },
   "DecisionTree": {
-    "accuracy": 0.9847,
-    "precision_macro": 0.9759,
-    "recall_macro": 0.9758,
-    "f1_macro": 0.9758,
-    "fit_time_s": 0.22,
+    "accuracy": 0.9834,
+    "precision_macro": 0.9729,
+    "recall_macro": 0.9755,
+    "f1_macro": 0.9742,
+    "fit_time_s": 0.19,
     "latency_ms_per_req": 0.0001
   },
   "RandomForest": {
-    "accuracy": 0.9909,
-    "precision_macro": 0.9901,
-    "recall_macro": 0.9876,
-    "f1_macro": 0.9888,
-    "fit_time_s": 0.82,
-    "latency_ms_per_req": 0.0051
+    "accuracy": 0.9906,
+    "precision_macro": 0.9893,
+    "recall_macro": 0.9877,
+    "f1_macro": 0.9885,
+    "fit_time_s": 0.74,
+    "latency_ms_per_req": 0.0053
   },
   "XGBoost": {
-    "accuracy": 0.9908,
-    "precision_macro": 0.9862,
-    "recall_macro": 0.9862,
-    "f1_macro": 0.9862,
-    "fit_time_s": 2.11,
-    "latency_ms_per_req": 0.0027
+    "accuracy": 0.9909,
+    "precision_macro": 0.9869,
+    "recall_macro": 0.9874,
+    "f1_macro": 0.9871,
+    "fit_time_s": 2.08,
+    "latency_ms_per_req": 0.0025
   },
   "LightGBM": {
-    "accuracy": 0.9916,
-    "precision_macro": 0.9883,
-    "recall_macro": 0.9897,
+    "accuracy": 0.9919,
+    "precision_macro": 0.9882,
+    "recall_macro": 0.9898,
     "f1_macro": 0.989,
-    "fit_time_s": 0.7,
-    "latency_ms_per_req": 0.0106
+    "fit_time_s": 0.89,
+    "latency_ms_per_req": 0.0078
   }
 }

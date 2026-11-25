@@ -104,7 +104,7 @@ def run_ablation_benchmark() -> dict[str, Any]:
         "rules_only": f"1. Rules Only ({n_rules} Hardened OWASP Signatures)",
         "ml_only": "2. ML Only (XGBoost v2.0 — 26-D UBJSON)",
         "anomaly_only": "3. Anomaly Only (Calibrated IForest v2.0 — NPZ)",
-        "hybrid": f"4. Hybrid Defense v3.2 ({n_rules} Rules + XGBoost v2 + IForest v2 + Dual-AI)",
+        "hybrid": f"4. Hybrid Defense v3.3 ({n_rules} Rules + XGBoost v2 + IForest v2 + Dual-AI)",
     }
 
     try:
@@ -113,18 +113,23 @@ def run_ablation_benchmark() -> dict[str, Any]:
     except Exception:
         cpu_pct = 15.0
 
+    import subprocess
     from datetime import datetime
     now_iso = datetime.now().isoformat()
+    try:
+        cur_sha = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT_DIR, text=True).strip()
+    except Exception:
+        cur_sha = "unknown"
 
     ablation_summary: dict[str, Any] = {
         "metadata": {
-            "version": "Blue Team v3.2",
+            "version": "Blue Team v3.3",
             "dataset": str(DATASET_PATH.name),
             "total_samples": total_samples,
             "benign_samples": int((df["attack_type"].str.upper() == "BENIGN").sum()),
             "attack_samples": int((df["attack_type"].str.upper() != "BENIGN").sum()),
             "active_rules_count": n_rules,
-            "rule_engine": f"{n_rules} Hardened OWASP Signatures (including SQLI-006 unquoted arithmetic tautology)",
+            "rule_engine": f"{n_rules} Hardened OWASP Signatures (including SQLI-006/007 & CMD-006)",
             "ml_model": getattr(ml_detector, "model_name", "XGBoost v2.0"),
             "anomaly_model": "Calibrated Isolation Forest v2.0 (with bare-root '/' special_char_ratio guard)",
             "feature_dim": 26,
@@ -137,8 +142,8 @@ def run_ablation_benchmark() -> dict[str, Any]:
                 "Blocking decision follows DecisionEngine ACTIVE_BLOCKING (>=80 block, Rule>=85/ML>=90 override, or Dual-AI Consensus). "
                 "Anomaly Only also reports detection @60.0."
             ),
-            "history_snapshot": "docs/reports/history/ablation_results_20261124_192715_fd012c1.json",
-            "git_base_sha": "fd012c1d17e42f531b635cbe94c7dd738023ee0f",
+            "history_snapshot": None,
+            "git_base_sha": cur_sha,
             "cpu_load_pct": cpu_pct,
             "last_pointer_update": now_iso,
         },

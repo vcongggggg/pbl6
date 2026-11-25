@@ -5,7 +5,12 @@
     "total_attack_samples": 1500,
     "total_benign_samples": 1500,
     "audit_methodology": "Recursive unquote_plus (depth=3) + regex with strict word boundary (\\b)",
-    "recall_metric_note": "Reports BOTH loose monitoring criteria (rule >= 80 OR ml.is_attack OR anom >= 60.0 OR hybrid_risk >= 50.0) AND operational DecisionEngine T=80 across Overall 1,500 and Group A."
+    "recall_metric_note": "Reports BOTH loose monitoring criteria (rule >= 80 OR ml.is_attack OR anom >= 60.0 OR hybrid_risk >= 50.0) AND operational DecisionEngine T=80 across Overall 1,500 and Group A.",
+    "taxonomy_audit_note": "Group A expanded from 196 (Phase D2) to 221 (Phase E3) strictly because recursive_urldecode switched from urllib.parse.unquote to urllib.parse.unquote_plus: decoding URL form '+' spaces revealed 25 additional genuine CSIC SQLi payloads (118 -> 143 SQLi, e.g. '1%27+OR+%271%27%3D%271' -> \"1' OR '1'='1\") previously masked under Group B Parameter Tampering. In addition, the 75-row legacy SQLI_BLIND_BOOLEAN slice includes 50 HTML SSI directives (<!--#EXEC / <!--#include) matched by the '--' comment token and is preserved intact for apples-to-apples before/after regression accounting alongside csic2010_blind_boolean_per_case_diff.json.",
+    "history_snapshot": "docs/reports/history/csic2010_taxonomy_breakdown_20261125_110741_ce36bb2.json",
+    "git_base_sha": "ce36bb2396d37f7fede33fdc867d2587ccbb0619",
+    "cpu_load_pct": 28.6,
+    "last_pointer_update": "2026-11-25T11:07:41.571790"
   },
   "reviewer_sqli_finding_verification": {
     "total_original_sqli_labeled": 254,
@@ -26,13 +31,13 @@
         "PATH_TRAVERSAL": 0,
         "COMMAND_INJECTION": 0
       },
-      "blocked": 214,
-      "recall_pct": 96.83,
-      "detection_recall_loose_pct": 96.83,
-      "blocked_operational_t80": 205,
-      "operational_t80_recall_pct": 92.76,
-      "blocked_standalone_ml": 207,
-      "standalone_ml_recall_pct": 93.67
+      "blocked": 221,
+      "recall_pct": 100.0,
+      "detection_recall_loose_pct": 100.0,
+      "blocked_operational_t80": 221,
+      "operational_t80_recall_pct": 100.0,
+      "blocked_standalone_ml": 206,
+      "standalone_ml_recall_pct": 93.21
     },
     "group_b_parameter_tampering": {
       "count": 1279,
@@ -40,50 +45,50 @@
       "categories": {
         "PARAMETER_TAMPERING": 1279
       },
-      "blocked": 55,
-      "recall_pct": 4.3,
-      "blocked_operational_t80": 24,
-      "operational_t80_recall_pct": 1.88
+      "blocked": 38,
+      "recall_pct": 2.97,
+      "blocked_operational_t80": 25,
+      "operational_t80_recall_pct": 1.95
     },
     "total_overall": {
       "count": 1500,
-      "blocked": 269,
-      "recall_pct": 17.93,
-      "blocked_operational_t80": 229,
-      "operational_t80_recall_pct": 15.27,
-      "blocked_standalone_ml": 256,
-      "standalone_ml_recall_pct": 17.07
+      "blocked": 259,
+      "recall_pct": 17.27,
+      "blocked_operational_t80": 246,
+      "operational_t80_recall_pct": 16.4,
+      "blocked_standalone_ml": 238,
+      "standalone_ml_recall_pct": 15.87
     }
   },
   "parallel_metrics": {
     "benign_fpr_target_pct": 0.5,
     "operational_decision_engine_t80": {
-      "overall_1500_recall_pct": 15.27,
-      "overall_1500_blocked": 229,
-      "group_a_recall_pct": 92.76,
-      "group_a_blocked": 205,
-      "group_b_recall_pct": 1.88,
+      "overall_1500_recall_pct": 16.4,
+      "overall_1500_blocked": 246,
+      "group_a_recall_pct": 100.0,
+      "group_a_blocked": 221,
+      "group_b_recall_pct": 1.95,
       "benign_fpr_pct": 0.0,
       "benign_fp_count": 0,
       "fpr_within_target": true
     },
     "loose_monitoring": {
-      "overall_1500_recall_pct": 17.93,
-      "overall_1500_blocked": 269,
-      "group_a_recall_pct": 96.83,
-      "group_a_blocked": 214,
-      "group_b_recall_pct": 4.3,
-      "benign_fpr_pct": 0.13,
-      "benign_fp_count": 2,
+      "overall_1500_recall_pct": 17.27,
+      "overall_1500_blocked": 259,
+      "group_a_recall_pct": 100.0,
+      "group_a_blocked": 221,
+      "group_b_recall_pct": 2.97,
+      "benign_fpr_pct": 0.07,
+      "benign_fp_count": 1,
       "fpr_within_target": true
     },
     "standalone_ml": {
-      "overall_1500_recall_pct": 17.07,
-      "overall_1500_blocked": 256,
-      "group_a_recall_pct": 93.67,
-      "group_a_blocked": 207,
-      "benign_fpr_pct": 0.13,
-      "benign_fp_count": 2,
+      "overall_1500_recall_pct": 15.87,
+      "overall_1500_blocked": 238,
+      "group_a_recall_pct": 93.21,
+      "group_a_blocked": 206,
+      "benign_fpr_pct": 0.07,
+      "benign_fp_count": 1,
       "fpr_within_target": true
     }
   },
@@ -96,8 +101,8 @@
       },
       "SQLI_BLIND_BOOLEAN": {
         "total": 75,
-        "blocked": 59,
-        "recall_pct": 78.67
+        "blocked": 75,
+        "recall_pct": 100.0
       },
       "SQLI_TSQL_TIME_DELAY": {
         "total": 61,
@@ -121,8 +126,8 @@
       },
       "PARAMETER_TAMPERING": {
         "total": 1279,
-        "blocked": 24,
-        "recall_pct": 1.88
+        "blocked": 25,
+        "recall_pct": 1.95
       }
     },
     "loose_monitoring": {
@@ -133,8 +138,8 @@
       },
       "SQLI_BLIND_BOOLEAN": {
         "total": 75,
-        "blocked": 68,
-        "recall_pct": 90.67
+        "blocked": 75,
+        "recall_pct": 100.0
       },
       "SQLI_TSQL_TIME_DELAY": {
         "total": 61,
@@ -158,8 +163,8 @@
       },
       "PARAMETER_TAMPERING": {
         "total": 1279,
-        "blocked": 55,
-        "recall_pct": 4.3
+        "blocked": 38,
+        "recall_pct": 2.97
       }
     },
     "standalone_ml": {
@@ -170,8 +175,8 @@
       },
       "SQLI_BLIND_BOOLEAN": {
         "total": 75,
-        "blocked": 61,
-        "recall_pct": 81.33
+        "blocked": 60,
+        "recall_pct": 80.0
       },
       "SQLI_TSQL_TIME_DELAY": {
         "total": 61,
@@ -195,8 +200,8 @@
       },
       "PARAMETER_TAMPERING": {
         "total": 1279,
-        "blocked": 49,
-        "recall_pct": 3.83
+        "blocked": 32,
+        "recall_pct": 2.5
       }
     }
   }

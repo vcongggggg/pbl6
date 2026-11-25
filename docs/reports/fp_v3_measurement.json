@@ -1,8 +1,8 @@
 {
   "metadata": {
     "task_id": "pbl6-v3-fix-round-001 / A1.1",
-    "measured_at": "2026-11-25T08:55:18+0700",
-    "active_rules_total": 26,
+    "measured_at": "2026-11-25T11:02:28+0700",
+    "active_rules_total": 28,
     "v3_added_rule_ids": [
       "CMD-005",
       "SSRF-001",
@@ -22,7 +22,11 @@
       "fp_operational": "Benign request actively blocked (HTTP 403) or throttled (HTTP 429) in ACTIVE_BLOCKING mode.",
       "fp_strict_schema_off": "Benign request triggering ANY rule match, ML is_attack, IForest >= 60.0, or Decision != ALLOW (risk >= 30.0) with schema_validation_enabled=False.",
       "fp_strict_schema_on": "Same as fp_strict_schema_off PLUS any OpenAPI SchemaValidator violation (missing param, extra field, undocumented sub-route) with schema_validation_enabled=True."
-    }
+    },
+    "history_snapshot": "docs/reports/history/fp_v3_measurement_20261125_110741_ce36bb2.json",
+    "git_base_sha": "ce36bb2396d37f7fede33fdc867d2587ccbb0619",
+    "cpu_load_pct": 19.2,
+    "last_pointer_update": "2026-11-25T11:07:42.015688"
   },
   "corpora": {
     "benchmark_1000_diverse_benign": {
@@ -47,15 +51,15 @@
       "benign_samples": 1500,
       "fp_operational_count": 0,
       "fp_operational_pct": 0.0,
-      "fp_strict_schema_off_count": 2,
-      "fp_strict_schema_off_pct": 0.13,
-      "fp_strict_schema_on_count": 2,
-      "fp_strict_schema_on_pct": 0.13,
+      "fp_strict_schema_off_count": 1,
+      "fp_strict_schema_off_pct": 0.07,
+      "fp_strict_schema_on_count": 1,
+      "fp_strict_schema_on_pct": 0.07,
       "schema_only_additional_fp_count": 0,
       "triggered_rules": {},
       "pillar_flag_counts": {
-        "ml_is_attack": 2,
-        "decision_non_allow_ge_30": 2
+        "ml_is_attack": 1,
+        "decision_non_allow_ge_30": 1
       },
       "schema_violation_breakdown": {
         "UNDOCUMENTED_ROUTE": 1500
@@ -86,10 +90,10 @@
     "total_benign_evaluated": 1715,
     "fp_operational_count": 0,
     "fp_operational_pct": 0.0,
-    "fp_strict_schema_off_count": 2,
-    "fp_strict_schema_off_pct": 0.117,
-    "fp_strict_schema_on_count": 4,
-    "fp_strict_schema_on_pct": 0.233,
+    "fp_strict_schema_off_count": 1,
+    "fp_strict_schema_off_pct": 0.058,
+    "fp_strict_schema_on_count": 3,
+    "fp_strict_schema_on_pct": 0.175,
     "v3_new_guards_false_positives": 0
   }
 }

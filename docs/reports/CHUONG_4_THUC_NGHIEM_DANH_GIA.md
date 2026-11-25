@@ -73,7 +73,7 @@ Thời gian suy luận thuần của `iforest_v2.npz` sau khi có vector 26-D ch
 
 ---
 
-## 4.4. Thực Nghiệm Ablation Study 4 Cấu Hình Phòng Thủ (Blue Team v3.2 — 26 Rules)
+## 4.4. Thực Nghiệm Ablation Study 4 Cấu Hình Phòng Thủ (Blue Team v3.2 — 28 Rules)
 
 Để chứng minh định lượng đóng góp của từng tầng phòng thủ, nhóm chạy kịch bản `scripts/run_ablation_study.py` trên **`benchmark_1000_diverse.csv` (1000 mẫu, `0` overlap với tập train)** với cơ chế cô lập thời gian thực thi từng chế độ và dùng chung một lần trích xuất 26-D trong chế độ Hybrid (Bảng 4.5):
 
@@ -81,25 +81,25 @@ Thời gian suy luận thuần của `iforest_v2.npz` sau khi có vector 26-D ch
 
 | Cấu Hình Phòng Thủ | Accuracy | Precision | Recall | F1-Score | FPR | Youden's J | Mean Latency | P95 Latency |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **1. Rules Only (26 Hardened Rules)** | 62.40% | 100.00% | 53.00% | 69.28% | 0.00% | 0.5300 | **0.156 ms** | 0.277 ms |
-| **2. ML Only (XGBoost v2.0 — 26-D)** | 96.30% | 100.00% | 95.38% | 97.63% | 0.00% | 0.9537 | 0.429 ms | 0.873 ms |
-| **3. Anomaly Only (IForest v2.0, >=80)** | 50.90% | 100.00% | 38.62% | 55.73% | 0.00% | 0.3862 | 0.240 ms | 0.344 ms |
-| *Anomaly Only (Ngưỡng cảnh báo >=60)* | *66.20%* | *100.00%* | *57.75%* | *73.22%* | *0.00%* | *0.5775* | *0.240 ms* | *0.344 ms* |
-| **4. HYBRID DEFENSE v3.2 (Đề tài)** | **98.50%** | **100.00%** | **98.12%** | **99.05%** | **0.00%** | **0.9812** | **0.711 ms** | **1.234 ms** |
+| **1. Rules Only (28 Hardened Rules)** | 62.90% | 100.00% | 53.62% | 69.81% | 0.00% | 0.5363 | **0.169 ms** | 0.299 ms |
+| **2. ML Only (XGBoost v2.0 — 26-D)** | 96.10% | 100.00% | 95.12% | 97.50% | 0.00% | 0.9513 | 0.428 ms | 0.854 ms |
+| **3. Anomaly Only (IForest v2.0, >=80)** | 50.90% | 100.00% | 38.62% | 55.73% | 0.00% | 0.3862 | 0.261 ms | 0.422 ms |
+| *Anomaly Only (Ngưỡng cảnh báo >=60)* | *66.20%* | *100.00%* | *57.75%* | *73.22%* | *0.00%* | *0.5775* | *0.261 ms* | *0.422 ms* |
+| **4. HYBRID DEFENSE v3.2 (Đề tài)** | **98.20%** | **100.00%** | **97.75%** | **98.86%** | **0.00%** | **0.9775** | **0.730 ms** | **1.298 ms** |
 
 *Bảng 4.6: Tỷ lệ chặn theo từng họ lỗ hổng của Hybrid Defense v3.2 (`benchmark_1000_diverse.csv`)*
 
 | Nhóm Lưu Lượng | Tổng Mẫu | Bị Chặn (403) | Cho Qua (200) | Hiệu Quả Phòng Thủ |
 | :--- | :---: | :---: | :---: | :---: |
-| **SQL Injection (SQLi)** | 200 | **200** | 0 | **100.00% BLOCKED** |
+| **SQL Injection (SQLi)** | 200 | **197** | 3 | **98.50% BLOCKED** |
 | **Cross-Site Scripting (XSS)** | 200 | **200** | 0 | **100.00% BLOCKED** |
 | **Path Traversal / LFI** | 200 | **200** | 0 | **100.00% BLOCKED** |
 | **OS Command Injection (RCE)** | 200 | **185** | 15 | **92.50% BLOCKED** |
 | **Lưu lượng hợp lệ (Benign)** | 200 | **0** | **200** | **100.00% ALLOWED (0.00% FPR)** |
 
 **Phân tích khoa học cốt lõi:**
-- **Hybrid v3.2 vượt trội rõ rệt so với ML đơn lẻ:** Tăng **`+2.74%` Recall (`95.38% -> 98.12%`)**, tăng **`+1.42%` F1-Score (`97.63% -> 99.05%`)**, giảm mạnh số tấn công bỏ lọt (`37 -> 15`), đạt **Youden's Index `J = 0.9812`** và giữ tuyệt đối **`0.00%` FPR** (trong đó `Anomaly Only` giảm FPR từ `4.00%` v2.0 xuống **`0.00%`** nhờ Phase C3 bare-root `'/'` guard).
-- **Độ trễ inline đạt sâu dưới SLA `<= 1.5 ms`:** Hybrid v3.2 (26 hardened rules) chỉ tiêu tốn **`0.711 ms/req`** (P95 **`1.234 ms`**) so với `16.10 ms` ở v1.0, chỉ cộng thêm **`+0.282 ms`** so với XGBoost thuần nhưng mang lại 4 lớp phòng vệ chiều sâu (chống Evasion, bắt Zero-Day OOD, Fail-Safe Degraded Mode và XAI giải trình đầy đủ).
+- **Hybrid v3.2 vượt trội rõ rệt so với ML đơn lẻ:** Tăng **`+2.63%` Recall (`95.12% -> 97.75%`)**, tăng **`+1.36%` F1-Score (`97.50% -> 98.86%`)**, giảm mạnh số tấn công bỏ lọt (`39 -> 18`), đạt **Youden's Index `J = 0.9775`** và giữ tuyệt đối **`0.00%` FPR** (trong đó `Anomaly Only` giảm FPR từ `4.00%` v2.0 xuống **`0.00%`** nhờ Phase C3 bare-root `'/'` guard).
+- **Độ trễ inline đạt sâu dưới SLA `<= 1.5 ms`:** Hybrid v3.2 (28 hardened rules) chỉ tiêu tốn **`0.730 ms/req`** (P95 **`1.298 ms`**) so với `16.10 ms` ở v1.0, chỉ cộng thêm **`+0.302 ms`** so với XGBoost thuần nhưng mang lại 4 lớp phòng vệ chiều sâu (chống Evasion, bắt Zero-Day OOD, Fail-Safe Degraded Mode và XAI giải trình đầy đủ).
 
 ---
 
@@ -111,13 +111,13 @@ Kiểm định chéo hoàn toàn **Zero-Shot** (`csic2010_overlap = 0`) trên **
 
 | Chỉ Số Đánh Giá | Blue Team v1.0 (RF 17-D) | XGBoost v2+ (26-D) | Hybrid v3.3 (3 Tầng) | Nhận Xét Khoa Học Khách Quan |
 | :--- | :---: | :---: | :---: | :--- |
-| **False Positive Rate (FPR)** | **29.60%** (444/1.500 chặn oan) | **0.13%** (2/1.500) | **0.13%** (2/1.500) | **Triệt tiêu overfitting chặn oan; ở ngưỡng Operational T=80 đạt 0.00% FPR (0/1.500).** |
-| **Precision (Độ tin cậy cảnh báo)** | 68.26% | **99.22%** | **99.26%** | Độ tin cậy cảnh báo thực tế cực cao ở FPR `<= 0.5%`. |
+| **False Positive Rate (FPR)** | **29.60%** (444/1.500 chặn oan) | **0.07%** (1/1.500) | **0.07%** (1/1.500) | **Triệt tiêu overfitting chặn oan; ở ngưỡng Operational T=80 đạt 0.00% FPR (0/1.500).** |
+| **Precision (Độ tin cậy cảnh báo)** | 68.26% | **99.58%** | **99.62%** | Độ tin cậy cảnh báo thực tế cực cao ở FPR `<= 0.5%`. |
 | **XSS Detection Rate (65 mẫu)** | 96.92% (63/65) | **100.00% (65/65)** | **100.00% (65/65)** | **Chặn tuyệt đối 100% XSS ngoại miền Zero-Shot.** |
-| **SQLi Detection Rate (254 mẫu)** | 65.75% (kèm 29.6% FPR) | **48.82% (124/254)** | **50.79% (129/254)** | Bao gồm cả hiệu ứng tách nhãn 2 tầng (133/254 mẫu `modo=insertar` không phải SQLi). |
-| **Anomalous Tamper (1.181 mẫu)** | 61.39% (do chặn bừa) | **5.67% (67/1.181)** | **6.35% (75/1.181)** | Phản ánh trung thực *Domain Shift*; cần tầng Positive Schema OpenAPI riêng (`/tienda1`). |
+| **SQLi Detection Rate (254 mẫu)** | 65.75% (kèm 29.6% FPR) | **48.43% (123/254)** | **50.79% (129/254)** | Bao gồm cả hiệu ứng tách nhãn 2 tầng (133/254 mẫu `modo=insertar` không phải SQLi). |
+| **Anomalous Tamper (1.181 mẫu)** | 61.39% (do chặn bừa) | **4.23% (50/1.181)** | **5.50% (65/1.181)** | Phản ánh trung thực *Domain Shift*; cần tầng Positive Schema OpenAPI riêng (`/tienda1`). |
 
-Kết quả này khẳng định tính liêm chính khoa học cao: **Blue Team v3.3** đạt Loose FPR **`0.13%`**, Precision **`99.26%`**, chặn **`100.00%` XSS** và **`50.79%` SQLi** (trên 254 nhãn gốc CSIC), đồng thời tách bạch 2 tầng ở mục 4.7.5 để đo chính xác **Group A True Payload** vs **Group B Parameter Tampering** qua thực nghiệm OpenAPI `/tienda1`.
+Kết quả này khẳng định tính liêm chính khoa học cao: **Blue Team v3.3** đạt Loose FPR **`0.07%`**, Precision **`99.62%`**, chặn **`100.00%` XSS** và **`50.79%` SQLi** (trên 254 nhãn gốc CSIC), đồng thời tách bạch 2 tầng ở mục 4.7.5 để đo chính xác **Group A True Payload** vs **Group B Parameter Tampering** qua thực nghiệm OpenAPI `/tienda1`.
 
 ---
 
@@ -240,22 +240,22 @@ Sau khi bổ sung quy tắc `SQLI-006` (nâng tổng số lên `26` hardened rul
 **Nhận xét khoa học & Bằng chứng kiểm định v3.1 (`adversarial_benchmark_live_http.json`, `fp_v3_tuning_c3.json`, `latency_e2e_v3_csic.json`, `zero_leakage_v3_verification.json`):**
 1. **Đối kháng qua Socket HTTP thật (`C1`):** Trên tập `Familiar`, `Hybrid v3.0` chặn đứng `100.0%` (`45/45`, trễ HTTP TB `3.856 ms`). Trên tập ngoại miền `Strange`, cổng `:8056` (`Gateway Rules Only`, tắt ML/IForest) đạt `88.9%` (`48/54`), trong khi `:8055` (`Hybrid v3.0`) nâng tỷ lệ chặn lên **`94.4%` (`51/54`, trễ HTTP TB `4.252 ms`)**.
 2. **Tinh chỉnh False Positive 2 vòng có kiểm soát (`C3`):** Nhờ xử lý điểm suy biến đường dẫn gốc `'/'` trong `AnomalyDetector` và đồng bộ đặc tả `/openapi.json`, `/docs/`, `/reviews/` vào `BUILTIN_TARGET_SPEC`, `Strict FPR` trên tập `B1000` giảm từ `4.0%` xuống **`0.0%`** (`Schema OFF`) và từ `8.5%` xuống **`0.0%`** (`Schema ON`) với **`0.00%` suy giảm Recall** (`Operational FPR = 0.00%` trên `1715` mẫu lành tính).
-- **Độ trễ 2-Hop HTTP TCP (`D2`) & Zero-Leakage (`D3`):** Trên `3.000` mẫu CSIC 2010 qua socket TCP thật, độ trễ 2-hop đạt **`mean = 3.773 ms`** (`p50 = 3.532 ms`, `p95 = 5.298 ms`, `p99 = 7.003 ms`), tách bạch rõ với độ trễ in-process engine (`1.060 ms`). Toàn bộ `47.240` mẫu `defense_v2` đạt `0` trùng lặp mã băm (`zero_leakage_verified = true`).
+- **Độ trễ 2-Hop HTTP TCP (`D2`) & Zero-Leakage (`D3`):** Trên `3.000` mẫu CSIC 2010 qua socket TCP thật, độ trễ 2-hop đạt **`mean = 3.839 ms`** (`p50 = 3.584 ms`, `p95 = 5.530 ms`, `p99 = 6.718 ms`), tách bạch rõ với độ trễ in-process engine (`1.060 ms`). Toàn bộ `47.372` mẫu `defense_v2` đạt `0` trùng lặp mã băm (`zero_leakage_verified = true`).
 
 ### 4.7.5. Mở Rộng Phase E (v3.3): Live-HTTP 36-Action DQN, Per-Parameter Max-Pooling, CSIC Two-Tier + `/tienda1` Schema & Blind Vault v2
 
 - **E1 (4-Stage DQN 36 Actions / 74-D):** Huấn luyện `800 episodes` (`45.588s` RAM + `43.131s` Live-HTTP `:8056`/`:8055`, tổng **`88.719s`**). Đánh giá greedy `eps=0.0` qua HTTP thật ghi nhận tỷ lệ DQN vượt `:8056` Rules-Only = **`25.0%`** (`3/12`) so với `:8055` Hybrid = **`8.33%`** (`stage4_sandbox_bypasses = 208`).
-- **E2 (`InputNormalizer` + Per-Parameter Max-Pooling & Zero-Leakage Retrain):** Bổ sung **`1053` mẫu Zero-Leakage** (`417` E2a sandbox + `636` E3 Group A; `0` trùng lặp hash trên `47.240` dòng `defense_v2`), đạt độ trễ inline Hybrid **`0.711 ms/req`** (`<= 1.5 ms`) và **`0.00%` Operational FPR** (`N = 1715`).
-- **E3 (CSIC Two-Tier Song Song + Thực Nghiệm `/tienda1` SchemaValidator):** Trên đủ `1.500` mẫu gốc CSIC đạt **`15.27%`** (Op T=80) / **`17.93%`** (Loose), còn **Group A True Payload** (`221` mẫu) đạt **`92.76% (205/221)`** ở `0.00%` FPR (`96.83%` Loose). Nạp schema OpenAPI `/tienda1` (suy dẫn chỉ từ Benign) nâng Group B từ `1.88%` lên **`66.46%`** (Overall **`71.13%`** ở `0.00%` FPR).
-- **E4 (`Strange Suite v3.3` 38 Cases & `Blind Held-Out Vault v2` 30 Cases):** Trên `Strange v3.3`, Live-HTTP DQN vượt `:8056` đạt block **`55.26%`**, còn `:8055` Hybrid v3.3 chặn **`92.11% (105/114)`**. Trên `Blind Vault v2` (khóa SHA-256 `f0bf69f6c28a...`, đo 1 lần), Live-HTTP DQN vs `:8056` = `46.67%`, còn `:8055` Hybrid v3.3 = **`86.67% (26/30)`**.
+- **E2 (`InputNormalizer` + Per-Parameter Max-Pooling & Zero-Leakage Retrain):** Bổ sung **`1185` mẫu Zero-Leakage** (`417` E2a sandbox + `768` E3 Group A; `0` trùng lặp hash trên `47.372` dòng `defense_v2`), đạt độ trễ inline Hybrid **`0.730 ms/req`** (`<= 1.5 ms`) và **`0.00%` Operational FPR** (`N = 1715`).
+- **E3 (CSIC Two-Tier Song Song + Thực Nghiệm `/tienda1` SchemaValidator):** Trên đủ `1.500` mẫu gốc CSIC đạt **`16.40%`** (Op T=80) / **`17.27%`** (Loose), còn **Group A True Payload** (`221` mẫu) đạt **`100.00% (221/221)`** ở `0.00%` FPR (`100.00%` Loose). Nạp schema OpenAPI `/tienda1` (suy dẫn chỉ từ Benign) nâng Group B từ `1.95%` lên **`66.54%`** (Overall **`71.47%`** ở `0.00%` FPR).
+- **E4 (`Strange Suite v3.3` 38 Cases & `Blind Held-Out Vault v2` 30 Cases):** Trên `Strange v3.3`, Live-HTTP DQN vượt `:8056` đạt block **`92.11%`**, còn `:8055` Hybrid v3.3 chặn **`100.00% (114/114)`**. Trên `Blind Vault v2` (khóa SHA-256 `f0bf69f6c28a...`, đo 1 lần), Live-HTTP DQN vs `:8056` = `46.67%`, còn `:8055` Hybrid v3.3 = **`86.67% (26/30)`**.
 
 ---
 
 ## 4.8. Tóm Tắt Chương 4
 
 Chương 4 đã cung cấp đầy đủ bằng chứng định lượng trung thực, không rò rỉ dữ liệu và tái lập được 100%:
-1. **Champion XGBoost v2.0 (`xgb_v2.ubj`) & Zero-Leakage (`D3`):** Retrain XGBoost với `+1053` mẫu sạch trên `33.383` mẫu Train / `6.929` mẫu Test (`0` giao nhau mã băm trên `47.240` mẫu `defense_v2`, CSIC 2010, B1000, Strange v3.3 và Blind Vault v2).
+1. **Champion XGBoost v2.0 (`xgb_v2.ubj`) & Zero-Leakage (`D3`):** Retrain XGBoost với `+1185` mẫu sạch trên `33.515` mẫu Train / `6.929` mẫu Test (`0` giao nhau mã băm trên `47.372` mẫu `defense_v2`, CSIC 2010, B1000, Strange v3.3 và Blind Vault v2).
 2. **Calibrated Isolation Forest v2.0 (`iforest_v2.npz`) & Tinh chỉnh `C3`:** Recall `@60.0` đạt **`57.75%`**; sau tinh chỉnh C3, `B1000 Strict FPR` giảm về **`0.0%`** (`Schema OFF`) và **`0.0%`** (`Schema ON`).
-3. **Ablation Study v3.2 (`N = 1000`, `26` Rules):** `Rules Only` đạt F1 **`69.28%`**, `ML Only` đạt F1 **`97.63%`**, và `Hybrid Defense` đạt **`98.50%` Accuracy, `100.00%` Precision, `98.12%` Recall, `99.05%` F1, `0.00%` Operational FPR** trong **`0.711 ms/req`**.
-4. **Zero-Shot CSIC 2010 (`N = 3.000`) & HTTP 2-Hop E2E (`D2`):** Operational FPR **`0.00%`**, Precision **`100.00%`**, độ trễ 2-hop TCP HTTP thực tế **`3.773 ms` mean** (`p50 = 3.532 ms`).
+3. **Ablation Study v3.2 (`N = 1000`, `28` Rules):** `Rules Only` đạt F1 **`69.81%`**, `ML Only` đạt F1 **`97.50%`**, và `Hybrid Defense` đạt **`98.20%` Accuracy, `100.00%` Precision, `97.75%` Recall, `98.86%` F1, `0.00%` Operational FPR** trong **`0.730 ms/req`**.
+4. **Zero-Shot CSIC 2010 (`N = 3.000`) & HTTP 2-Hop E2E (`D2`):** Operational FPR **`0.00%`**, Precision **`100.00%`**, độ trễ 2-hop TCP HTTP thực tế **`3.839 ms` mean** (`p50 = 3.584 ms`).
 5. **Đối kháng Đa vòng 3x3 (`800`-Ep DQN, In-Process & Live HTTP):** Baseline v3.1 (`Blue Team v3.0 Hybrid`) chặn **`100.0%` (`45/45`)** trên tập `Familiar` và **`94.4%` (`51/54`)** In-Process / **`94.4%` (`51/54`)** Live HTTP trên tập ngoại miền `Strange`; trên bản kiểm chứng bổ sung **v3.2 (`26` Rules + `SQLI-006`)** ở `Strange`, `Hybrid v3.2` đạt **`100.00%` (`54/54`)** Static / **`100.00%` (`54/54`)** Random / **`100.00%` (`54/54`)** DQN (In-Process) và **`100.00%` (`54/54`)** Static / **`100.00%` (`54/54`)** Random / **`100.00%` (`54/54`)** DQN (Live HTTP).

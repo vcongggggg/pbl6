@@ -554,21 +554,27 @@ def run_a1_2_http_e2e_latency() -> dict[str, Any]:
             except Exception:
                 pass
 
+        import subprocess as _sp
+        try:
+            _cur_sha = _sp.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT_DIR, text=True).strip()
+        except Exception:
+            _cur_sha = "unknown"
+
         out = {
             "metadata": {
-                "task_id": "pbl6-v3-2-fix-004 / D2-D4 Live 26-Rule Unthrottled E2E",
+                "task_id": f"pbl6-v3-3-fix-001 / F3 Live {n_active_rules}-Rule Per-Param Pooling E2E",
                 "measured_at": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
                 "dataset": "csic_2010_benchmark.csv",
                 "total_requests": len(e2e_latencies),
                 "transport": "Real TCP HTTP/1.1 Keep-Alive (httpx.Client -> uvicorn WAF Gateway :8055 -> uvicorn ASGI Upstream :5055)",
                 "waf_mode": (
-                    f"ACTIVE_BLOCKING (Full v3.2: InputNormalizer + {n_active_rules} Rules + 5 OWASP API Guards "
-                    "+ XGBoost 26-D + IForest 26-D + Dual-AI Consensus + Route-Tiered Schema + Response DLP + Background SQLite WAL)"
+                    f"ACTIVE_BLOCKING (Full v3.3: InputNormalizer + {n_active_rules} Rules + 5 OWASP API Guards "
+                    "+ Per-Param Max-Pooling XGBoost 26-D + IForest 26-D + Dual-AI Consensus + Route-Tiered Schema + Response DLP + Background SQLite WAL)"
                 ),
                 "wall_clock_seconds": round(wall_sec, 2),
                 "sequential_rps": round(len(e2e_latencies) / wall_sec, 1),
-                "history_snapshot": "docs/reports/history/latency_e2e_v3_csic_20261124_192715_fd012c1.json",
-                "git_base_sha": "fd012c1d17e42f531b635cbe94c7dd738023ee0f",
+                "history_snapshot": None,
+                "git_base_sha": _cur_sha,
                 "cpu_load_pct": host_telemetry.get("cpu_load_pct", 15.0),
                 "last_pointer_update": now_iso,
                 "host_power_telemetry": host_telemetry,
@@ -587,9 +593,9 @@ def run_a1_2_http_e2e_latency() -> dict[str, Any]:
                 "meets_2_5ms_target": meets_2_5ms,
                 "dual_tier_e2e_sla_ms": 5.5,
                 "meets_5_5ms_dual_tier_sla": bool(mean_ms <= 5.5),
-                "inline_v32_ablation_mean_ms": round(inline_mean_ms, 3),
+                "inline_v33_ablation_mean_ms": round(inline_mean_ms, 3),
                 "conclusion": (
-                    f"In-process single-pass Hybrid v3.2 inspection measures {inline_mean_ms:.3f} ms mean (<= 1.5 ms inline SLA), "
+                    f"In-process single-pass Hybrid v3.3 inspection measures {inline_mean_ms:.3f} ms mean (<= 1.5 ms inline SLA), "
                     f"whereas full 2-hop TCP HTTP reverse-proxy round-trip (Client -> Uvicorn WAF -> Uvicorn Upstream + async "
                     f"threadpool hop + SQLite WAL commit) measures {mean_ms} ms mean (p50={p50_ms} ms, p95={p95_ms} ms). "
                     f"Verified against dual-tier SLA: <= 1.5 ms inline WAF engine budget and <= 5.5 ms full HTTP 2-hop proxy E2E."
@@ -627,6 +633,11 @@ def run_a1_3_disjoint_hashes() -> dict[str, Any]:
         "benchmark_1000": ROOT_DIR / "data" / "benchmark_1000_diverse.csv",
     }
 
+    json_files = {
+        "strange_suite_v33": ROOT_DIR / "data" / "benchmarks" / "strange_suite_v33.json",
+        "blind_heldout_vault_v2": ROOT_DIR / "data" / "benchmarks" / "blind_heldout_vault_v2.json",
+    }
+
     hash_sets: dict[str, set[str]] = {}
     file_stats: dict[str, Any] = {}
 
@@ -647,21 +658,57 @@ def run_a1_3_disjoint_hashes() -> dict[str, Any]:
             "unique_canonical_hashes": len(h_set),
         }
 
+    from build_phase_e_augmentation import _case_to_http_tuple  # noqa: E402
+
+    for name, jpath in json_files.items():
+        if not jpath.is_file():
+            raise FileNotFoundError(f"Required suite missing: {jpath}")
+        raw_j = json.loads(jpath.read_text(encoding="utf-8"))
+        cases = raw_j.get("cases", [])
+        h_set = {_canonical_sha256(*_case_to_http_tuple(c)) for c in cases}
+        hash_sets[name] = h_set
+        file_stats[name] = {
+            "file": str(jpath.relative_to(ROOT_DIR)).replace("\\", "/"),
+            "size_bytes": jpath.stat().st_size,
+            "sha256": _file_sha256_normalized(jpath),
+            "row_count": len(cases),
+            "unique_canonical_hashes": len(h_set),
+        }
+
     d2_union = hash_sets["defense_v2_train"] | hash_sets["defense_v2_val"] | hash_sets["defense_v2_test"]
+    d2_total_rows = (
+        file_stats["defense_v2_train"]["row_count"]
+        + file_stats["defense_v2_val"]["row_count"]
+        + file_stats["defense_v2_test"]["row_count"]
+    )
     intersections = {
         "train_vs_val": len(hash_sets["defense_v2_train"] & hash_sets["defense_v2_val"]),
         "train_vs_test": len(hash_sets["defense_v2_train"] & hash_sets["defense_v2_test"]),
         "val_vs_test": len(hash_sets["defense_v2_val"] & hash_sets["defense_v2_test"]),
         "defense_v2_all_vs_csic2010": len(d2_union & hash_sets["csic2010"]),
         "defense_v2_all_vs_benchmark_1000": len(d2_union & hash_sets["benchmark_1000"]),
+        "defense_v2_all_vs_strange_suite_v33": len(d2_union & hash_sets["strange_suite_v33"]),
+        "defense_v2_all_vs_blind_heldout_vault_v2": len(d2_union & hash_sets["blind_heldout_vault_v2"]),
+        "strange_suite_v33_vs_blind_heldout_vault_v2": len(
+            hash_sets["strange_suite_v33"] & hash_sets["blind_heldout_vault_v2"]
+        ),
     }
+
+    try:
+        _cur_sha = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT_DIR, text=True).strip()
+    except Exception:
+        _cur_sha = "unknown"
 
     all_zero = all(v == 0 for v in intersections.values())
     out = {
         "metadata": {
-            "task_id": "pbl6-v3-fix-round-001 / A1.3 (D3)",
+            "task_id": "pbl6-v3-3-fix-001 (A1.3 / D3 / E4)",
             "measured_at": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
             "hash_protocol": "SHA-256(canonicalize_payload(canonicalize_http_request(path, query_params, body, headers=None)))",
+            "defense_v2_total_rows": d2_total_rows,
+            "history_snapshot": None,
+            "git_base_sha": _cur_sha,
+            "last_pointer_update": datetime.now().isoformat(),
         },
         "datasets": file_stats,
         "pairwise_canonical_hash_overlaps": intersections,

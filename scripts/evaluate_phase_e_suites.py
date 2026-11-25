@@ -513,7 +513,7 @@ def _run_inprocess_suite(
                     bypassed_cases.append(
                         {
                             "pass": pass_num,
-                            "case_id": case.get("case_id"),
+                            "case_id": case.get("case_id") or case.get("vault_id"),
                             "endpoint": case.get("endpoint"),
                             "family": family,
                             "action": last_action,
@@ -680,7 +680,7 @@ def _run_live_http_suite(
                     bypassed_cases.append(
                         {
                             "pass": pass_num,
-                            "case_id": case.get("case_id"),
+                            "case_id": case.get("case_id") or case.get("vault_id"),
                             "endpoint": case.get("endpoint"),
                             "family": family,
                             "action": last_action,
@@ -866,7 +866,13 @@ def main() -> None:
     parser.add_argument(
         "--include-blind-vault",
         action="store_true",
-        help="Verify blind_heldout_vault_v2.json SHA-256 lock and run single-shot evaluation",
+        help="Verify blind_heldout_vault_v2.json SHA-256 lock and run post-fix evaluation into --vault-out",
+    )
+    parser.add_argument(
+        "--vault-out",
+        type=Path,
+        default=ROOT_DIR / "docs" / "reports" / "blind_heldout_vault_v2_postfix_results.json",
+        help="Output path for Blind Held-Out Vault v2 re-evaluation (never overwrites frozen baseline unless explicitly specified).",
     )
     args = parser.parse_args()
 
@@ -883,8 +889,8 @@ def main() -> None:
         evaluate_suite(
             suite_name="PBL6 Blind Held-Out Vault v2.0",
             suite_path=BLIND_VAULT_PATH,
-            out_path=BLIND_VAULT_RESULTS,
-            passes=1,  # Single-shot blind vault evaluation
+            out_path=args.vault_out,
+            passes=1,  # Blind vault evaluation
             run_live_http=not args.no_live_http,
             extra_metadata={"lock_verification": lock_check},
         )

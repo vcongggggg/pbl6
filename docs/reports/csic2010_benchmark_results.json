@@ -5,85 +5,89 @@
     "model_path": "C:\\Study\\HocKy6\\PBL6\\ml-engine\\artifacts\\xgb_v2.ubj",
     "anomaly_path": "C:\\Study\\HocKy6\\PBL6\\ml-engine\\artifacts\\iforest_v2.npz",
     "total_samples": 3000,
-    "duration_seconds": 3.04,
-    "throughput_samples_per_sec": 985.9
+    "duration_seconds": 2.87,
+    "throughput_samples_per_sec": 1047.0,
+    "history_snapshot": "docs/reports/history/csic2010_benchmark_results_20261125_110741_ce36bb2.json",
+    "git_base_sha": "ce36bb2396d37f7fede33fdc867d2587ccbb0619",
+    "cpu_load_pct": 22.9,
+    "last_pointer_update": "2026-11-25T11:07:41.462100"
   },
   "standalone_xgboost_v2": {
-    "tp": 256,
-    "fn": 1244,
-    "tn": 1498,
-    "fp": 2,
-    "recall": 17.07,
-    "precision": 99.22,
-    "f1_score": 29.12,
-    "fpr": 0.13,
-    "accuracy": 58.47
+    "tp": 238,
+    "fn": 1262,
+    "tn": 1499,
+    "fp": 1,
+    "recall": 15.87,
+    "precision": 99.58,
+    "f1_score": 27.37,
+    "fpr": 0.07,
+    "accuracy": 57.9
   },
   "hybrid_defense_in_depth": {
-    "tp": 269,
-    "fn": 1231,
-    "tn": 1498,
-    "fp": 2,
-    "recall": 17.93,
-    "precision": 99.26,
-    "f1_score": 30.38,
-    "fpr": 0.13,
-    "accuracy": 58.9
+    "tp": 259,
+    "fn": 1241,
+    "tn": 1499,
+    "fp": 1,
+    "recall": 17.27,
+    "precision": 99.62,
+    "f1_score": 29.43,
+    "fpr": 0.07,
+    "accuracy": 58.6
   },
   "hybrid_operational_t80": {
-    "tp": 229,
-    "fn": 1271,
+    "tp": 246,
+    "fn": 1254,
     "tn": 1500,
     "fp": 0,
-    "recall": 15.27,
+    "recall": 16.4,
     "precision": 100.0,
-    "f1_score": 26.49,
+    "f1_score": 28.18,
     "fpr": 0.0,
-    "accuracy": 57.63
+    "accuracy": 58.2
   },
   "two_tier_parallel_metrics": {
     "overall_1500": {
-      "standalone_ml_recall_pct": 17.07,
-      "hybrid_loose_recall_pct": 17.93,
-      "hybrid_operational_t80_recall_pct": 15.27,
-      "benign_fpr_ml_pct": 0.13,
-      "benign_fpr_hybrid_loose_pct": 0.13,
+      "standalone_ml_recall_pct": 15.87,
+      "hybrid_loose_recall_pct": 17.27,
+      "hybrid_operational_t80_recall_pct": 16.4,
+      "benign_fpr_ml_pct": 0.07,
+      "benign_fpr_hybrid_loose_pct": 0.07,
       "benign_fpr_hybrid_operational_t80_pct": 0.0
     },
     "group_a_true_payload": {
       "total": 221,
       "standalone_ml": {
-        "tp": 207,
+        "tp": 206,
         "total": 221,
-        "recall_pct": 93.67
+        "recall_pct": 93.21
       },
       "hybrid_loose": {
-        "tp": 214,
+        "tp": 221,
         "total": 221,
-        "recall_pct": 96.83
+        "recall_pct": 100.0
       },
       "hybrid_operational_t80": {
-        "tp": 205,
+        "tp": 221,
         "total": 221,
-        "recall_pct": 92.76
+        "recall_pct": 100.0
       }
     },
     "group_b_parameter_tampering": {
       "total": 1279,
       "standalone_ml": {
-        "tp": 49,
+        "tp": 32,
         "total": 1279,
-        "recall_pct": 3.83
+        "recall_pct": 2.5
       },
       "hybrid_loose": {
-        "tp": 55,
+        "tp": 38,
         "total": 1279,
-        "recall_pct": 4.3
+        "recall_pct": 2.97
       },
       "hybrid_operational_t80": {
-        "tp": 24,
+        "tp": 25,
         "total": 1279,
-        "recall_pct": 1.88
+        "recall_pct": 1.95
       }
     },
     "detailed_subcategories": {
@@ -95,8 +99,8 @@
         },
         "SQLI_BLIND_BOOLEAN": {
           "total": 75,
-          "blocked": 61,
-          "recall_pct": 81.33
+          "blocked": 60,
+          "recall_pct": 80.0
         },
         "SQLI_TSQL_TIME_DELAY": {
           "total": 61,
@@ -120,8 +124,8 @@
         },
         "PARAMETER_TAMPERING": {
           "total": 1279,
-          "blocked": 49,
-          "recall_pct": 3.83
+          "blocked": 32,
+          "recall_pct": 2.5
         }
       },
       "hybrid_loose": {
@@ -132,8 +136,8 @@
         },
         "SQLI_BLIND_BOOLEAN": {
           "total": 75,
-          "blocked": 68,
-          "recall_pct": 90.67
+          "blocked": 75,
+          "recall_pct": 100.0
         },
         "SQLI_TSQL_TIME_DELAY": {
           "total": 61,
@@ -157,8 +161,8 @@
         },
         "PARAMETER_TAMPERING": {
           "total": 1279,
-          "blocked": 55,
-          "recall_pct": 4.3
+          "blocked": 38,
+          "recall_pct": 2.97
         }
       },
       "hybrid_operational_t80": {
@@ -169,8 +173,8 @@
         },
         "SQLI_BLIND_BOOLEAN": {
           "total": 75,
-          "blocked": 59,
-          "recall_pct": 78.67
+          "blocked": 75,
+          "recall_pct": 100.0
         },
         "SQLI_TSQL_TIME_DELAY": {
           "total": 61,
@@ -194,36 +198,36 @@
         },
         "PARAMETER_TAMPERING": {
           "total": 1279,
-          "blocked": 24,
-          "recall_pct": 1.88
+          "blocked": 25,
+          "recall_pct": 1.95
         }
       }
     }
   },
   "latency": {
-    "mean_ms": 0.877,
-    "p50_ms": 0.602,
-    "p95_ms": 2.169,
-    "p99_ms": 2.734
+    "mean_ms": 0.841,
+    "p50_ms": 0.539,
+    "p95_ms": 2.082,
+    "p99_ms": 2.6
   },
   "categories_ml": {
     "ANOMALY_TAMPER": {
       "total": 1181,
-      "blocked": 67,
-      "passed": 1114,
-      "success_rate": 5.67
+      "blocked": 50,
+      "passed": 1131,
+      "success_rate": 4.23
     },
     "BENIGN": {
       "total": 1500,
-      "blocked": 2,
-      "passed": 1498,
-      "success_rate": 99.87
+      "blocked": 1,
+      "passed": 1499,
+      "success_rate": 99.93
     },
     "SQLI": {
       "total": 254,
-      "blocked": 124,
-      "passed": 130,
-      "success_rate": 48.82
+      "blocked": 123,
+      "passed": 131,
+      "success_rate": 48.43
     },
     "XSS": {
       "total": 65,
@@ -235,15 +239,15 @@
   "categories_hybrid": {
     "ANOMALY_TAMPER": {
       "total": 1181,
-      "blocked": 75,
-      "passed": 1106,
-      "success_rate": 6.35
+      "blocked": 65,
+      "passed": 1116,
+      "success_rate": 5.5
     },
     "BENIGN": {
       "total": 1500,
-      "blocked": 2,
-      "passed": 1498,
-      "success_rate": 99.87
+      "blocked": 1,
+      "passed": 1499,
+      "success_rate": 99.93
     },
     "SQLI": {
       "total": 254,
@@ -261,39 +265,39 @@
   "comparison_with_in_domain": [
     {
       "metric": "Accuracy",
-      "in_domain": "99.15%",
-      "csic_ml": "58.47%",
-      "csic_hybrid": "58.90%"
+      "in_domain": "99.16%",
+      "csic_ml": "57.90%",
+      "csic_hybrid": "58.60%"
     },
     {
       "metric": "Precision",
-      "in_domain": "98.65%",
-      "csic_ml": "99.22%",
-      "csic_hybrid": "99.26%"
+      "in_domain": "98.60%",
+      "csic_ml": "99.58%",
+      "csic_hybrid": "99.62%"
     },
     {
       "metric": "Recall",
-      "in_domain": "98.78%",
-      "csic_ml": "17.07%",
-      "csic_hybrid": "17.93%"
+      "in_domain": "98.95%",
+      "csic_ml": "15.87%",
+      "csic_hybrid": "17.27%"
     },
     {
       "metric": "F1-Score",
-      "in_domain": "98.71%",
-      "csic_ml": "29.12%",
-      "csic_hybrid": "30.38%"
+      "in_domain": "98.77%",
+      "csic_ml": "27.37%",
+      "csic_hybrid": "29.43%"
     },
     {
       "metric": "False Positive Rate (FPR)",
       "in_domain": "0.05%",
-      "csic_ml": "0.13%",
-      "csic_hybrid": "0.13%"
+      "csic_ml": "0.07%",
+      "csic_hybrid": "0.07%"
     },
     {
       "metric": "Avg Inference Latency",
-      "in_domain": "0.466 ms",
-      "csic_ml": "0.877 ms",
-      "csic_hybrid": "0.877 ms"
+      "in_domain": "0.439 ms",
+      "csic_ml": "0.841 ms",
+      "csic_hybrid": "0.841 ms"
     }
   ]
 }

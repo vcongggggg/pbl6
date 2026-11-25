@@ -423,6 +423,14 @@ def audit_csic2010(save_before: bool = False) -> dict[str, Any]:
                 "Reports BOTH loose monitoring criteria (rule >= 80 OR ml.is_attack OR anom >= 60.0 "
                 "OR hybrid_risk >= 50.0) AND operational DecisionEngine T=80 across Overall 1,500 and Group A."
             ),
+            "taxonomy_audit_note": (
+                "Group A expanded from 196 (Phase D2) to 221 (Phase E3) strictly because recursive_urldecode switched from "
+                "urllib.parse.unquote to urllib.parse.unquote_plus: decoding URL form '+' spaces revealed 25 additional genuine "
+                "CSIC SQLi payloads (118 -> 143 SQLi, e.g. '1%27+OR+%271%27%3D%271' -> \"1' OR '1'='1\") previously masked "
+                "under Group B Parameter Tampering. In addition, the 75-row legacy SQLI_BLIND_BOOLEAN slice includes 50 HTML SSI "
+                "directives (<!--#EXEC / <!--#include) matched by the '--' comment token and is preserved intact for apples-to-apples "
+                "before/after regression accounting alongside csic2010_blind_boolean_per_case_diff.json."
+            ),
         },
         "reviewer_sqli_finding_verification": {
             "total_original_sqli_labeled": len(sqli_labeled),

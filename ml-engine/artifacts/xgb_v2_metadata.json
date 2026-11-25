@@ -2,7 +2,7 @@
   "model_name": "Champion Cost-Sensitive Regularized XGBoost v2.0",
   "model_file": "xgb_v2.ubj",
   "model_version": "2.0.0",
-  "sha256_hash": "bb2521b571f669f009b20853e893c5ef8c6ae3c91f51ee9536ef832582767dc0",
+  "sha256_hash": "a166334e22e44f02ceaf21774cbf49b61fd9699751e8ed9a0817e7746c59deed",
   "feature_count": 26,
   "feature_names": [
     "length",
@@ -48,27 +48,27 @@
   },
   "attack_threshold": 0.5,
   "latency_benchmark": {
-    "mean_ms": 0.4662,
-    "p99_ms": 0.6421
+    "mean_ms": 0.4387,
+    "p99_ms": 0.652
   },
   "metrics": {
-    "test_accuracy": 0.9915,
-    "test_precision_macro": 0.9865,
-    "test_recall_macro": 0.9878,
-    "test_f1_macro": 0.9871,
+    "test_accuracy": 0.9916,
+    "test_precision_macro": 0.986,
+    "test_recall_macro": 0.9895,
+    "test_f1_macro": 0.9877,
     "confusion_matrix": [
       [
-        3874,
-        1,
-        15,
+        3872,
         3,
-        8
+        16,
+        4,
+        6
       ],
       [
         0,
-        349,
+        351,
+        0,
         1,
-        2,
         1
       ],
       [
@@ -81,8 +81,8 @@
       [
         1,
         5,
-        1,
-        268,
+        0,
+        269,
         0
       ],
       [
@@ -95,46 +95,46 @@
     ],
     "classification_report": {
       "BENIGN": {
-        "precision": 0.9948638931689779,
-        "recall": 0.9930786977698026,
-        "f1-score": 0.9939704939063502,
+        "precision": 0.9948612538540597,
+        "recall": 0.9925660087157139,
+        "f1-score": 0.9937123059155653,
         "support": 3901.0
       },
       "COMMAND_INJECTION": {
-        "precision": 0.9775910364145658,
-        "recall": 0.9886685552407932,
-        "f1-score": 0.9830985915492958,
+        "precision": 0.9722991689750693,
+        "recall": 0.9943342776203966,
+        "f1-score": 0.9831932773109243,
         "support": 353.0
       },
       "PATH_TRAVERSAL": {
-        "precision": 0.985973597359736,
+        "precision": 0.9867877786952931,
         "recall": 0.9958333333333333,
-        "f1-score": 0.9908789386401327,
+        "f1-score": 0.9912899211945251,
         "support": 1200.0
       },
       "SQL_INJECTION": {
-        "precision": 0.9816849816849816,
-        "recall": 0.9745454545454545,
-        "f1-score": 0.9781021897810219,
+        "precision": 0.9817518248175182,
+        "recall": 0.9781818181818182,
+        "f1-score": 0.9799635701275046,
         "support": 275.0
       },
       "XSS": {
-        "precision": 0.9924559932942163,
+        "precision": 0.9941225860621327,
         "recall": 0.9866666666666667,
-        "f1-score": 0.9895528625156708,
+        "f1-score": 0.9903805938937683,
         "support": 1200.0
       },
-      "accuracy": 0.9914850627796219,
+      "accuracy": 0.9916293837494587,
       "macro avg": {
-        "precision": 0.9865139003844956,
-        "recall": 0.9877585415112101,
-        "f1-score": 0.9871206152784943,
+        "precision": 0.9859645224808146,
+        "recall": 0.9895164209035856,
+        "f1-score": 0.9877079336884576,
         "support": 6929.0
       },
       "weighted avg": {
-        "precision": 0.9915041942350464,
-        "recall": 0.9914850627796219,
-        "f1-score": 0.9914863563461276,
+        "precision": 0.9916653986818609,
+        "recall": 0.9916293837494587,
+        "f1-score": 0.9916342231430786,
         "support": 6929.0
       }
     }

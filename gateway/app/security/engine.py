@@ -200,13 +200,13 @@ class RuleEngine:
         # SEC-PBL6-002: decode with errors="replace" so non-UTF-8 prefix cannot bypass inspection
         text = body_bytes.decode("utf-8", errors="replace")
 
-        # Attempt full JSON traversal with depth guard
+        # Attempt full JSON traversal with depth guard (object_pairs_hook preserves duplicate JSON keys!)
         try:
-            data = json.loads(text)
+            data = json.loads(text, object_pairs_hook=list)
             self._inspect_json_recursive(data=data, on_match=on_match, prefix="body", depth=0, max_depth=32)
             return
         except Exception:
-            # Fallback to plain text inspection with sliding window if JSON parsing fails or depth exceeds max_depth
+            # Fallback to plain text + URL-encoded form inspection if JSON parsing fails or depth exceeds max_depth
             pass
 
         self._inspect_text(
@@ -216,15 +216,43 @@ class RuleEngine:
             on_match=on_match,
         )
 
+        # Inspect URL-encoded form parameters (application/x-www-form-urlencoded) so + and %XX decode per field
+        if "=" in text and not text.lstrip().startswith("<"):
+            try:
+                parsed_form = parse_qs(text, keep_blank_values=True)
+                for fk, fvals in parsed_form.items():
+                    self._inspect_text(
+                        text=fk,
+                        location=InspectionLocation.BODY,
+                        location_key=f"form_key:{fk}",
+                        on_match=on_match,
+                    )
+                    for fv in fvals:
+                        self._inspect_text(
+                            text=fv,
+                            location=InspectionLocation.BODY,
+                            location_key=fk,
+                            on_match=on_match,
+                        )
+            except Exception:
+                pass
+
     def _inspect_json_recursive(
         self, data: Any, on_match: Any, prefix: str, depth: int = 0, max_depth: int = 32
     ) -> None:
-        """Recursively inspects keys and values in nested JSON objects with depth protection."""
+        """Recursively inspects keys and values in nested JSON objects/pairs with depth protection."""
         if depth > max_depth:
             raise ValueError(f"JSON nesting depth exceeded maximum threshold ({max_depth})")
 
         if isinstance(data, dict):
-            for k, v in data.items():
+            pairs = list(data.items())
+        elif isinstance(data, list) and all(isinstance(el, tuple) and len(el) == 2 for el in data):
+            pairs = data
+        else:
+            pairs = None
+
+        if pairs is not None:
+            for k, v in pairs:
                 k_str = str(k)
                 self._inspect_text(
                     text=k_str,

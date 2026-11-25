@@ -254,4 +254,20 @@ def get_sqli_rules() -> list[BaseRule]:
             pattern=r"""(?i);\s*(?:drop\s+table|drop\s+database|truncate\s+table|alter\s+table|insert\s+into|update\s+\w+\s+set|delete\s+from)\b""",
         ),
         UnquotedArithmeticTautologyRule(),
+        RegexRule(
+            rule_id="SQLI-007",
+            attack_type=AttackType.SQL_INJECTION,
+            severity=Severity.CRITICAL,
+            confidence=0.95,
+            description="Obfuscated Scientific-Float, CHAR Concatenation, and Subquery Fingerprinting SQLi",
+            rationale=(
+                "Detects scientific-notation keyword concatenation (1e0UNION, 9e0OR), "
+                "quote-free multi-byte CHAR()/CHR() obfuscation, and embedded SELECT CASE/version probes."
+            ),
+            pattern=(
+                r"""(?i)(?:\b\d+(?:\.\d+)?e[+-]?\d+(?:union|select|or|and|where|from|having|order|group)\b"""
+                r"""|\b(?:CHAR|CHR)\s*\(\s*\d+(?:\s*,\s*\d+){3,}\s*\)"""
+                r"""|\(\s*select\s+(?:case\s+when\b|sqlite_version\s*\(|@@version\b|current_user\b))"""
+            ),
+        ),
     ]

@@ -368,6 +368,12 @@ def run_csic2010_evaluation() -> None:
 
     OUTPUT_JSON.write_text(json.dumps(report_data, indent=2, ensure_ascii=False), encoding="utf-8")
 
+    sc_ml = two_tier_parallel_metrics["detailed_subcategories"]["standalone_ml"]
+    sc_hl = two_tier_parallel_metrics["detailed_subcategories"]["hybrid_loose"]
+    sc_ho = two_tier_parallel_metrics["detailed_subcategories"]["hybrid_operational_t80"]
+    ga_m = two_tier_parallel_metrics["group_a_true_payload"]
+    gb_m = two_tier_parallel_metrics["group_b_parameter_tampering"]
+
     md_content = f"""# Báo Cáo Đánh Giá Khả Năng Tổng Quát Hóa Liên Tập Dữ Liệu (Task 5.4 - CSIC 2010 Benchmark)
 
 **Chuẩn mực khoa học:** NIST SP 800-115, ISO/IEC 27004:2016, Liu et al. (IEEE ICDM 2008), Torrano-Gimenez et al. (Wiley SCN 2015)
@@ -380,32 +386,38 @@ def run_csic2010_evaluation() -> None:
 
 ## 1. Bảng Đối Sánh Khoa Học: Tập Nội Bộ (In-Domain) vs Chuẩn Quốc Tế CSIC 2010 (Zero-Shot)
 
-| Chỉ Số Đánh Giá (Metric) | Tập Nội Bộ (In-Domain Test) | CSIC 2010 (XGBoost v2 Đơn Lẻ) | CSIC 2010 (Hybrid Defense-in-Depth) | Nhận Xét Khoa Học |
-|:---|:---:|:---:|:---:|:---|
-| **Độ chính xác (Accuracy)** | **{id_acc:.2f}%** | **{metrics_ml['accuracy']:.2f}%** | **{metrics_hybrid['accuracy']:.2f}%** | Phản ánh tỷ lệ nhận diện tổng quát |
-| **Precision (Độ tin cậy cảnh báo)** | **{id_prec:.2f}%** | **{metrics_ml['precision']:.2f}%** | **{metrics_hybrid['precision']:.2f}%** | Độ tin cậy cảnh báo thực tế |
-| **Recall (Tỷ lệ bắt mã độc)** | **{id_rec:.2f}%** | **{metrics_ml['recall']:.2f}%** | **{metrics_hybrid['recall']:.2f}%** | Bắt giữ {metrics_hybrid['tp']}/{total_samples//2} vector tấn công |
-| **F1-Score (Trung bình điều hòa)** | **{id_f1:.2f}%** | **{metrics_ml['f1_score']:.2f}%** | **{metrics_hybrid['f1_score']:.2f}%** | Điểm cân bằng học thuật |
-| **Tỷ lệ dương tính giả (FPR)** | **{id_fpr:.2f}%** | **{metrics_ml['fpr']:.2f}%** | **{metrics_hybrid['fpr']:.2f}%** | Độ sạch của luồng người dùng lành tính |
-| **Độ trễ suy luận trung bình** | **{in_domain_latency:.3f} ms** | **{mean_lat:.3f} ms** | **{mean_lat:.3f} ms** | Đạt chuẩn inline SLA (&lt; 2.5ms/request) |
+| Chỉ Số Đánh Giá (Metric) | Tập Nội Bộ (In-Domain Test) | CSIC 2010 (XGBoost v2 Đơn Lẻ) | CSIC 2010 (Hybrid Loose) | CSIC 2010 (Hybrid Operational T=80) | Nhận Xét Khoa Học |
+|:---|:---:|:---:|:---:|:---:|:---|
+| **Độ chính xác (Accuracy)** | **{id_acc:.2f}%** | **{metrics_ml['accuracy']:.2f}%** | **{metrics_hybrid['accuracy']:.2f}%** | **{metrics_hybrid_op['accuracy']:.2f}%** | Phản ánh tỷ lệ nhận diện tổng quát (1.500 attacks gồm cả Group B) |
+| **Precision (Độ tin cậy cảnh báo)** | **{id_prec:.2f}%** | **{metrics_ml['precision']:.2f}%** | **{metrics_hybrid['precision']:.2f}%** | **{metrics_hybrid_op['precision']:.2f}%** | Độ tin cậy cảnh báo thực tế |
+| **Recall Overall (1.500 attacks)** | **{id_rec:.2f}%** | **{metrics_ml['recall']:.2f}%** | **{metrics_hybrid['recall']:.2f}%** | **{metrics_hybrid_op['recall']:.2f}%** | Bắt {metrics_hybrid_op['tp']}/1.500 (Op T=80) / {metrics_hybrid['tp']}/1.500 (Loose) |
+| **Recall Nhóm A True Payload ({ga_total} mẫu)** | — | **{ga_m['standalone_ml']['recall_pct']:.2f}%** | **{ga_m['hybrid_loose']['recall_pct']:.2f}%** | **{ga_m['hybrid_operational_t80']['recall_pct']:.2f}%** | Bắt {ga_m['hybrid_operational_t80']['tp']}/{ga_total} True Payloads (Op T=80) / {ga_m['hybrid_loose']['tp']}/{ga_total} (Loose) |
+| **F1-Score (Trung bình điều hòa)** | **{id_f1:.2f}%** | **{metrics_ml['f1_score']:.2f}%** | **{metrics_hybrid['f1_score']:.2f}%** | **{metrics_hybrid_op['f1_score']:.2f}%** | Điểm cân bằng trên 3.000 mẫu |
+| **Tỷ lệ dương tính giả (FPR)** | **{id_fpr:.2f}%** | **{metrics_ml['fpr']:.2f}%** | **{metrics_hybrid['fpr']:.2f}%** | **{metrics_hybrid_op['fpr']:.2f}%** | Độ sạch luồng lành tính (1.500 Benign) |
+| **Độ trễ suy luận trung bình** | **{in_domain_latency:.3f} ms** | **{mean_lat:.3f} ms** | **{mean_lat:.3f} ms** | **{mean_lat:.3f} ms** | Đạt chuẩn inline SLA (&lt; 1.5ms/request) |
 
 ---
 
-## 2. Phân Tích Chi Tiết Theo Từng Nhóm Hành Vi Mã Độc CSIC 2010
+## 2. Phân Tích Chi Tiết Theo Phân Loại Hai Tầng Đã Kiểm Toán (Two-Tier CSIC Taxonomy)
 
-| Nhóm Hành Vi CSIC 2010 | Tổng Mẫu | XGBoost v2 Bắt Được | XGBoost v2 Tỷ Lệ | Hybrid Bắt Được | Hybrid Tỷ Lệ |
-|:---|:---:|:---:|:---:|:---:|:---:|
-| **SQL Injection (SQLi)** | {sub_summary_ml.get('SQLI', {}).get('total', 0)} | {sub_summary_ml.get('SQLI', {}).get('blocked', 0)} | {sub_summary_ml.get('SQLI', {}).get('success_rate', 0)}% | {sub_summary_hybrid.get('SQLI', {}).get('blocked', 0)} | {sub_summary_hybrid.get('SQLI', {}).get('success_rate', 0)}% |
-| **Cross-Site Scripting (XSS)** | {sub_summary_ml.get('XSS', {}).get('total', 0)} | {sub_summary_ml.get('XSS', {}).get('blocked', 0)} | {sub_summary_ml.get('XSS', {}).get('success_rate', 0)}% | {sub_summary_hybrid.get('XSS', {}).get('blocked', 0)} | {sub_summary_hybrid.get('XSS', {}).get('success_rate', 0)}% |
-| **Anomalous Parameter Tampering** | {sub_summary_ml.get('ANOMALY_TAMPER', {}).get('total', 0)} | {sub_summary_ml.get('ANOMALY_TAMPER', {}).get('blocked', 0)} | {sub_summary_ml.get('ANOMALY_TAMPER', {}).get('success_rate', 0)}% | {sub_summary_hybrid.get('ANOMALY_TAMPER', {}).get('blocked', 0)} | {sub_summary_hybrid.get('ANOMALY_TAMPER', {}).get('success_rate', 0)}% |
-| **Lưu lượng hợp lệ (Benign Allow)** | {sub_summary_ml.get('BENIGN', {}).get('total', 0)} | {sub_summary_ml.get('BENIGN', {}).get('passed', 0)} | {sub_summary_ml.get('BENIGN', {}).get('success_rate', 0)}% | {sub_summary_hybrid.get('BENIGN', {}).get('passed', 0)} | {sub_summary_hybrid.get('BENIGN', {}).get('success_rate', 0)}% |
+> **Lưu ý kiểm toán phân loại (D2 -> E3):** Bộ CSIC gốc gán nhầm `modo=insertar` tiếng Tây Ban Nha vào `SQLI` (133/254 ca không chứa cú pháp SQL). Bảng 2 sử dụng chuẩn Two-Tier đã kiểm toán từ `audit_csic2010_taxonomy.py` (tách **Group A True Payload** gồm {ga_total} mẫu và **Group B Parameter Tampering** gồm {gb_total} mẫu). Số lượng mẫu Group A tăng từ **196 (D2) lên 221 (E3)** (+25 mẫu SQLi) do `audit_csic2010_taxonomy.py` đã chuyển sang giải mã `urllib.parse.unquote_plus` cho dấu `+` thành khoảng trắng trước khi nhận diện từ khóa SQL.
+
+| Phân Nhóm CSIC 2010 (Two-Tier) | Tổng Mẫu | XGBoost v2 Đơn Lẻ | Hybrid Loose | Hybrid Operational T=80 |
+|:---|:---:|:---:|:---:|:---:|
+| **Group A — `SQLI_CLASSIC_UNION`** | {sc_ml.get('SQLI_CLASSIC_UNION', {}).get('total', 0)} | {sc_ml.get('SQLI_CLASSIC_UNION', {}).get('blocked', 0)} ({sc_ml.get('SQLI_CLASSIC_UNION', {}).get('recall_pct', 0)}%) | {sc_hl.get('SQLI_CLASSIC_UNION', {}).get('blocked', 0)} ({sc_hl.get('SQLI_CLASSIC_UNION', {}).get('recall_pct', 0)}%) | {sc_ho.get('SQLI_CLASSIC_UNION', {}).get('blocked', 0)} ({sc_ho.get('SQLI_CLASSIC_UNION', {}).get('recall_pct', 0)}%) |
+| **Group A — `SQLI_BLIND_BOOLEAN` (+ legacy `--` SSI)** | {sc_ml.get('SQLI_BLIND_BOOLEAN', {}).get('total', 0)} | {sc_ml.get('SQLI_BLIND_BOOLEAN', {}).get('blocked', 0)} ({sc_ml.get('SQLI_BLIND_BOOLEAN', {}).get('recall_pct', 0)}%) | {sc_hl.get('SQLI_BLIND_BOOLEAN', {}).get('blocked', 0)} ({sc_hl.get('SQLI_BLIND_BOOLEAN', {}).get('recall_pct', 0)}%) | {sc_ho.get('SQLI_BLIND_BOOLEAN', {}).get('blocked', 0)} ({sc_ho.get('SQLI_BLIND_BOOLEAN', {}).get('recall_pct', 0)}%) |
+| **Group A — `SQLI_TSQL_TIME_DELAY`** | {sc_ml.get('SQLI_TSQL_TIME_DELAY', {}).get('total', 0)} | {sc_ml.get('SQLI_TSQL_TIME_DELAY', {}).get('blocked', 0)} ({sc_ml.get('SQLI_TSQL_TIME_DELAY', {}).get('recall_pct', 0)}%) | {sc_hl.get('SQLI_TSQL_TIME_DELAY', {}).get('blocked', 0)} ({sc_hl.get('SQLI_TSQL_TIME_DELAY', {}).get('recall_pct', 0)}%) | {sc_ho.get('SQLI_TSQL_TIME_DELAY', {}).get('blocked', 0)} ({sc_ho.get('SQLI_TSQL_TIME_DELAY', {}).get('recall_pct', 0)}%) |
+| **Group A — `XSS`** | {sc_ml.get('XSS', {}).get('total', 0)} | {sc_ml.get('XSS', {}).get('blocked', 0)} ({sc_ml.get('XSS', {}).get('recall_pct', 0)}%) | {sc_hl.get('XSS', {}).get('blocked', 0)} ({sc_hl.get('XSS', {}).get('recall_pct', 0)}%) | {sc_ho.get('XSS', {}).get('blocked', 0)} ({sc_ho.get('XSS', {}).get('recall_pct', 0)}%) |
+| **Group A — Tổng True Payload Attacks** | **{ga_total}** | **{ga_m['standalone_ml']['tp']} ({ga_m['standalone_ml']['recall_pct']:.2f}%)** | **{ga_m['hybrid_loose']['tp']} ({ga_m['hybrid_loose']['recall_pct']:.2f}%)** | **{ga_m['hybrid_operational_t80']['tp']} ({ga_m['hybrid_operational_t80']['recall_pct']:.2f}%)** |
+| **Group B — `PARAMETER_TAMPERING` (App Logic)** | {gb_total} | {gb_m['standalone_ml']['tp']} ({gb_m['standalone_ml']['recall_pct']:.2f}%) | {gb_m['hybrid_loose']['tp']} ({gb_m['hybrid_loose']['recall_pct']:.2f}%) | {gb_m['hybrid_operational_t80']['tp']} ({gb_m['hybrid_operational_t80']['recall_pct']:.2f}%) |
+| **Lưu lượng hợp lệ (`BENIGN` Allow Rate)** | {sub_summary_ml.get('BENIGN', {}).get('total', 0)} | {sub_summary_ml.get('BENIGN', {}).get('passed', 0)} ({sub_summary_ml.get('BENIGN', {}).get('success_rate', 0)}%) | {sub_summary_hybrid.get('BENIGN', {}).get('passed', 0)} ({sub_summary_hybrid.get('BENIGN', {}).get('success_rate', 0)}%) | {metrics_hybrid_op['tn']} ({100.0 - metrics_hybrid_op['fpr']:.2f}%) |
 
 ---
 
 ## 3. Kết Luận Học Thuật & Luận Điểm Kiến Trúc Defense-in-Depth
 
-1. **Khách quan khoa học:** Khi đối đầu với dữ liệu ngoại miền CSIC 2010 (hoàn toàn zero-shot, không có trong tập huấn luyện), XGBoost v2 phân loại chính xác các kỹ thuật tiêm nhiễm cú pháp (SQLi, XSS). Đối với nhóm dị thường tham số (`ANOMALY_TAMPER`), mô hình học có giám sát đơn lẻ gặp giới hạn do các mẫu này không mang dấu ấn cú pháp injection điển hình.
-2. **Sức mạnh của kiến trúc đa tầng (Defense-in-Depth):** Khi kết hợp Supervised XGBoost v2 cùng Unsupervised Calibrated Isolation Forest v2 và Rule Engine, hệ thống WAF đạt tỷ lệ bắt giữ mã độc vượt trội trong khi duy trì FPR cực thấp trên luồng lành tính ({metrics_hybrid['fpr']:.2f}%), khẳng định kiến trúc phân tầng là giải pháp tối ưu cho WAF hiện đại.
+1. **Khách quan khoa học:** Khi đối đầu với dữ liệu ngoại miền CSIC 2010 (hoàn toàn zero-shot, không có trong tập huấn luyện), kiến trúc WAF Hybrid chặn chính xác **Group A (True Payload)** ở mức **{ga_m['hybrid_operational_t80']['recall_pct']:.2f}%** (`DecisionEngine T=80`, FPR **`{metrics_hybrid_op['fpr']:.2f}%`**) và **{ga_m['hybrid_loose']['recall_pct']:.2f}%** (`Loose Monitoring`, FPR **`{metrics_hybrid['fpr']:.2f}%`**). Nhóm **Group B (`PARAMETER_TAMPERING`, {gb_total} mẫu)** mang sai lệch nghiệp vụ riêng của ứng dụng `/tienda1`, đòi hỏi lớp Positive Security OpenAPI Schema (`csic2010_tienda1_schema_proof.json`).
+2. **Sức mạnh của kiến trúc đa tầng (Defense-in-Depth):** Kết hợp Supervised XGBoost v2 (với URL-normalized per-parameter max-pooling), Unsupervised Calibrated Isolation Forest v2, và 28 Hardened Signatures duy trì FPR vận hành **`{metrics_hybrid_op['fpr']:.2f}%`** trong **{mean_lat:.3f} ms/request**.
 """
 
     OUTPUT_MD.write_text(md_content, encoding="utf-8")

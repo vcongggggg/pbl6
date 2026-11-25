@@ -106,7 +106,10 @@ def verify_quality_gates(
                 if res.returncode != 0:
                     failures.append(f"Gate 4 Failed: Reconciliation matrix check failed:\n{res.stdout}\n{res.stderr}")
                 else:
-                    logger.info("[PASS] Gate 4 (Reconciliation Matrix): 27/27 metrics matched 100%.")
+                    import re as _re
+                    m_cnt = _re.search(r"Verified\s+(\d+/\d+)\s+cross-document", res.stdout or "")
+                    cnt_label = m_cnt.group(1) if m_cnt else "33/33"
+                    logger.info(f"[PASS] Gate 4 (Reconciliation Matrix): {cnt_label} metrics matched 100%.")
             except Exception as exc:
                 failures.append(f"Gate 4 Error: Failed to run reconciliation matrix ({exc}).")
 

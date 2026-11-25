@@ -1,0 +1,1204 @@
+{
+  "metadata": {
+    "suite_name": "PBL6 Strange Held-Out Suite v3.3",
+    "suite_path": "data\\benchmarks\\strange_suite_v33.json",
+    "total_cases": 38,
+    "passes_per_case": 3,
+    "evaluated_at_utc": "2026-11-25T04:07:05.445061+00:00",
+    "dqn_backend": "pytorch",
+    "dqn_actions_count": 36,
+    "ml_model_path": "C:\\Study\\HocKy6\\PBL6\\ml-engine\\artifacts\\xgb_v2.ubj"
+  },
+  "in_process": {
+    "Static Replay": {
+      "No WAF": {
+        "total_cases": 38,
+        "passes_per_case": 3,
+        "total_episodes": 114,
+        "total_probes_dispatched": 132,
+        "blocked_count": 0,
+        "bypass_count": 114,
+        "block_rate_pct": 0.0,
+        "evasion_rate_pct": 100.0,
+        "avg_threat_score": 0.0,
+        "avg_latency_ms": 0.0,
+        "p95_latency_ms": 0.0,
+        "bypassed_families": [
+          "BOLA_IDOR",
+          "COMMAND_INJECTION",
+          "MASS_ASSIGNMENT",
+          "NOSQL_INJECTION",
+          "PATH_TRAVERSAL",
+          "SQL_INJECTION",
+          "SSRF",
+          "XSS"
+        ],
+        "bypassed_samples": [
+          {
+            "pass": 1,
+            "case_id": 1,
+            "endpoint": "/api/v3/analytics/revenue",
+            "family": "SQL_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": 2,
+            "endpoint": "/api/v3/catalog/items",
+            "family": "SQL_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": 3,
+            "endpoint": "/api/v2/warehouse/stock",
+            "family": "SQL_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": 4,
+            "endpoint": "/graphql",
+            "family": "SQL_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": 5,
+            "endpoint": "/api/v2/support/tickets",
+            "family": "XSS",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": 6,
+            "endpoint": "/api/v2/forum/posts",
+            "family": "XSS",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": 7,
+            "endpoint": "/api/v2/oauth/callback",
+            "family": "XSS",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": 8,
+            "endpoint": "/api/v2/reports/export",
+            "family": "PATH_TRAVERSAL",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": 9,
+            "endpoint": "/api/v2/themes/asset",
+            "family": "PATH_TRAVERSAL",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": 10,
+            "endpoint": "/api/v2/netops/traceroute",
+            "family": "COMMAND_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": 11,
+            "endpoint": "/api/v2/devops/hook",
+            "family": "COMMAND_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": 12,
+            "endpoint": "/api/v2/agents/provision",
+            "family": "COMMAND_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": 13,
+            "endpoint": "/api/v2/webhooks/preview",
+            "family": "SSRF",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": 14,
+            "endpoint": "/api/v2/media/thumbnail",
+            "family": "SSRF",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": 15,
+            "endpoint": "/api/v2/connectors/prometheus",
+            "family": "SSRF",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          }
+        ]
+      },
+      "Rules Only": {
+        "total_cases": 38,
+        "passes_per_case": 3,
+        "total_episodes": 114,
+        "total_probes_dispatched": 132,
+        "blocked_count": 12,
+        "bypass_count": 102,
+        "block_rate_pct": 10.53,
+        "evasion_rate_pct": 89.47,
+        "avg_threat_score": 9.0,
+        "avg_latency_ms": 0.01,
+        "p95_latency_ms": 0.016,
+        "bypassed_families": [
+          "BOLA_IDOR",
+          "COMMAND_INJECTION",
+          "MASS_ASSIGNMENT",
+          "NOSQL_INJECTION",
+          "PATH_TRAVERSAL",
+          "SQL_INJECTION",
+          "SSRF",
+          "XSS"
+        ],
+        "bypassed_samples": [
+          {
+            "pass": 1,
+            "case_id": 1,
+            "endpoint": "/api/v3/analytics/revenue",
+            "family": "SQL_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": 2,
+            "endpoint": "/api/v3/catalog/items",
+            "family": "SQL_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": 3,
+            "endpoint": "/api/v2/warehouse/stock",
+            "family": "SQL_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": 5,
+            "endpoint": "/api/v2/support/tickets",
+            "family": "XSS",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": 6,
+            "endpoint": "/api/v2/forum/posts",
+            "family": "XSS",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": 7,
+            "endpoint": "/api/v2/oauth/callback",
+            "family": "XSS",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": 8,
+            "endpoint": "/api/v2/reports/export",
+            "family": "PATH_TRAVERSAL",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": 9,
+            "endpoint": "/api/v2/themes/asset",
+            "family": "PATH_TRAVERSAL",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": 11,
+            "endpoint": "/api/v2/devops/hook",
+            "family": "COMMAND_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": 12,
+            "endpoint": "/api/v2/agents/provision",
+            "family": "COMMAND_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": 13,
+            "endpoint": "/api/v2/webhooks/preview",
+            "family": "SSRF",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": 14,
+            "endpoint": "/api/v2/media/thumbnail",
+            "family": "SSRF",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": 15,
+            "endpoint": "/api/v2/connectors/prometheus",
+            "family": "SSRF",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": 16,
+            "endpoint": "/api/v2/customers/lookup",
+            "family": "NOSQL_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": 17,
+            "endpoint": "/api/v2/me/settings",
+            "family": "MASS_ASSIGNMENT",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          }
+        ]
+      },
+      "Hybrid v3.3": {
+        "total_cases": 38,
+        "passes_per_case": 3,
+        "total_episodes": 114,
+        "total_probes_dispatched": 132,
+        "blocked_count": 114,
+        "bypass_count": 0,
+        "block_rate_pct": 100.0,
+        "evasion_rate_pct": 0.0,
+        "avg_threat_score": 93.6,
+        "avg_latency_ms": 0.836,
+        "p95_latency_ms": 1.218,
+        "bypassed_families": [],
+        "bypassed_samples": []
+      }
+    },
+    "Random Mutator": {
+      "No WAF": {
+        "total_cases": 38,
+        "passes_per_case": 3,
+        "total_episodes": 114,
+        "total_probes_dispatched": 132,
+        "blocked_count": 0,
+        "bypass_count": 114,
+        "block_rate_pct": 0.0,
+        "evasion_rate_pct": 100.0,
+        "avg_threat_score": 0.0,
+        "avg_latency_ms": 0.0,
+        "p95_latency_ms": 0.0,
+        "bypassed_families": [
+          "BOLA_IDOR",
+          "COMMAND_INJECTION",
+          "MASS_ASSIGNMENT",
+          "NOSQL_INJECTION",
+          "PATH_TRAVERSAL",
+          "SQL_INJECTION",
+          "SSRF",
+          "XSS"
+        ],
+        "bypassed_samples": [
+          {
+            "pass": 1,
+            "case_id": 1,
+            "endpoint": "/api/v3/analytics/revenue",
+            "family": "SQL_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": 2,
+            "endpoint": "/api/v3/catalog/items",
+            "family": "SQL_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": 3,
+            "endpoint": "/api/v2/warehouse/stock",
+            "family": "SQL_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": 4,
+            "endpoint": "/graphql",
+            "family": "SQL_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": 5,
+            "endpoint": "/api/v2/support/tickets",
+            "family": "XSS",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": 6,
+            "endpoint": "/api/v2/forum/posts",
+            "family": "XSS",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": 7,
+            "endpoint": "/api/v2/oauth/callback",
+            "family": "XSS",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": 8,
+            "endpoint": "/api/v2/reports/export",
+            "family": "PATH_TRAVERSAL",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": 9,
+            "endpoint": "/api/v2/themes/asset",
+            "family": "PATH_TRAVERSAL",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": 10,
+            "endpoint": "/api/v2/netops/traceroute",
+            "family": "COMMAND_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": 11,
+            "endpoint": "/api/v2/devops/hook",
+            "family": "COMMAND_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": 12,
+            "endpoint": "/api/v2/agents/provision",
+            "family": "COMMAND_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": 13,
+            "endpoint": "/api/v2/webhooks/preview",
+            "family": "SSRF",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": 14,
+            "endpoint": "/api/v2/media/thumbnail",
+            "family": "SSRF",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": 15,
+            "endpoint": "/api/v2/connectors/prometheus",
+            "family": "SSRF",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          }
+        ]
+      },
+      "Rules Only": {
+        "total_cases": 38,
+        "passes_per_case": 3,
+        "total_episodes": 114,
+        "total_probes_dispatched": 155,
+        "blocked_count": 2,
+        "bypass_count": 112,
+        "block_rate_pct": 1.75,
+        "evasion_rate_pct": 98.25,
+        "avg_threat_score": 1.5,
+        "avg_latency_ms": 0.009,
+        "p95_latency_ms": 0.014,
+        "bypassed_families": [
+          "BOLA_IDOR",
+          "COMMAND_INJECTION",
+          "MASS_ASSIGNMENT",
+          "NOSQL_INJECTION",
+          "PATH_TRAVERSAL",
+          "SQL_INJECTION",
+          "SSRF",
+          "XSS"
+        ],
+        "bypassed_samples": [
+          {
+            "pass": 1,
+            "case_id": 1,
+            "endpoint": "/api/v3/analytics/revenue",
+            "family": "SQL_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": 2,
+            "endpoint": "/api/v3/catalog/items",
+            "family": "SQL_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": 3,
+            "endpoint": "/api/v2/warehouse/stock",
+            "family": "SQL_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": 4,
+            "endpoint": "/graphql",
+            "family": "SQL_INJECTION",
+            "action": "random:double_url_encode",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": 5,
+            "endpoint": "/api/v2/support/tickets",
+            "family": "XSS",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": 6,
+            "endpoint": "/api/v2/forum/posts",
+            "family": "XSS",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": 7,
+            "endpoint": "/api/v2/oauth/callback",
+            "family": "XSS",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": 8,
+            "endpoint": "/api/v2/reports/export",
+            "family": "PATH_TRAVERSAL",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": 9,
+            "endpoint": "/api/v2/themes/asset",
+            "family": "PATH_TRAVERSAL",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": 10,
+            "endpoint": "/api/v2/netops/traceroute",
+            "family": "COMMAND_INJECTION",
+            "action": "random:whitespace_ifs",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": 11,
+            "endpoint": "/api/v2/devops/hook",
+            "family": "COMMAND_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": 12,
+            "endpoint": "/api/v2/agents/provision",
+            "family": "COMMAND_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": 13,
+            "endpoint": "/api/v2/webhooks/preview",
+            "family": "SSRF",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": 14,
+            "endpoint": "/api/v2/media/thumbnail",
+            "family": "SSRF",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": 15,
+            "endpoint": "/api/v2/connectors/prometheus",
+            "family": "SSRF",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          }
+        ]
+      },
+      "Hybrid v3.3": {
+        "total_cases": 38,
+        "passes_per_case": 3,
+        "total_episodes": 114,
+        "total_probes_dispatched": 456,
+        "blocked_count": 114,
+        "bypass_count": 0,
+        "block_rate_pct": 100.0,
+        "evasion_rate_pct": 0.0,
+        "avg_threat_score": 93.5,
+        "avg_latency_ms": 0.957,
+        "p95_latency_ms": 1.371,
+        "bypassed_families": [],
+        "bypassed_samples": []
+      }
+    },
+    "Dueling-DQN v2.0": {
+      "No WAF": {
+        "total_cases": 38,
+        "passes_per_case": 3,
+        "total_episodes": 114,
+        "total_probes_dispatched": 132,
+        "blocked_count": 0,
+        "bypass_count": 114,
+        "block_rate_pct": 0.0,
+        "evasion_rate_pct": 100.0,
+        "avg_threat_score": 0.0,
+        "avg_latency_ms": 0.0,
+        "p95_latency_ms": 0.0,
+        "bypassed_families": [
+          "BOLA_IDOR",
+          "COMMAND_INJECTION",
+          "MASS_ASSIGNMENT",
+          "NOSQL_INJECTION",
+          "PATH_TRAVERSAL",
+          "SQL_INJECTION",
+          "SSRF",
+          "XSS"
+        ],
+        "bypassed_samples": [
+          {
+            "pass": 1,
+            "case_id": 1,
+            "endpoint": "/api/v3/analytics/revenue",
+            "family": "SQL_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": 2,
+            "endpoint": "/api/v3/catalog/items",
+            "family": "SQL_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": 3,
+            "endpoint": "/api/v2/warehouse/stock",
+            "family": "SQL_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": 4,
+            "endpoint": "/graphql",
+            "family": "SQL_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": 5,
+            "endpoint": "/api/v2/support/tickets",
+            "family": "XSS",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": 6,
+            "endpoint": "/api/v2/forum/posts",
+            "family": "XSS",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": 7,
+            "endpoint": "/api/v2/oauth/callback",
+            "family": "XSS",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": 8,
+            "endpoint": "/api/v2/reports/export",
+            "family": "PATH_TRAVERSAL",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": 9,
+            "endpoint": "/api/v2/themes/asset",
+            "family": "PATH_TRAVERSAL",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": 10,
+            "endpoint": "/api/v2/netops/traceroute",
+            "family": "COMMAND_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": 11,
+            "endpoint": "/api/v2/devops/hook",
+            "family": "COMMAND_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": 12,
+            "endpoint": "/api/v2/agents/provision",
+            "family": "COMMAND_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": 13,
+            "endpoint": "/api/v2/webhooks/preview",
+            "family": "SSRF",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": 14,
+            "endpoint": "/api/v2/media/thumbnail",
+            "family": "SSRF",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": 15,
+            "endpoint": "/api/v2/connectors/prometheus",
+            "family": "SSRF",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          }
+        ]
+      },
+      "Rules Only": {
+        "total_cases": 38,
+        "passes_per_case": 3,
+        "total_episodes": 114,
+        "total_probes_dispatched": 150,
+        "blocked_count": 0,
+        "bypass_count": 114,
+        "block_rate_pct": 0.0,
+        "evasion_rate_pct": 100.0,
+        "avg_threat_score": 0.0,
+        "avg_latency_ms": 0.01,
+        "p95_latency_ms": 0.017,
+        "bypassed_families": [
+          "BOLA_IDOR",
+          "COMMAND_INJECTION",
+          "MASS_ASSIGNMENT",
+          "NOSQL_INJECTION",
+          "PATH_TRAVERSAL",
+          "SQL_INJECTION",
+          "SSRF",
+          "XSS"
+        ],
+        "bypassed_samples": [
+          {
+            "pass": 1,
+            "case_id": 1,
+            "endpoint": "/api/v3/analytics/revenue",
+            "family": "SQL_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": 2,
+            "endpoint": "/api/v3/catalog/items",
+            "family": "SQL_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": 3,
+            "endpoint": "/api/v2/warehouse/stock",
+            "family": "SQL_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": 4,
+            "endpoint": "/graphql",
+            "family": "SQL_INJECTION",
+            "action": "mutate_sqli_char_chr_concat",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": 5,
+            "endpoint": "/api/v2/support/tickets",
+            "family": "XSS",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": 6,
+            "endpoint": "/api/v2/forum/posts",
+            "family": "XSS",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": 7,
+            "endpoint": "/api/v2/oauth/callback",
+            "family": "XSS",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": 8,
+            "endpoint": "/api/v2/reports/export",
+            "family": "PATH_TRAVERSAL",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": 9,
+            "endpoint": "/api/v2/themes/asset",
+            "family": "PATH_TRAVERSAL",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": 10,
+            "endpoint": "/api/v2/netops/traceroute",
+            "family": "COMMAND_INJECTION",
+            "action": "mutate_cmdi_wildcard_glob",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": 11,
+            "endpoint": "/api/v2/devops/hook",
+            "family": "COMMAND_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": 12,
+            "endpoint": "/api/v2/agents/provision",
+            "family": "COMMAND_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": 13,
+            "endpoint": "/api/v2/webhooks/preview",
+            "family": "SSRF",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": 14,
+            "endpoint": "/api/v2/media/thumbnail",
+            "family": "SSRF",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": 15,
+            "endpoint": "/api/v2/connectors/prometheus",
+            "family": "SSRF",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          }
+        ]
+      },
+      "Hybrid v3.3": {
+        "total_cases": 38,
+        "passes_per_case": 3,
+        "total_episodes": 114,
+        "total_probes_dispatched": 456,
+        "blocked_count": 114,
+        "bypass_count": 0,
+        "block_rate_pct": 100.0,
+        "evasion_rate_pct": 0.0,
+        "avg_threat_score": 93.1,
+        "avg_latency_ms": 0.922,
+        "p95_latency_ms": 1.339,
+        "bypassed_families": [],
+        "bypassed_samples": []
+      }
+    }
+  },
+  "live_http": {
+    "Static Replay": {
+      "Rules Only": {
+        "total_cases": 38,
+        "passes_per_case": 3,
+        "total_episodes": 114,
+        "total_probes_dispatched": 132,
+        "blocked_count": 111,
+        "bypass_count": 3,
+        "block_rate_pct": 97.37,
+        "evasion_rate_pct": 2.63,
+        "avg_threat_score": 84.7,
+        "avg_latency_ms": 2.478,
+        "p95_latency_ms": 3.27,
+        "bypassed_families": [
+          "SQL_INJECTION"
+        ],
+        "bypassed_samples": [
+          {
+            "pass": 1,
+            "case_id": 1,
+            "endpoint": "/api/v3/analytics/revenue",
+            "family": "SQL_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 2,
+            "case_id": 1,
+            "endpoint": "/api/v3/analytics/revenue",
+            "family": "SQL_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 3,
+            "case_id": 1,
+            "endpoint": "/api/v3/analytics/revenue",
+            "family": "SQL_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          }
+        ]
+      },
+      "Hybrid v3.3": {
+        "total_cases": 38,
+        "passes_per_case": 3,
+        "total_episodes": 114,
+        "total_probes_dispatched": 132,
+        "blocked_count": 114,
+        "bypass_count": 0,
+        "block_rate_pct": 100.0,
+        "evasion_rate_pct": 0.0,
+        "avg_threat_score": 93.7,
+        "avg_latency_ms": 3.16,
+        "p95_latency_ms": 3.859,
+        "bypassed_families": [],
+        "bypassed_samples": []
+      }
+    },
+    "Random Mutator": {
+      "Rules Only": {
+        "total_cases": 38,
+        "passes_per_case": 3,
+        "total_episodes": 114,
+        "total_probes_dispatched": 442,
+        "blocked_count": 106,
+        "bypass_count": 8,
+        "block_rate_pct": 92.98,
+        "evasion_rate_pct": 7.02,
+        "avg_threat_score": 79.8,
+        "avg_latency_ms": 2.248,
+        "p95_latency_ms": 3.16,
+        "bypassed_families": [
+          "COMMAND_INJECTION",
+          "SQL_INJECTION"
+        ],
+        "bypassed_samples": [
+          {
+            "pass": 1,
+            "case_id": 1,
+            "endpoint": "/api/v3/analytics/revenue",
+            "family": "SQL_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": 4,
+            "endpoint": "/graphql",
+            "family": "SQL_INJECTION",
+            "action": "random:sqli_char_chr_concat",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": 11,
+            "endpoint": "/api/v2/devops/hook",
+            "family": "COMMAND_INJECTION",
+            "action": "random:cmd_wildcard_glob",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 2,
+            "case_id": 1,
+            "endpoint": "/api/v3/analytics/revenue",
+            "family": "SQL_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 2,
+            "case_id": 4,
+            "endpoint": "/graphql",
+            "family": "SQL_INJECTION",
+            "action": "random:sqli_char_chr_concat",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 2,
+            "case_id": 11,
+            "endpoint": "/api/v2/devops/hook",
+            "family": "COMMAND_INJECTION",
+            "action": "random:cmd_wildcard_glob",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 3,
+            "case_id": 1,
+            "endpoint": "/api/v3/analytics/revenue",
+            "family": "SQL_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 3,
+            "case_id": 11,
+            "endpoint": "/api/v2/devops/hook",
+            "family": "COMMAND_INJECTION",
+            "action": "random:cmd_wildcard_glob",
+            "threat_score": 0.0
+          }
+        ]
+      },
+      "Hybrid v3.3": {
+        "total_cases": 38,
+        "passes_per_case": 3,
+        "total_episodes": 114,
+        "total_probes_dispatched": 456,
+        "blocked_count": 114,
+        "bypass_count": 0,
+        "block_rate_pct": 100.0,
+        "evasion_rate_pct": 0.0,
+        "avg_threat_score": 93.6,
+        "avg_latency_ms": 3.137,
+        "p95_latency_ms": 3.957,
+        "bypassed_families": [],
+        "bypassed_samples": []
+      }
+    },
+    "Dueling-DQN v2.0": {
+      "Rules Only": {
+        "total_cases": 38,
+        "passes_per_case": 3,
+        "total_episodes": 114,
+        "total_probes_dispatched": 435,
+        "blocked_count": 105,
+        "bypass_count": 9,
+        "block_rate_pct": 92.11,
+        "evasion_rate_pct": 7.89,
+        "avg_threat_score": 78.6,
+        "avg_latency_ms": 2.064,
+        "p95_latency_ms": 3.158,
+        "bypassed_families": [
+          "COMMAND_INJECTION",
+          "SQL_INJECTION"
+        ],
+        "bypassed_samples": [
+          {
+            "pass": 1,
+            "case_id": 1,
+            "endpoint": "/api/v3/analytics/revenue",
+            "family": "SQL_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": 4,
+            "endpoint": "/graphql",
+            "family": "SQL_INJECTION",
+            "action": "mutate_sqli_char_chr_concat",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": 11,
+            "endpoint": "/api/v2/devops/hook",
+            "family": "COMMAND_INJECTION",
+            "action": "mutate_cmdi_wildcard_glob",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 2,
+            "case_id": 1,
+            "endpoint": "/api/v3/analytics/revenue",
+            "family": "SQL_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 2,
+            "case_id": 4,
+            "endpoint": "/graphql",
+            "family": "SQL_INJECTION",
+            "action": "mutate_sqli_char_chr_concat",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 2,
+            "case_id": 11,
+            "endpoint": "/api/v2/devops/hook",
+            "family": "COMMAND_INJECTION",
+            "action": "mutate_cmdi_wildcard_glob",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 3,
+            "case_id": 1,
+            "endpoint": "/api/v3/analytics/revenue",
+            "family": "SQL_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 3,
+            "case_id": 4,
+            "endpoint": "/graphql",
+            "family": "SQL_INJECTION",
+            "action": "mutate_sqli_char_chr_concat",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 3,
+            "case_id": 11,
+            "endpoint": "/api/v2/devops/hook",
+            "family": "COMMAND_INJECTION",
+            "action": "mutate_cmdi_wildcard_glob",
+            "threat_score": 0.0
+          }
+        ]
+      },
+      "Hybrid v3.3": {
+        "total_cases": 38,
+        "passes_per_case": 3,
+        "total_episodes": 114,
+        "total_probes_dispatched": 456,
+        "blocked_count": 114,
+        "bypass_count": 0,
+        "block_rate_pct": 100.0,
+        "evasion_rate_pct": 0.0,
+        "avg_threat_score": 92.8,
+        "avg_latency_ms": 3.108,
+        "p95_latency_ms": 4.168,
+        "bypassed_families": [],
+        "bypassed_samples": []
+      }
+    }
+  }
+}

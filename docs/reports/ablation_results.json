@@ -1,56 +1,56 @@
 {
   "metadata": {
-    "version": "Blue Team v3.2",
+    "version": "Blue Team v3.3",
     "dataset": "benchmark_1000_diverse.csv",
     "total_samples": 1000,
     "benign_samples": 200,
     "attack_samples": 800,
-    "active_rules_count": 26,
-    "rule_engine": "26 Hardened OWASP Signatures (including SQLI-006 unquoted arithmetic tautology)",
+    "active_rules_count": 28,
+    "rule_engine": "28 Hardened OWASP Signatures (including SQLI-006/007 & CMD-006)",
     "ml_model": "Champion Cost-Sensitive Regularized XGBoost v2.0",
     "anomaly_model": "Calibrated Isolation Forest v2.0 (with bare-root '/' special_char_ratio guard)",
     "feature_dim": 26,
-    "timestamp": "2026-11-25 08:53:20",
+    "timestamp": "2026-11-25 11:02:04",
     "device": "Machine 1 (Blue Team Host)",
-    "methodology_note": "Blue Team v3.3 URL-normalized per-parameter max-pooling (normalize_http_for_ml + MLDetector.predict_http) with unified 26-D feature extraction (extract_26_from_http) shared once per request in Hybrid mode with 26 hardened rules; each mode measures ONLY its active detector(s) single-pass latency (never summed across separate modes). Blocking decision follows DecisionEngine ACTIVE_BLOCKING (>=80 block, Rule>=85/ML>=90 override, or Dual-AI Consensus). Anomaly Only also reports detection @60.0.",
-    "history_snapshot": "docs/reports/history/ablation_results_20261124_192715_fd012c1.json",
-    "git_base_sha": "fd012c1d17e42f531b635cbe94c7dd738023ee0f",
-    "cpu_load_pct": 2.1,
-    "last_pointer_update": "2026-11-25T08:53:20.082348"
+    "methodology_note": "Blue Team v3.3 URL-normalized per-parameter max-pooling (normalize_http_for_ml + MLDetector.predict_http) with unified 26-D feature extraction (extract_26_from_http) shared once per request in Hybrid mode with 28 hardened rules; each mode measures ONLY its active detector(s) single-pass latency (never summed across separate modes). Blocking decision follows DecisionEngine ACTIVE_BLOCKING (>=80 block, Rule>=85/ML>=90 override, or Dual-AI Consensus). Anomaly Only also reports detection @60.0.",
+    "history_snapshot": "docs/reports/history/ablation_results_20261125_110741_ce36bb2.json",
+    "git_base_sha": "ce36bb2396d37f7fede33fdc867d2587ccbb0619",
+    "cpu_load_pct": 24.6,
+    "last_pointer_update": "2026-11-25T11:07:41.357439"
   },
   "modes": {
     "rules_only": {
-      "accuracy_pct": 62.4,
+      "accuracy_pct": 62.9,
       "precision_pct": 100.0,
-      "recall_pct": 53.0,
-      "f1_score_pct": 69.28,
+      "recall_pct": 53.62,
+      "f1_score_pct": 69.81,
       "fpr_pct": 0.0,
-      "youden_j": 0.53,
-      "avg_latency_ms": 0.156,
-      "p95_latency_ms": 0.277,
+      "youden_j": 0.5363,
+      "avg_latency_ms": 0.169,
+      "p95_latency_ms": 0.299,
       "confusion_matrix": {
-        "tp": 424,
+        "tp": 429,
         "fp": 0,
         "tn": 200,
-        "fn": 376
+        "fn": 371
       },
       "mode_name": "rules_only",
-      "display_name": "1. Rules Only (26 Hardened OWASP Signatures)"
+      "display_name": "1. Rules Only (28 Hardened OWASP Signatures)"
     },
     "ml_only": {
-      "accuracy_pct": 96.3,
+      "accuracy_pct": 96.1,
       "precision_pct": 100.0,
-      "recall_pct": 95.38,
-      "f1_score_pct": 97.63,
+      "recall_pct": 95.12,
+      "f1_score_pct": 97.5,
       "fpr_pct": 0.0,
-      "youden_j": 0.9537,
-      "avg_latency_ms": 0.429,
-      "p95_latency_ms": 0.873,
+      "youden_j": 0.9513,
+      "avg_latency_ms": 0.428,
+      "p95_latency_ms": 0.854,
       "confusion_matrix": {
-        "tp": 763,
+        "tp": 761,
         "fp": 0,
         "tn": 200,
-        "fn": 37
+        "fn": 39
       },
       "mode_name": "ml_only",
       "display_name": "2. ML Only (XGBoost v2.0 — 26-D UBJSON)"
@@ -62,8 +62,8 @@
       "f1_score_pct": 55.73,
       "fpr_pct": 0.0,
       "youden_j": 0.3862,
-      "avg_latency_ms": 0.24,
-      "p95_latency_ms": 0.344,
+      "avg_latency_ms": 0.261,
+      "p95_latency_ms": 0.422,
       "confusion_matrix": {
         "tp": 309,
         "fp": 0,
@@ -74,22 +74,22 @@
       "display_name": "3. Anomaly Only (Calibrated IForest v2.0 — NPZ)"
     },
     "hybrid": {
-      "accuracy_pct": 98.5,
+      "accuracy_pct": 98.2,
       "precision_pct": 100.0,
-      "recall_pct": 98.12,
-      "f1_score_pct": 99.05,
+      "recall_pct": 97.75,
+      "f1_score_pct": 98.86,
       "fpr_pct": 0.0,
-      "youden_j": 0.9812,
-      "avg_latency_ms": 0.711,
-      "p95_latency_ms": 1.234,
+      "youden_j": 0.9775,
+      "avg_latency_ms": 0.73,
+      "p95_latency_ms": 1.298,
       "confusion_matrix": {
-        "tp": 785,
+        "tp": 782,
         "fp": 0,
         "tn": 200,
-        "fn": 15
+        "fn": 18
       },
       "mode_name": "hybrid",
-      "display_name": "4. Hybrid Defense v3.2 (26 Rules + XGBoost v2 + IForest v2 + Dual-AI)"
+      "display_name": "4. Hybrid Defense v3.3 (28 Rules + XGBoost v2 + IForest v2 + Dual-AI)"
     }
   },
   "anomaly_detection_at_60": {
@@ -99,8 +99,8 @@
     "f1_score_pct": 73.22,
     "fpr_pct": 0.0,
     "youden_j": 0.5775,
-    "avg_latency_ms": 0.24,
-    "p95_latency_ms": 0.344,
+    "avg_latency_ms": 0.261,
+    "p95_latency_ms": 0.422,
     "confusion_matrix": {
       "tp": 462,
       "fp": 0,
@@ -129,9 +129,9 @@
     },
     "SQLI": {
       "total": 200,
-      "blocked": 200,
-      "allowed": 0,
-      "rate_pct": 100.0
+      "blocked": 197,
+      "allowed": 3,
+      "rate_pct": 98.5
     },
     "XSS": {
       "total": 200,

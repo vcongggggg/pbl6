@@ -318,3 +318,33 @@ def test_command_injection_rules():
         )
         is None
     )
+
+
+def test_phase_e_fix_f2_rules_normalizer_and_body_inspection():
+    """Verifies SQLI-007, CMD-006, InputNormalizer \\u00XX, duplicate JSON keys, and form bodies."""
+    from app.security.engine import RuleEngine
+    from app.security.normalizer import InputNormalizer
+
+    sqli = {r.rule_id: r for r in get_sqli_rules()}
+    cmd = {r.rule_id: r for r in get_command_injection_rules()}
+
+    assert sqli["SQLI-007"].evaluate("1059e0OR 17-7=10", InspectionLocation.QUERY) is not None
+    assert sqli["SQLI-007"].evaluate("CHAR(114,111,111,116)", InspectionLocation.QUERY) is not None
+    assert sqli["SQLI-007"].evaluate("42 AND (SELECT CASE WHEN (1=1) THEN 1 ELSE 1/0 END)=1", InspectionLocation.QUERY) is not None
+    assert sqli["SQLI-007"].evaluate("science 1e5 order summary", InspectionLocation.QUERY) is None
+
+    assert cmd["CMD-006"].evaluate("bundle.tar && /???/c?t /???/p??s??", InspectionLocation.BODY) is not None
+    assert cmd["CMD-006"].evaluate('<!--#include file="archivo_secreto" -->', InspectionLocation.BODY) is not None
+    assert cmd["CMD-003"].evaluate("ws-09 & powershell -NoP -NonI -W Hidden -c whoami", InspectionLocation.BODY) is not None
+    assert cmd["CMD-005"].evaluate("192.0.2.10;{c$@at,/etc/p$@asswd}", InspectionLocation.BODY) is not None
+    assert cmd["CMD-006"].evaluate("/api/v3/storage/checksum?file=bundle.tar", InspectionLocation.BODY) is None
+
+    norm = InputNormalizer.normalize(r"\u003cscript\u003ealert(1)\u003c/script\u003e")
+    assert norm == "<script>alert(1)</script>"
+
+    eng = RuleEngine()
+    dup_json = b'{"comment": "42 AND (SELECT CASE WHEN (1=1) THEN 1 ELSE 1/0 END)=1", "comment": "benign_preview"}'
+    assert eng.inspect_request(path="/api/v3/audit/events", body_bytes=dup_json).is_attack is True
+
+    form_ssi = b"id=2%3C%21--%23include+file%3D%22archivo_secreto%22+--%3E"
+    assert eng.inspect_request(path="/tienda1/publico/caracteristicas.jsp", body_bytes=form_ssi).is_attack is True

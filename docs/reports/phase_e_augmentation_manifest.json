@@ -1,14 +1,14 @@
 {
   "baseline_train_rows": 32330,
-  "added_total_rows": 1053,
-  "augmented_train_rows": 33383,
+  "added_total_rows": 1185,
+  "augmented_train_rows": 33515,
   "added_by_source": {
     "phase_e_e2a_sandbox": 417,
-    "phase_e_e3_group_a_synth": 636
+    "phase_e_e3_group_a_synth": 768
   },
   "added_by_attack_type": {
-    "SQL_INJECTION": 251,
-    "COMMAND_INJECTION": 175,
+    "SQL_INJECTION": 335,
+    "COMMAND_INJECTION": 223,
     "XSS": 124,
     "PATH_TRAVERSAL": 93,
     "BENIGN": 410
@@ -22,8 +22,8 @@
       "BENIGN": 280
     },
     "phase_e_e3_group_a_synth": {
-      "SQL_INJECTION": 192,
-      "COMMAND_INJECTION": 144,
+      "SQL_INJECTION": 276,
+      "COMMAND_INJECTION": 192,
       "PATH_TRAVERSAL": 80,
       "XSS": 90,
       "BENIGN": 130
@@ -50,7 +50,14 @@
     "BENIGN": 18609,
     "XSS": 5724,
     "PATH_TRAVERSAL": 5693,
-    "COMMAND_INJECTION": 1819,
-    "SQL_INJECTION": 1538
+    "COMMAND_INJECTION": 1867,
+    "SQL_INJECTION": 1622
+  },
+  "metadata": {
+    "task_id": "pbl6-v3-3-fix-001",
+    "history_snapshot": "docs/reports/history/phase_e_augmentation_manifest_20261125_110742_ce36bb2.json",
+    "git_base_sha": "ce36bb2396d37f7fede33fdc867d2587ccbb0619",
+    "cpu_load_pct": 0.0,
+    "last_pointer_update": "2026-11-25T11:07:42.577880"
   }
 }
