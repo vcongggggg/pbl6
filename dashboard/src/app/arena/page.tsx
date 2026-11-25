@@ -541,7 +541,7 @@ export default function ArenaPage() {
                   : "text-slate-400 hover:text-white"
               }`}
             >
-              3. Hybrid v3.0
+              3. Hybrid v3.4
             </button>
           </div>
 
@@ -957,7 +957,7 @@ export default function ArenaPage() {
                 <p className="text-[11px] text-slate-600 mt-1">
                   Chọn cấp độ phòng thủ (<span className="text-rose-400">No WAF</span> /{" "}
                   <span className="text-amber-400">Rules Only</span> /{" "}
-                  <span className="text-purple-400">Hybrid v3.0</span>) rồi bấm{" "}
+                  <span className="text-purple-400">Hybrid v3.4</span>) rồi bấm{" "}
                   <span className="text-rose-400 font-bold">[Chạy Pentest AI]</span>.
                 </p>
               </div>
@@ -967,14 +967,14 @@ export default function ArenaPage() {
 
         {/* COLUMN 3: DUAL-BRAIN INSPECTOR */}
         <div className="col-span-12 lg:col-span-4 h-full min-h-0 flex flex-col gap-3 overflow-hidden">
-          {/* Top Half: Trained 64-D Dueling-DQN Brain */}
+          {/* Top Half: Trained 74-D Dueling-DQN Brain */}
           <div className="flex-1 min-h-0 bg-slate-900/70 border border-slate-800/80 rounded-xl p-3 shadow flex flex-col overflow-hidden">
             <div className="flex items-center justify-between pb-2 border-b border-slate-800/80 text-xs font-mono">
               <span className="font-bold text-rose-400 uppercase tracking-wider flex items-center gap-1.5">
                 <Cpu className="w-4 h-4 text-rose-400" />
                 Bộ Não Red Team Dueling-DQN
               </span>
-              <span className="text-[10px] text-slate-400">64-D State -&gt; 26 Actions</span>
+              <span className="text-[10px] text-slate-400">74-D State -&gt; 36 Actions</span>
             </div>
 
             <div className="flex-1 overflow-y-auto mt-2 space-y-2 pr-1 text-xs font-mono">
@@ -1249,7 +1249,7 @@ export default function ArenaPage() {
               <div className="flex items-center gap-2">
                 <FlaskConical className="w-4 h-4 text-amber-400" />
                 <span className="font-bold text-white text-sm">
-                  Replay 100 Benchmark Corpus &amp; Operational FPR Reconciliation
+                  Replay 100 Benchmark Corpus (In-Process Engine) &amp; Operational FPR Reconciliation
                 </span>
                 {benchmarkResult && (
                   <span
@@ -1426,7 +1426,7 @@ export default function ArenaPage() {
         <div className="flex items-center gap-3">
           <span>AI Arena Autonomous Pentest Cockpit</span>
           <span>•</span>
-          <span className="text-rose-400">PyTorch Dueling-DQN v2.0 (64-D) vs Blue Team Hybrid v3.0</span>
+          <span className="text-rose-400">PyTorch Dueling-DQN v2.0 (74-D) vs Blue Team Hybrid v3.4</span>
           <span>•</span>
           <span className="text-slate-400">Live SSE Stream</span>
         </div>

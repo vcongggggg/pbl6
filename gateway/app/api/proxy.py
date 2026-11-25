@@ -851,6 +851,7 @@ async def proxy_endpoint(
             "attack_type": primary_family,
             "risk_score": decision.risk_score,
             "threat_score": decision.risk_score,
+            "matched_rules": [m.rule_id for m in detection_result.matches],
             "breakdown": risk_breakdown.to_dict(),
             "reason": decision.reason,
         }).encode("utf-8")

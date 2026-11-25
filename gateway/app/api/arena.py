@@ -46,6 +46,18 @@ for _p in (str(_REPO_ROOT), str(_ATTACK_LAB_ROOT)):
         sys.path.insert(0, _p)
 
 try:
+    from agent.evasion import (
+        tamper_cmd_dollar_at_split,
+        tamper_cmd_wildcard_glob,
+        tamper_hpp_query_pollution,
+        tamper_json_duplicate_key_tamper,
+        tamper_nosql_nin_exists_blind,
+        tamper_path_overlong_mixed_slash,
+        tamper_sqli_char_chr_concat,
+        tamper_sqli_scientific_float,
+        tamper_xss_json_unicode_escape,
+        tamper_xss_svg_mathml_onbegin,
+    )
     from agent.pentest_advisor import PentestDQNAdvisor
     from agent.recon import APIReconAgent
     from agent.synthesizer import OpenAPIPayloadSynthesizer
@@ -61,6 +73,98 @@ except Exception as _adv_err:  # pragma: no cover
     _PENTEST_ADVISOR = None  # type: ignore
     logging.getLogger("waf.gateway.api.arena").warning("PentestDQNAdvisor init warning: %s", _adv_err)
 
+    def tamper_hpp_query_pollution(payload: str, param_name: str = "q") -> str:
+        """Inline fallback for HPP duplicate-parameter marker."""
+        if payload.startswith("1&q=") or payload.startswith("safe_item&"):
+            return payload
+        return f"1&{param_name}={payload}"
+
+    def tamper_sqli_scientific_float(payload: str) -> str:
+        """Inline fallback for scientific-float spaceless SQLi."""
+        result = re.sub(r"\s*\bUNION\s+SELECT\b", "1e0UNION/*s*/SELECT", payload, flags=re.IGNORECASE)
+        result = re.sub(r"\s*\bOR\b\s*", "9e0OR/*s*/", result, flags=re.IGNORECASE)
+        result = re.sub(r"\s*\bAND\b\s*", "1e0AND/*s*/", result, flags=re.IGNORECASE)
+        result = re.sub(r"\s+", "/*s*/", result)
+        return result if ("1e0" in result or "9e0" in result) else f"1e0/*s*/{result}"
+
+    def tamper_sqli_char_chr_concat(payload: str) -> str:
+        """Inline fallback for quote-free SQL CHAR(...) concatenation."""
+        def _to_char_expr(text: str) -> str:
+            return f"CHAR({','.join(str(ord(ch)) for ch in text)})"
+
+        result = re.sub(r"'([A-Za-z0-9_./:@+-]+)'", lambda m: _to_char_expr(m.group(1)), payload)
+        result = re.sub(r'"([A-Za-z0-9_./:@+-]+)"', lambda m: _to_char_expr(m.group(1)), result)
+        result = re.sub(r"([A-Za-z0-9_.-]+)'", lambda m: _to_char_expr(m.group(1)), result)
+        result = result.replace("'", "CHAR(39)").replace('"', "CHAR(34)")
+        if "CHAR(" not in result:
+            result = re.sub(r"\b(\d+)\b", lambda m: _to_char_expr(m.group(1)), result, count=1)
+            if "CHAR(" not in result:
+                result = _to_char_expr(payload)
+        return result
+
+    def tamper_xss_json_unicode_escape(payload: str) -> str:
+        """Inline fallback for JSON Unicode escape XSS."""
+        repl = {"<": r"\u003c", ">": r"\u003e", "=": r"\u003d", "'": r"\u0027", '"': r"\u0022"}
+        return "".join(repl.get(ch, ch) for ch in payload)
+
+    def tamper_json_duplicate_key_tamper(payload: str, key: str = "comment") -> str:
+        """Inline fallback for duplicate JSON key pollution."""
+        return f'{{"{key}": "benign_preview", "{key}": {json.dumps(payload)}}}'
+
+    def tamper_xss_svg_mathml_onbegin(payload: str) -> str:
+        """Inline fallback for SVG/MathML onbegin vector."""
+        m = re.search(r"<script.*?>(.*?)</script>", payload, re.IGNORECASE | re.DOTALL)
+        inner = m.group(1).strip() if m and m.group(1).strip() else "alert(1)"
+        return f"<svg><animate/onbegin={inner}//"
+
+    def tamper_cmd_dollar_at_split(payload: str) -> str:
+        """Inline fallback for shell $@ token split with ${IFS}."""
+        result = payload
+        for cmd in (
+            "whoami", "cat", "passwd", "shadow", "echo", "bash", "sh",
+            "id", "ls", "curl", "wget", "base64", "uname",
+        ):
+            result = re.sub(rf"\b{cmd}\b", f"{cmd[0]}$@{cmd[1:]}", result)
+        return result.replace(" ", "${IFS}")
+
+    def tamper_cmd_wildcard_glob(payload: str) -> str:
+        """Inline fallback for filesystem wildcard globbing."""
+        result = payload
+        for src, dst in (
+            ("/etc/passwd", "/???/p??s??"),
+            ("/etc/shadow", "/???/s??d??"),
+            ("/bin/bash", "/???/b??h"),
+            ("/bin/sh", "/???/s?"),
+        ):
+            result = result.replace(src, dst)
+        for cmd, glob_path in {
+            "cat": "/bin/c?t",
+            "whoami": "/???/bin/wh??mi",
+            "id": "/???/bin/?d",
+            "ls": "/bin/l?",
+            "echo": "/bin/e?ho",
+            "uname": "/???/bin/u??me",
+        }.items():
+            result = re.sub(rf"(?<![/\w]){cmd}\b", glob_path, result)
+        return result
+
+    def tamper_path_overlong_mixed_slash(payload: str) -> str:
+        """Inline fallback for overlong UTF-8 mixed-slash traversal."""
+        if "../../" in payload:
+            result = payload.replace("../../", "..%c0%af%5c..%2f", 1)
+        elif "../" in payload:
+            result = payload.replace("../", "..%c0%af%5c..%2f", 1)
+        elif "..\\" in payload:
+            result = payload.replace("..\\", "..%c0%af%5c..%2f", 1)
+        else:
+            result = f"..%c0%af%5c..%2f{payload}"
+        return result.replace("../", "..%c0%af").replace("..\\", "..%5c").replace("/", "%c0%af")
+
+    def tamper_nosql_nin_exists_blind(payload: str) -> str:
+        """Inline fallback for MongoDB $nin + $exists blind operator."""
+        _ = payload
+        return '{"$nin": ["__nonexistent__"], "$exists": true}'
+
 logger = logging.getLogger("waf.gateway.api.arena")
 
 router = APIRouter(
@@ -74,6 +178,7 @@ _MAX_HISTORY_ENTRIES = 50
 _BATTLE_HISTORY: list[dict[str, Any]] = []
 _CURRENT_OR_LAST_BATTLE: dict[str, Any] | None = None
 _CURRENT_OR_LAST_PENTEST: dict[str, Any] | None = None
+_LIVE_HTTP_ARENA_LOCK = asyncio.Lock()
 
 
 # -----------------------------------------------------------------------------
@@ -628,6 +733,16 @@ _MUTATOR_FUNCTIONS: dict[str, Any] = {
     "role_escalation": lambda _p: "admin",
     "id_enumeration_burst": lambda _p: "4",
     "sensitive_dump": lambda _p: "all",
+    "hpp_query_pollution": tamper_hpp_query_pollution,
+    "sqli_scientific_float": tamper_sqli_scientific_float,
+    "sqli_char_chr_concat": tamper_sqli_char_chr_concat,
+    "xss_json_unicode_escape": tamper_xss_json_unicode_escape,
+    "json_duplicate_key_tamper": tamper_json_duplicate_key_tamper,
+    "xss_svg_mathml_onbegin": tamper_xss_svg_mathml_onbegin,
+    "cmd_dollar_at_split": tamper_cmd_dollar_at_split,
+    "cmd_wildcard_glob": tamper_cmd_wildcard_glob,
+    "path_overlong_mixed_slash": tamper_path_overlong_mixed_slash,
+    "nosql_nin_exists_blind": tamper_nosql_nin_exists_blind,
 }
 
 
@@ -930,7 +1045,7 @@ def _select_pentest_payload(
     family_state: dict[str, Any],
     custom_payload: str | None = None,
 ) -> tuple[str, str, str, list[dict[str, Any]]]:
-    """Selects attack technique and mutated payload via 64-D Dueling-DQN or safe ATTACK_CONFIGS fallback."""
+    """Selects attack technique and mutated payload via 74-D Dueling-DQN or safe ATTACK_CONFIGS fallback."""
     tried_ids: set[str] = family_state.setdefault("tried_ids", set())
     consec_blocks: int = int(family_state.get("consec_blocks", 0))
     prev_status: int | None = family_state.get("last_status")
@@ -1001,6 +1116,30 @@ def _select_pentest_payload(
     return effective_baseline, tech_name, mutated_payload, dqn_q_values
 
 
+def _has_duplicate_json_keys(raw_json: str) -> bool:
+    """Returns True when a JSON object string contains duplicate keys."""
+    if not raw_json.lstrip().startswith("{"):
+        return False
+    found_dup = False
+
+    def _hook(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+        nonlocal found_dup
+        seen: set[str] = set()
+        out: dict[str, Any] = {}
+        for k, v in pairs:
+            if k in seen:
+                found_dup = True
+            seen.add(k)
+            out[k] = v
+        return out
+
+    try:
+        json.loads(raw_json, object_pairs_hook=_hook)
+    except Exception:
+        return False
+    return found_dup
+
+
 def _build_http_surface_args(
     *,
     endpoint_tpl: str,
@@ -1031,16 +1170,37 @@ def _build_http_surface_args(
             parsed_q = dict(urllib.parse.parse_qsl(existing_q, keep_blank_values=True))
         else:
             parsed_q = {}
-        if param:
-            params_dict = {**extra, **parsed_q, param: payload_str}
-        elif parsed_q or extra:
-            params_dict = {**extra, **parsed_q}
-        if params_dict:
-            query_str = urllib.parse.urlencode(params_dict)
+        if (payload_str.startswith("1&") or payload_str.startswith("safe_item&")) and "=" in payload_str:
+            raw_tail = payload_str.split("=", 1)[1]
+            p_name = param or "q"
+            merged_extra = {**extra, **parsed_q}
+            extra_q = f"&{urllib.parse.urlencode(merged_extra)}" if merged_extra else ""
+            query_str = f"{p_name}=1&{p_name}={urllib.parse.quote_plus(raw_tail)}{extra_q}"
+            params_dict = None
+        else:
+            if param:
+                params_dict = {**extra, **parsed_q, param: payload_str}
+            elif parsed_q or extra:
+                params_dict = {**extra, **parsed_q}
+            if params_dict:
+                query_str = urllib.parse.urlencode(params_dict)
     else:
-        json_obj = {**extra, param: payload_str} if param else dict(extra)
-        body_text = json.dumps(json_obj)
-        body_bytes = body_text.encode("utf-8")
+        if _has_duplicate_json_keys(payload_str):
+            p_name = param or "comment"
+            raw_dup = payload_str.strip()
+            if param and '"comment":' in raw_dup:
+                raw_dup = raw_dup.replace('"comment":', f'"{p_name}":')
+            if extra:
+                extra_json = json.dumps(extra)[1:-1].strip()
+                if extra_json and raw_dup.endswith("}"):
+                    raw_dup = f"{raw_dup[:-1]}, {extra_json}}}"
+            body_text = raw_dup
+            body_bytes = body_text.encode("utf-8")
+            json_obj = None
+        else:
+            json_obj = {**extra, param: payload_str} if param else dict(extra)
+            body_text = json.dumps(json_obj)
+            body_bytes = body_text.encode("utf-8")
 
     return resolved_path, params_dict, json_obj, query_str, body_text, body_bytes
 
@@ -1158,15 +1318,25 @@ def _inspect_in_process_waf(
         matched_rules = [m.rule_id for m in detection_result.matches] if detection_result else []
         rule_score = float(detection_result.rule_risk_score if detection_result else 0.0)
 
-        vec_26 = extract_26_from_http(
-            path=resolved_path,
-            query_params=query_str,
-            body=body_text,
-        ).tolist()
         payload_content = f"{resolved_path} {query_str or ''} {body_text or ''}".strip()
-
-        ml_result = _ml_detector.predict(payload_content, feature_vector=vec_26)
-        ml_score_val = float(ml_result.risk_score if ml_result.model_loaded else 0.0)
+        if callable(getattr(_ml_detector, "predict_http", None)):
+            ml_result, vec_26 = _ml_detector.predict_http(
+                path=resolved_path,
+                query_params=query_str,
+                body=body_text,
+            )
+        else:
+            vec_26 = extract_26_from_http(
+                path=resolved_path,
+                query_params=query_str,
+                body=body_text,
+            ).tolist()
+            ml_result = _ml_detector.predict(payload_content, feature_vector=vec_26)
+        ml_score_val = float(
+            ml_result.risk_score
+            if (ml_result.model_loaded and ml_result.risk_score is not None)
+            else 0.0
+        )
 
         anomaly_result = _anomaly_detector.predict(payload_content, feature_vector=vec_26)
         anomaly_score_val = float(anomaly_result.anomaly_score if anomaly_result.model_loaded else 0.0)
@@ -1270,7 +1440,7 @@ def _evaluate_single_pentest_round(
     client_ip: str,
     custom_payload: str | None = None,
 ) -> dict[str, Any]:
-    """Executes one round using real 64-D Dueling-DQN inference and authentic WAF evaluation."""
+    """Executes one round using real 74-D Dueling-DQN inference and authentic WAF evaluation."""
     family = case["family"]
     endpoint_tpl = case["endpoint"]
     method = case["method"]
@@ -1611,7 +1781,7 @@ async def _execute_single_live_http_round(
         )
 
     _, normalized_payload = InputNormalizer.get_canonical_representations(mutated_payload)
-    resolved_path, params_dict, json_obj, _q, _bt, _bb = _build_http_surface_args(
+    resolved_path, params_dict, json_obj, query_str, _bt, body_bytes = _build_http_surface_args(
         endpoint_tpl=endpoint_tpl,
         method=method,
         param=param,
@@ -1636,12 +1806,30 @@ async def _execute_single_live_http_round(
             )
         assert resp is not None
     else:
+        req_headers = {
+            "X-Forwarded-For": f"10.99.{ip_octet + 1}.{round_num}",
+            "User-Agent": "PBL6-ArenaLiveHTTP/3.1",
+        }
+        if params_dict is None and query_str:
+            req_url = f"/api/proxy{resolved_path}?{query_str}"
+            req_params = None
+        else:
+            req_url = f"/api/proxy{resolved_path}"
+            req_params = params_dict
+        if json_obj is None and body_bytes is not None:
+            req_headers["Content-Type"] = "application/json"
+            req_content: bytes | None = body_bytes
+            req_json = None
+        else:
+            req_content = None
+            req_json = json_obj
         resp = await client.request(
             method=method,
-            url=f"/api/proxy{resolved_path}",
-            params=params_dict,
-            json=json_obj,
-            headers={"X-Forwarded-For": f"10.99.{ip_octet + 1}.{round_num}", "User-Agent": "PBL6-ArenaLiveHTTP/3.1"},
+            url=req_url,
+            params=req_params,
+            json=req_json,
+            content=req_content,
+            headers=req_headers,
         )
     latency_ms = round((time.perf_counter() - t0) * 1000.0, 3)
 
@@ -1737,29 +1925,30 @@ async def _run_live_http_pentest_evaluation(
     rounds_data: list[dict[str, Any]] = []
     per_family_state: dict[str, dict[str, Any]] = {}
 
-    prev_waf_mode, prev_ablation = _enter_live_http_tier(tier)
-    try:
-        transport = httpx.ASGITransport(app=request.app)
-        async with httpx.AsyncClient(transport=transport, base_url="http://local-gateway") as client:
-            for r in range(1, num_rounds + 1):
-                ep_idx = (r - 1) % len(ordered_cases)
-                case = ordered_cases[ep_idx]
-                f_state = per_family_state.setdefault(case["family"], {})
-                rd = await _execute_single_live_http_round(
-                    client=client,
-                    round_num=r,
-                    total_rounds=num_rounds,
-                    case=case,
-                    endpoint_index=ep_idx,
-                    total_endpoints=len(ordered_cases),
-                    tier=tier,
-                    family_state=f_state,
-                    custom_payload=body.custom_payload,
-                    ip_octet=0,
-                )
-                rounds_data.append(rd)
-    finally:
-        _exit_live_http_tier(prev_waf_mode, prev_ablation)
+    async with _LIVE_HTTP_ARENA_LOCK:
+        prev_waf_mode, prev_ablation = _enter_live_http_tier(tier)
+        try:
+            transport = httpx.ASGITransport(app=request.app)
+            async with httpx.AsyncClient(transport=transport, base_url="http://local-gateway") as client:
+                for r in range(1, num_rounds + 1):
+                    ep_idx = (r - 1) % len(ordered_cases)
+                    case = ordered_cases[ep_idx]
+                    f_state = per_family_state.setdefault(case["family"], {})
+                    rd = await _execute_single_live_http_round(
+                        client=client,
+                        round_num=r,
+                        total_rounds=num_rounds,
+                        case=case,
+                        endpoint_index=ep_idx,
+                        total_endpoints=len(ordered_cases),
+                        tier=tier,
+                        family_state=f_state,
+                        custom_payload=body.custom_payload,
+                        ip_octet=0,
+                    )
+                    rounds_data.append(rd)
+        finally:
+            _exit_live_http_tier(prev_waf_mode, prev_ablation)
 
     return _finalize_pentest_report(
         body=body,
@@ -2014,37 +2203,38 @@ async def stream_pentest_evaluation_endpoint(
         per_family_state: dict[str, dict[str, Any]] = {}
 
         if exec_mode == "live_http":
-            prev_waf_mode, prev_ablation = _enter_live_http_tier(tier)
-            try:
-                transport = httpx.ASGITransport(app=request.app)
-                async with httpx.AsyncClient(transport=transport, base_url="http://local-gateway") as client:
-                    for r in range(1, num_rounds + 1):
-                        ep_idx = (r - 1) % len(ordered_cases)
-                        case = ordered_cases[ep_idx]
-                        f_state = per_family_state.setdefault(case["family"], {})
-                        rd = await _execute_single_live_http_round(
-                            client=client,
-                            round_num=r,
-                            total_rounds=num_rounds,
-                            case=case,
-                            endpoint_index=ep_idx,
-                            total_endpoints=len(ordered_cases),
-                            tier=tier,
-                            family_state=f_state,
-                            custom_payload=req.custom_payload,
-                            ip_octet=0,
-                        )
-                        rounds_data.append(rd)
-                        rd_payload = {
-                            "type": "ROUND",
-                            "phase": f"Round {rd['round_num']}/{num_rounds}",
-                            "round_data": rd,
-                            "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
-                        }
-                        yield f"event: round\ndata: {json.dumps(rd_payload, ensure_ascii=False)}\n\n"
-                        await asyncio.sleep(0.02)
-            finally:
-                _exit_live_http_tier(prev_waf_mode, prev_ablation)
+            async with _LIVE_HTTP_ARENA_LOCK:
+                prev_waf_mode, prev_ablation = _enter_live_http_tier(tier)
+                try:
+                    transport = httpx.ASGITransport(app=request.app)
+                    async with httpx.AsyncClient(transport=transport, base_url="http://local-gateway") as client:
+                        for r in range(1, num_rounds + 1):
+                            ep_idx = (r - 1) % len(ordered_cases)
+                            case = ordered_cases[ep_idx]
+                            f_state = per_family_state.setdefault(case["family"], {})
+                            rd = await _execute_single_live_http_round(
+                                client=client,
+                                round_num=r,
+                                total_rounds=num_rounds,
+                                case=case,
+                                endpoint_index=ep_idx,
+                                total_endpoints=len(ordered_cases),
+                                tier=tier,
+                                family_state=f_state,
+                                custom_payload=req.custom_payload,
+                                ip_octet=0,
+                            )
+                            rounds_data.append(rd)
+                            rd_payload = {
+                                "type": "ROUND",
+                                "phase": f"Round {rd['round_num']}/{num_rounds}",
+                                "round_data": rd,
+                                "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+                            }
+                            yield f"event: round\ndata: {json.dumps(rd_payload, ensure_ascii=False)}\n\n"
+                            await asyncio.sleep(0.02)
+                finally:
+                    _exit_live_http_tier(prev_waf_mode, prev_ablation)
         else:
             for r in range(1, num_rounds + 1):
                 ep_idx = (r - 1) % len(ordered_cases)
@@ -2144,56 +2334,57 @@ async def replay_pentest_traffic_endpoint(
     per_family_state: dict[str, dict[str, Any]] = {}
 
     if exec_mode == "live_http":
-        prev_waf_mode, prev_ablation = _enter_live_http_tier(tier)
-        try:
-            transport = httpx.ASGITransport(app=request.app)
-            async with httpx.AsyncClient(transport=transport, base_url="http://local-gateway") as client:
-                for idx, orig_rd in enumerate(source_rounds, start=1):
-                    family = str(orig_rd.get("attack_type") or "SQL_INJECTION").upper()
-                    cfg = ATTACK_CONFIGS.get(family, ATTACK_CONFIGS["SQL_INJECTION"])
-                    endpoint_val = str(
-                        orig_rd.get("target_endpoint")
-                        or orig_rd.get("endpoint")
-                        or cfg["endpoint"]
-                    )
-                    method_val = str(orig_rd.get("method") or cfg["method"]).upper()
-                    replay_payload = str(
-                        orig_rd.get("mutated_payload")
-                        if orig_rd.get("mutated_payload") is not None
-                        else (
-                            orig_rd.get("payload")
-                            if orig_rd.get("payload") is not None
-                            else orig_rd.get("original_payload") or cfg["baseline"]
+        async with _LIVE_HTTP_ARENA_LOCK:
+            prev_waf_mode, prev_ablation = _enter_live_http_tier(tier)
+            try:
+                transport = httpx.ASGITransport(app=request.app)
+                async with httpx.AsyncClient(transport=transport, base_url="http://local-gateway") as client:
+                    for idx, orig_rd in enumerate(source_rounds, start=1):
+                        family = str(orig_rd.get("attack_type") or "SQL_INJECTION").upper()
+                        cfg = ATTACK_CONFIGS.get(family, ATTACK_CONFIGS["SQL_INJECTION"])
+                        endpoint_val = str(
+                            orig_rd.get("target_endpoint")
+                            or orig_rd.get("endpoint")
+                            or cfg["endpoint"]
                         )
-                    )
-                    orig_baseline = str(orig_rd.get("original_payload") or replay_payload)
-                    case = {
-                        "family": family,
-                        "endpoint": endpoint_val,
-                        "method": method_val,
-                        "param": cfg.get("param", "q"),
-                        "request_type": "path" if "{" in endpoint_val else ("query" if method_val == "GET" else "json"),
-                        "extra_fields": dict(cfg.get("extra_fields", {})),
-                        "baseline": orig_baseline,
-                    }
-                    f_state = per_family_state.setdefault(family, {})
-                    new_rd = await _execute_single_live_http_round(
-                        client=client,
-                        round_num=idx,
-                        total_rounds=len(source_rounds),
-                        case=case,
-                        endpoint_index=0,
-                        total_endpoints=1,
-                        tier=tier,
-                        family_state=f_state,
-                        fixed_payload=replay_payload,
-                        fixed_technique=str(orig_rd.get("mutation_technique") or orig_rd.get("technique") or "replay"),
-                        fixed_dqn_q_values=orig_rd.get("dqn_q_values") if isinstance(orig_rd.get("dqn_q_values"), list) else [],
-                        ip_octet=10,
-                    )
-                    replayed_rounds.append(new_rd)
-        finally:
-            _exit_live_http_tier(prev_waf_mode, prev_ablation)
+                        method_val = str(orig_rd.get("method") or cfg["method"]).upper()
+                        replay_payload = str(
+                            orig_rd.get("mutated_payload")
+                            if orig_rd.get("mutated_payload") is not None
+                            else (
+                                orig_rd.get("payload")
+                                if orig_rd.get("payload") is not None
+                                else orig_rd.get("original_payload") or cfg["baseline"]
+                            )
+                        )
+                        orig_baseline = str(orig_rd.get("original_payload") or replay_payload)
+                        case = {
+                            "family": family,
+                            "endpoint": endpoint_val,
+                            "method": method_val,
+                            "param": cfg.get("param", "q"),
+                            "request_type": "path" if "{" in endpoint_val else ("query" if method_val == "GET" else "json"),
+                            "extra_fields": dict(cfg.get("extra_fields", {})),
+                            "baseline": orig_baseline,
+                        }
+                        f_state = per_family_state.setdefault(family, {})
+                        new_rd = await _execute_single_live_http_round(
+                            client=client,
+                            round_num=idx,
+                            total_rounds=len(source_rounds),
+                            case=case,
+                            endpoint_index=0,
+                            total_endpoints=1,
+                            tier=tier,
+                            family_state=f_state,
+                            fixed_payload=replay_payload,
+                            fixed_technique=str(orig_rd.get("mutation_technique") or orig_rd.get("technique") or "replay"),
+                            fixed_dqn_q_values=orig_rd.get("dqn_q_values") if isinstance(orig_rd.get("dqn_q_values"), list) else [],
+                            ip_octet=10,
+                        )
+                        replayed_rounds.append(new_rd)
+            finally:
+                _exit_live_http_tier(prev_waf_mode, prev_ablation)
     else:
         for idx, orig_rd in enumerate(source_rounds, start=1):
             family = str(orig_rd.get("attack_type") or "SQL_INJECTION").upper()
@@ -2739,66 +2930,67 @@ async def replay_benchmark_endpoint(
     sampled = _sample_benchmark_rows(csv_path, body.sample_count, mode)
     verdicts: list[dict[str, Any]] = []
 
-    prev_waf_mode, prev_ablation = _enter_live_http_tier(tier)
-    try:
-        for idx, row in enumerate(sampled, start=1):
-            method, path_norm, query_str, body_text, body_bytes, headers_dict = _parse_benchmark_row_http(row)
-            label_int = int(str(row.get("label", "0")).strip() or "0")
-            attack_type = str(row.get("attack_type") or ("BENIGN" if label_int == 0 else "ATTACK")).strip()
-            clean_headers = {
-                str(k): str(v)
-                for k, v in headers_dict.items()
-                if str(k).lower() not in ("host", "content-length", "connection")
-            }
-            target_proxy_url = f"/api/proxy{path_norm}"
-            if query_str:
-                target_proxy_url = f"{target_proxy_url}?{query_str}"
-
-            client_ip = f"10.88.{(idx // 250) + 1}.{(idx % 250) + 1}"
-            transport = httpx.ASGITransport(app=request.app, client=(client_ip, 12345))
-            t0 = time.perf_counter()
-            async with httpx.AsyncClient(transport=transport, base_url="http://local-gateway") as client:
-                resp = await client.request(
-                    method=method,
-                    url=target_proxy_url,
-                    headers=clean_headers,
-                    content=body_bytes,
-                )
-            latency_ms = max(0.01, round((time.perf_counter() - t0) * 1000.0, 3))
-
-            status_code = resp.status_code
-            waf_blocked = status_code in (403, 429)
-            waf_decision = "BLOCK" if waf_blocked else "ALLOW"
-            resp_json: dict[str, Any] = {}
-            bd: dict[str, Any] = {}
-            if status_code == 403:
-                try:
-                    parsed = resp.json()
-                    if isinstance(parsed, dict):
-                        resp_json = parsed
-                        bd = parsed.get("breakdown") or {}
-                except Exception:
-                    pass
-            matched_rules = _extract_matched_rules_from_403(resp_json, bd, False)
-            threat_score = float(resp.headers.get("x-waf-risk-score") or 0.0)
-            verdicts.append(
-                {
-                    "index": idx,
-                    "method": method,
-                    "path": path_norm,
-                    "query_params": query_str or "",
-                    "label": label_int,
-                    "attack_type": attack_type,
-                    "waf_blocked": waf_blocked,
-                    "waf_decision": waf_decision,
-                    "http_status": status_code,
-                    "threat_score": round(threat_score, 1),
-                    "latency_ms": latency_ms,
-                    "matched_rules": matched_rules,
+    async with _LIVE_HTTP_ARENA_LOCK:
+        prev_waf_mode, prev_ablation = _enter_live_http_tier(tier)
+        try:
+            for idx, row in enumerate(sampled, start=1):
+                method, path_norm, query_str, body_text, body_bytes, headers_dict = _parse_benchmark_row_http(row)
+                label_int = int(str(row.get("label", "0")).strip() or "0")
+                attack_type = str(row.get("attack_type") or ("BENIGN" if label_int == 0 else "ATTACK")).strip()
+                clean_headers = {
+                    str(k): str(v)
+                    for k, v in headers_dict.items()
+                    if str(k).lower() not in ("host", "content-length", "connection")
                 }
-            )
-    finally:
-        _exit_live_http_tier(prev_waf_mode, prev_ablation)
+                target_proxy_url = f"/api/proxy{path_norm}"
+                if query_str:
+                    target_proxy_url = f"{target_proxy_url}?{query_str}"
+
+                client_ip = f"10.88.{(idx // 250) + 1}.{(idx % 250) + 1}"
+                transport = httpx.ASGITransport(app=request.app, client=(client_ip, 12345))
+                t0 = time.perf_counter()
+                async with httpx.AsyncClient(transport=transport, base_url="http://local-gateway") as client:
+                    resp = await client.request(
+                        method=method,
+                        url=target_proxy_url,
+                        headers=clean_headers,
+                        content=body_bytes,
+                    )
+                latency_ms = max(0.01, round((time.perf_counter() - t0) * 1000.0, 3))
+
+                status_code = resp.status_code
+                waf_blocked = status_code in (403, 429)
+                waf_decision = "BLOCK" if waf_blocked else "ALLOW"
+                resp_json: dict[str, Any] = {}
+                bd: dict[str, Any] = {}
+                if status_code == 403:
+                    try:
+                        parsed = resp.json()
+                        if isinstance(parsed, dict):
+                            resp_json = parsed
+                            bd = parsed.get("breakdown") or {}
+                    except Exception:
+                        pass
+                matched_rules = _extract_matched_rules_from_403(resp_json, bd, False)
+                threat_score = float(resp.headers.get("x-waf-risk-score") or 0.0)
+                verdicts.append(
+                    {
+                        "index": idx,
+                        "method": method,
+                        "path": path_norm,
+                        "query_params": query_str or "",
+                        "label": label_int,
+                        "attack_type": attack_type,
+                        "waf_blocked": waf_blocked,
+                        "waf_decision": waf_decision,
+                        "http_status": status_code,
+                        "threat_score": round(threat_score, 1),
+                        "latency_ms": latency_ms,
+                        "matched_rules": matched_rules,
+                    }
+                )
+        finally:
+            _exit_live_http_tier(prev_waf_mode, prev_ablation)
 
     return _build_benchmark_summary(
         dataset=dataset,

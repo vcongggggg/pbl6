@@ -695,3 +695,259 @@ def test_arena_export_digest_reproducible_and_git_sha(client: TestClient, tmp_pa
     assert actual_digest == exp_digest
 
 
+def test_arena_phase_e_mutators_complete_36_action_coverage():
+    """LOGIC-PBL6-301: All 36 PENTEST_ACTIONS resolve in _MUTATOR_FUNCTIONS and Phase E mutators transform payloads."""
+    from environment.pentest_env import PENTEST_ACTIONS
+
+    assert len(PENTEST_ACTIONS) == 36
+    for spec in PENTEST_ACTIONS:
+        fn = arena._MUTATOR_FUNCTIONS.get(spec.transformation)
+        assert fn is not None, f"Missing mutator for {spec.action_id} ({spec.transformation})"
+        assert callable(fn)
+
+    phase_e_samples = {
+        "hpp_query_pollution": "' OR 1=1--",
+        "sqli_scientific_float": "' UNION SELECT 1,2--",
+        "sqli_char_chr_concat": "' OR 'admin'='admin'--",
+        "xss_json_unicode_escape": "<script>alert(1)</script>",
+        "json_duplicate_key_tamper": "<script>alert(1)</script>",
+        "xss_svg_mathml_onbegin": "<script>alert(1)</script>",
+        "cmd_dollar_at_split": "127.0.0.1; cat /etc/passwd",
+        "cmd_wildcard_glob": "127.0.0.1; cat /etc/passwd",
+        "path_overlong_mixed_slash": "../../../../etc/passwd",
+        "nosql_nin_exists_blind": "admin",
+    }
+    for tech, sample in phase_e_samples.items():
+        mutated = arena._MUTATOR_FUNCTIONS[tech](sample)
+        assert isinstance(mutated, str)
+        assert mutated != ""
+        assert mutated != sample
+
+
+def test_arena_build_http_surface_args_preserves_hpp_and_duplicate_json_keys():
+    """LOGIC-PBL6-301: Preserves duplicate query params for HPP and duplicate JSON keys for JSON pollution."""
+    import json
+    import urllib.parse
+
+    hpp_payload = arena._MUTATOR_FUNCTIONS["hpp_query_pollution"]("' OR 1=1--")
+    resolved_path, params_dict, json_obj, query_str, body_text, body_bytes = arena._build_http_surface_args(
+        endpoint_tpl="/api/v1/vulnerable/books/search/",
+        method="GET",
+        param="q",
+        rtype="query",
+        extra={"limit": "5"},
+        payload_str=hpp_payload,
+    )
+    assert resolved_path == "/api/v1/vulnerable/books/search/"
+    assert params_dict is None
+    assert json_obj is None
+    assert query_str is not None
+    parsed_pairs = urllib.parse.parse_qsl(query_str, keep_blank_values=True)
+    assert [v for k, v in parsed_pairs if k == "q"] == ["1", "' OR 1=1--"]
+    assert ("limit", "5") in parsed_pairs
+
+    dup_payload = arena._MUTATOR_FUNCTIONS["json_duplicate_key_tamper"]("<script>alert(1)</script>")
+    _rp, p_dict2, j_obj2, q_str2, b_text2, b_bytes2 = arena._build_http_surface_args(
+        endpoint_tpl="/api/v1/vulnerable/reviews/",
+        method="POST",
+        param="comment",
+        rtype="json",
+        extra={"book_id": 1},
+        payload_str=dup_payload,
+    )
+    assert p_dict2 is None
+    assert q_str2 is None
+    assert j_obj2 is None
+    assert b_text2 is not None and b_bytes2 == b_text2.encode("utf-8")
+    assert b_text2.count('"comment":') == 2
+    assert '"book_id": 1' in b_text2
+    assert json.loads(b_text2)["comment"] == "<script>alert(1)</script>"
+
+    # Adapts default "comment" key when target param is different
+    _, _, j_obj3, _, b_text3, _ = arena._build_http_surface_args(
+        endpoint_tpl="/api/v1/vulnerable/reviews/",
+        method="POST",
+        param="title",
+        rtype="json",
+        extra={},
+        payload_str=dup_payload,
+    )
+    assert j_obj3 is None
+    assert b_text3 is not None and b_text3.count('"title":') == 2
+
+    # Non-duplicate JSON payloads (e.g. NoSQL) remain structured json_obj
+    _, _, j_obj4, _, _, _ = arena._build_http_surface_args(
+        endpoint_tpl="/api/v1/vulnerable/users/login/",
+        method="POST",
+        param="username",
+        rtype="json",
+        extra={},
+        payload_str='{"$ne": ""}',
+    )
+    assert j_obj4 == {"username": '{"$ne": ""}'}
+
+
+def test_arena_live_http_lock_serializes_concurrent_runs(monkeypatch):
+    """SEC-PBL6-302: _LIVE_HTTP_ARENA_LOCK serializes concurrent live_http evaluations and restores tier on error."""
+    import asyncio
+    from types import SimpleNamespace
+
+    from app.main import app
+
+    assert isinstance(arena._LIVE_HTTP_ARENA_LOCK, asyncio.Lock)
+    active = 0
+    max_active = 0
+    tier_calls: list[tuple[str, object]] = []
+
+    def fake_enter(tier: str):
+        tier_calls.append(("enter", tier))
+        return "MONITOR_ONLY", "hybrid"
+
+    def fake_exit(prev_waf_mode, prev_ablation):
+        tier_calls.append(("exit", (prev_waf_mode, prev_ablation)))
+
+    async def fake_round(**kwargs):
+        nonlocal active, max_active
+        assert arena._LIVE_HTTP_ARENA_LOCK.locked()
+        active += 1
+        max_active = max(max_active, active)
+        await asyncio.sleep(0.02)
+        active -= 1
+        return {
+            "round_num": kwargs["round_num"],
+            "round": kwargs["round_num"],
+            "attack_type": kwargs["case"]["family"],
+            "waf_blocked": True,
+            "waf_decision": "BLOCK",
+            "waf_threat_score": 90.0,
+            "latency_ms": 1.0,
+            "matched_rules": ["SQLI-001"],
+        }
+
+    monkeypatch.setattr(arena, "_enter_live_http_tier", fake_enter)
+    monkeypatch.setattr(arena, "_exit_live_http_tier", fake_exit)
+    monkeypatch.setattr(arena, "_execute_single_live_http_round", fake_round)
+
+    req = SimpleNamespace(app=app)
+    body = arena.PentestRunRequest(scope="sqli", max_rounds=1, defense_tier="hybrid_v3", execution_mode="live_http")
+
+    async def _run_concurrent():
+        return await asyncio.gather(
+            arena._run_live_http_pentest_evaluation(req, body, "127.0.0.1"),
+            arena._run_live_http_pentest_evaluation(req, body, "127.0.0.1"),
+        )
+
+    results = asyncio.run(_run_concurrent())
+    assert len(results) == 2
+    assert max_active == 1
+    assert [c[0] for c in tier_calls] == ["enter", "exit", "enter", "exit"]
+
+
+def test_proxy_403_and_arena_live_http_populate_matched_rules(client: TestClient):
+    """LOGIC-PBL6-303: HTTP 403 /api/proxy blocks include matched_rules and Arena live_http populates badges."""
+    from app.api.proxy import invalidate_waf_mode_cache
+    from app.db.models import WafConfigModel
+    from app.db.session import SessionLocal
+
+    prev_mode: str | None = None
+    with SessionLocal() as db:
+        row = db.query(WafConfigModel).filter(WafConfigModel.key == "waf_mode").first()
+        prev_mode = row.value if row else None
+        if row:
+            row.value = "ACTIVE_BLOCKING"
+        else:
+            db.add(WafConfigModel(key="waf_mode", value="ACTIVE_BLOCKING"))
+        db.commit()
+    invalidate_waf_mode_cache()
+
+    try:
+        proxy_res = client.get(
+            "/api/proxy/rest/products/search?q=apple%27%20UNION%20SELECT%20null%2Cnull--"
+        )
+        assert proxy_res.status_code == 403
+        proxy_json = proxy_res.json()
+        assert isinstance(proxy_json.get("matched_rules"), list)
+        assert any(r.startswith("SQLI-") for r in proxy_json["matched_rules"])
+    finally:
+        with SessionLocal() as db:
+            row = db.query(WafConfigModel).filter(WafConfigModel.key == "waf_mode").first()
+            if prev_mode is None and row is not None:
+                db.delete(row)
+            elif row is not None:
+                row.value = prev_mode
+            db.commit()
+        invalidate_waf_mode_cache()
+
+    arena_res = client.post(
+        "/api/dashboard/arena/pentest/run",
+        json={
+            "scope": "injection",
+            "max_rounds": 2,
+            "defense_tier": "hybrid_v3",
+            "execution_mode": "live_http",
+            "target_url": "http://127.0.0.1:5000",
+        },
+        headers=ADMIN_HEADERS,
+    )
+    assert arena_res.status_code == 200
+    rounds = arena_res.json()["rounds"]
+    assert len(rounds) == 2
+    for rd in rounds:
+        assert rd["waf_blocked"] is True
+        assert isinstance(rd["matched_rules"], list) and len(rd["matched_rules"]) > 0
+
+
+def test_arena_in_process_waf_uses_predict_http_with_fallback(monkeypatch):
+    """LOGIC-PBL6-304: _inspect_in_process_waf uses predict_http when available and keeps vec_26 for anomaly."""
+    predict_http_calls: list[tuple[str, str | None, str | None]] = []
+    anomaly_vecs: list[list[float] | None] = []
+
+    orig_predict_http = arena._ml_detector.predict_http
+    orig_anomaly_predict = arena._anomaly_detector.predict
+
+    def spy_predict_http(*, path: str, query_params: str | None = None, body: str | None = None):
+        predict_http_calls.append((path, query_params, body))
+        return orig_predict_http(path=path, query_params=query_params, body=body)
+
+    def spy_anomaly_predict(payload: str, feature_vector=None):
+        anomaly_vecs.append(feature_vector)
+        return orig_anomaly_predict(payload, feature_vector=feature_vector)
+
+    monkeypatch.setattr(arena._ml_detector, "predict_http", spy_predict_http)
+    monkeypatch.setattr(arena._anomaly_detector, "predict", spy_anomaly_predict)
+
+    res = arena._inspect_in_process_waf(
+        family="SQL_INJECTION",
+        endpoint_tpl="/api/v1/vulnerable/books/search/",
+        resolved_path="/api/v1/vulnerable/books/search/",
+        method="GET",
+        query_str="q=%27%20OR%201%3D1--",
+        body_text=None,
+        body_bytes=None,
+        tech_name="baseline_probe",
+        tier="hybrid_v3",
+        client_ip="127.0.0.1",
+    )
+    assert res["waf_blocked"] is True
+    assert predict_http_calls == [("/api/v1/vulnerable/books/search/", "q=%27%20OR%201%3D1--", None)]
+    assert len(anomaly_vecs) == 1 and isinstance(anomaly_vecs[0], list) and len(anomaly_vecs[0]) == 26
+
+    # Verify fallback path when predict_http is absent/non-callable
+    monkeypatch.setattr(arena._ml_detector, "predict_http", None)
+    res_fb = arena._inspect_in_process_waf(
+        family="SQL_INJECTION",
+        endpoint_tpl="/api/v1/vulnerable/books/search/",
+        resolved_path="/api/v1/vulnerable/books/search/",
+        method="GET",
+        query_str="q=%27%20OR%201%3D1--",
+        body_text=None,
+        body_bytes=None,
+        tech_name="baseline_probe",
+        tier="hybrid_v3",
+        client_ip="127.0.0.1",
+    )
+    assert res_fb["waf_blocked"] is True
+    assert len(anomaly_vecs) == 2 and len(anomaly_vecs[1]) == 26
+
+
+
