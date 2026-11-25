@@ -215,9 +215,8 @@ def run_a1_1_fp_measurement() -> dict[str, Any]:
             for m in det.matches:
                 rule_fp_counter[m.rule_id] += 1
 
-            vec26 = extract_26_from_http(path=path, query_params=query, body=body).tolist()
             payload = f"{path} {query or ''} {body or ''}".strip()
-            ml_res = ml_detector.predict(payload, feature_vector=vec26)
+            ml_res, vec26 = ml_detector.predict_http(path=path, query_params=query, body=body)
             anom_res = anomaly_detector.predict(payload, feature_vector=vec26)
 
             rb = risk_engine.calculate_weighted_score(

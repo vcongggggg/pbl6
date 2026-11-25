@@ -55,6 +55,11 @@ def main() -> None:
     csic = json.loads((REPORTS_DIR / "csic2010_benchmark_results.json").read_text(encoding="utf-8"))
     leak = json.loads((REPORTS_DIR / "zero_leakage_v3_verification.json").read_text(encoding="utf-8"))
     perf = json.loads((REPORTS_DIR / "performance_profile_results.json").read_text(encoding="utf-8"))
+    aug = json.loads((REPORTS_DIR / "phase_e_augmentation_manifest.json").read_text(encoding="utf-8"))
+    csic_tax = json.loads((REPORTS_DIR / "csic2010_taxonomy_breakdown.json").read_text(encoding="utf-8"))
+    csic_tienda1 = json.loads((REPORTS_DIR / "csic2010_tienda1_schema_proof.json").read_text(encoding="utf-8"))
+    st33 = json.loads((REPORTS_DIR / "strange_suite_v33_results.json").read_text(encoding="utf-8"))
+    bv2 = json.loads((REPORTS_DIR / "blind_heldout_vault_v2_results.json").read_text(encoding="utf-8"))
 
     docx_txt = _extract_docx_text(REPORTS_DIR / "PBL6_Bao_Cao.docx")
     docx_ch4_txt = _extract_docx_text(REPORTS_DIR / "PBL6_Bao_Cao_Chuong_4_Thuc_Nghiem_Danh_Gia.docx")
@@ -289,8 +294,8 @@ def main() -> None:
             "csic2010_benchmark_results.json",
             "hybrid_defense_in_depth.{fpr,precision}",
             f"{csic_h['fpr']:.2f}% / {csic_h['precision']:.2f}%",
-            "0.00% (0/1.500)",
-            [("DOCX", docx_txt), ("CH4_MD", md_txt)],
+            f"{csic_h['fpr']:.2f}%",
+            [("DOCX", docx_txt), ("PPTX", pptx_txt), ("CH4_MD", md_txt)],
         ),
         (
             "7. Ablation, CSIC & C=50",
@@ -303,10 +308,10 @@ def main() -> None:
         ),
         (
             "7. Ablation, CSIC & C=50",
-            "Disjoint Canonical Hash Overlap (D3)",
+            "Disjoint Canonical Hash Overlap (D3 / E4)",
             "zero_leakage_v3_verification.json",
             "zero_leakage_verified",
-            f"{leak['zero_leakage_verified']} (0 overlaps / 46,187 rows)",
+            f"{leak['zero_leakage_verified']} (0 overlaps / {leak['metadata']['defense_v2_total_rows']:,} rows)",
             "zero_leakage_verified = true",
             [("CH4_MD", md_txt)],
         ),
@@ -318,6 +323,60 @@ def main() -> None:
             f"{c50_rps:.2f} RPS",
             f"{c50_rps:.0f} RPS",
             [("PPTX", pptx_txt)],
+        ),
+        (
+            "8. Phase E (v3.3)",
+            "E1 Live-HTTP :8056 Greedy DQN Bypass",
+            "pentest_dqn_v2_metadata.json",
+            "stage4_live_http_metrics.live_http_8056_dqn_bypass_rate_pct",
+            f"{dqn['stage4_live_http_metrics']['live_http_8056_dqn_bypass_rate_pct']:.1f}%",
+            f"{dqn['stage4_live_http_metrics']['live_http_8056_dqn_bypass_rate_pct']:.1f}%",
+            [("DOCX", docx_txt), ("PPTX", pptx_txt), ("CH4_MD", md_txt)],
+        ),
+        (
+            "8. Phase E (v3.3)",
+            "E2 Zero-Leakage Augmented Train Rows Added",
+            "phase_e_augmentation_manifest.json",
+            "added_total_rows",
+            f"+{aug['added_total_rows']} ({aug['added_by_source']['phase_e_e2a_sandbox']} E2a + {aug['added_by_source']['phase_e_e3_group_a_synth']} E3)",
+            f"{aug['added_total_rows']}",
+            [("DOCX", docx_txt), ("PPTX", pptx_txt), ("CH4_MD", md_txt)],
+        ),
+        (
+            "8. Phase E (v3.3)",
+            "E3 CSIC Group A True Payload Recall (Op T=80)",
+            "csic2010_taxonomy_breakdown.json",
+            "parallel_metrics.operational_decision_engine_t80.group_a_recall_pct",
+            f"{csic_tax['parallel_metrics']['operational_decision_engine_t80']['group_a_recall_pct']:.2f}% ({csic_tax['parallel_metrics']['operational_decision_engine_t80']['group_a_blocked']}/{csic_tax['two_tier_breakdown']['group_a_true_payload']['count']})",
+            f"{csic_tax['parallel_metrics']['operational_decision_engine_t80']['group_a_recall_pct']:.2f}% ({csic_tax['parallel_metrics']['operational_decision_engine_t80']['group_a_blocked']}/{csic_tax['two_tier_breakdown']['group_a_true_payload']['count']})",
+            [("DOCX", docx_txt), ("PPTX", pptx_txt), ("CH4_MD", md_txt)],
+        ),
+        (
+            "8. Phase E (v3.3)",
+            "E3 /tienda1 OpenAPI Schema Group B & Overall",
+            "csic2010_tienda1_schema_proof.json",
+            "operational_decision_engine_t80.hybrid_plus_tienda1_schema_strict.{group_b,overall}",
+            f"{csic_tienda1['operational_decision_engine_t80']['hybrid_plus_tienda1_schema_strict']['group_b_parameter_tampering']['recall_pct']:.2f}% / {csic_tienda1['operational_decision_engine_t80']['hybrid_plus_tienda1_schema_strict']['overall_1500']['recall_pct']:.2f}%",
+            f"{csic_tienda1['operational_decision_engine_t80']['hybrid_plus_tienda1_schema_strict']['group_b_parameter_tampering']['recall_pct']:.2f}%",
+            [("DOCX", docx_txt), ("PPTX", pptx_txt), ("CH4_MD", md_txt)],
+        ),
+        (
+            "8. Phase E (v3.3)",
+            "E4 Expanded Strange Suite v3.3 Live-HTTP Hybrid",
+            "strange_suite_v33_results.json",
+            "live_http.Dueling-DQN v2.0.Hybrid v3.3.block_rate_pct",
+            f"{st33['live_http']['Dueling-DQN v2.0']['Hybrid v3.3']['block_rate_pct']:.2f}% ({st33['live_http']['Dueling-DQN v2.0']['Hybrid v3.3']['blocked_count']}/{st33['live_http']['Dueling-DQN v2.0']['Hybrid v3.3']['total_episodes']})",
+            f"{st33['live_http']['Dueling-DQN v2.0']['Hybrid v3.3']['block_rate_pct']:.2f}% ({st33['live_http']['Dueling-DQN v2.0']['Hybrid v3.3']['blocked_count']}/{st33['live_http']['Dueling-DQN v2.0']['Hybrid v3.3']['total_episodes']})",
+            [("DOCX", docx_txt), ("PPTX", pptx_txt), ("CH4_MD", md_txt)],
+        ),
+        (
+            "8. Phase E (v3.3)",
+            "E4 Blind Held-Out Vault v2 Live-HTTP Hybrid",
+            "blind_heldout_vault_v2_results.json",
+            "live_http.Dueling-DQN v2.0.Hybrid v3.3.block_rate_pct",
+            f"{bv2['live_http']['Dueling-DQN v2.0']['Hybrid v3.3']['block_rate_pct']:.2f}% ({bv2['live_http']['Dueling-DQN v2.0']['Hybrid v3.3']['blocked_count']}/{bv2['live_http']['Dueling-DQN v2.0']['Hybrid v3.3']['total_episodes']})",
+            f"{bv2['live_http']['Dueling-DQN v2.0']['Hybrid v3.3']['block_rate_pct']:.2f}% ({bv2['live_http']['Dueling-DQN v2.0']['Hybrid v3.3']['blocked_count']}/{bv2['live_http']['Dueling-DQN v2.0']['Hybrid v3.3']['total_episodes']})",
+            [("DOCX", docx_txt), ("PPTX", pptx_txt), ("CH4_MD", md_txt)],
         ),
     ]
 

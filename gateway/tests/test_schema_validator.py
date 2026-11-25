@@ -250,3 +250,135 @@ def test_route_tiered_schema_policy():
     # 4. Off policy bypasses all checks
     assert validator.validate_request(method="POST", path="/invalid/", policy="off") == []
 
+
+def test_schema_validator_custom_strict_route_prefixes():
+    """Verifies custom strict_route_prefixes and auto-derivation from custom OpenAPI spec."""
+    custom_spec = {
+        "openapi": "3.0.3",
+        "info": {"title": "Tienda1", "version": "1.0.0"},
+        "paths": {
+            "/tienda1/publico/anadir.jsp": {
+                "get": {
+                    "parameters": [
+                        {
+                            "name": "id",
+                            "in": "query",
+                            "required": True,
+                            "schema": {"type": "integer", "maxLength": 4},
+                        },
+                        {
+                            "name": "modo",
+                            "in": "query",
+                            "required": False,
+                            "schema": {"type": "string", "pattern": "^[a-z]+$", "maxLength": 12},
+                        },
+                    ]
+                }
+            }
+        },
+    }
+
+    # Auto-derived prefix '/tienda1'
+    validator = SchemaValidator(spec=custom_spec, enforcement_policy="strict_all")
+    assert validator.strict_route_prefixes == ("/tienda1",)
+
+    # Unknown route under /tienda1 triggers ROUTE_NOT_FOUND penalty
+    v_missing = validator.validate_request(method="GET", path="/tienda1/admin/secret.jsp")
+    assert len(v_missing) == 1
+    assert v_missing[0].violation_type == "ROUTE_NOT_FOUND"
+    assert v_missing[0].is_penalty is True
+
+    # Query maxLength & pattern constraints
+    assert validator.validate_request(
+        method="GET",
+        path="/tienda1/publico/anadir.jsp",
+        query_params="id=12&modo=insertar",
+    ) == []
+
+    v_q = validator.validate_request(
+        method="GET",
+        path="/tienda1/publico/anadir.jsp",
+        query_params="id=12345&modo=BAD_123",
+    )
+    types = {(v.field, v.violation_type, v.is_penalty) for v in v_q}
+    assert ("id", "MAX_LENGTH_EXCEEDED", True) in types
+    assert ("modo", "PATTERN_MISMATCH", True) in types
+
+    # Explicit strict_route_prefixes override
+    v_explicit = SchemaValidator(
+        spec=custom_spec,
+        enforcement_policy="strict_all",
+        strict_route_prefixes=("/custom-app",),
+    )
+    assert v_explicit.validate_request(method="GET", path="/tienda1/unknown.jsp") == []
+    v_hit = v_explicit.validate_request(method="GET", path="/custom-app/unknown.jsp")
+    assert len(v_hit) == 1 and v_hit[0].violation_type == "ROUTE_NOT_FOUND"
+
+
+def test_schema_validator_form_urlencoded_body():
+    """Verifies application/x-www-form-urlencoded parsing & constraint validation."""
+    form_spec = {
+        "openapi": "3.0.3",
+        "info": {"title": "Form API", "version": "1.0.0"},
+        "paths": {
+            "/tienda1/publico/anadir.jsp": {
+                "post": {
+                    "requestBody": {
+                        "required": True,
+                        "content": {
+                            "application/x-www-form-urlencoded": {
+                                "schema": {
+                                    "type": "object",
+                                    "additionalProperties": False,
+                                    "required": ["id", "cantidad", "modo"],
+                                    "properties": {
+                                        "id": {"type": "integer", "maxLength": 4},
+                                        "cantidad": {"type": "integer", "maxLength": 3},
+                                        "modo": {
+                                            "type": "string",
+                                            "enum": ["insertar", "actualizar"],
+                                            "pattern": "^[a-z]+$",
+                                            "maxLength": 16,
+                                        },
+                                    },
+                                }
+                            }
+                        },
+                    }
+                }
+            }
+        },
+    }
+    validator = SchemaValidator(spec=form_spec, enforcement_policy="strict_all")
+
+    # 1. Clean form payload (both explicit Content-Type and inferred from '=')
+    assert validator.validate_request(
+        method="POST",
+        path="/tienda1/publico/anadir.jsp",
+        body_bytes=b"id=3&cantidad=2&modo=insertar",
+        content_type="application/x-www-form-urlencoded; charset=utf-8",
+    ) == []
+    assert validator.validate_request(
+        method="POST",
+        path="/tienda1/publico/anadir.jsp",
+        body_bytes=b"id=3&cantidad=2&modo=insertar",
+        content_type=None,
+    ) == []
+
+    # 2. Tampered form payload: missing required, extra field, non-integer, enum/maxLength/pattern violation
+    v_bad = validator.validate_request(
+        method="POST",
+        path="/tienda1/publico/anadir.jsp",
+        body_bytes=b"id=3%2F&modo=INVALID_MODE_TOO_LONG&B2A=tamper",
+        content_type="application/x-www-form-urlencoded",
+    )
+    assert all(v.is_penalty for v in v_bad)
+    v_map = {(v.field, v.violation_type) for v in v_bad}
+    assert ("cantidad", "MISSING_FIELD") in v_map
+    assert ("B2A", "ADDITIONAL_PROPERTY_NOT_ALLOWED") in v_map
+    assert ("id", "TYPE_MISMATCH") in v_map
+    assert ("modo", "ENUM_MISMATCH") in v_map
+    assert ("modo", "MAX_LENGTH_EXCEEDED") in v_map
+    assert ("modo", "PATTERN_MISMATCH") in v_map
+
+

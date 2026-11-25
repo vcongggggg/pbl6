@@ -306,6 +306,22 @@ class DryRunDispatcher:
                 "''",
                 "<sCr",
                 "confirm(",
+                # Phase E (36-action) extended tamper markers
+                "1e0",
+                "9e0",
+                "CHAR(",
+                "CHR(",
+                "\\u00",
+                "<svg><animate",
+                "<math>",
+                "onbegin=",
+                "$@",
+                "/???/",
+                "%c0%af",
+                "%5c",
+                "$nin",
+                "safe_item&",
+                "__DUP_JSON_KEY__",
             ]
         )
 

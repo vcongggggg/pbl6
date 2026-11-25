@@ -17,7 +17,7 @@ from app.security.anomaly import AnomalyDetector, get_anomaly_detector
 from app.security.bola_detector import BOLADetector
 from app.security.decision import DecisionEngine, PolicyAction
 from app.security.engine import RuleEngine
-from app.security.ml_detector import MLDetector, extract_26_from_http
+from app.security.ml_detector import MLDetector, extract_26_from_http, normalize_http_for_ml
 from app.security.models import AttackType, DetectionResult
 from app.security.protocol_detector import (
     ApiProtocol,
@@ -192,22 +192,61 @@ def _run_security_inspection(
             ml_body: str | None = extracted_api.metadata.get("extracted_text") or ""
         else:
             ml_body = body_bytes.decode("utf-8", errors="replace") if body_bytes else None
-        feature_vector_26 = extract_26_from_http(
-            path=path_norm,
-            query_params=query_str,
-            body=ml_body,
-        ).tolist()
     except Exception:
-        feature_vector_26 = None
+        ml_body = None
 
+    feature_vector_26: list[float] | None = None
     if settings.ml_enabled:
-        ml_result = ml_detector.predict(payload_content, feature_vector=feature_vector_26)
+        used_predict_http = False
+        if callable(getattr(ml_detector, "predict_http", None)):
+            try:
+                ml_out = ml_detector.predict_http(
+                    path=path_norm,
+                    query_params=query_str,
+                    body=ml_body,
+                )
+                if isinstance(ml_out, tuple) and len(ml_out) == 2:
+                    ml_result, feature_vector_26 = ml_out
+                    used_predict_http = True
+            except (TypeError, ValueError):
+                used_predict_http = False
+
+        if not used_predict_http:
+            try:
+                norm_path, norm_query, norm_body = normalize_http_for_ml(
+                    path=path_norm,
+                    query_params=query_str,
+                    body=ml_body,
+                )
+                feature_vector_26 = extract_26_from_http(
+                    path=norm_path,
+                    query_params=norm_query,
+                    body=norm_body,
+                ).tolist()
+            except Exception:
+                feature_vector_26 = None
+            ml_result = ml_detector.predict(payload_content, feature_vector=feature_vector_26)
+
         ml_is_available = bool(ml_result.model_loaded and ml_detector.ml_available)
         ml_score = ml_result.risk_score if ml_is_available else None
     else:
         ml_result = None
         ml_is_available = True
         ml_score = None
+        if settings.anomaly_enabled:
+            try:
+                norm_path, norm_query, norm_body = normalize_http_for_ml(
+                    path=path_norm,
+                    query_params=query_str,
+                    body=ml_body,
+                )
+                feature_vector_26 = extract_26_from_http(
+                    path=norm_path,
+                    query_params=norm_query,
+                    body=norm_body,
+                ).tolist()
+            except Exception:
+                feature_vector_26 = None
 
     if settings.anomaly_enabled:
         anomaly_result = anomaly_detector.predict(payload_content, feature_vector=feature_vector_26)

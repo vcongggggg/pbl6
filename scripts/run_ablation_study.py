@@ -95,7 +95,7 @@ def run_ablation_benchmark() -> dict[str, Any]:
 
     # Warm up JIT / thread-local buffers so timings reflect steady-state serving
     for _ in range(10):
-        ml_detector.predict("/api/v1/books q=test", feature_vector=warm_vec)
+        ml_detector.predict_http(path="/api/v1/books", query_params="q=test", body=None)
         anomaly_detector.predict("/api/v1/books q=test", feature_vector=warm_vec)
 
     n_rules = len(rule_engine.rules)
@@ -131,7 +131,8 @@ def run_ablation_benchmark() -> dict[str, Any]:
             "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
             "device": "Machine 1 (Blue Team Host)",
             "methodology_note": (
-                f"Unified 26-D feature extraction (extract_26_from_http) shared once per request in Hybrid mode with {n_rules} hardened rules; "
+                f"Blue Team v3.3 URL-normalized per-parameter max-pooling (normalize_http_for_ml + MLDetector.predict_http) "
+                f"with unified 26-D feature extraction (extract_26_from_http) shared once per request in Hybrid mode with {n_rules} hardened rules; "
                 "each mode measures ONLY its active detector(s) single-pass latency (never summed across separate modes). "
                 "Blocking decision follows DecisionEngine ACTIVE_BLOCKING (>=80 block, Rule>=85/ML>=90 override, or Dual-AI Consensus). "
                 "Anomaly Only also reports detection @60.0."
@@ -186,8 +187,7 @@ def run_ablation_benchmark() -> dict[str, Any]:
                 decision = decision_engine.evaluate(risk_breakdown=breakdown, waf_mode="ACTIVE_BLOCKING")
 
             elif mode == "ml_only":
-                vec_26 = extract_26_from_http(path=path, query_params=query, body=body_val).tolist()
-                ml_res = ml_detector.predict(payload, feature_vector=vec_26)
+                ml_res, _vec_26 = ml_detector.predict_http(path=path, query_params=query, body=body_val)
                 ml_score = ml_res.risk_score if ml_res.model_loaded else None
                 breakdown = risk_engine.calculate_weighted_score(
                     rule_score=0.0,
@@ -218,8 +218,7 @@ def run_ablation_benchmark() -> dict[str, Any]:
                     body_bytes=body_bytes,
                 )
                 rule_score = det.rule_risk_score if det else 0.0
-                vec_26 = extract_26_from_http(path=path, query_params=query, body=body_val).tolist()
-                ml_res = ml_detector.predict(payload, feature_vector=vec_26)
+                ml_res, vec_26 = ml_detector.predict_http(path=path, query_params=query, body=body_val)
                 ml_score = ml_res.risk_score if ml_res.model_loaded else None
                 anom_res = anomaly_detector.predict(payload, feature_vector=vec_26)
                 anom_score = anom_res.anomaly_score if anom_res.model_loaded else None

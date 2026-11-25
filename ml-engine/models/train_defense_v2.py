@@ -11,6 +11,7 @@ Conforms to:
 
 from __future__ import annotations
 
+import argparse
 import hashlib
 import json
 import logging
@@ -452,6 +453,14 @@ def train_calibrated_isolation_forest_v2(
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser(description="Train Defense ML Models v2.0")
+    parser.add_argument(
+        "--xgb-only",
+        action="store_true",
+        help="Retrain supervised benchmark + Champion XGBoost v2.0 only, preserving calibrated IForest v2.0 artifacts.",
+    )
+    args = parser.parse_args()
+
     logger.info("Starting Defense ML Models v2.0 Training Pipeline...")
     data_dir = REPO_ROOT / "data" / "processed" / "defense_v2"
     artifacts_dir = ML_ENGINE_DIR / "artifacts"
@@ -477,15 +486,18 @@ def main() -> None:
         X_train, y_train, X_val, y_val, X_test, y_test, artifacts_dir
     )
 
-    # 4. Train Calibrated Isolation Forest v2 on Benign subset
-    benign_train_mask = (y_train == CLASS_TO_INT["BENIGN"])
-    benign_val_mask = (y_val == CLASS_TO_INT["BENIGN"])
-    X_train_benign = X_train[benign_train_mask]
-    X_val_benign = X_val[benign_val_mask]
+    # 4. Train Calibrated Isolation Forest v2 on Benign subset (unless --xgb-only)
+    if not args.xgb_only:
+        benign_train_mask = (y_train == CLASS_TO_INT["BENIGN"])
+        benign_val_mask = (y_val == CLASS_TO_INT["BENIGN"])
+        X_train_benign = X_train[benign_train_mask]
+        X_val_benign = X_val[benign_val_mask]
 
-    _ = train_calibrated_isolation_forest_v2(
-        X_train_benign, X_val_benign, artifacts_dir, REPO_ROOT
-    )
+        _ = train_calibrated_isolation_forest_v2(
+            X_train_benign, X_val_benign, artifacts_dir, REPO_ROOT
+        )
+    else:
+        logger.info("Preserving existing Calibrated IsolationForest v2.0 artifacts (--xgb-only).")
 
     logger.info(">>> DEFENSE ML MODELS v2.0 PIPELINE 100% COMPLETE! <<<")
 

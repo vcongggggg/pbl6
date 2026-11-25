@@ -1,12 +1,15 @@
 import json
 import logging
 import os
+import re
 import sys
 import threading
 import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+
+from .normalizer import InputNormalizer
 
 # Gateway workers execute single-request inline inference (nthread=1). Without
 # OMP_NUM_THREADS=1, OpenMP initializes a multi-core spin-barrier thread pool on
@@ -51,6 +54,118 @@ from features.payload import calculate_entropy  # noqa: E402
 
 FEATURE_NAMES: list[str] = CANONICAL_FEATURE_NAMES
 
+_INPUT_NORMALIZER = InputNormalizer()
+_SUSPICIOUS_SYNTAX_RE = re.compile(
+    r"(['\"<>();$|\\{}`=]|/\*|\*/|--|\.\.|\\u00)"
+)
+_BENIGN_PARAM_VALUE_RE = re.compile(
+    r"^(?:"
+    r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}"
+    r"|\d{4}-\d{2}-\d{2}(?:[T ]\d{2}:\d{2}:\d{2}(?:\.\d+)?Z?)?"
+    r"|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}"
+    r"|-?\d+(?:\.\d+)?"
+    r")$"
+)
+
+
+def normalize_http_for_ml(
+    path: str,
+    query_params: str | None = None,
+    body: str | None = None,
+) -> tuple[str, str | None, str | None]:
+    """Normalizes HTTP path, query string, and body for ML feature extraction.
+
+    Decodes form/query '+' -> space (preserving '+' inside JSON/XML/plain payloads)
+    and applies bounded multi-pass canonicalization via cached InputNormalizer.
+    """
+    norm_path = _INPUT_NORMALIZER.normalize(path) if path else ""
+
+    if query_params is None:
+        norm_query: str | None = None
+    elif query_params == "":
+        norm_query = ""
+    else:
+        norm_query = _INPUT_NORMALIZER.normalize(query_params.replace("+", " "))
+
+    if body is None:
+        norm_body: str | None = None
+    elif body == "":
+        norm_body = ""
+    else:
+        body_stripped = body.lstrip()
+        is_structured_non_form = body_stripped.startswith(("{", "[", "<"))
+        is_form_body = (
+            not is_structured_non_form
+            and "=" in body
+            and ("&" in body or not any(ch.isspace() for ch in body_stripped.split("=", 1)[0]))
+        )
+        body_work = body.replace("+", " ") if is_form_body else body
+        norm_body = _INPUT_NORMALIZER.normalize(body_work)
+
+    return norm_path, norm_query, norm_body
+
+
+def _extract_http_params(
+    norm_query: str | None,
+    norm_body: str | None,
+    raw_body: str | None = None,
+) -> list[tuple[str, str]]:
+    """Extracts (key, value) pairs from normalized query string and body (JSON or form)."""
+    params: list[tuple[str, str]] = []
+
+    if norm_query:
+        for seg in norm_query.split("&"):
+            if not seg:
+                continue
+            if "=" in seg:
+                k, v = seg.split("=", 1)
+                params.append((k, v))
+            else:
+                params.append(("", seg))
+
+    if norm_body:
+        stripped = norm_body.lstrip()
+        if stripped.startswith(("{", "[")):
+            parsed_obj: Any = None
+            need_norm = False
+            try:
+                parsed_obj = json.loads(norm_body)
+            except Exception:
+                if raw_body:
+                    try:
+                        parsed_obj = json.loads(raw_body)
+                        need_norm = True
+                    except Exception:
+                        parsed_obj = None
+            if parsed_obj is not None:
+                stack: list[tuple[str, Any]] = [("", parsed_obj)]
+                visited = 0
+                while stack and visited < 64:
+                    key, val = stack.pop()
+                    visited += 1
+                    if isinstance(val, str):
+                        if val:
+                            v_norm = _INPUT_NORMALIZER.normalize(val) if need_norm else val
+                            params.append((key, v_norm))
+                    elif isinstance(val, dict):
+                        for ck, cv in reversed(list(val.items())):
+                            stack.append((str(ck), cv))
+                    elif isinstance(val, list):
+                        for item in reversed(val):
+                            stack.append((key, item))
+        elif not stripped.startswith("<") and "=" in norm_body:
+            for seg in norm_body.split("&"):
+                if not seg:
+                    continue
+                if "=" in seg:
+                    k, v = seg.split("=", 1)
+                    params.append((k, v))
+                else:
+                    params.append(("", seg))
+
+    return params
+
+
 __all__ = [
     "MLDetector",
     "MLPredictionResult",
@@ -58,6 +173,7 @@ __all__ = [
     "extract_17_vector",
     "extract_26_vector",
     "extract_26_from_http",
+    "normalize_http_for_ml",
 ]
 
 @dataclass
@@ -574,3 +690,85 @@ class MLDetector:
                 latency_ms=round(latency_ms, 3),
                 model_loaded=False,
             )
+
+    def predict_http(
+        self,
+        path: str,
+        query_params: str | None = None,
+        body: str | None = None,
+        feature_vector: list[float] | None = None,
+    ) -> tuple[MLPredictionResult, list[float]]:
+        """Normalizes HTTP request components and runs global + per-parameter max-pooling inference."""
+        start_time = time.perf_counter()
+        norm_path, norm_query, norm_body = normalize_http_for_ml(
+            path=path,
+            query_params=query_params,
+            body=body,
+        )
+        global_vec = (
+            list(feature_vector)
+            if feature_vector is not None
+            else extract_26_from_http(
+                path=norm_path,
+                query_params=norm_query,
+                body=norm_body,
+            ).tolist()
+        )
+        payload_text = " ".join(p for p in (norm_path, norm_query, norm_body) if p).strip()
+        global_res = self.predict(payload_text, feature_vector=global_vec)
+
+        if not global_res.model_loaded or global_res.risk_score is None:
+            global_res.latency_ms = round((time.perf_counter() - start_time) * 1000, 3)
+            return global_res, global_vec
+
+        params = _extract_http_params(norm_query, norm_body, raw_body=body)
+        context_len = (len(norm_query) if norm_query else 0) + (len(norm_body) if norm_body else 0)
+
+        best_res = global_res
+        if len(params) >= 2 or context_len > 40:
+            scored_candidates: list[tuple[int, float, str, str]] = []
+            for k, v in params:
+                if not v or _BENIGN_PARAM_VALUE_RE.match(v):
+                    continue
+                matches = _SUSPICIOUS_SYNTAX_RE.findall(v)
+                if matches:
+                    count = len(matches)
+                    density = count / max(1, len(v))
+                    scored_candidates.append((count, density, k, v))
+
+            if scored_candidates:
+                scored_candidates.sort(key=lambda item: (item[0], item[1]), reverse=True)
+                for _cnt, _dens, k, v in scored_candidates[:2]:
+                    param_query = f"{k}={v}" if k else v
+                    param_vec = extract_26_from_http(
+                        path=norm_path,
+                        query_params=param_query,
+                        body=None,
+                    ).tolist()
+                    param_res = self.predict(param_query, feature_vector=param_vec)
+                    if (
+                        param_res.model_loaded
+                        and param_res.risk_score is not None
+                        and param_res.risk_score > (best_res.risk_score or 0.0)
+                    ):
+                        best_res = param_res
+
+        total_latency_ms = round((time.perf_counter() - start_time) * 1000, 3)
+        if best_res is global_res:
+            global_res.latency_ms = total_latency_ms
+            return global_res, global_vec
+
+        combined = MLPredictionResult(
+            is_attack=bool(global_res.is_attack or best_res.is_attack),
+            attack_type=best_res.attack_type if best_res.is_attack else global_res.attack_type,
+            confidence=best_res.confidence,
+            risk_score=max(global_res.risk_score, best_res.risk_score or 0.0),
+            probabilities=best_res.probabilities,
+            latency_ms=total_latency_ms,
+            model_loaded=best_res.model_loaded,
+            feature_vector=global_vec,
+            feature_names=best_res.feature_names,
+            model_name=best_res.model_name,
+            model_version=best_res.model_version,
+        )
+        return combined, global_vec

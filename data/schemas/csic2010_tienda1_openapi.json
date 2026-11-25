@@ -1,0 +1,1079 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "CSIC 2010 Tienda1 Web Application (Benign-Derived Positive Security Schema)",
+    "version": "1.0.0",
+    "x_derived_from": "csic_2010_benchmark.csv label==0 ONLY (1500 benign requests)",
+    "x_max_length_headroom_multiplier": 1.5
+  },
+  "paths": {
+    "/tienda1/global/creditos.jsp": {
+      "get": {
+        "summary": "CSIC 2010 Benign Endpoint (GET /tienda1/global/creditos.jsp)",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/tienda1/global/estilos.css": {
+      "get": {
+        "summary": "CSIC 2010 Benign Endpoint (GET /tienda1/global/estilos.css)",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/tienda1/global/menum.jsp": {
+      "get": {
+        "summary": "CSIC 2010 Benign Endpoint (GET /tienda1/global/menum.jsp)",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/tienda1/global/titulo.jsp": {
+      "get": {
+        "summary": "CSIC 2010 Benign Endpoint (GET /tienda1/global/titulo.jsp)",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/tienda1/imagenes/1.gif": {
+      "get": {
+        "summary": "CSIC 2010 Benign Endpoint (GET /tienda1/imagenes/1.gif)",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/tienda1/imagenes/2.gif": {
+      "get": {
+        "summary": "CSIC 2010 Benign Endpoint (GET /tienda1/imagenes/2.gif)",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/tienda1/imagenes/3.gif": {
+      "get": {
+        "summary": "CSIC 2010 Benign Endpoint (GET /tienda1/imagenes/3.gif)",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/tienda1/imagenes/cmenbul.gif": {
+      "get": {
+        "summary": "CSIC 2010 Benign Endpoint (GET /tienda1/imagenes/cmenbul.gif)",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/tienda1/imagenes/logo.gif": {
+      "get": {
+        "summary": "CSIC 2010 Benign Endpoint (GET /tienda1/imagenes/logo.gif)",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/tienda1/imagenes/nuestratierra.jpg": {
+      "get": {
+        "summary": "CSIC 2010 Benign Endpoint (GET /tienda1/imagenes/nuestratierra.jpg)",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/tienda1/index.jsp": {
+      "get": {
+        "summary": "CSIC 2010 Benign Endpoint (GET /tienda1/index.jsp)",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/tienda1/miembros/editar.jsp": {
+      "get": {
+        "summary": "CSIC 2010 Benign Endpoint (GET /tienda1/miembros/editar.jsp)",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "parameters": [
+          {
+            "name": "B1",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 14
+            }
+          },
+          {
+            "name": "apellidos",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 29
+            }
+          },
+          {
+            "name": "ciudad",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 39
+            }
+          },
+          {
+            "name": "cp",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "maxLength": 8
+            }
+          },
+          {
+            "name": "direccion",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 62
+            }
+          },
+          {
+            "name": "dni",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 14
+            }
+          },
+          {
+            "name": "email",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 59
+            }
+          },
+          {
+            "name": "login",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 14
+            }
+          },
+          {
+            "name": "modo",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 12
+            }
+          },
+          {
+            "name": "nombre",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 18
+            }
+          },
+          {
+            "name": "ntc",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "maxLength": 24
+            }
+          },
+          {
+            "name": "password",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 23
+            }
+          },
+          {
+            "name": "provincia",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 17
+            }
+          }
+        ]
+      },
+      "post": {
+        "summary": "CSIC 2010 Benign Endpoint (POST /tienda1/miembros/editar.jsp)",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "B1": {
+                    "type": "string",
+                    "maxLength": 14
+                  },
+                  "apellidos": {
+                    "type": "string",
+                    "maxLength": 30
+                  },
+                  "ciudad": {
+                    "type": "string",
+                    "maxLength": 36
+                  },
+                  "cp": {
+                    "type": "integer",
+                    "maxLength": 8
+                  },
+                  "direccion": {
+                    "type": "string",
+                    "maxLength": 57
+                  },
+                  "dni": {
+                    "type": "string",
+                    "maxLength": 14
+                  },
+                  "email": {
+                    "type": "string",
+                    "maxLength": 62
+                  },
+                  "login": {
+                    "type": "string",
+                    "maxLength": 12
+                  },
+                  "modo": {
+                    "type": "string",
+                    "maxLength": 12
+                  },
+                  "nombre": {
+                    "type": "string",
+                    "maxLength": 18
+                  },
+                  "ntc": {
+                    "type": "integer",
+                    "maxLength": 24
+                  },
+                  "password": {
+                    "type": "string",
+                    "maxLength": 23
+                  },
+                  "provincia": {
+                    "type": "string",
+                    "maxLength": 17
+                  }
+                },
+                "required": [
+                  "B1",
+                  "apellidos",
+                  "ciudad",
+                  "cp",
+                  "direccion",
+                  "dni",
+                  "email",
+                  "login",
+                  "modo",
+                  "nombre",
+                  "ntc",
+                  "password",
+                  "provincia"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/tienda1/miembros/fotos.jsp": {
+      "get": {
+        "summary": "CSIC 2010 Benign Endpoint (GET /tienda1/miembros/fotos.jsp)",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/tienda1/miembros/imagenes/castro.jpg": {
+      "get": {
+        "summary": "CSIC 2010 Benign Endpoint (GET /tienda1/miembros/imagenes/castro.jpg)",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/tienda1/miembros/imagenes/ogono.jpg": {
+      "get": {
+        "summary": "CSIC 2010 Benign Endpoint (GET /tienda1/miembros/imagenes/ogono.jpg)",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/tienda1/miembros/imagenes/zarauz.jpg": {
+      "get": {
+        "summary": "CSIC 2010 Benign Endpoint (GET /tienda1/miembros/imagenes/zarauz.jpg)",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/tienda1/miembros/index.jsp": {
+      "get": {
+        "summary": "CSIC 2010 Benign Endpoint (GET /tienda1/miembros/index.jsp)",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/tienda1/miembros/salir.jsp": {
+      "get": {
+        "summary": "CSIC 2010 Benign Endpoint (GET /tienda1/miembros/salir.jsp)",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/tienda1/publico/anadir.jsp": {
+      "get": {
+        "summary": "CSIC 2010 Benign Endpoint (GET /tienda1/publico/anadir.jsp)",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "parameters": [
+          {
+            "name": "B1",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 26
+            }
+          },
+          {
+            "name": "cantidad",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "maxLength": 3
+            }
+          },
+          {
+            "name": "id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "maxLength": 2
+            }
+          },
+          {
+            "name": "nombre",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 21
+            }
+          },
+          {
+            "name": "precio",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "maxLength": 5
+            }
+          }
+        ]
+      },
+      "post": {
+        "summary": "CSIC 2010 Benign Endpoint (POST /tienda1/publico/anadir.jsp)",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "B1": {
+                    "type": "string",
+                    "maxLength": 26
+                  },
+                  "cantidad": {
+                    "type": "integer",
+                    "maxLength": 3
+                  },
+                  "id": {
+                    "type": "integer",
+                    "maxLength": 2
+                  },
+                  "nombre": {
+                    "type": "string",
+                    "maxLength": 21
+                  },
+                  "precio": {
+                    "type": "integer",
+                    "maxLength": 5
+                  }
+                },
+                "required": [
+                  "B1",
+                  "cantidad",
+                  "id",
+                  "nombre",
+                  "precio"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/tienda1/publico/autenticar.jsp": {
+      "get": {
+        "summary": "CSIC 2010 Benign Endpoint (GET /tienda1/publico/autenticar.jsp)",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "parameters": [
+          {
+            "name": "B1",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 9
+            }
+          },
+          {
+            "name": "login",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 14
+            }
+          },
+          {
+            "name": "modo",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 9
+            }
+          },
+          {
+            "name": "pwd",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 20
+            }
+          },
+          {
+            "name": "remember",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 5
+            }
+          }
+        ]
+      },
+      "post": {
+        "summary": "CSIC 2010 Benign Endpoint (POST /tienda1/publico/autenticar.jsp)",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "B1": {
+                    "type": "string",
+                    "maxLength": 9
+                  },
+                  "login": {
+                    "type": "string",
+                    "maxLength": 14
+                  },
+                  "modo": {
+                    "type": "string",
+                    "maxLength": 9
+                  },
+                  "pwd": {
+                    "type": "string",
+                    "maxLength": 27
+                  },
+                  "remember": {
+                    "type": "string",
+                    "maxLength": 5
+                  }
+                },
+                "required": [
+                  "B1",
+                  "login",
+                  "modo",
+                  "pwd",
+                  "remember"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/tienda1/publico/caracteristicas.jsp": {
+      "get": {
+        "summary": "CSIC 2010 Benign Endpoint (GET /tienda1/publico/caracteristicas.jsp)",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "maxLength": 2
+            }
+          }
+        ]
+      },
+      "post": {
+        "summary": "CSIC 2010 Benign Endpoint (POST /tienda1/publico/caracteristicas.jsp)",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "id": {
+                    "type": "integer",
+                    "maxLength": 2
+                  }
+                },
+                "required": [
+                  "id"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/tienda1/publico/carrito.jsp": {
+      "get": {
+        "summary": "CSIC 2010 Benign Endpoint (GET /tienda1/publico/carrito.jsp)",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/tienda1/publico/entrar.jsp": {
+      "get": {
+        "summary": "CSIC 2010 Benign Endpoint (GET /tienda1/publico/entrar.jsp)",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "parameters": [
+          {
+            "name": "errorMsg",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 36
+            }
+          }
+        ]
+      },
+      "post": {
+        "summary": "CSIC 2010 Benign Endpoint (POST /tienda1/publico/entrar.jsp)",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "errorMsg": {
+                    "type": "string",
+                    "maxLength": 36
+                  }
+                },
+                "required": [
+                  "errorMsg"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/tienda1/publico/miembros.jsp": {
+      "get": {
+        "summary": "CSIC 2010 Benign Endpoint (GET /tienda1/publico/miembros.jsp)",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/tienda1/publico/pagar.jsp": {
+      "get": {
+        "summary": "CSIC 2010 Benign Endpoint (GET /tienda1/publico/pagar.jsp)",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "parameters": [
+          {
+            "name": "B1",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 21
+            }
+          },
+          {
+            "name": "modo",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 12
+            }
+          },
+          {
+            "name": "precio",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "maxLength": 6
+            }
+          }
+        ]
+      },
+      "post": {
+        "summary": "CSIC 2010 Benign Endpoint (POST /tienda1/publico/pagar.jsp)",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "B1": {
+                    "type": "string",
+                    "maxLength": 21
+                  },
+                  "modo": {
+                    "type": "string",
+                    "maxLength": 12
+                  },
+                  "precio": {
+                    "type": "integer",
+                    "maxLength": 6
+                  }
+                },
+                "required": [
+                  "B1",
+                  "modo",
+                  "precio"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/tienda1/publico/productos.jsp": {
+      "get": {
+        "summary": "CSIC 2010 Benign Endpoint (GET /tienda1/publico/productos.jsp)",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/tienda1/publico/registro.jsp": {
+      "get": {
+        "summary": "CSIC 2010 Benign Endpoint (GET /tienda1/publico/registro.jsp)",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "parameters": [
+          {
+            "name": "B1",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 14
+            }
+          },
+          {
+            "name": "apellidos",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 30
+            }
+          },
+          {
+            "name": "ciudad",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 42
+            }
+          },
+          {
+            "name": "cp",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "maxLength": 8
+            }
+          },
+          {
+            "name": "direccion",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 59
+            }
+          },
+          {
+            "name": "dni",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 14
+            }
+          },
+          {
+            "name": "email",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 65
+            }
+          },
+          {
+            "name": "login",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 12
+            }
+          },
+          {
+            "name": "modo",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 12
+            }
+          },
+          {
+            "name": "nombre",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 35
+            }
+          },
+          {
+            "name": "ntc",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "maxLength": 24
+            }
+          },
+          {
+            "name": "password",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 21
+            }
+          },
+          {
+            "name": "provincia",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 24
+            }
+          }
+        ]
+      },
+      "post": {
+        "summary": "CSIC 2010 Benign Endpoint (POST /tienda1/publico/registro.jsp)",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "B1": {
+                    "type": "string",
+                    "maxLength": 14
+                  },
+                  "apellidos": {
+                    "type": "string",
+                    "maxLength": 27
+                  },
+                  "ciudad": {
+                    "type": "string",
+                    "maxLength": 36
+                  },
+                  "cp": {
+                    "type": "integer",
+                    "maxLength": 8
+                  },
+                  "direccion": {
+                    "type": "string",
+                    "maxLength": 53
+                  },
+                  "dni": {
+                    "type": "string",
+                    "maxLength": 14
+                  },
+                  "email": {
+                    "type": "string",
+                    "maxLength": 66
+                  },
+                  "login": {
+                    "type": "string",
+                    "maxLength": 14
+                  },
+                  "modo": {
+                    "type": "string",
+                    "maxLength": 12
+                  },
+                  "nombre": {
+                    "type": "string",
+                    "maxLength": 15
+                  },
+                  "ntc": {
+                    "type": "integer",
+                    "maxLength": 24
+                  },
+                  "password": {
+                    "type": "string",
+                    "maxLength": 20
+                  },
+                  "provincia": {
+                    "type": "string",
+                    "maxLength": 17
+                  }
+                },
+                "required": [
+                  "B1",
+                  "apellidos",
+                  "ciudad",
+                  "cp",
+                  "direccion",
+                  "dni",
+                  "email",
+                  "login",
+                  "modo",
+                  "nombre",
+                  "ntc",
+                  "password",
+                  "provincia"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/tienda1/publico/vaciar.jsp": {
+      "get": {
+        "summary": "CSIC 2010 Benign Endpoint (GET /tienda1/publico/vaciar.jsp)",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "parameters": [
+          {
+            "name": "B2",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 21
+            }
+          }
+        ]
+      },
+      "post": {
+        "summary": "CSIC 2010 Benign Endpoint (POST /tienda1/publico/vaciar.jsp)",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "B2": {
+                    "type": "string",
+                    "maxLength": 21
+                  }
+                },
+                "required": [
+                  "B2"
+                ]
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

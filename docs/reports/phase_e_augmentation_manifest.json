@@ -1,0 +1,56 @@
+{
+  "baseline_train_rows": 32330,
+  "added_total_rows": 1053,
+  "augmented_train_rows": 33383,
+  "added_by_source": {
+    "phase_e_e2a_sandbox": 417,
+    "phase_e_e3_group_a_synth": 636
+  },
+  "added_by_attack_type": {
+    "SQL_INJECTION": 251,
+    "COMMAND_INJECTION": 175,
+    "XSS": 124,
+    "PATH_TRAVERSAL": 93,
+    "BENIGN": 410
+  },
+  "added_breakdown": {
+    "phase_e_e2a_sandbox": {
+      "SQL_INJECTION": 59,
+      "COMMAND_INJECTION": 31,
+      "XSS": 34,
+      "PATH_TRAVERSAL": 13,
+      "BENIGN": 280
+    },
+    "phase_e_e3_group_a_synth": {
+      "SQL_INJECTION": 192,
+      "COMMAND_INJECTION": 144,
+      "PATH_TRAVERSAL": 80,
+      "XSS": 90,
+      "BENIGN": 130
+    }
+  },
+  "dedup_and_zero_leakage": {
+    "forbidden_hash_counts": {
+      "val_csv": 6928,
+      "test_csv": 6929,
+      "csic2010": 1592,
+      "benchmark_1000": 609,
+      "strange_suite_v33": 38,
+      "blind_heldout_vault_v2": 30,
+      "blind_vault_lock": 30
+    },
+    "total_unique_forbidden_hashes": 16125,
+    "dropped_forbidden_collision": 6,
+    "dropped_existing_train_duplicate": 0,
+    "dropped_candidate_duplicate": 228,
+    "post_merge_forbidden_overlap": 0,
+    "zero_leakage_verified": true
+  },
+  "final_train_class_distribution": {
+    "BENIGN": 18609,
+    "XSS": 5724,
+    "PATH_TRAVERSAL": 5693,
+    "COMMAND_INJECTION": 1819,
+    "SQL_INJECTION": 1538
+  }
+}

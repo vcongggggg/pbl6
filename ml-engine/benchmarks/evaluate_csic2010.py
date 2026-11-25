@@ -25,15 +25,27 @@ OUTPUT_MD = ROOT_DIR / "docs" / "reports" / "csic2010_benchmark_report.md"
 
 OUTPUT_JSON.parent.mkdir(parents=True, exist_ok=True)
 
-# Add gateway and ml-engine to sys.path
+# Add gateway, ml-engine, and scripts to sys.path
 sys.path.insert(0, str(ROOT_DIR / "gateway"))
 sys.path.insert(0, str(ROOT_DIR / "ml-engine"))
+sys.path.insert(0, str(ROOT_DIR / "scripts"))
 
 from app.security.anomaly import AnomalyDetector  # noqa: E402
+from app.security.decision import DecisionEngine  # noqa: E402
 from app.security.engine import RuleEngine  # noqa: E402
 from app.security.ml_detector import MLDetector  # noqa: E402
+from app.security.risk_engine import RiskEngine  # noqa: E402
+from audit_csic2010_taxonomy import (  # noqa: E402
+    GROUP_A_SUBCATEGORIES,
+    classify_payload_taxonomy,
+)
 from features.canonicalizer import canonicalize_http_request  # noqa: E402
 from features.extractor import extract_26_from_http  # noqa: E402
+
+try:
+    from features.canonicalizer import normalize_http_for_ml  # type: ignore[attr-defined]
+except ImportError:
+    normalize_http_for_ml = None
 
 
 def compute_metrics(results: list[dict[str, Any]], pred_key: str, total_samples: int) -> dict[str, Any]:
@@ -77,6 +89,8 @@ def run_csic2010_evaluation() -> None:
     ml_detector = MLDetector()
     anomaly_detector = AnomalyDetector()
     rule_engine = RuleEngine()
+    risk_engine = RiskEngine()
+    decision_engine = DecisionEngine()
 
     print(f"[OK] MLDetector: is_loaded={ml_detector.is_loaded}, path={ml_detector.model_path}")
     print(f"[OK] AnomalyDetector: is_loaded={anomaly_detector.is_loaded}, path={anomaly_detector.model_path}")
@@ -93,12 +107,37 @@ def run_csic2010_evaluation() -> None:
         true_label = int(row["label"])
         attack_type = str(row["attack_type"])
 
-        # Authoritative single feature extraction pipeline matching proxy and training
-        vec_26 = extract_26_from_http(path=path, query_params=query, body=body).tolist()
-        canonical_payload = canonicalize_http_request(path=path, query_params=query, body=body)
+        tax = (
+            classify_payload_taxonomy(f"{path} {query} {body}")
+            if true_label == 1
+            else {"is_group_a": False, "true_category": "BENIGN", "detailed_subcategory": "BENIGN"}
+        )
 
+        # Authoritative single feature extraction pipeline matching proxy and training
         t0 = time.perf_counter()
-        pred_ml = ml_detector.predict(canonical_payload, feature_vector=vec_26)
+        if callable(getattr(ml_detector, "predict_http", None)):
+            ml_out = ml_detector.predict_http(path=path, query_params=query, body=body)
+            if isinstance(ml_out, tuple) and len(ml_out) == 2:
+                pred_ml, vec_26 = ml_out
+            else:
+                pred_ml = ml_out
+                vec_26 = pred_ml.feature_vector or extract_26_from_http(
+                    path=path, query_params=query, body=body
+                ).tolist()
+            if normalize_http_for_ml is not None:
+                np_, nq_, nb_ = normalize_http_for_ml(path=path, query_params=query, body=body)
+                canonical_payload = canonicalize_http_request(path=np_, query_params=nq_, body=nb_)
+            else:
+                canonical_payload = canonicalize_http_request(path=path, query_params=query, body=body)
+        else:
+            if normalize_http_for_ml is not None:
+                np_, nq_, nb_ = normalize_http_for_ml(path=path, query_params=query, body=body)
+            else:
+                np_, nq_, nb_ = path, query, body
+            vec_26 = extract_26_from_http(path=np_, query_params=nq_, body=nb_).tolist()
+            canonical_payload = canonicalize_http_request(path=np_, query_params=nq_, body=nb_)
+            pred_ml = ml_detector.predict(canonical_payload, feature_vector=vec_26)
+
         pred_anom = anomaly_detector.predict(canonical_payload, feature_vector=vec_26)
         rules_eval = rule_engine.inspect_request(
             path=path,
@@ -126,12 +165,24 @@ def run_csic2010_evaluation() -> None:
         )
         pred_hybrid_label = 1 if is_hybrid_attack else 0
 
+        rb = risk_engine.calculate_weighted_score(
+            rule_score=rule_score,
+            ml_score=pred_ml.risk_score,
+            anomaly_score=pred_anom.anomaly_score,
+            ablation_mode="hybrid",
+        )
+        dec = decision_engine.evaluate(risk_breakdown=rb, waf_mode="ACTIVE_BLOCKING")
+        pred_hybrid_op_label = 1 if (dec.is_blocked or dec.is_rate_limited) else 0
+
         results.append({
             "index": idx,
             "attack_type": attack_type,
             "true_label": true_label,
+            "is_group_a": bool(tax["is_group_a"]),
+            "detailed_subcategory": str(tax["detailed_subcategory"]),
             "pred_ml_label": pred_ml_label,
             "pred_hybrid_label": pred_hybrid_label,
+            "pred_hybrid_op_label": pred_hybrid_op_label,
             "ml_risk": pred_ml.risk_score,
             "ml_pred_type": pred_ml.attack_type,
             "anom_score": pred_anom.anomaly_score,
@@ -226,6 +277,70 @@ def run_csic2010_evaluation() -> None:
         {"metric": "Avg Inference Latency", "in_domain": f"{in_domain_latency:.3f} ms", "csic_ml": f"{mean_lat:.3f} ms", "csic_hybrid": f"{mean_lat:.3f} ms"},
     ]
 
+    # Two-Tier Parallel Metrics: Overall (1,500) vs Group A (True Payload) + Group B
+    metrics_hybrid_op = compute_metrics(results, "pred_hybrid_op_label", total_samples)
+    ga_results = [r for r in results if r["true_label"] == 0 or r["is_group_a"]]
+    gb_results = [r for r in results if r["true_label"] == 1 and not r["is_group_a"]]
+    ga_total = sum(1 for r in ga_results if r["true_label"] == 1)
+    gb_total = len(gb_results)
+
+    def _ga_recall(pred_key: str) -> dict[str, Any]:
+        tp = sum(1 for r in ga_results if r["true_label"] == 1 and r[pred_key] == 1)
+        return {
+            "tp": tp,
+            "total": ga_total,
+            "recall_pct": round((tp / ga_total * 100.0), 2) if ga_total else 0.0,
+        }
+
+    def _gb_recall(pred_key: str) -> dict[str, Any]:
+        tp = sum(1 for r in gb_results if r[pred_key] == 1)
+        return {
+            "tp": tp,
+            "total": gb_total,
+            "recall_pct": round((tp / gb_total * 100.0), 2) if gb_total else 0.0,
+        }
+
+    def _subcat_recall(pred_key: str) -> dict[str, dict[str, Any]]:
+        out: dict[str, dict[str, Any]] = {}
+        for sub in (*GROUP_A_SUBCATEGORIES, "PARAMETER_TAMPERING"):
+            sub_r = [r for r in results if r["true_label"] == 1 and r["detailed_subcategory"] == sub]
+            blk = sum(1 for r in sub_r if r[pred_key] == 1)
+            tot = len(sub_r)
+            out[sub] = {
+                "total": tot,
+                "blocked": blk,
+                "recall_pct": round((blk / tot * 100.0), 2) if tot else 0.0,
+            }
+        return out
+
+    two_tier_parallel_metrics = {
+        "overall_1500": {
+            "standalone_ml_recall_pct": metrics_ml["recall"],
+            "hybrid_loose_recall_pct": metrics_hybrid["recall"],
+            "hybrid_operational_t80_recall_pct": metrics_hybrid_op["recall"],
+            "benign_fpr_ml_pct": metrics_ml["fpr"],
+            "benign_fpr_hybrid_loose_pct": metrics_hybrid["fpr"],
+            "benign_fpr_hybrid_operational_t80_pct": metrics_hybrid_op["fpr"],
+        },
+        "group_a_true_payload": {
+            "total": ga_total,
+            "standalone_ml": _ga_recall("pred_ml_label"),
+            "hybrid_loose": _ga_recall("pred_hybrid_label"),
+            "hybrid_operational_t80": _ga_recall("pred_hybrid_op_label"),
+        },
+        "group_b_parameter_tampering": {
+            "total": gb_total,
+            "standalone_ml": _gb_recall("pred_ml_label"),
+            "hybrid_loose": _gb_recall("pred_hybrid_label"),
+            "hybrid_operational_t80": _gb_recall("pred_hybrid_op_label"),
+        },
+        "detailed_subcategories": {
+            "standalone_ml": _subcat_recall("pred_ml_label"),
+            "hybrid_loose": _subcat_recall("pred_hybrid_label"),
+            "hybrid_operational_t80": _subcat_recall("pred_hybrid_op_label"),
+        },
+    }
+
     report_data = {
         "metadata": {
             "task": "TASK-5.4",
@@ -238,6 +353,8 @@ def run_csic2010_evaluation() -> None:
         },
         "standalone_xgboost_v2": metrics_ml,
         "hybrid_defense_in_depth": metrics_hybrid,
+        "hybrid_operational_t80": metrics_hybrid_op,
+        "two_tier_parallel_metrics": two_tier_parallel_metrics,
         "latency": {
             "mean_ms": round(mean_lat, 3),
             "p50_ms": round(p50_lat, 3),

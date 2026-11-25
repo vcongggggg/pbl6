@@ -10,13 +10,13 @@
     "ml_model": "Champion Cost-Sensitive Regularized XGBoost v2.0",
     "anomaly_model": "Calibrated Isolation Forest v2.0 (with bare-root '/' special_char_ratio guard)",
     "feature_dim": 26,
-    "timestamp": "2026-11-24 23:08:44",
+    "timestamp": "2026-11-25 08:53:20",
     "device": "Machine 1 (Blue Team Host)",
-    "methodology_note": "Unified 26-D feature extraction (extract_26_from_http) shared once per request in Hybrid mode with 26 hardened rules; each mode measures ONLY its active detector(s) single-pass latency (never summed across separate modes). Blocking decision follows DecisionEngine ACTIVE_BLOCKING (>=80 block, Rule>=85/ML>=90 override, or Dual-AI Consensus). Anomaly Only also reports detection @60.0.",
+    "methodology_note": "Blue Team v3.3 URL-normalized per-parameter max-pooling (normalize_http_for_ml + MLDetector.predict_http) with unified 26-D feature extraction (extract_26_from_http) shared once per request in Hybrid mode with 26 hardened rules; each mode measures ONLY its active detector(s) single-pass latency (never summed across separate modes). Blocking decision follows DecisionEngine ACTIVE_BLOCKING (>=80 block, Rule>=85/ML>=90 override, or Dual-AI Consensus). Anomaly Only also reports detection @60.0.",
     "history_snapshot": "docs/reports/history/ablation_results_20261124_192715_fd012c1.json",
     "git_base_sha": "fd012c1d17e42f531b635cbe94c7dd738023ee0f",
-    "cpu_load_pct": 17.8,
-    "last_pointer_update": "2026-11-24T23:08:44.085707"
+    "cpu_load_pct": 2.1,
+    "last_pointer_update": "2026-11-25T08:53:20.082348"
   },
   "modes": {
     "rules_only": {
@@ -27,7 +27,7 @@
       "fpr_pct": 0.0,
       "youden_j": 0.53,
       "avg_latency_ms": 0.156,
-      "p95_latency_ms": 0.291,
+      "p95_latency_ms": 0.277,
       "confusion_matrix": {
         "tp": 424,
         "fp": 0,
@@ -38,19 +38,19 @@
       "display_name": "1. Rules Only (26 Hardened OWASP Signatures)"
     },
     "ml_only": {
-      "accuracy_pct": 94.8,
+      "accuracy_pct": 96.3,
       "precision_pct": 100.0,
-      "recall_pct": 93.5,
-      "f1_score_pct": 96.64,
+      "recall_pct": 95.38,
+      "f1_score_pct": 97.63,
       "fpr_pct": 0.0,
-      "youden_j": 0.935,
-      "avg_latency_ms": 0.322,
-      "p95_latency_ms": 0.582,
+      "youden_j": 0.9537,
+      "avg_latency_ms": 0.429,
+      "p95_latency_ms": 0.873,
       "confusion_matrix": {
-        "tp": 748,
+        "tp": 763,
         "fp": 0,
         "tn": 200,
-        "fn": 52
+        "fn": 37
       },
       "mode_name": "ml_only",
       "display_name": "2. ML Only (XGBoost v2.0 — 26-D UBJSON)"
@@ -62,8 +62,8 @@
       "f1_score_pct": 55.73,
       "fpr_pct": 0.0,
       "youden_j": 0.3862,
-      "avg_latency_ms": 0.268,
-      "p95_latency_ms": 0.458,
+      "avg_latency_ms": 0.24,
+      "p95_latency_ms": 0.344,
       "confusion_matrix": {
         "tp": 309,
         "fp": 0,
@@ -74,19 +74,19 @@
       "display_name": "3. Anomaly Only (Calibrated IForest v2.0 — NPZ)"
     },
     "hybrid": {
-      "accuracy_pct": 98.2,
+      "accuracy_pct": 98.5,
       "precision_pct": 100.0,
-      "recall_pct": 97.75,
-      "f1_score_pct": 98.86,
+      "recall_pct": 98.12,
+      "f1_score_pct": 99.05,
       "fpr_pct": 0.0,
-      "youden_j": 0.9775,
-      "avg_latency_ms": 0.561,
-      "p95_latency_ms": 0.806,
+      "youden_j": 0.9812,
+      "avg_latency_ms": 0.711,
+      "p95_latency_ms": 1.234,
       "confusion_matrix": {
-        "tp": 782,
+        "tp": 785,
         "fp": 0,
         "tn": 200,
-        "fn": 18
+        "fn": 15
       },
       "mode_name": "hybrid",
       "display_name": "4. Hybrid Defense v3.2 (26 Rules + XGBoost v2 + IForest v2 + Dual-AI)"
@@ -99,8 +99,8 @@
     "f1_score_pct": 73.22,
     "fpr_pct": 0.0,
     "youden_j": 0.5775,
-    "avg_latency_ms": 0.268,
-    "p95_latency_ms": 0.458,
+    "avg_latency_ms": 0.24,
+    "p95_latency_ms": 0.344,
     "confusion_matrix": {
       "tp": 462,
       "fp": 0,
@@ -117,9 +117,9 @@
     },
     "CMD": {
       "total": 200,
-      "blocked": 182,
-      "allowed": 18,
-      "rate_pct": 91.0
+      "blocked": 185,
+      "allowed": 15,
+      "rate_pct": 92.5
     },
     "BENIGN": {
       "total": 200,

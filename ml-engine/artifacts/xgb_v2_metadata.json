@@ -2,7 +2,7 @@
   "model_name": "Champion Cost-Sensitive Regularized XGBoost v2.0",
   "model_file": "xgb_v2.ubj",
   "model_version": "2.0.0",
-  "sha256_hash": "2b9cd94af19804735a082e2cbdc5ebf3fc28f00985209600ef67d8bdcef80336",
+  "sha256_hash": "bb2521b571f669f009b20853e893c5ef8c6ae3c91f51ee9536ef832582767dc0",
   "feature_count": 26,
   "feature_names": [
     "length",
@@ -48,42 +48,42 @@
   },
   "attack_threshold": 0.5,
   "latency_benchmark": {
-    "mean_ms": 2.2247,
-    "p99_ms": 9.1817
+    "mean_ms": 0.4662,
+    "p99_ms": 0.6421
   },
   "metrics": {
     "test_accuracy": 0.9915,
-    "test_precision_macro": 0.9871,
-    "test_recall_macro": 0.9874,
-    "test_f1_macro": 0.9872,
+    "test_precision_macro": 0.9865,
+    "test_recall_macro": 0.9878,
+    "test_f1_macro": 0.9871,
     "confusion_matrix": [
       [
         3874,
         1,
-        17,
-        1,
+        15,
+        3,
         8
       ],
       [
-        1,
-        348,
         0,
-        3,
+        349,
+        1,
+        2,
         1
       ],
       [
-        4,
+        5,
         0,
-        1196,
+        1195,
         0,
         0
       ],
       [
         1,
         5,
-        0,
+        1,
         268,
-        1
+        0
       ],
       [
         14,
@@ -101,40 +101,40 @@
         "support": 3901.0
       },
       "COMMAND_INJECTION": {
-        "precision": 0.9775280898876404,
-        "recall": 0.9858356940509915,
-        "f1-score": 0.9816643159379408,
+        "precision": 0.9775910364145658,
+        "recall": 0.9886685552407932,
+        "f1-score": 0.9830985915492958,
         "support": 353.0
       },
       "PATH_TRAVERSAL": {
-        "precision": 0.9859851607584501,
-        "recall": 0.9966666666666667,
-        "f1-score": 0.9912971404890178,
+        "precision": 0.985973597359736,
+        "recall": 0.9958333333333333,
+        "f1-score": 0.9908789386401327,
         "support": 1200.0
       },
       "SQL_INJECTION": {
-        "precision": 0.9852941176470589,
+        "precision": 0.9816849816849816,
         "recall": 0.9745454545454545,
-        "f1-score": 0.979890310786106,
+        "f1-score": 0.9781021897810219,
         "support": 275.0
       },
       "XSS": {
-        "precision": 0.9916247906197655,
+        "precision": 0.9924559932942163,
         "recall": 0.9866666666666667,
-        "f1-score": 0.9891395154553049,
+        "f1-score": 0.9895528625156708,
         "support": 1200.0
       },
       "accuracy": 0.9914850627796219,
       "macro avg": {
-        "precision": 0.9870592104163786,
-        "recall": 0.9873586359399165,
-        "f1-score": 0.987192355314944,
+        "precision": 0.9865139003844956,
+        "recall": 0.9877585415112101,
+        "f1-score": 0.9871206152784943,
         "support": 6929.0
       },
       "weighted avg": {
-        "precision": 0.9915022783936094,
+        "precision": 0.9915041942350464,
         "recall": 0.9914850627796219,
-        "f1-score": 0.9914850949421464,
+        "f1-score": 0.9914863563461276,
         "support": 6929.0
       }
     }
