@@ -26,7 +26,7 @@
 | **10** | Thực Nghiệm 1: Đối Sánh ML & Ablation v3.2/v3.3 | Công | `defense_v2` (`47.372` tổng / `33.515` train, `0` overlap 8 cặp) & Ablation 1.000 mẫu (28 Rules): Hybrid **98.86% F1 / 97.75% Recall / 0.00% FPR / 0.803 ms** |
 | **11** | Thực Nghiệm 2: Zero-Shot CSIC 2010 & Domain Shift | Công | Hạ FPR `29.60% -> 0.00%` (Op T=80), **Group A `100.00% (221/221)`** + `/tienda1` Schema **`66.54%` Group B / `71.47%` Overall @ `0.00%` FPR** |
 | **12** | Thực Nghiệm 3: Tải Cao `C=50`, 3x3 & Phase E Suites | Minh | `253–340 RPS @ C=50`; E2E `4.138 ms`; Familiar `45/45`; Strange v3.3 **`114/114`**; Blind Vault `28/30` single-shot + **`30/30` postfix2** |
-| **13** | Kịch Bản Demo Thực Chiến 10 Phút (5 Giai Đoạn) | Cả hai | 5 giai đoạn `demo_rehearsal.py` + 3 cấp độ phòng thủ (`No WAF -> Rules -> Hybrid v3.0`) trên `/arena` |
+| **13** | Kịch Bản Demo Thực Chiến 10 Phút (5 Giai Đoạn) | Cả hai | 5 giai đoạn `demo_rehearsal.py` + 3 cấp độ phòng thủ (`No WAF -> Rules -> Hybrid v3.4`) trên `/arena` |
 | **14** | Kết Luận & Hướng Phát Triển Tương Lai | Cả hai | Tổng kết tiến hóa 4 tầng (`v1.0 -> v3.3`), `0.00%` Op FPR (`N=1.715`) & lộ trình Cloud-Native (PostgreSQL/Redis, eBPF/XDP, Co-Evolution) |
 
 ---

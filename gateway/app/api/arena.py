@@ -1384,7 +1384,7 @@ def _inspect_in_process_waf(
             waf_threat_score = max(0.0, min(100.0, round(float(decision.risk_score), 1)))
             rule_display = f"Rules: {', '.join(matched_rules)}" if matched_rules else "Rules: Clean"
             reasoning_vi = (
-                f"Chế độ Hybrid v3.0: Chuẩn hóa đệ quy + {rule_display}, "
+                f"Chế độ Hybrid v3.4: Chuẩn hóa đệ quy + {rule_display}, "
                 f"XGBoost ({ml_score_val:.1f}) & Isolation Forest ({anomaly_score_val:.1f}) hợp nhất điểm rủi ro "
                 f"{waf_threat_score:.1f}/100 -> Chặn đứng HTTP 403 trong {latency_ms:.2f}ms."
             )
@@ -1395,7 +1395,7 @@ def _inspect_in_process_waf(
             winner = "BLUE_TEAM"
             waf_threat_score = 88.0
             reasoning_vi = (
-                f"Chế độ Hybrid v3.0: Request GET hợp lệ nhưng Response DLP phát hiện rò rỉ băm mật khẩu "
+                f"Chế độ Hybrid v3.4: Request GET hợp lệ nhưng Response DLP phát hiện rò rỉ băm mật khẩu "
                 f"trên '{resolved_path}' -> Tự động che giấu [REDACTED_BY_WAF_DLP] bảo toàn dữ liệu!"
             )
         else:
@@ -1405,7 +1405,7 @@ def _inspect_in_process_waf(
             winner = "RED_TEAM"
             waf_threat_score = max(0.0, min(100.0, round(float(decision.risk_score), 1)))
             reasoning_vi = (
-                f"Chế độ Hybrid v3.0: Điểm rủi ro tổng hợp {waf_threat_score:.1f}/100 dưới ngưỡng chặn -> "
+                f"Chế độ Hybrid v3.4: Điểm rủi ro tổng hợp {waf_threat_score:.1f}/100 dưới ngưỡng chặn -> "
                 f"Request được phép đi qua (HTTP 200 OK)."
             )
 
