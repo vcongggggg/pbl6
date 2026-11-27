@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import re
+from html import escape as _xml_escape
 from pathlib import Path
 from typing import Any
 
@@ -1187,6 +1188,237 @@ def _split_md_row(line: str) -> list[str]:
     return [p.strip().replace(r"\|", "|") for p in parts]
 
 
+def _omml_r(text: str, upright: bool = False, sz_half: int = 26) -> str:
+    """Build an OMML <m:r> math run using Cambria Math."""
+    sty = "<m:rPr><m:sty m:val=\"p\"/></m:rPr>" if upright else ""
+    return (
+        f"<m:r>{sty}"
+        f"<w:rPr><w:rFonts w:ascii=\"Cambria Math\" w:hAnsi=\"Cambria Math\"/>"
+        f"<w:sz w:val=\"{sz_half}\"/><w:szCs w:val=\"{sz_half}\"/></w:rPr>"
+        f"<m:t xml:space=\"preserve\">{_xml_escape(text)}</m:t></m:r>"
+    )
+
+
+def _omml_sub(base: str, sub: str) -> str:
+    return f"<m:sSub><m:e>{base}</m:e><m:sub>{sub}</m:sub></m:sSub>"
+
+
+def _omml_sup(base: str, sup: str) -> str:
+    return f"<m:sSup><m:e>{base}</m:e><m:sup>{sup}</m:sup></m:sSup>"
+
+
+def _omml_subsup(base: str, sub: str, sup: str) -> str:
+    return f"<m:sSubSup><m:e>{base}</m:e><m:sub>{sub}</m:sub><m:sup>{sup}</m:sup></m:sSubSup>"
+
+
+def _omml_frac(num: str, den: str) -> str:
+    return f"<m:f><m:num>{num}</m:num><m:den>{den}</m:den></m:f>"
+
+
+def _omml_nary(sub: str, sup: str, body: str, op: str = "\u2211") -> str:
+    return (
+        f"<m:nary><m:naryPr><m:chr m:val=\"{op}\"/><m:limLoc m:val=\"undOvr\"/></m:naryPr>"
+        f"<m:sub>{sub}</m:sub><m:sup>{sup}</m:sup><m:e>{body}</m:e></m:nary>"
+    )
+
+
+def _omml_acc(base: str, chr_val: str = "\u0302") -> str:
+    return f"<m:acc><m:accPr><m:chr m:val=\"{chr_val}\"/></m:accPr><m:e>{base}</m:e></m:acc>"
+
+
+def _omml_delim(body: str, beg: str = "(", end: str = ")") -> str:
+    return (
+        f"<m:d><m:dPr><m:begChr m:val=\"{_xml_escape(beg)}\"/>"
+        f"<m:endChr m:val=\"{_xml_escape(end)}\"/></m:dPr><m:e>{body}</m:e></m:d>"
+    )
+
+
+def _add_numbered_equation(doc: Document, omath_inner: str, eq_num: str) -> None:
+    """Insert a clean, borderless centered native Word OMML equation with right-aligned numbering."""
+    tbl = doc.add_table(rows=1, cols=2)
+    tbl.alignment = WD_TABLE_ALIGNMENT.CENTER
+    tbl.autofit = False
+    tblPr = tbl._tbl.tblPr
+    tblPr.append(parse_xml(
+        f'<w:tblBorders {nsdecls("w")}>'
+        '<w:top w:val="none" w:sz="0" w:space="0" w:color="auto"/>'
+        '<w:left w:val="none" w:sz="0" w:space="0" w:color="auto"/>'
+        '<w:bottom w:val="none" w:sz="0" w:space="0" w:color="auto"/>'
+        '<w:right w:val="none" w:sz="0" w:space="0" w:color="auto"/>'
+        '<w:insideH w:val="none" w:sz="0" w:space="0" w:color="auto"/>'
+        '<w:insideV w:val="none" w:sz="0" w:space="0" w:color="auto"/>'
+        "</w:tblBorders>"
+    ))
+    tblPr.append(parse_xml(
+        f'<w:tblCellMar {nsdecls("w")}>'
+        '<w:top w:w="50" w:type="dxa"/><w:left w:w="0" w:type="dxa"/>'
+        '<w:bottom w:w="50" w:type="dxa"/><w:right w:w="0" w:type="dxa"/>'
+        "</w:tblCellMar>"
+    ))
+    _set_table_fixed_width(tbl, [13.8, 1.7])
+    _set_row_header_and_nosplit(tbl.rows[0], is_header=False)
+    for idx_c in (0, 1):
+        _set_cell_valign(tbl.rows[0].cells[idx_c], "center")
+
+    p_eq = tbl.rows[0].cells[0].paragraphs[0]
+    p_eq.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    p_eq.paragraph_format.first_line_indent = Cm(0)
+    p_eq.paragraph_format.space_before = Pt(2)
+    p_eq.paragraph_format.space_after = Pt(2)
+    omath_para = parse_xml(
+        '<m:oMathPara xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math" '
+        'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'
+        f"<m:oMath>{omath_inner}</m:oMath></m:oMathPara>"
+    )
+    p_eq._p.append(omath_para)
+
+    p_num = tbl.rows[0].cells[1].paragraphs[0]
+    p_num.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+    p_num.paragraph_format.first_line_indent = Cm(0)
+    p_num.paragraph_format.space_before = Pt(2)
+    p_num.paragraph_format.space_after = Pt(2)
+    r_num = p_num.add_run(eq_num)
+    _set_run_font(r_num, "Times New Roman", 12.0, bold=False, italic=False, color=CAPTION_RGB)
+
+
+def _render_formula_block(doc: Document, eq_lines: list[str]) -> bool:
+    """Render known thesis formula blocks as native editable Word OMML equations (1.1)-(1.6)."""
+    lead = eq_lines[0] if eq_lines else ""
+    if lead.startswith("H(S) ="):
+        expr = (
+            _omml_r("H")
+            + _omml_delim(_omml_r("S"))
+            + _omml_r(" = \u2212", upright=True)
+            + _omml_nary(
+                _omml_r("i") + _omml_r("=1", upright=True),
+                _omml_r("k"),
+                _omml_r("p")
+                + _omml_delim(_omml_sub(_omml_r("c"), _omml_r("i")))
+                + _omml_r("\u2009")
+                + _omml_sub(_omml_r("log", upright=True), _omml_r("2", upright=True))
+                + _omml_delim(_omml_r("p") + _omml_delim(_omml_sub(_omml_r("c"), _omml_r("i")))),
+            )
+        )
+        _add_numbered_equation(doc, expr, "(1.1)")
+        return True
+
+    if lead.startswith("Obj(t) ="):
+        y_hat_sub_sup = _omml_subsup(
+            _omml_acc(_omml_r("y")),
+            _omml_r("i"),
+            _omml_delim(_omml_r("t") + _omml_r("\u22121", upright=True)),
+        )
+        obj_expr = (
+            _omml_sup(_omml_r("Obj", upright=True), _omml_delim(_omml_r("t")))
+            + _omml_r(" = ", upright=True)
+            + _omml_nary(
+                _omml_r("i") + _omml_r("=1", upright=True),
+                _omml_r("N"),
+                _omml_r("L")
+                + _omml_delim(
+                    _omml_sub(_omml_r("y"), _omml_r("i"))
+                    + _omml_r(", ", upright=True)
+                    + y_hat_sub_sup
+                    + _omml_r(" + ", upright=True)
+                    + _omml_sub(_omml_r("f"), _omml_r("t"))
+                    + _omml_delim(_omml_sub(_omml_r("x"), _omml_r("i")))
+                ),
+            )
+            + _omml_r(" + \u03a9", upright=True)
+            + _omml_delim(_omml_sub(_omml_r("f"), _omml_r("t")))
+        )
+        omega_expr = (
+            _omml_r("\u03a9", upright=True)
+            + _omml_delim(_omml_r("f"))
+            + _omml_r(" = ", upright=True)
+            + _omml_r("\u03b3T + ")
+            + _omml_frac(_omml_r("1", upright=True), _omml_r("2", upright=True))
+            + _omml_r("\u2009\u03bb")
+            + _omml_nary(
+                _omml_r("j") + _omml_r("=1", upright=True),
+                _omml_r("T"),
+                _omml_subsup(_omml_r("w"), _omml_r("j"), _omml_r("2", upright=True)),
+            )
+        )
+        _add_numbered_equation(doc, obj_expr, "(1.2)")
+        _add_numbered_equation(doc, omega_expr, "(1.3)")
+        return True
+
+    if lead.startswith("s(x, n) ="):
+        s_expr = (
+            _omml_r("s")
+            + _omml_delim(_omml_r("x, n"))
+            + _omml_r(" = ", upright=True)
+            + _omml_sup(
+                _omml_r("2", upright=True),
+                _omml_r("\u2212", upright=True)
+                + _omml_frac(
+                    _omml_r("E") + _omml_delim(_omml_r("h") + _omml_delim(_omml_r("x"))),
+                    _omml_r("c") + _omml_delim(_omml_r("n")),
+                ),
+            )
+        )
+        c_expr = (
+            _omml_r("c")
+            + _omml_delim(_omml_r("n"))
+            + _omml_r(" = 2", upright=True)
+            + _omml_r("ln", upright=True)
+            + _omml_delim(_omml_r("n \u2212 ") + _omml_r("1", upright=True))
+            + _omml_r(" + 0.5772156649 \u2212 ", upright=True)
+            + _omml_frac(
+                _omml_r("2", upright=True) + _omml_delim(_omml_r("n \u2212 ") + _omml_r("1", upright=True)),
+                _omml_r("n"),
+            )
+        )
+        _add_numbered_equation(doc, s_expr, "(1.4)")
+        _add_numbered_equation(doc, c_expr, "(1.5)")
+        return True
+
+    if lead.startswith("R_hybrid ="):
+        r_expr = (
+            _omml_sub(_omml_r("R"), _omml_r("hybrid", upright=True))
+            + _omml_r(" = clamp", upright=True)
+            + _omml_delim(
+                _omml_sub(_omml_r("w"), _omml_r("rule", upright=True))
+                + _omml_r("\u2009")
+                + _omml_sub(_omml_r("S"), _omml_r("rule", upright=True))
+                + _omml_r(" + ", upright=True)
+                + _omml_sub(_omml_r("w"), _omml_r("ml", upright=True))
+                + _omml_r("\u2009")
+                + _omml_sub(_omml_r("S"), _omml_r("ml", upright=True))
+                + _omml_r(" + ", upright=True)
+                + _omml_sub(_omml_r("w"), _omml_r("anomaly", upright=True))
+                + _omml_r("\u2009")
+                + _omml_sub(_omml_r("S"), _omml_r("anomaly", upright=True))
+                + _omml_r(", 0, 100", upright=True)
+            )
+        )
+        _add_numbered_equation(doc, r_expr, "(1.6)")
+        w_inline = (
+            _omml_sub(_omml_r("w", sz_half=24), _omml_r("rule", upright=True, sz_half=24))
+            + _omml_r(" = 0.40,   ", upright=True, sz_half=24)
+            + _omml_sub(_omml_r("w", sz_half=24), _omml_r("ml", upright=True, sz_half=24))
+            + _omml_r(" = 0.35,   ", upright=True, sz_half=24)
+            + _omml_sub(_omml_r("w", sz_half=24), _omml_r("anomaly", upright=True, sz_half=24))
+            + _omml_r(" = 0.25", upright=True, sz_half=24)
+        )
+        p_note = doc.add_paragraph()
+        p_note.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        p_note.paragraph_format.first_line_indent = Cm(0)
+        p_note.paragraph_format.space_before = Pt(0)
+        p_note.paragraph_format.space_after = Pt(6)
+        r_pre = p_note.add_run("trong đó:  ")
+        _set_run_font(r_pre, "Times New Roman", 12.0, bold=False, italic=True, color=CAPTION_RGB)
+        p_note._p.append(parse_xml(
+            '<m:oMath xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math" '
+            'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'
+            f"{w_inline}</m:oMath>"
+        ))
+        return True
+
+    return False
+
+
 def render_markdown_chapter(doc: Document, md_text: str, is_first_h1_in_section: bool = False,
                             is_ch2: bool = False, split_ref_appendix: bool = False) -> None:
     """Parse markdown chapter content cleanly into styled Word paragraphs, tables, figures, and callouts."""
@@ -1246,6 +1478,8 @@ def render_markdown_chapter(doc: Document, md_text: str, is_first_h1_in_section:
                 if q:
                     quote_lines.append(q)
                 i += 1
+            if any(q.startswith(("**Đề tài:**", "**Học phần:**")) for q in quote_lines):
+                continue
             p = doc.add_paragraph()
             _apply_paragraph_box(p, fill_hex="EEF4FA", border_hex=NAVY_HEX, left_sz="18",
                                  space_before=6, space_after=8, line_spacing=1.35)
@@ -1346,12 +1580,14 @@ def render_markdown_chapter(doc: Document, md_text: str, is_first_h1_in_section:
             p_sp.paragraph_format.line_spacing = 1.0
             continue
 
-        # Indented formula blocks (4+ leading spaces) -> MHMM Equation Callout Box
+        # Indented formula blocks (4+ leading spaces) -> Native OMML Word Equations (or clean fallback)
         if line.startswith("    ") and not stripped.startswith(("-", "*", "•")) and not re.match(r"^\d+\.", stripped):
             eq_lines: list[str] = []
             while i < n and (lines[i].startswith("    ") and lines[i].strip()):
                 eq_lines.append(lines[i].strip())
                 i += 1
+            if _render_formula_block(doc, eq_lines):
+                continue
             p = doc.add_paragraph()
             _apply_paragraph_box(p, fill_hex="EAF0F6", border_hex=NAVY_HEX, left_sz="18",
                                  space_before=6, space_after=6, line_spacing=1.25)
