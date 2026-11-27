@@ -7,12 +7,12 @@
 
 Dự án **Web API Security Platform & Autonomous Red Teaming** được thiết kế theo mô hình **Thao trường An ninh Đối kháng Phân tán (Distributed Cyber Range)** triển khai trên **2 máy vật lý độc lập** kết nối qua mạng cục bộ (LAN / Wi-Fi):
 
-* **MÁY 1 (Blue Team — Phòng thủ — Phụ trách: `vcongggggg`):** Vận hành hệ thống phòng vệ gồm WAF Gateway (Reverse Proxy + Rule Engine + ML Detection Engine), ứng dụng mục tiêu tự xây dựng `vulnerable-api`, và trung tâm chỉ huy an ninh SOC Dashboard.
-* **MÁY 2 (Red Team — Tấn công — Phụ trách: `naocavang08`):** Vận hành hệ thống tấn công tự động gồm **AI Attack Planner (Offensive AI Agent)** và công cụ bắn payload thích ứng (Adaptive Evasion Engine) tấn công từ xa qua mạng LAN vào Máy 1.
+* **MÁY 1 (Blue Team — Phòng thủ — Phụ trách: Ngô Văn Công (Blue Team)):** Vận hành hệ thống phòng vệ gồm WAF Gateway (Reverse Proxy + Rule Engine + ML Detection Engine), ứng dụng mục tiêu tự xây dựng `vulnerable-api`, và trung tâm chỉ huy an ninh SOC Dashboard.
+* **MÁY 2 (Red Team — Tấn công — Phụ trách: Nguyễn Công Minh (Red Team)):** Vận hành hệ thống tấn công tự động gồm **AI Attack Planner (Offensive AI Agent)** và công cụ bắn payload thích ứng (Adaptive Evasion Engine) tấn công từ xa qua mạng LAN vào Máy 1.
 
 ```mermaid
 graph LR
-    subgraph Machine2["MÁY 2: RED TEAM (ATTACKER) — naocavang08"]
+    subgraph Machine2["MÁY 2: RED TEAM (ATTACKER) — Nguyễn Công Minh (Red Team)"]
         AI_Planner["AI Attack Planner\n(Offensive AI Agent)"]
         Recon["Recon Engine\n(OpenAPI Schema Parser)"]
         Evasion["Adaptive Evasion Engine\n(Payload Obfuscator)"]
@@ -27,7 +27,7 @@ graph LR
         LAN_Traffic["HTTP / REST API Traffic\nTarget: http://192.168.1.X:8000/api/proxy/..."]
     end
 
-    subgraph Machine1["MÁY 1: BLUE TEAM (DEFENDER) — vcongggggg"]
+    subgraph Machine1["MÁY 1: BLUE TEAM (DEFENDER) — Ngô Văn Công (Blue Team)"]
         subgraph Gateway["WAF Gateway (Lắng nghe 0.0.0.0:8000)"]
             ReqID["Request ID Resolver & Header Filter"]
             Normalizer["Input Normalizer: URL, HTML, Unicode"]
@@ -121,7 +121,7 @@ graph LR
   * Bảng sự kiện an ninh Live Events và ngăn kéo Payload Evidence Drawer đối chiếu chi tiết Raw Input vs Canonical Normalized.
 
 ### 2.4. `attack-lab/` (Offensive AI — AI Attack Planner & PyTorch Evasion Model Trên Máy 2)
-* **Vị trí triển khai:** Chạy độc lập trên **MÁY 2 (Red Team — `naocavang08`)**.
+* **Vị trí triển khai:** Chạy độc lập trên **MÁY 2 (Red Team — Nguyễn Công Minh (Red Team))**.
 * **Cơ chế hoạt động:**
   1. **Tự động Trinh sát (Automated Reconnaissance):** Đọc file đặc tả OpenAPI schema từ Máy 1 qua Gateway (`http://192.168.1.X:8000/api/proxy/api/v1/vulnerable/openapi.json`), lập bản đồ bề mặt tấn công (Attack Surface Mapping).
   2. **Attack Graph & Action Space:** Xây dựng môi trường mô phỏng chuỗi tấn công (Kill Chain) với không gian trạng thái 17 đặc trưng payload và không gian hành động biến dị (Mutation operators: URL encoding, comment injection `/**/`, case alternation, keyword substitution).
@@ -134,17 +134,17 @@ graph LR
 
 | Thành Phần Hệ Thống | Vị Trí Triển Khai | Thành Viên Phụ Trách | Trạng Thái Kỹ Thuật |
 | :--- | :--- | :--- | :---: |
-| **vulnerable-api** (Custom Web API) | **MÁY 1 (Blue Team)** | `vcongggggg` | 🚀 Tiếp tục xây dựng |
-| **FastAPI WAF Reverse Proxy** | **MÁY 1 (Blue Team)** | `vcongggggg` | ✅ Hoàn thành Phase 1 |
-| **Rule-based Detection Engine (16 Rules)** | **MÁY 1 (Blue Team)** | `vcongggggg` | ✅ Hoàn thành Phase 2 |
-| **SOC Dashboard (Next.js 14)** | **MÁY 1 (Blue Team)** | `vcongggggg` | ✅ Hoàn thành Phase 9 |
-| **Hybrid Decision & Active Blocking (403)**| **MÁY 1 (Blue Team)** | `vcongggggg` | ⏳ Phase 7 (PR #68) |
-| **IP Sliding Window Rate Limiter (429)** | **MÁY 1 (Blue Team)** | `vcongggggg` | ⏳ Phase 8 (PR #69) |
-| **17-Feature Extractor Pipeline** | Dùng chung (Shared) | `vcongggggg` | ⏳ Phase 3 (Next) |
-| **Dataset Generation (Raw + Synthetic)** | Dùng chung (Shared) | `vcongggggg` | ⏳ Phase 4 |
-| **Random Forest Supervised Classifier** | Model nạp Máy 1 | `vcongggggg` | ⏳ Phase 5 |
-| **Isolation Forest Anomaly Detection** | Model nạp Máy 1 | `vcongggggg` | ⏳ Phase 6 |
-| **OpenAPI Recon & Attack Graph Environment**| **MÁY 2 (Red Team)** | `naocavang08` | ⏳ Phase 10 |
-| **In-House PyTorch Evasion Model (`evasion_agent.pt`)**| **MÁY 2 (Red Team)** | `naocavang08` | ⏳ Phase 10 (100% PyTorch) |
-| **AI Arena Runner & LAN Campaigns** | **MÁY 2 (Red Team)** | `naocavang08` | ⏳ Phase 10 |
-| **Multi-Method Performance Evaluation** | Cả 2 máy | `naocavang08` & `vcongggggg` | ⏳ Phase 11 |
+| **vulnerable-api** (Custom Web API) | **MÁY 1 (Blue Team)** | Ngô Văn Công (Blue Team) | 🚀 Tiếp tục xây dựng |
+| **FastAPI WAF Reverse Proxy** | **MÁY 1 (Blue Team)** | Ngô Văn Công (Blue Team) | ✅ Hoàn thành Phase 1 |
+| **Rule-based Detection Engine (16 Rules)** | **MÁY 1 (Blue Team)** | Ngô Văn Công (Blue Team) | ✅ Hoàn thành Phase 2 |
+| **SOC Dashboard (Next.js 14)** | **MÁY 1 (Blue Team)** | Ngô Văn Công (Blue Team) | ✅ Hoàn thành Phase 9 |
+| **Hybrid Decision & Active Blocking (403)**| **MÁY 1 (Blue Team)** | Ngô Văn Công (Blue Team) | ⏳ Phase 7 (PR #68) |
+| **IP Sliding Window Rate Limiter (429)** | **MÁY 1 (Blue Team)** | Ngô Văn Công (Blue Team) | ⏳ Phase 8 (PR #69) |
+| **17-Feature Extractor Pipeline** | Dùng chung (Shared) | Ngô Văn Công (Blue Team) | ⏳ Phase 3 (Next) |
+| **Dataset Generation (Raw + Synthetic)** | Dùng chung (Shared) | Ngô Văn Công (Blue Team) | ⏳ Phase 4 |
+| **Random Forest Supervised Classifier** | Model nạp Máy 1 | Ngô Văn Công (Blue Team) | ⏳ Phase 5 |
+| **Isolation Forest Anomaly Detection** | Model nạp Máy 1 | Ngô Văn Công (Blue Team) | ⏳ Phase 6 |
+| **OpenAPI Recon & Attack Graph Environment**| **MÁY 2 (Red Team)** | Nguyễn Công Minh (Red Team) | ⏳ Phase 10 |
+| **In-House PyTorch Evasion Model (`evasion_agent.pt`)**| **MÁY 2 (Red Team)** | Nguyễn Công Minh (Red Team) | ⏳ Phase 10 (100% PyTorch) |
+| **AI Arena Runner & LAN Campaigns** | **MÁY 2 (Red Team)** | Nguyễn Công Minh (Red Team) | ⏳ Phase 10 |
+| **Multi-Method Performance Evaluation** | Cả 2 máy | Nguyễn Công Minh (Red Team) & Ngô Văn Công (Blue Team) | ⏳ Phase 11 |

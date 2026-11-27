@@ -2,7 +2,7 @@
 
 **Pull Request:** #82 - `feat(ml-engine): multi-model candidate benchmarking pipeline (Task 5.1 - #22)`  
 **Nhánh:** `feat/task-5.1-multi-model-benchmark` ➔ `main`  
-**Tác giả:** @vcongggggg  
+**Tác giả:** Ngô Văn Công (Blue Team)  
 **Reviewer:** @reviewer (Senior Security Architect & Code Reviewer)  
 **Quyết định:** 🟢 **APPROVE (SẴN SÀNG MERGE VÀO MAIN)**  
 **Điểm đánh giá công tâm:** **9.6 / 10**

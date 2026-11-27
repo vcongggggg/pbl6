@@ -2,7 +2,7 @@
 
 **Pull Request:** #85 - `feat(ml-engine): isolation forest training pipeline on pure benign baseline (Task 6.1 - #26)`  
 **Nhánh:** `feat/task-6.1-iforest-training-pipeline` ➔ `main`  
-**Tác giả:** @vcongggggg  
+**Tác giả:** Ngô Văn Công (Blue Team)  
 **Reviewer:** @reviewer (Senior Security Architect & Code Reviewer)  
 **Quyết định:** 🟢 **APPROVE (CHẤP THUẬN MERGE - XUẤT SẮC)**  
 **Điểm đánh giá công tâm:** **9.7 / 10**

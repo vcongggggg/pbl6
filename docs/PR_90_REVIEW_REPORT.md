@@ -2,7 +2,7 @@
 
 **Pull Request:** #90 - `feat(gateway): integrate anomaly detection hook and realtime logging with zero-day telemetry (Task 6.4 - #29)`  
 **Nhánh:** `feat/task-6.4-gateway-anomaly-hook` ➔ `main`  
-**Tác giả:** @vcongggggg (Thành viên A - Tech Lead & Defense AI/ML Engineer)  
+**Tác giả:** Ngô Văn Công (Blue Team — Thành viên A, Tech Lead & Defense AI/ML Engineer)  
 **Reviewer:** @reviewer (Senior Security Architect & Independent Code Reviewer)  
 **Quyết định:** 🟢 **APPROVE (CHẤP THUẬN MERGE - HOÀN HẢO)**  
 **Điểm đánh giá công tâm:** **9.9 / 10**

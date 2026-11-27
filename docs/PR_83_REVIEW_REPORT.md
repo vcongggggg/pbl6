@@ -2,7 +2,7 @@
 
 **Pull Request:** #83 - `feat(ml-engine): champion random forest fine-tuning, validation & feature importance (Task 5.2 - #23)`  
 **Nhánh:** `feat/task-5.2-rf-tuning-validation` ➔ `main`  
-**Tác giả:** @vcongggggg  
+**Tác giả:** Ngô Văn Công (Blue Team)  
 **Reviewer:** @reviewer (Senior Security Architect & Code Reviewer)  
 **Quyết định:** 🟢 **APPROVE (CHẤP THUẬN MERGE - KÈM GÓP Ý CHỈNH SỬA MINOR)**  
 **Điểm đánh giá công tâm:** **9.2 / 10**

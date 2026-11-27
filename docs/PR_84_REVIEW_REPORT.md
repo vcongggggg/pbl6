@@ -2,7 +2,7 @@
 
 **Pull Request:** #84 - `feat(ml-engine): champion model serialization, cryptographic hash & gateway integration (Task 5.3 - #24)`  
 **Nhánh:** `feat/task-5.3-rf-serialization-gateway-integration` ➔ `main`  
-**Tác giả:** @vcongggggg  
+**Tác giả:** Ngô Văn Công (Blue Team)  
 **Reviewer:** @reviewer (Senior Security Architect & Code Reviewer)  
 **Quyết định:** 🟢 **APPROVE (CHẤP THUẬN MERGE - KÈM GÓP Ý NÂNG CẤP AN NINH)**  
 **Điểm đánh giá công tâm:** **9.5 / 10**

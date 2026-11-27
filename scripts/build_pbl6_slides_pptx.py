@@ -76,7 +76,7 @@ TEXT_AMBER = RGBColor(0xB4, 0x53, 0x09)
 
 FOOTER_LEFT = (
     "Đồ án Chuyên ngành PBL6: Adaptive Hybrid WAF & Autonomous Red Team"
-    "  |  Ngô Văn Công (102230284) & Nguyễn Công Minh (102230306)"
+    "  |  Ngô Văn Công & Nguyễn Công Minh"
 )
 
 
@@ -634,23 +634,23 @@ def build_slide_01_cover(prs: Presentation) -> None:
         anchor=MSO_ANCHOR.TOP, margin=(0.0, 0.0, 0.0, 0.0),
     )
 
-    add_rect(slide, 0.70, 4.18, 6.10, 1.65, fill=NAVY_MID, line=TEAL, line_pt=1.0, rounded=True, adjust=0.06)
+    add_rect(slide, 0.70, 4.18, 6.60, 1.65, fill=NAVY_MID, line=TEAL, line_pt=1.0, rounded=True, adjust=0.06)
     add_textbox(
-        slide, 0.90, 4.30, 5.70, 1.42,
+        slide, 0.88, 4.30, 6.24, 1.42,
         [
             ("NHÓM SINH VIÊN THỰC HIỆN", {"font": FONT_BODY, "size": 14.0, "bold": True, "color": TEAL_BRIGHT, "space_after": 6}),
-            ("• Ngô Văn Công (102230284) — Blue Team & WAF Hybrid", {"font": FONT_BODY, "size": 15.0, "color": WHITE, "space_after": 4}),
-            ("• Nguyễn Công Minh (102230306) — Red Team Dueling-DQN", {"font": FONT_BODY, "size": 15.0, "color": WHITE, "space_after": 0}),
+            ("• Ngô Văn Công (102230284 — Lớp 23T_DT3 — Blue Team & WAF Hybrid)", {"font": FONT_BODY, "size": 13.5, "color": WHITE, "space_after": 4}),
+            ("• Nguyễn Công Minh (102230306 — Lớp 23T_DT3 — Red Team Dueling-DQN)", {"font": FONT_BODY, "size": 13.5, "color": WHITE, "space_after": 0}),
         ],
         anchor=MSO_ANCHOR.MIDDLE,
     )
 
-    add_rect(slide, 7.10, 4.18, 5.53, 1.65, fill=NAVY_MID, line=TEAL, line_pt=1.0, rounded=True, adjust=0.06)
+    add_rect(slide, 7.50, 4.18, 5.13, 1.65, fill=NAVY_MID, line=TEAL, line_pt=1.0, rounded=True, adjust=0.06)
     add_textbox(
-        slide, 7.30, 4.30, 5.13, 1.42,
+        slide, 7.68, 4.30, 4.77, 1.42,
         [
             ("GIẢNG VIÊN HƯỚNG DẪN & HỌC PHẦN", {"font": FONT_BODY, "size": 14.0, "bold": True, "color": TEAL_BRIGHT, "space_after": 6}),
-            ("• GVHD: TS. Nguyễn Thế Xuân Ly", {"font": FONT_BODY, "size": 15.5, "bold": True, "color": WHITE, "space_after": 4}),
+            ("• GVHD: TS. Nguyễn Năng Hùng Vân", {"font": FONT_BODY, "size": 15.5, "bold": True, "color": WHITE, "space_after": 4}),
             ("• Khoa CNTT — Trường ĐH Bách khoa, ĐH Đà Nẵng", {"font": FONT_BODY, "size": 14.5, "color": ICE_BLUE, "space_after": 0}),
         ],
         anchor=MSO_ANCHOR.MIDDLE,
@@ -661,7 +661,7 @@ def build_slide_01_cover(prs: Presentation) -> None:
         slide, 0.70, 6.58, 11.93, 0.78,
         [
             ("Đà Nẵng, Tháng 11/2026   |   Bảo Vệ Đồ Án Chuyên Ngành PBL6 — An Toàn Thông Tin", {"font": FONT_HEAD, "size": 16.0, "bold": True, "color": WHITE, "align": PP_ALIGN.CENTER, "space_after": 2}),
-            ("Phòng Thủ Đa Tầng (Rules + XGBoost v2 + IForest v2 + OpenAPI Schema + DLP) Đối Kháng Tự Động Dueling Double-DQN", {"font": FONT_BODY, "size": 14.0, "color": ICE_BLUE, "align": PP_ALIGN.CENTER, "space_after": 0}),
+            ("Phòng Thủ Đa Tầng (Rules + XGBoost + IForest + OpenAPI Schema + DLP) Đối Kháng Tự Động Dueling Double-DQN", {"font": FONT_BODY, "size": 14.0, "color": ICE_BLUE, "align": PP_ALIGN.CENTER, "space_after": 0}),
         ],
         anchor=MSO_ANCHOR.MIDDLE,
     )
@@ -670,7 +670,7 @@ def build_slide_01_cover(prs: Presentation) -> None:
         slide,
         "Kính thưa Quý thầy cô trong Hội đồng chấm đồ án chuyên ngành PBL6. Em là Ngô Văn Công, cùng bạn Nguyễn Công Minh, "
         "xin đại diện nhóm trình bày đề tài: Nền tảng giám sát, phát hiện và ngăn chặn tấn công Web API thông minh kết hợp thao trường an ninh đối kháng, "
-        "dưới sự hướng dẫn của Tiến sĩ Nguyễn Thế Xuân Ly. Phần trình bày gồm 11 phần, đi từ bối cảnh Web API hiện đại, "
+        "dưới sự hướng dẫn của Tiến sĩ Nguyễn Năng Hùng Vân. Phần trình bày gồm 11 phần, đi từ bối cảnh Web API hiện đại, "
         "quy trình chuẩn hóa dữ liệu và kiến trúc phòng thủ đa tầng của Blue Team, đến tác tử học tăng cường tự động của Red Team, "
         "và khép lại bằng toàn bộ thực nghiệm đối kháng, kiểm định hiệu năng và kịch bản demo trực tiếp trên hệ thống hoàn chỉnh.",
     )
@@ -757,7 +757,7 @@ def build_slide_03_objectives_rq(prs: Presentation) -> None:
         ["Câu Hỏi", "Vấn Đề Nghiên Cứu", "Kiểm Chứng Thực Nghiệm"],
         [
             ["RQ1\nHợp lực", "Kết hợp Rules, ML và Anomaly có giảm bỏ lọt mà giữ báo nhầm thấp?", "Ablation (B1000), CSIC 2010 & Op FPR (N=1.715)."],
-            ["RQ2\nĐối kháng", "Dueling-DQN học Curriculum có vượt WAF tĩnh và tự pivot trước Hybrid?", "Ma trận 3x3, Strange v3.3 & Blind Vault v2."],
+            ["RQ2\nĐối kháng", "Dueling-DQN học Curriculum có vượt WAF tĩnh và tự pivot trước Hybrid?", "Ma trận 3x3, Strange Suite & Blind Vault."],
             ["RQ3\nSLA Tải", "Đường ống 6 tầng qua 2-hop HTTP + WAL có đạt SLA tải C=50?", "Đo inline, 2-hop E2E (N=3.000) & tải C=1..50."],
         ],
         [1.15, 2.40, 2.33],
@@ -913,7 +913,7 @@ def build_slide_06_raw_data(prs: Presentation, m: DeckMetrics) -> None:
             ["defense_v2", f"{d2_total:,} dòng\n({d2_tr:,}/{d2_va:,}/{d2_te:,})".replace(",", "."), "/api/v1/books?q=1'/**/UN/**/ION%20SEL/**/ECT%201,2--", "Attack (SQLi/XSS/Path/CMD) & Benign"],
             ["CSIC 2010", "3.000 dòng\n(1.500 B / 1.500 A)", "/tienda1/publico/anadir.jsp?id=1'+OR+'1'='1", "Domain shift + Parameter Tampering"],
             ["Benchmark 1000", "1.000 dòng\n(200 B / 800 A)", "GET /api/v1/vulnerable/books/search/?q=Clean+Code", "4 họ tấn công + 200 benign đa dạng"],
-            ["Strange & Vault v2", "38 + 30 ca\n(Khóa SHA-256)", "POST /api/v4/billing/invoices {\"q\":\"1e0union select 1\"}", "Endpoint mới & biến thể Phase E"],
+            ["Strange & Blind Vault", "38 + 30 ca\n(Khóa SHA-256)", "POST /api/v4/billing/invoices {\"q\":\"1e0union select 1\"}", "Endpoint mới & biến thể Phase E"],
         ],
         [2.05, 2.05, 5.18, 2.95],
         font_size=11.0,
@@ -937,7 +937,7 @@ def build_slide_06_raw_data(prs: Presentation, m: DeckMetrics) -> None:
         slide,
         "Slide 6 tổng quan toàn bộ nguồn dữ liệu thô phục vụ huấn luyện và kiểm định độc lập. "
         "Tập chính defense_v2 gồm 47.372 mẫu chia tách chặt theo train, validation và test với 5 lớp nhãn. "
-        "Bên cạnh đó là bộ chuẩn ngoài miền CSIC 2010 gồm 3.000 yêu cầu, Benchmark 1000 để chạy ablation, cùng hai bộ kiểm định mù Strange v3.3 và Blind Vault v2 khóa mã băm SHA-256. "
+        "Bên cạnh đó là bộ chuẩn ngoài miền CSIC 2010 gồm 3.000 yêu cầu, Benchmark 1000 để chạy ablation, cùng hai bộ kiểm định mù Strange Suite và Blind Vault khóa mã băm SHA-256. "
         "Bốn thẻ bên dưới nêu rõ bốn thách thức thực tế của dữ liệu HTTP thô: biến thể mã hóa ẩn, hiện tượng lệch miền và Parameter Tampering trong CSIC 2010, "
         "kỹ thuật làm nhiễu JSON trùng khóa hoặc HPP, và yêu cầu tối quan trọng là không rò rỉ dữ liệu giữa tập huấn luyện và tập đánh giá.",
     )
@@ -990,7 +990,7 @@ def build_slide_08_features_pooling(prs: Presentation) -> None:
     add_content_chrome(slide, "03 / DỮ LIỆU & TIỀN XỬ LÝ (3/3)", "Trích Xuất Vector 26 Đặc Trưng & Per-Parameter Max-Pooling", 8)
 
     tx1, ty1, tw1 = add_card_shell(
-        slide, 0.55, 1.20, 6.45, 5.66, fill=WHITE, border=BORDER_SLATE, header_fill=NAVY, header_h=0.44, title="Vector 26 Đặc Trưng Thống Nhất (v2.0)", title_color=WHITE, title_size=15.5
+        slide, 0.55, 1.20, 6.45, 5.66, fill=WHITE, border=BORDER_SLATE, header_fill=NAVY, header_h=0.44, title="Vector 26 Đặc Trưng Thống Nhất", title_color=WHITE, title_size=15.5
     )
     add_styled_table(
         slide,
@@ -1000,7 +1000,7 @@ def build_slide_08_features_pooling(prs: Presentation) -> None:
         4.92,
         ["Nhóm Đặc Trưng", "Chiều", "Các Thành Phần Đại Diện"],
         [
-            ["1. Hình thái &\nEntropy (v1)", "12", "length, entropy Shannon, số ký tự ', \", <, >, ;, -, /, \\, (), special_char_ratio."],
+            ["1. Hình thái &\nEntropy", "12", "length, entropy Shannon, số ký tự ', \", <, >, ;, -, /, \\, (), special_char_ratio."],
             ["2. Từ khóa &\nMẫu Regex", "7", "sql_keyword, xss_keyword, sqli_regex, xss_regex, path_traversal, cmd_keyword, cmd_regex."],
             ["3. Độ sâu & SQL", "4", "encoding_layer_depth, sql_comment_and_func_score, param_value_entropy_ratio, numeric_anomaly."],
             ["4. Ngữ cảnh & Safe", "3", "natural_text_ratio, safe_structured_ratio (email/UUID/date), protocol_complexity."],
@@ -1033,7 +1033,7 @@ def build_slide_08_features_pooling(prs: Presentation) -> None:
 
     set_notes(
         slide,
-        "Sau khi chuẩn hóa, dữ liệu được ánh xạ thành vector 26 đặc trưng ở bảng bên trái, nâng cấp từ 17 đặc trưng ở phiên bản đầu. "
+        "Sau khi chuẩn hóa, dữ liệu được ánh xạ thành vector 26 đặc trưng ở bảng bên trái. "
         "Ngoài 12 chỉ số hình thái và 7 chỉ số từ khóa đa họ tấn công, nhóm bổ sung 7 đặc trưng mới đo độ sâu giải mã, hàm SQL, "
         "tỉ lệ văn bản tự nhiên và cấu trúc dữ liệu an toàn như email hay UUID để giảm báo nhầm trên lưu lượng hợp lệ. "
         "Ở phía bên phải là cải tiến kỹ thuật quan trọng: Per-Parameter Max-Pooling trong hàm predict_http. "
@@ -1147,7 +1147,7 @@ def build_slide_11_blue_tier5_6(prs: Presentation) -> None:
     add_content_chrome(slide, "04 / BLUE TEAM — PHÒNG THỦ ĐA TẦNG (3/3)", "Tầng 5–6: Dual-AI Zero-Pickle & Công Thức Hợp Nhất Rủi Ro", 11)
 
     tx1, ty1, tw1 = add_card_shell(
-        slide, 0.55, 1.20, 4.10, 2.22, fill=TINT_BLUE, border=BORDER_BLUE, badge_text="M1", badge_color=TEXT_BLUE, title="XGBoost v2 (xgb_v2.ubj)", title_size=15.0
+        slide, 0.55, 1.20, 4.10, 2.22, fill=TINT_BLUE, border=BORDER_BLUE, badge_text="M1", badge_color=TEXT_BLUE, title="XGBoost (xgb_v2.ubj)", title_size=15.0
     )
     add_textbox(
         slide, tx1, ty1, tw1, 1.56,
@@ -1155,7 +1155,7 @@ def build_slide_11_blue_tier5_6(prs: Presentation) -> None:
     )
 
     tx2, ty2, tw2 = add_card_shell(
-        slide, 4.90, 1.20, 3.90, 2.22, fill=TINT_TEAL, border=BORDER_TEAL, badge_text="M2", badge_color=TEAL, title="IForest v2 (iforest_v2.npz)", title_size=15.0
+        slide, 4.90, 1.20, 3.90, 2.22, fill=TINT_TEAL, border=BORDER_TEAL, badge_text="M2", badge_color=TEAL, title="IForest (iforest_v2.npz)", title_size=15.0
     )
     add_textbox(
         slide, tx2, ty2, tw2, 1.56,
@@ -1354,7 +1354,7 @@ def build_slide_13_red_dqn_curriculum(prs: Presentation, m: DeckMetrics) -> None
         "Slide 13 mô tả kiến trúc mạng Dueling Double-DQN và lộ trình huấn luyện bốn giai đoạn. "
         "Từ vector đầu vào 74 chiều, mạng đi qua hai tầng ẩn 128 nút dùng hàm kích hoạt ReLU rồi tách thành hai nhánh: "
         "nhánh giá trị trạng thái V(s) và nhánh lợi thế hành động A(s, a) qua tầng 64 nút để tổng hợp giá trị Q, sau đó áp mặt nạ loại bỏ hành động sai pha hoặc đã thử. "
-        "Điểm đặc biệt của phiên bản mới là lộ trình học tăng tiến bốn giai đoạn gồm 600 tập mô phỏng tốc độ cao trong RAM cộng thêm 200 tập đánh trực tiếp qua kết nối HTTP thật tới cổng 8055 và 8056. "
+        "Điểm đặc biệt của tác tử là lộ trình học tăng tiến bốn giai đoạn gồm 600 tập mô phỏng tốc độ cao trong RAM cộng thêm 200 tập đánh trực tiếp qua kết nối HTTP thật tới cổng 8055 và 8056. "
         "Bảng bên phải cho thấy hàm thưởng được thiết kế để chống reward hacking: chỉ thưởng cao khi vượt lọt 200 OK sạch, phạt nặng đánh lặp trừ 3 điểm, và thưởng cộng 2.2 khi tác tử biết chuyển hướng đúng lúc sau khi bị Hybrid WAF chặn liên tiếp.",
     )
 
@@ -1416,7 +1416,7 @@ def build_slide_14_infra_bff(prs: Presentation) -> None:
 
 def build_slide_15_model_comparison(prs: Presentation, m: DeckMetrics) -> None:
     slide = prs.slides.add_slide(prs.slide_layouts[6])
-    add_content_chrome(slide, "07 / KẾT QUẢ THỰC NGHIỆM (1/6)", "Đối Sánh Mô Hình Học Máy & Chọn Champion XGBoost v2.0", 15)
+    add_content_chrome(slide, "07 / KẾT QUẢ THỰC NGHIỆM (1/6)", "Đối Sánh Mô Hình Học Máy & Chọn Champion XGBoost", 15)
 
     mv2 = m.models_v2
     xgb_m = m.xgb_meta["metrics"]
@@ -1436,7 +1436,7 @@ def build_slide_15_model_comparison(prs: Presentation, m: DeckMetrics) -> None:
             ["Decision Tree", f"{mv2['DecisionTree']['accuracy']*100:.2f}%", f"{mv2['DecisionTree']['f1_macro']*100:.2f}%", f"{mv2['DecisionTree']['recall_macro']*100:.2f}%", "Dễ quá khớp biên"],
             ["Random Forest", f"{mv2['RandomForest']['accuracy']*100:.2f}%", f"{mv2['RandomForest']['f1_macro']*100:.2f}%", f"{mv2['RandomForest']['recall_macro']*100:.2f}%", "Phụ thuộc Joblib/Pickle"],
             ["LightGBM", f"{mv2['LightGBM']['accuracy']*100:.2f}%", f"{mv2['LightGBM']['f1_macro']*100:.2f}%", f"{mv2['LightGBM']['recall_macro']*100:.2f}%", "Nhanh nhưng lệch biên"],
-            ["XGBoost v2.0 (Champion)", f"{xgb_m['test_accuracy']*100:.2f}%", f"{xgb_m['test_f1_macro']*100:.2f}%", f"{xgb_m['test_recall_macro']*100:.2f}%", f"{xgb_lat['mean_ms']:.3f} ms (UBJSON)"],
+            ["XGBoost (Champion)", f"{xgb_m['test_accuracy']*100:.2f}%", f"{xgb_m['test_f1_macro']*100:.2f}%", f"{xgb_m['test_recall_macro']*100:.2f}%", f"{xgb_lat['mean_ms']:.3f} ms (UBJSON)"],
         ],
         [1.90, 0.90, 0.90, 0.90, 1.30],
         font_size=11.0,
@@ -1446,7 +1446,7 @@ def build_slide_15_model_comparison(prs: Presentation, m: DeckMetrics) -> None:
     )
 
     tx, ty, tw = add_card_shell(
-        slide, 0.55, 4.92, 5.90, 1.94, fill=TINT_BLUE, border=BORDER_BLUE, badge_text="★", badge_color=TEAL, title=f"Chọn XGBoost v2.0 (N={d2_tot:,} | Test={d2_te:,})".replace(",", "."), title_size=14.5
+        slide, 0.55, 4.92, 5.90, 1.94, fill=TINT_BLUE, border=BORDER_BLUE, badge_text="★", badge_color=TEAL, title=f"Chọn XGBoost (N={d2_tot:,} | Test={d2_te:,})".replace(",", "."), title_size=14.5
     )
     add_textbox(
         slide, tx, ty, tw, 1.28,
@@ -1470,7 +1470,7 @@ def build_slide_15_model_comparison(prs: Presentation, m: DeckMetrics) -> None:
         slide,
         "Bắt đầu phần kết quả thực nghiệm, slide 15 trình bày phép đối sánh năm mô hình học máy trên tập dữ liệu Zero-Leakage defense_v2 gồm 47.372 dòng, "
         "trong đó tập kiểm thử độc lập gồm 6.929 mẫu. Các mô hình cây quyết định và ensemble đều vượt xa hồi quy tuyến tính. "
-        "Nhóm lựa chọn XGBoost phiên bản 2.0 làm mô hình vô địch cho sản phẩm vì ba lý do kỹ thuật: đạt độ chính xác kiểm thử 99.16% và Macro F1 98.77%, "
+        "Nhóm lựa chọn XGBoost làm mô hình vô địch cho sản phẩm vì ba lý do kỹ thuật: đạt độ chính xác kiểm thử 99.16% và Macro F1 98.77%, "
         "được tinh chỉnh phạt chi phí và chính quy hóa để không bỏ sót nhóm SQL Injection ít mẫu, và quan trọng nhất là lưu trữ bằng định dạng UBJSON thuần giúp loại bỏ rủi ro Pickle "
         "với độ trễ suy luận trung bình chỉ 0.439 mili-giây.",
     )
@@ -1493,9 +1493,9 @@ def build_slide_16_ablation(prs: Presentation, m: DeckMetrics) -> None:
         ["Cấu Hình Phòng Thủ", "Acc", "Recall", "F1-Score", "FPR", "Inline"],
         [
             [f"1. Rules Only ({n_rules} luật)", f"{rl['accuracy_pct']:.1f}%", f"{rl['recall_pct']:.2f}%", f"{rl['f1_score_pct']:.2f}%", f"{rl['fpr_pct']:.2f}%", f"{rl['avg_latency_ms']:.3f} ms"],
-            ["2. ML Only (XGBoost v2)", f"{ml['accuracy_pct']:.1f}%", f"{ml['recall_pct']:.2f}%", f"{ml['f1_score_pct']:.2f}%", f"{ml['fpr_pct']:.2f}%", f"{ml['avg_latency_ms']:.3f} ms"],
-            ["3. Anomaly (IForest v2)", f"{an['accuracy_pct']:.1f}%", f"{an['recall_pct']:.2f}%", f"{an['f1_score_pct']:.2f}%", f"{an['fpr_pct']:.2f}%", f"{an['avg_latency_ms']:.3f} ms"],
-            ["4. Hybrid Defense v3.3", f"{hy['accuracy_pct']:.1f}%", f"{hy['recall_pct']:.2f}%", f"{hy['f1_score_pct']:.2f}%", f"{hy['fpr_pct']:.2f}%", f"{hy['avg_latency_ms']:.3f} ms"],
+            ["2. ML Only (XGBoost)", f"{ml['accuracy_pct']:.1f}%", f"{ml['recall_pct']:.2f}%", f"{ml['f1_score_pct']:.2f}%", f"{ml['fpr_pct']:.2f}%", f"{ml['avg_latency_ms']:.3f} ms"],
+            ["3. Anomaly (IForest)", f"{an['accuracy_pct']:.1f}%", f"{an['recall_pct']:.2f}%", f"{an['f1_score_pct']:.2f}%", f"{an['fpr_pct']:.2f}%", f"{an['avg_latency_ms']:.3f} ms"],
+            ["4. Hybrid Defense", f"{hy['accuracy_pct']:.1f}%", f"{hy['recall_pct']:.2f}%", f"{hy['f1_score_pct']:.2f}%", f"{hy['fpr_pct']:.2f}%", f"{hy['avg_latency_ms']:.3f} ms"],
         ],
         [2.05, 0.72, 0.85, 0.90, 0.75, 0.98],
         font_size=11.0,
@@ -1511,28 +1511,57 @@ def build_slide_16_ablation(prs: Presentation, m: DeckMetrics) -> None:
     add_textbox(
         slide, tx, ty, tw, 1.88,
         [
-            (f"• Hybrid v3.3 đạt {hy['f1_score_pct']:.2f}% F1-Score, {hy['recall_pct']:.2f}% Recall, {hy['fpr_pct']:.2f}% FPR (chỉ lọt {hy['confusion_matrix']['fn']}/800 ca so với {ml['confusion_matrix']['fn']}/800 của ML đơn lẻ).", {"font": FONT_BODY, "size": 14.0, "bold": True, "color": TEXT_DARK, "space_after": 4}),
+            (f"• Hybrid Defense đạt {hy['f1_score_pct']:.2f}% F1-Score, {hy['recall_pct']:.2f}% Recall, {hy['fpr_pct']:.2f}% FPR (chỉ lọt {hy['confusion_matrix']['fn']}/800 ca so với {ml['confusion_matrix']['fn']}/800 của ML đơn lẻ).", {"font": FONT_BODY, "size": 14.0, "bold": True, "color": TEXT_DARK, "space_after": 4}),
             (f"• Theo họ: XSS {cats['XSS']['rate_pct']:.1f}%, Path {cats['PATH']['rate_pct']:.1f}%, SQLi {cats['SQLI']['rate_pct']:.1f}%, CMD {cats['CMD']['rate_pct']:.1f}%, Benign {cats['BENIGN']['rate_pct']:.1f}%.", {"font": FONT_BODY, "size": 14.0, "color": TEXT_BODY, "space_after": 4}),
             (f"• Độ trễ nội tuyến chỉ {hy['avg_latency_ms']:.3f} ms (SLA <= 1.5 ms).", {"font": FONT_BODY, "size": 14.0, "color": TEAL_DEEP, "bold": True, "space_after": 0}),
         ],
     )
 
     add_rect(slide, 7.05, 1.20, 5.73, 5.67, fill=WHITE, line=BORDER_SLATE, line_pt=1.0, rounded=True, adjust=0.03)
-    slide.shapes.add_picture(str(FIGURES_DIR / "fig2_ablation_study_v2.png"), Inches(7.17), Inches(1.42), width=Inches(5.49))
-    add_textbox(
-        slide, 7.17, 4.42, 5.49, 2.25,
+    abl_chart = add_clustered_bar_chart(
+        slide,
+        7.17,
+        1.30,
+        5.49,
+        4.32,
+        "Ablation Study: Recall & F1-Score — Benchmark 1000 (%)",
+        [f"Rules Only\n({n_rules} luật)", "ML Only\n(XGBoost)", "Anomaly\n(IForest)", "Hybrid\nDefense"],
         [
-            ("Hình 2: Biểu đồ Ablation nền tảng v2.0 (16 luật, 98.6% F1, 0.848 ms).", {"font": FONT_BODY, "size": 14.0, "bold": True, "color": TEXT_DARK, "space_after": 6}),
-            (f"• Bản v3.3 ({n_rules} luật + Per-Param Max-Pooling + chia sẻ 26-D) nâng F1 lên {hy['f1_score_pct']:.2f}% và giảm độ trễ xuống {hy['avg_latency_ms']:.3f} ms.", {"font": FONT_BODY, "size": 14.0, "color": TEXT_BODY, "space_after": 0}),
+            ("Recall (%)", [rl["recall_pct"], ml["recall_pct"], an["recall_pct"], hy["recall_pct"]], TEXT_BLUE),
+            ("F1-Score (%)", [rl["f1_score_pct"], ml["f1_score_pct"], an["f1_score_pct"], hy["f1_score_pct"]], TEAL),
         ],
+        y_max=115.0,
+        label_fmt="0.00",
+    )
+    abl_plot = abl_chart.chart.plots[0]
+    abl_plot.gap_width = 50
+    abl_plot.overlap = -80
+    abl_plot.data_labels.font.size = Pt(7.5)
+    add_rect(slide, 7.17, 5.72, 5.49, 1.02, fill=TINT_TEAL, line=BORDER_TEAL, line_pt=1.0, rounded=True, adjust=0.08)
+    add_textbox(
+        slide,
+        7.29,
+        5.78,
+        5.25,
+        0.90,
+        [
+            (
+                f"Hybrid Defense ({n_rules} luật + Per-Param Max-Pooling + chia sẻ vector 26-D): "
+                f"{hy['recall_pct']:.2f}% Recall, {hy['f1_score_pct']:.2f}% F1-Score, "
+                f"{hy['fpr_pct']:.2f}% FPR, độ trễ inline {hy['avg_latency_ms']:.3f} ms.",
+                {"font": FONT_BODY, "size": 13.0, "bold": True, "color": TEXT_DARK, "space_after": 0},
+            ),
+        ],
+        anchor=MSO_ANCHOR.MIDDLE,
+        margin=(0.02, 0.02, 0.02, 0.02),
     )
 
     set_notes(
         slide,
         "Slide 16 trả lời câu hỏi nghiên cứu thứ nhất thông qua thí nghiệm triệt tiêu bốn cấu hình trên Benchmark 1000 gồm 800 mẫu tấn công và 200 mẫu sạch. "
-        "Nếu chỉ chạy 28 luật tĩnh, tỉ lệ phát hiện chỉ đạt 53.62% và F1 là 69.81%. Khi chạy riêng XGBoost v2.0, F1 tăng vọt lên 97.50% nhưng vẫn bỏ lọt 39 mẫu tấn công. "
-        "Khi kết hợp đầy đủ trong kiến trúc Hybrid v3.3, điểm F1 đạt 98.86%, Recall đạt 97.75%, giảm số ca bỏ lọt xuống còn 18 mẫu mà vẫn giữ tuyệt đối 0.00% báo nhầm. "
-        "Đáng chú ý, nhờ chia sẻ một lần trích xuất vector 26-D và dùng Max-Pooling tối ưu, độ trễ nội tuyến của cả chế độ Hybrid chỉ mất 0.716 mili-giây, nhanh hơn cả phiên bản v2.0 trên biểu đồ hình 2.",
+        "Nếu chỉ chạy 28 luật tĩnh, tỉ lệ phát hiện chỉ đạt 53.62% và F1 là 69.81%. Khi chạy riêng XGBoost, F1 tăng vọt lên 97.50% nhưng vẫn bỏ lọt 39 mẫu tấn công. "
+        "Khi kết hợp đầy đủ trong kiến trúc Hybrid Defense, điểm F1 đạt 98.86%, Recall đạt 97.75%, giảm số ca bỏ lọt xuống còn 18 mẫu mà vẫn giữ tuyệt đối 0.00% báo nhầm. "
+        "Đáng chú ý, nhờ chia sẻ một lần trích xuất vector 26-D và dùng Max-Pooling tối ưu, độ trễ nội tuyến của cả chế độ Hybrid chỉ mất 0.716 mili-giây, đạt sâu dưới ngưỡng SLA 1.5 mili-giây.",
     )
 
 
@@ -1599,7 +1628,7 @@ def build_slide_17_csic_twotier(prs: Presentation, m: DeckMetrics) -> None:
     set_notes(
         slide,
         "Slide 17 đánh giá khả năng tổng quát hóa Zero-Shot trên bộ dữ liệu ngoài miền CSIC 2010 gồm 3.000 mẫu hoàn toàn không xuất hiện khi huấn luyện. "
-        "Điểm đáng chú ý là tỉ lệ báo nhầm giảm từ mức 29.6% ở mô hình cũ xuống còn 0.07% ở mức giám sát lỏng và tuyệt đối 0.00% ở ngưỡng vận hành T=80. "
+        "Điểm đáng chú ý là tỉ lệ báo nhầm chỉ còn 0.07% ở mức giám sát lỏng và tuyệt đối 0.00% ở ngưỡng vận hành T=80. "
         "Khi kiểm toán chi tiết, chúng em giải thích minh bạch vì sao Recall tổng ban đầu chỉ đạt 16.40% ở T=80 hoặc 17.27% ở ngưỡng Loose: "
         "có tới 1.279 trên 1.500 mẫu tấn công của CSIC thuộc Nhóm B Parameter Tampering như bỏ trống trường hoặc đổi kiểu dữ liệu mà không chứa payload độc. "
         "Trên Nhóm A mang payload thật, hệ thống chặn tuyệt đối 100.00% (221/221). Và khi suy diễn lược đồ OpenAPI cho /tienda1 chỉ từ các mẫu sạch, "
@@ -1740,16 +1769,16 @@ def build_slide_19_adversarial_dqn(prs: Presentation, m: DeckMetrics) -> None:
     set_notes(
         slide,
         "Slide 19 trả lời câu hỏi nghiên cứu thứ hai về trận đấu đối kháng 3 nhân 3 giữa ba chiến lược tấn công và ba cấp độ phòng thủ. "
-        "Khi gặp luật tĩnh Legacy, tác tử Dueling-DQN v2.0 đạt tỉ lệ vượt qua tới 93.3% ở tập quen, chứng tỏ khả năng học biến thể né tránh thực sự. "
-        "Ngược lại, trước Hybrid v3.0, tỉ lệ chặn đạt 100.0% (45/45) trên tập quen và 94.4% (51/54) trên tập lạ cả trong RAM lẫn qua kết nối HTTP thật. "
+        "Khi gặp luật tĩnh Legacy, tác tử Dueling-DQN đạt tỉ lệ vượt qua tới 93.3% ở tập quen, chứng tỏ khả năng học biến thể né tránh thực sự. "
+        "Ngược lại, trước Hybrid Defense, tỉ lệ chặn đạt 100.0% (45/45) trên tập quen và 94.4% (51/54) trên tập lạ cả trong RAM lẫn qua kết nối HTTP thật. "
         "Đồ thị hội tụ cho thấy qua 800 tập huấn luyện (trong đó 600 tập RAM và 200 tập Live-HTTP), phần thưởng trung bình Stage 3 hội tụ về âm 4.33 và tỉ lệ thử mù lặp giảm 42.31%. "
-        "Trên cổng Live-HTTP 8056 chỉ bật luật, tác tử greedy vẫn lọt 25.0% số ca thử thách, tạo ra khoảng trống thực tiễn để nhóm tiếp tục nâng cấp lên Hybrid v3.3 ở slide kế tiếp.",
+        "Trên cổng Live-HTTP 8056 chỉ bật luật, tác tử greedy vẫn lọt 25.0% số ca thử thách, khẳng định nhu cầu kiểm định sâu hơn trên các bộ held-out mở rộng Phase E ở slide kế tiếp.",
     )
 
 
 def build_slide_20_phase_e_suites(prs: Presentation, m: DeckMetrics) -> None:
     slide = prs.slides.add_slide(prs.slide_layouts[6])
-    add_content_chrome(slide, "07 / KẾT QUẢ THỰC NGHIỆM (6/6)", "Kiểm Định Mở Rộng Phase E: Strange Suite v3.3 & Blind Vault v2", 20)
+    add_content_chrome(slide, "07 / KẾT QUẢ THỰC NGHIỆM (6/6)", "Kiểm Định Mở Rộng Phase E: Strange Suite & Blind Vault", 20)
 
     s33_dqn_rl = m.st33["live_http"]["Dueling-DQN v2.0"]["Rules Only"]
     s33_dqn_hy = m.st33["live_http"]["Dueling-DQN v2.0"]["Hybrid v3.3"]
@@ -1764,13 +1793,13 @@ def build_slide_20_phase_e_suites(prs: Presentation, m: DeckMetrics) -> None:
         1.20,
         6.15,
         3.50,
-        ["Bộ Kiểm Định Held-Out (Live HTTP)", "Rules Only", "Hybrid v3.3"],
+        ["Bộ Kiểm Định Held-Out (Live HTTP)", "Rules Only", "Hybrid Defense"],
         [
-            ["Strange Suite v3.3 (Static, 114 ep)", f"{m.st33['live_http']['Static Replay']['Rules Only']['block_rate_pct']:.2f}% (111/114)", f"{m.st33['live_http']['Static Replay']['Hybrid v3.3']['block_rate_pct']:.2f}% (114/114)"],
-            ["Strange Suite v3.3 (DQN, 114 ep)", f"{s33_dqn_rl['block_rate_pct']:.2f}% ({s33_dqn_rl['blocked_count']}/{s33_dqn_rl['total_episodes']})", f"{s33_dqn_hy['block_rate_pct']:.2f}% ({s33_dqn_hy['blocked_count']}/{s33_dqn_hy['total_episodes']})"],
-            ["Blind Vault v2 First-Pass (Static, 30)", f"{m.bv2['live_http']['Static Replay']['Rules Only']['block_rate_pct']:.2f}% (25/30)", f"{bv_st_hy['block_rate_pct']:.2f}% ({bv_st_hy['blocked_count']}/{bv_st_hy['total_episodes']})"],
-            ["Blind Vault v2 First-Pass (DQN, 30)", f"{bv_dqn_rl['block_rate_pct']:.2f}% ({bv_dqn_rl['blocked_count']}/{bv_dqn_rl['total_episodes']})", f"{bv_dqn_hy['block_rate_pct']:.2f}% ({bv_dqn_hy['blocked_count']}/{bv_dqn_hy['total_episodes']})"],
-            ["Blind Vault v2 Postfix2 (DQN, 30)", f"{m.bv2_p2['live_http']['Dueling-DQN v2.0']['Rules Only']['block_rate_pct']:.2f}% (28/30)", f"{bv2_dqn_hy['block_rate_pct']:.2f}% ({bv2_dqn_hy['blocked_count']}/{bv2_dqn_hy['total_episodes']})"],
+            ["Strange Suite (Static, 114 ep)", f"{m.st33['live_http']['Static Replay']['Rules Only']['block_rate_pct']:.2f}% (111/114)", f"{m.st33['live_http']['Static Replay']['Hybrid v3.3']['block_rate_pct']:.2f}% (114/114)"],
+            ["Strange Suite (DQN, 114 ep)", f"{s33_dqn_rl['block_rate_pct']:.2f}% ({s33_dqn_rl['blocked_count']}/{s33_dqn_rl['total_episodes']})", f"{s33_dqn_hy['block_rate_pct']:.2f}% ({s33_dqn_hy['blocked_count']}/{s33_dqn_hy['total_episodes']})"],
+            ["Blind Vault First-Pass (Static, 30)", f"{m.bv2['live_http']['Static Replay']['Rules Only']['block_rate_pct']:.2f}% (25/30)", f"{bv_st_hy['block_rate_pct']:.2f}% ({bv_st_hy['blocked_count']}/{bv_st_hy['total_episodes']})"],
+            ["Blind Vault First-Pass (DQN, 30)", f"{bv_dqn_rl['block_rate_pct']:.2f}% ({bv_dqn_rl['blocked_count']}/{bv_dqn_rl['total_episodes']})", f"{bv_dqn_hy['block_rate_pct']:.2f}% ({bv_dqn_hy['blocked_count']}/{bv_dqn_hy['total_episodes']})"],
+            ["Blind Vault Postfix2 (DQN, 30)", f"{m.bv2_p2['live_http']['Dueling-DQN v2.0']['Rules Only']['block_rate_pct']:.2f}% (28/30)", f"{bv2_dqn_hy['block_rate_pct']:.2f}% ({bv2_dqn_hy['blocked_count']}/{bv2_dqn_hy['total_episodes']})"],
         ],
         [2.75, 1.65, 1.75],
         font_size=11.0,
@@ -1785,8 +1814,8 @@ def build_slide_20_phase_e_suites(prs: Presentation, m: DeckMetrics) -> None:
     add_textbox(
         slide, tx, ty, tw, 1.30,
         [
-            (f"• Strange Suite v3.3 bị chặn tuyệt đối {s33_dqn_hy['block_rate_pct']:.2f}% ({s33_dqn_hy['blocked_count']}/{s33_dqn_hy['total_episodes']}) dưới cả Static & DQN.", {"font": FONT_BODY, "size": 14.0, "color": TEXT_DARK, "space_after": 3}),
-            (f"• Blind Vault v2 đạt {bv_dqn_hy['block_rate_pct']:.2f}% ({bv_dqn_hy['blocked_count']}/{bv_dqn_hy['total_episodes']}) lượt đầu ({bv_st_hy['blocked_count']}/30 Static), sau đó vá 1e0union/globbing -> {bv2_dqn_hy['block_rate_pct']:.2f}% ({bv2_dqn_hy['blocked_count']}/{bv2_dqn_hy['total_episodes']}) ở postfix2.", {"font": FONT_BODY, "size": 14.0, "color": TEXT_BODY, "space_after": 0}),
+            (f"• Strange Suite bị chặn tuyệt đối {s33_dqn_hy['block_rate_pct']:.2f}% ({s33_dqn_hy['blocked_count']}/{s33_dqn_hy['total_episodes']}) dưới cả Static & DQN.", {"font": FONT_BODY, "size": 14.0, "color": TEXT_DARK, "space_after": 3}),
+            (f"• Blind Vault đạt {bv_dqn_hy['block_rate_pct']:.2f}% ({bv_dqn_hy['blocked_count']}/{bv_dqn_hy['total_episodes']}) lượt đầu ({bv_st_hy['blocked_count']}/30 Static), sau đó vá 1e0union/globbing -> {bv2_dqn_hy['block_rate_pct']:.2f}% ({bv2_dqn_hy['blocked_count']}/{bv2_dqn_hy['total_episodes']}) ở postfix2.", {"font": FONT_BODY, "size": 14.0, "color": TEXT_BODY, "space_after": 0}),
         ],
     )
 
@@ -1797,11 +1826,11 @@ def build_slide_20_phase_e_suites(prs: Presentation, m: DeckMetrics) -> None:
         1.32,
         5.59,
         5.40,
-        "Live HTTP (Dueling-DQN v2.0): Rules vs Hybrid v3.3 (%)",
-        ["Strange Suite\nv3.3 (114 ep)", "Blind Vault v2\nFirst-Pass (30)", "Blind Vault v2\nPostfix2 (30)"],
+        "Live HTTP (Dueling-DQN): Rules Only vs Hybrid Defense (%)",
+        ["Strange Suite\n(114 ep)", "Blind Vault\nFirst-Pass (30)", "Blind Vault\nPostfix2 (30)"],
         [
             ("Rules Only (:8056)", [s33_dqn_rl["block_rate_pct"], bv_dqn_rl["block_rate_pct"], m.bv2_p2["live_http"]["Dueling-DQN v2.0"]["Rules Only"]["block_rate_pct"]], TEXT_AMBER),
-            ("Hybrid v3.3 (:8055)", [s33_dqn_hy["block_rate_pct"], bv_dqn_hy["block_rate_pct"], bv2_dqn_hy["block_rate_pct"]], TEAL),
+            ("Hybrid Defense (:8055)", [s33_dqn_hy["block_rate_pct"], bv_dqn_hy["block_rate_pct"], bv2_dqn_hy["block_rate_pct"]], TEAL),
         ],
         y_max=115.0,
         label_fmt="0.0",
@@ -1810,9 +1839,9 @@ def build_slide_20_phase_e_suites(prs: Presentation, m: DeckMetrics) -> None:
     set_notes(
         slide,
         "Slide 20 trình bày kết quả vòng kiểm định mở rộng Phase E trên hai bộ kiểm thử ngoài miền hoàn toàn mới. "
-        "Trên Strange Suite v3.3 gồm 38 ca và 114 tập đánh Live-HTTP, Hybrid v3.3 chặn tuyệt đối 100.00% (114/114) ngay cả khi tác tử Dueling-DQN liên tục đột biến né tránh. "
-        "Đặc biệt trung thực về mặt khoa học là kết quả trên Blind Held-Out Vault v2 được niêm phong mã băm SHA-256 trước khi chạy: ở lượt đánh mù đầu tiên, "
-        "khi Rules Only bị DQN xuyên thủng hơn một nửa (chỉ chặn 46.67%), Hybrid v3.3 vẫn chặn được 86.67% (26/30) và 28/30 trước Static Replay. "
+        "Trên Strange Suite gồm 38 ca và 114 tập đánh Live-HTTP, Hybrid Defense chặn tuyệt đối 100.00% (114/114) ngay cả khi tác tử Dueling-DQN liên tục đột biến né tránh. "
+        "Đặc biệt trung thực về mặt khoa học là kết quả trên Blind Held-Out Vault được niêm phong mã băm SHA-256 trước khi chạy: ở lượt đánh mù đầu tiên, "
+        "khi Rules Only bị DQN xuyên thủng hơn một nửa (chỉ chặn 46.67%), Hybrid Defense vẫn chặn được 86.67% (26/30) và 28/30 trước Static Replay. "
         "Từ bốn ca lọt mù đầu tiên như toán tử scientific float 1e0union và command globbing, nhóm bổ sung đúng luật SQLI-007 và CMD-006 rồi đánh lại trên file Vault đóng băng không đổi, nâng tỉ lệ chặn ở vòng postfix2 lên 100.00% (30/30).",
     )
 
@@ -1821,14 +1850,50 @@ def build_slide_21_performance_sla(prs: Presentation, m: DeckMetrics) -> None:
     slide = prs.slides.add_slide(prs.slide_layouts[6])
     add_content_chrome(slide, "08 / HIỆU NĂNG TẢI CAO & SLA 2 TẦNG", "Thông Lượng Chịu Tải C=50, Độ Trễ Inline vs 2-Hop HTTP E2E", 21)
 
-    # Sized cleanly so x-axis labels of fig3 and fig4 sit comfortably inside their cards
-    add_rect(slide, 0.55, 1.20, 6.20, 2.74, fill=WHITE, line=BORDER_SLATE, line_pt=1.0, rounded=True, adjust=0.04)
-    slide.shapes.add_picture(str(FIGURES_DIR / "fig3_concurrency_throughput_v2.png"), Inches(1.06), Inches(1.27), width=Inches(5.18))
+    benign_conc = m.perf["concurrency_benchmark"]["benign_passthrough"]
+    block_conc = m.perf["concurrency_benchmark"]["attack_blocking_403"]
+    micro = m.perf["component_microbenchmark"]
+    res_tel = m.perf["concurrency_benchmark"]["resource_telemetry"]
 
-    add_rect(slide, 0.55, 4.10, 6.20, 2.78, fill=WHITE, line=BORDER_SLATE, line_pt=1.0, rounded=True, adjust=0.04)
-    slide.shapes.add_picture(str(FIGURES_DIR / "fig4_v1_vs_v2_upgrade_impact.png"), Inches(0.67), Inches(4.32), width=Inches(5.96))
+    add_rect(slide, 0.55, 1.20, 6.20, 5.68, fill=WHITE, line=BORDER_SLATE, line_pt=1.0, rounded=True, adjust=0.03)
+    add_clustered_bar_chart(
+        slide,
+        0.67,
+        1.30,
+        5.96,
+        4.32,
+        "Thông Lượng Chịu Tải Đồng Thời WAF Gateway (RPS)",
+        [f"C = {item['concurrency']}" for item in benign_conc],
+        [
+            ("Benign Passthrough (HTTP 200)", [item["rps"] for item in benign_conc], TEAL),
+            ("Active Blocking (HTTP 403)", [item["rps"] for item in block_conc], TEXT_RED),
+        ],
+        y_max=430.0,
+        label_fmt="0.0",
+    )
+    add_rect(slide, 0.67, 5.72, 5.96, 1.04, fill=TINT_TEAL, line=BORDER_TEAL, line_pt=1.0, rounded=True, adjust=0.08)
+    add_textbox(
+        slide,
+        0.79,
+        5.78,
+        5.72,
+        0.92,
+        [
+            (
+                f"Vi đo thành phần: {micro['full_inspection_pipeline_mean_ms']:.3f} ms full pipeline "
+                f"(Normalizer 0.020 + Rules 0.195 + 26-D 0.155 + XGB 0.618 + IF 0.095 ms).",
+                {"font": FONT_BODY, "size": 12.5, "bold": True, "color": TEXT_DARK, "space_after": 3},
+            ),
+            (
+                f"Tải C=50 (500 req): 100% thành công, 0 lỗi, RAM Δ +{res_tel['rss_memory_delta_mb']:.2f} MB (ngưỡng SLA ≥ 150 RPS).",
+                {"font": FONT_BODY, "size": 12.5, "color": TEXT_BODY, "space_after": 0},
+            ),
+        ],
+        anchor=MSO_ANCHOR.MIDDLE,
+        margin=(0.02, 0.02, 0.02, 0.02),
+    )
 
-    c50_rps = m.perf["concurrency_benchmark"]["benign_passthrough"][-1]["rps"]
+    c50_rps = benign_conc[-1]["rps"]
     inline_ms = m.abl["modes"]["hybrid"]["avg_latency_ms"]
     e2e = m.lat["http_e2e_latency_ms"]
 
@@ -1836,7 +1901,7 @@ def build_slide_21_performance_sla(prs: Presentation, m: DeckMetrics) -> None:
         (6.98, 1.20, f"{c50_rps:.0f} RPS", f"Tải C=50 ({c50_rps:.2f} RPS)", "100% HTTP 200 (SLA >=150)", TINT_TEAL, BORDER_TEAL, TEAL_DEEP),
         (9.98, 1.20, f"{inline_ms:.3f} ms", "Độ Trễ Inline Hybrid", "Đạt sâu SLA <= 1.5 ms", TINT_BLUE, BORDER_BLUE, TEXT_BLUE),
         (6.98, 2.84, f"{e2e['mean_ms']:.3f} ms", "2-Hop HTTP E2E Mean", "N=3.000 CSIC (SLA <= 5.5 ms)", TINT_TEAL, BORDER_TEAL, TEAL),
-        (9.98, 2.84, "0.89 ms", "ReDoS XSS-002 (từ 923 ms)", "Giảm >1.000x thời gian quét", TINT_AMBER, BORDER_AMBER, TEXT_AMBER),
+        (9.98, 2.84, "0.89 ms", "ReDoS-Safe XSS-002", "Giới hạn biên (từ 923 ms)", TINT_AMBER, BORDER_AMBER, TEXT_AMBER),
     ]
     for kx, ky, kval, klbl, ksub, kfill, kborder, kcol in kpis:
         add_kpi_card(slide, kx, ky, 2.80, 1.48, value=kval, label=klbl, sub=ksub, fill=kfill, border=kborder, val_color=kcol, val_size=22.0)
@@ -1847,7 +1912,7 @@ def build_slide_21_performance_sla(prs: Presentation, m: DeckMetrics) -> None:
         4.52,
         5.80,
         2.36,
-        ["Phép Đo SLA 2 Tầng (v3.3)", "Mean", "p50", "p95", "Ngưỡng SLA"],
+        ["Phép Đo SLA 2 Tầng", "Mean", "p50", "p95", "Ngưỡng SLA"],
         [
             ["Inline Engine (Ablation)", f"{inline_ms:.3f} ms", "—", f"{m.abl['modes']['hybrid']['p95_latency_ms']:.3f} ms", "<= 1.5 ms (Đạt)"],
             ["2-Hop TCP HTTP E2E (CSIC)", f"{e2e['mean_ms']:.3f} ms", f"{e2e['p50_ms']:.3f} ms", f"{e2e['p95_ms']:.3f} ms", "<= 5.5 ms (Đạt)"],
@@ -1867,13 +1932,13 @@ def build_slide_21_performance_sla(prs: Presentation, m: DeckMetrics) -> None:
         "nhờ kiến trúc bất đồng bộ FastAPI kết hợp Leader-Follower Group Commit cho SQLite WAL. "
         "Về độ trễ, nhóm tách bạch rõ chuẩn SLA hai tầng: xử lý nội tuyến của bộ máy Hybrid chỉ mất trung bình 0.716 mili-giây (đạt sâu dưới ngưỡng 1.5 mili-giây), "
         "còn toàn bộ vòng khép kín 2-Hop TCP HTTP thực qua hai tiến trình Uvicorn trên 3.000 mẫu CSIC đạt trung bình 3.792 mili-giây, trung vị 3.571 và p95 là 5.329 mili-giây, đạt chuẩn dưới 5.5 mili-giây. "
-        "Đồng thời hình 4 cho thấy bước nhảy từ v1.0 lên v2+/v3 đã khử độ trễ ReDoS từ 923.37 xuống 0.89 mili-giây.",
+        "Đồng thời cơ chế biên dịch regex giới hạn biên đã kiểm soát độ trễ quét XSS-002 chỉ còn 0.89 mili-giây, triệt tiêu hoàn toàn nguy cơ treo CPU do ReDoS.",
     )
 
 
 def build_slide_22_four_tiers(prs: Presentation, m: DeckMetrics) -> None:
     slide = prs.slides.add_slide(prs.slide_layouts[6])
-    add_content_chrome(slide, "09 / SO SÁNH 4 TẦNG PHÒNG THỦ", "Phân Tích Ưu / Nhược Điểm 4 Tầng Tiến Hóa WAF", 22)
+    add_content_chrome(slide, "09 / SO SÁNH 4 TẦNG PHÒNG THỦ", "Phân Tích Ưu / Nhược Điểm 4 Cấu Hình Phòng Thủ WAF", 22)
 
     add_styled_table(
         slide,
@@ -1886,7 +1951,7 @@ def build_slide_22_four_tiers(prs: Presentation, m: DeckMetrics) -> None:
             ["1. No WAF\n(:5000)", "Bookie API trực tiếp, không lọc.", "0% (Lọt mọi họ tấn công)", "FPR 0%\n~0.9 ms", "Ưu: Không trễ.\nNhược: Lộ 100% bề mặt."],
             ["2. Legacy\n(5 regex)", "5 regex thô, không Normalizer.", "Lọt 93.3% trước DQN; mù API.", "Dễ ReDoS\n~0.01 ms", "Ưu: Cực nhẹ.\nNhược: Vô hiệu khi encode."],
             ["3. Hardened\n(28 Rules)", "Normalizer + 28 luật + BOLA/DLP.", "Chặn 53.6% B1000; mẫu đã biết.", "Op FPR 0.00%\n~0.17 ms", "Ưu: Minh bạch rule.\nNhược: Thiếu tổng quát."],
-            ["4. Hybrid v3.4\n+ Schema/AI", "28 Rules + Dual-AI + Schema + DLP.", "98.86% F1 (B1000), 100% Strange v3.3, 100% postfix2.", f"Op FPR {m.fp['aggregate_summary']['fp_operational_pct']:.2f}%\n{m.abl['modes']['hybrid']['avg_latency_ms']:.3f} ms", "Ưu: Bắt né & Zero-Day.\nNhược: Cần đồng bộ OpenAPI."],
+            ["4. Hybrid Defense\n+ Schema/AI", "28 Rules + Dual-AI + Schema + DLP.", "98.86% F1 (B1000), 100% Strange Suite, 100% postfix2.", f"Op FPR {m.fp['aggregate_summary']['fp_operational_pct']:.2f}%\n{m.abl['modes']['hybrid']['avg_latency_ms']:.3f} ms", "Ưu: Bắt né & Zero-Day.\nNhược: Cần đồng bộ OpenAPI."],
         ],
         [1.80, 2.65, 2.55, 1.80, 3.43],
         font_size=11.0,
@@ -1904,10 +1969,10 @@ def build_slide_22_four_tiers(prs: Presentation, m: DeckMetrics) -> None:
 
     set_notes(
         slide,
-        "Slide 22 tổng hợp bức tranh tiến hóa qua bốn cấp độ phòng thủ để Hội đồng dễ dàng so sánh ưu nhược điểm. "
+        "Slide 22 tổng hợp bức tranh so sánh qua bốn cấu hình phòng thủ để Hội đồng dễ dàng đối chiếu ưu nhược điểm. "
         "Ở Tầng 1 không có WAF, mọi lỗ hổng đều bị khai thác hoàn toàn. Ở Tầng 2 với năm regex tĩnh truyền thống, chi phí thấp nhưng bị tác tử Dueling-DQN vượt qua tới 93.3%. "
         "Tầng 3 bổ sung bộ chuẩn hóa đệ quy, 28 luật gia cố và năm lá chắn API giúp nâng cao năng lực bảo vệ nhưng vẫn còn phụ thuộc vào chữ ký đã biết. "
-        "Chỉ đến Tầng 4 Hybrid v3.4 kết hợp thêm XGBoost, Isolation Forest, cơ chế đồng thuận Dual-AI và OpenAPI Schema mới đạt được sự cân bằng tối ưu giữa khả năng chống né tránh gần tuyệt đối, tỉ lệ báo nhầm 0.00% và độ trễ nội tuyến 0.716 mili-giây.",
+        "Chỉ đến cấu hình 4 Hybrid Defense kết hợp thêm XGBoost, Isolation Forest, cơ chế đồng thuận Dual-AI và OpenAPI Schema mới đạt được sự cân bằng tối ưu giữa khả năng chống né tránh gần tuyệt đối, tỉ lệ báo nhầm 0.00% và độ trễ nội tuyến 0.716 mili-giây.",
     )
 
 
@@ -1978,9 +2043,9 @@ def build_slide_24_closing(prs: Presentation, m: DeckMetrics) -> None:
         slide, 0.78, 1.54, 5.54, 4.22,
         [
             ("KẾT LUẬN CỐT LÕI ĐÃ ĐẠT ĐƯỢC", {"font": FONT_HEAD, "size": 17.0, "bold": True, "color": TEAL_BRIGHT, "space_after": 10}),
-            (f"• Hybrid v3.4: {m.abl['modes']['hybrid']['f1_score_pct']:.2f}% F1 (B1000), {m.fp['aggregate_summary']['fp_operational_pct']:.2f}% Op FPR (N=1.715), {m.abl['modes']['hybrid']['avg_latency_ms']:.3f} ms inline & {m.lat['http_e2e_latency_ms']['mean_ms']:.3f} ms E2E.", {"font": FONT_BODY, "size": 14.5, "color": WHITE, "space_after": 8}),
+            (f"• Hybrid Defense: {m.abl['modes']['hybrid']['f1_score_pct']:.2f}% F1 (B1000), {m.fp['aggregate_summary']['fp_operational_pct']:.2f}% Op FPR (N=1.715), {m.abl['modes']['hybrid']['avg_latency_ms']:.3f} ms inline & {m.lat['http_e2e_latency_ms']['mean_ms']:.3f} ms E2E.", {"font": FONT_BODY, "size": 14.5, "color": WHITE, "space_after": 8}),
             ("• Gia cố toàn diện: Zero-Pickle SHA-256 Fail-Closed, regex ReDoS-safe, BFF 4 route & Docker non-root UID 1001.", {"font": FONT_BODY, "size": 14.5, "color": ICE_BLUE, "space_after": 8}),
-            (f"• Đối kháng Red Team {m.dqn['episodes_trained']} episodes: 100.00% (114/114) Strange v3.3 & 100.00% (30/30) Vault postfix2.", {"font": FONT_BODY, "size": 14.5, "color": WHITE, "space_after": 0}),
+            (f"• Đối kháng Red Team {m.dqn['episodes_trained']} episodes: 100.00% (114/114) Strange Suite & 100.00% (30/30) Blind Vault postfix2.", {"font": FONT_BODY, "size": 14.5, "color": WHITE, "space_after": 0}),
         ],
     )
 
@@ -2000,7 +2065,7 @@ def build_slide_24_closing(prs: Presentation, m: DeckMetrics) -> None:
         slide, 0.60, 6.32, 12.13, 1.08,
         [
             ("CẢM ƠN HỘI ĐỒNG ĐÃ LẮNG NGHE!   |   Sẵn Sàng Demo Trực Tiếp & Q&A", {"font": FONT_HEAD, "size": 20.0, "bold": True, "color": WHITE, "align": PP_ALIGN.CENTER, "space_after": 4}),
-            ("github.com/vcongggggg/pbl6   |   Quality Gates 5/5 & Reconciliation Matrix 33/33 Verified", {"font": FONT_BODY, "size": 14.0, "bold": True, "color": ICE_BLUE, "align": PP_ALIGN.CENTER, "space_after": 0}),
+            ("Kho mã nguồn & Kiểm định PBL6: WAF Gateway + Attack Lab + SOC Dashboard", {"font": FONT_BODY, "size": 14.0, "bold": True, "color": ICE_BLUE, "align": PP_ALIGN.CENTER, "space_after": 0}),
         ],
         anchor=MSO_ANCHOR.MIDDLE,
     )
@@ -2008,8 +2073,8 @@ def build_slide_24_closing(prs: Presentation, m: DeckMetrics) -> None:
     set_notes(
         slide,
         "Kính thưa Hội đồng, phần trình bày của nhóm xin được tổng kết lại ở slide cuối cùng. "
-        "Đề tài đã xây dựng hoàn chỉnh nền tảng tường lửa Web API đa tầng Hybrid v3.4 đạt 98.86% F1 trên Benchmark 1000, 0.00% báo nhầm vận hành trên 1.715 mẫu sạch, "
-        "độ trễ nội tuyến 0.716 mili-giây và 3.792 mili-giây cho toàn bộ đường truyền 2-hop HTTP, đồng thời vượt qua kiểm định đối kháng với tác tử Dueling-DQN trên cả hai bộ Strange Suite v3.3 và Blind Vault v2. "
+        "Đề tài đã xây dựng hoàn chỉnh nền tảng tường lửa Web API đa tầng Hybrid Defense đạt 98.86% F1 trên Benchmark 1000, 0.00% báo nhầm vận hành trên 1.715 mẫu sạch, "
+        "độ trễ nội tuyến 0.716 mili-giây và 3.792 mili-giây cho toàn bộ đường truyền 2-hop HTTP, đồng thời vượt qua kiểm định đối kháng với tác tử Dueling-DQN trên cả hai bộ Strange Suite và Blind Vault. "
         "Trong tương lai, nhóm định hướng tự động hóa việc học đặc tả OpenAPI từ lưu lượng sạch và khép kín vòng lặp đồng tiến hóa giữa Red Team và Blue Team. "
         "Chúng em xin trân trọng cảm ơn Quý thầy cô đã lắng nghe và rất mong nhận được góp ý cùng câu hỏi phản biện từ Hội đồng.",
     )

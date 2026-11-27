@@ -2,7 +2,7 @@
 
 **Pull Request:** #77 - Task 3.3: HTTP Context & Protocol Metadata Feature Extractor  
 **Nhánh:** `feat/task-3.3-http-context-features` ➔ `main`  
-**Tác giả:** @vcongggggg  
+**Tác giả:** Ngô Văn Công (Blue Team)  
 **Reviewer:** @reviewer (Senior Security Architect & Code Reviewer)  
 **Quyết định:** 🟢 **APPROVE (SẴN SÀNG MERGE VÀO MAIN)**  
 **Điểm đánh giá công tâm:** **9.4 / 10**

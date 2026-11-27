@@ -2,7 +2,7 @@
 
 **Pull Request:** #79 - Task 3.4 & 3.5: Unified 17-Dimensional Feature Vector Pipeline & Unit Test Suite  
 **Nhánh:** `feat/task-3.4-feature-vector-pipeline` ➔ `main`  
-**Tác giả:** @vcongggggg  
+**Tác giả:** Ngô Văn Công (Blue Team)  
 **Reviewer:** @reviewer (Senior Security Architect & Code Reviewer)  
 **Quyết định:** 🟢 **APPROVE (SẴN SÀNG MERGE VÀO MAIN)**  
 **Điểm đánh giá công tâm:** **9.3 / 10**

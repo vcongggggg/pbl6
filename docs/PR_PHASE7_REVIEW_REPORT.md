@@ -3,7 +3,7 @@
 **Hạng mục:** Rà soát và Chuẩn hóa Học thuật Toàn diện Phân Hệ Quyết Định Phòng Thủ & Đánh Giá Rủi Ro Kết Hợp (Phase 7 Standardized)  
 **Nhánh nguồn:** `feat/task-7.1-7.3-hybrid-risk-decision-engine` ➔ `main`  
 **Các Issues giải quyết:** `#30` (Task 7.1 - Multi-Pillar Risk Scoring), `#31` (Task 7.2 - Policy Decision Engine), `#32` (Task 7.3 - WAF Mode Toggle & Enforcement)  
-**Tác giả thực hiện:** @vcongggggg (Anh Văn Công - Tech Lead & Defense AI/ML Engineer)  
+**Tác giả thực hiện:** Ngô Văn Công (Blue Team — Tech Lead & Defense AI/ML Engineer)  
 **Thẩm định độc lập:** @reviewer (Senior Security Architect & Independent Code Reviewer)  
 **Quyết định thẩm định:** 🟢 **APPROVE (CHẤP THUẬN MERGE - XUẤT SẮC & CHUẨN MỰC HỌC THUẬT)**  
 **Điểm đánh giá chất lượng:** **9.9 / 10**
