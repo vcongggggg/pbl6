@@ -15,8 +15,16 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 ATTACK_DIR = PROJECT_ROOT / "data" / "processed" / "attack"
 DEFENSE_DIR = PROJECT_ROOT / "data" / "processed" / "defense"
 
-ATTACK_REPORT = PROJECT_ROOT / "docs" / "reports" / "attack_dataset_distribution.md"
-DEFENSE_REPORT = PROJECT_ROOT / "docs" / "reports" / "defense_dataset_distribution.md"
+ATTACK_REPORT = (
+    PROJECT_ROOT / "docs" / "reports" / "_archive" / "attack_dataset_distribution.md"
+    if (PROJECT_ROOT / "docs" / "reports" / "_archive" / "attack_dataset_distribution.md").exists()
+    else PROJECT_ROOT / "docs" / "reports" / "attack_dataset_distribution.md"
+)
+DEFENSE_REPORT = (
+    PROJECT_ROOT / "docs" / "reports" / "_archive" / "defense_dataset_distribution.md"
+    if (PROJECT_ROOT / "docs" / "reports" / "_archive" / "defense_dataset_distribution.md").exists()
+    else PROJECT_ROOT / "docs" / "reports" / "defense_dataset_distribution.md"
+)
 
 ATTACK_META = ATTACK_DIR / "split_metadata.json"
 DEFENSE_META = DEFENSE_DIR / "split_metadata.json"

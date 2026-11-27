@@ -2,9 +2,9 @@
 
 Zero manual/human number entry:
 1. Loads every ground-truth JSON artifact from disk.
-2. Extracts raw text + table cells from `PBL6_Bao_Cao.docx`, `PBL6_Academic_Defense_Slides.pptx`,
-   and `CHUONG_4_THUC_NGHIEM_DANH_GIA.md`.
-3. Asserts that every metric's formatted string ACTUALLY appears in the target document(s) on disk.
+2. Extracts raw text + table cells from the consolidated report `PBL6_Bao_Cao.docx`
+   and defense slide deck `PBL6_Academic_Defense_Slides.pptx`.
+3. Asserts that every metric's formatted string ACTUALLY appears in the target deliverable(s) on disk.
    Exits non-zero immediately if any discrepancy exists.
 4. Writes `docs/reports/THESIS_ARTIFACT_RECONCILIATION_MATRIX.md` from verified ground truth.
 """
@@ -62,10 +62,7 @@ def main() -> None:
     bv2 = json.loads((REPORTS_DIR / "blind_heldout_vault_v2_results.json").read_text(encoding="utf-8"))
 
     docx_txt = _extract_docx_text(REPORTS_DIR / "PBL6_Bao_Cao.docx")
-    docx_ch4_txt = _extract_docx_text(REPORTS_DIR / "PBL6_Bao_Cao_Chuong_4_Thuc_Nghiem_Danh_Gia.docx")
-    docx_full_txt = _extract_docx_text(REPORTS_DIR / "PBL6_Bao_Cao_Tong_Hop_Toan_Van.docx")
     pptx_txt = _extract_pptx_text(REPORTS_DIR / "PBL6_Academic_Defense_Slides.pptx")
-    md_txt = (REPORTS_DIR / "CHUONG_4_THUC_NGHIEM_DANH_GIA.md").read_text(encoding="utf-8").replace("**", "").replace("`", "")
 
     fam = adv["familiar"]
     stg = adv["strange"]
@@ -88,7 +85,7 @@ def main() -> None:
             "familiar.Static Replay.Rules Only.block_rate_pct",
             f"{fam['Static Replay']['Rules Only']['block_rate_pct']:.1f}% ({fam['Static Replay']['Rules Only']['blocked_count']}/{fam['Static Replay']['Rules Only']['total_rounds']})",
             f"{fam['Static Replay']['Rules Only']['block_rate_pct']:.1f}% ({fam['Static Replay']['Rules Only']['blocked_count']}/{fam['Static Replay']['Rules Only']['total_rounds']})",
-            [("DOCX", docx_txt), ("CH4_MD", md_txt)],
+            [("DOCX", docx_txt)],
         ),
         (
             "1. In-Process 3x3 (Familiar)",
@@ -97,7 +94,7 @@ def main() -> None:
             "familiar.Dueling-DQN v2.0.Rules Only.block_rate_pct",
             f"{fam['Dueling-DQN v2.0']['Rules Only']['block_rate_pct']:.1f}% ({fam['Dueling-DQN v2.0']['Rules Only']['blocked_count']}/{fam['Dueling-DQN v2.0']['Rules Only']['total_rounds']})",
             f"{fam['Dueling-DQN v2.0']['Rules Only']['block_rate_pct']:.1f}% ({fam['Dueling-DQN v2.0']['Rules Only']['blocked_count']}/{fam['Dueling-DQN v2.0']['Rules Only']['total_rounds']})",
-            [("DOCX", docx_txt), ("CH4_MD", md_txt)],
+            [("DOCX", docx_txt)],
         ),
         (
             "1. In-Process 3x3 (Familiar)",
@@ -106,7 +103,7 @@ def main() -> None:
             "familiar.Dueling-DQN v2.0.Rules Only.evasion_rate_pct",
             f"{fam['Dueling-DQN v2.0']['Rules Only']['evasion_rate_pct']:.1f}%",
             f"{fam['Dueling-DQN v2.0']['Rules Only']['evasion_rate_pct']:.1f}%",
-            [("DOCX", docx_txt), ("PPTX", pptx_txt), ("CH4_MD", md_txt)],
+            [("DOCX", docx_txt), ("PPTX", pptx_txt)],
         ),
         (
             "1. In-Process 3x3 (Familiar)",
@@ -115,7 +112,7 @@ def main() -> None:
             "familiar.Dueling-DQN v2.0.Hybrid v3.0.block_rate_pct",
             f"{fam['Dueling-DQN v2.0']['Hybrid v3.0']['block_rate_pct']:.1f}% ({fam['Dueling-DQN v2.0']['Hybrid v3.0']['blocked_count']}/{fam['Dueling-DQN v2.0']['Hybrid v3.0']['total_rounds']})",
             f"{fam['Dueling-DQN v2.0']['Hybrid v3.0']['block_rate_pct']:.1f}% ({fam['Dueling-DQN v2.0']['Hybrid v3.0']['blocked_count']}/{fam['Dueling-DQN v2.0']['Hybrid v3.0']['total_rounds']})",
-            [("DOCX", docx_txt), ("PPTX", pptx_txt), ("CH4_MD", md_txt)],
+            [("DOCX", docx_txt), ("PPTX", pptx_txt)],
         ),
         (
             "1. In-Process 3x3 (Familiar)",
@@ -124,7 +121,7 @@ def main() -> None:
             "familiar.Dueling-DQN v2.0.Hybrid v3.0.avg_latency_ms",
             f"{fam['Dueling-DQN v2.0']['Hybrid v3.0']['avg_latency_ms']:.3f} ms",
             f"{fam['Dueling-DQN v2.0']['Hybrid v3.0']['avg_latency_ms']:.3f} ms",
-            [("DOCX", docx_txt), ("CH4_MD", md_txt)],
+            [("DOCX", docx_txt)],
         ),
         (
             "2. In-Process 3x3 (Strange)",
@@ -133,7 +130,7 @@ def main() -> None:
             "strange.Static Replay.Rules Only.block_rate_pct",
             f"{stg['Static Replay']['Rules Only']['block_rate_pct']:.1f}% ({stg['Static Replay']['Rules Only']['blocked_count']}/{stg['Static Replay']['Rules Only']['total_rounds']})",
             f"{stg['Static Replay']['Rules Only']['block_rate_pct']:.1f}% ({stg['Static Replay']['Rules Only']['blocked_count']}/{stg['Static Replay']['Rules Only']['total_rounds']})",
-            [("DOCX", docx_txt), ("CH4_MD", md_txt)],
+            [("DOCX", docx_txt)],
         ),
         (
             "2. In-Process 3x3 (Strange)",
@@ -142,7 +139,7 @@ def main() -> None:
             "strange.Dueling-DQN v2.0.Rules Only.block_rate_pct",
             f"{stg['Dueling-DQN v2.0']['Rules Only']['block_rate_pct']:.1f}% ({stg['Dueling-DQN v2.0']['Rules Only']['blocked_count']}/{stg['Dueling-DQN v2.0']['Rules Only']['total_rounds']})",
             f"{stg['Dueling-DQN v2.0']['Rules Only']['block_rate_pct']:.1f}% ({stg['Dueling-DQN v2.0']['Rules Only']['blocked_count']}/{stg['Dueling-DQN v2.0']['Rules Only']['total_rounds']})",
-            [("DOCX", docx_txt), ("CH4_MD", md_txt)],
+            [("DOCX", docx_txt)],
         ),
         (
             "2. In-Process 3x3 (Strange)",
@@ -151,7 +148,7 @@ def main() -> None:
             "strange.Dueling-DQN v2.0.Hybrid v3.0.block_rate_pct",
             f"{stg['Dueling-DQN v2.0']['Hybrid v3.0']['block_rate_pct']:.1f}% ({stg['Dueling-DQN v2.0']['Hybrid v3.0']['blocked_count']}/{stg['Dueling-DQN v2.0']['Hybrid v3.0']['total_rounds']})",
             f"{stg['Dueling-DQN v2.0']['Hybrid v3.0']['block_rate_pct']:.1f}%",
-            [("DOCX", docx_txt), ("PPTX", pptx_txt), ("CH4_MD", md_txt)],
+            [("DOCX", docx_txt), ("PPTX", pptx_txt)],
         ),
         (
             "3. Live HTTP 3x3 (C1)",
@@ -160,7 +157,7 @@ def main() -> None:
             "familiar_results.Dueling-DQN v2.0.Hybrid v3.0.block_rate_pct",
             f"{lfam['Dueling-DQN v2.0']['Hybrid v3.0']['block_rate_pct']:.1f}% ({lfam['Dueling-DQN v2.0']['Hybrid v3.0']['blocked_count']}/{lfam['Dueling-DQN v2.0']['Hybrid v3.0']['total_episodes']})",
             f"{lfam['Dueling-DQN v2.0']['Hybrid v3.0']['block_rate_pct']:.1f}% ({lfam['Dueling-DQN v2.0']['Hybrid v3.0']['blocked_count']}/{lfam['Dueling-DQN v2.0']['Hybrid v3.0']['total_episodes']})",
-            [("DOCX", docx_txt), ("CH4_MD", md_txt)],
+            [("DOCX", docx_txt)],
         ),
         (
             "3. Live HTTP 3x3 (C1)",
@@ -169,7 +166,7 @@ def main() -> None:
             "strange_results.Dueling-DQN v2.0.Rules Only.block_rate_pct",
             f"{lstg['Dueling-DQN v2.0']['Rules Only']['block_rate_pct']:.1f}% ({lstg['Dueling-DQN v2.0']['Rules Only']['blocked_count']}/{lstg['Dueling-DQN v2.0']['Rules Only']['total_episodes']})",
             f"{lstg['Dueling-DQN v2.0']['Rules Only']['block_rate_pct']:.1f}% ({lstg['Dueling-DQN v2.0']['Rules Only']['blocked_count']}/{lstg['Dueling-DQN v2.0']['Rules Only']['total_episodes']})",
-            [("DOCX", docx_txt), ("CH4_MD", md_txt)],
+            [("DOCX", docx_txt)],
         ),
         (
             "3. Live HTTP 3x3 (C1)",
@@ -178,7 +175,7 @@ def main() -> None:
             "strange_results.Dueling-DQN v2.0.Hybrid v3.0.block_rate_pct",
             f"{lstg['Dueling-DQN v2.0']['Hybrid v3.0']['block_rate_pct']:.1f}% ({lstg['Dueling-DQN v2.0']['Hybrid v3.0']['blocked_count']}/{lstg['Dueling-DQN v2.0']['Hybrid v3.0']['total_episodes']})",
             f"{lstg['Dueling-DQN v2.0']['Hybrid v3.0']['block_rate_pct']:.1f}%",
-            [("DOCX", docx_txt), ("PPTX", pptx_txt), ("CH4_MD", md_txt)],
+            [("DOCX", docx_txt), ("PPTX", pptx_txt)],
         ),
         (
             "3. Live HTTP 3x3 (C1)",
@@ -187,7 +184,7 @@ def main() -> None:
             "strange_results.Dueling-DQN v2.0.Hybrid v3.0.avg_latency_ms",
             f"{lstg['Dueling-DQN v2.0']['Hybrid v3.0']['avg_latency_ms']:.3f} ms",
             f"{lstg['Dueling-DQN v2.0']['Hybrid v3.0']['avg_latency_ms']:.3f} ms",
-            [("DOCX", docx_txt), ("CH4_MD", md_txt)],
+            [("DOCX", docx_txt)],
         ),
         (
             "4. Curriculum DQN 600-Ep (C2)",
@@ -196,7 +193,7 @@ def main() -> None:
             "episodes_trained",
             f"{dqn['episodes_trained']} episodes",
             f"{dqn['episodes_trained']} episodes",
-            [("DOCX", docx_txt), ("PPTX", pptx_txt), ("CH4_MD", md_txt)],
+            [("DOCX", docx_txt), ("PPTX", pptx_txt)],
         ),
         (
             "4. Curriculum DQN 600-Ep (C2)",
@@ -205,7 +202,7 @@ def main() -> None:
             "curriculum_metrics.stage{1,2,3}_avg_reward",
             f"{cm['stage1_avg_reward']:.2f} / {cm['stage2_avg_reward']:.2f} / {cm['stage3_avg_reward']:.2f}",
             f"{cm['stage3_avg_reward']:.2f}",
-            [("DOCX", docx_txt), ("PPTX", pptx_txt), ("CH4_MD", md_txt)],
+            [("DOCX", docx_txt), ("PPTX", pptx_txt)],
         ),
         (
             "4. Curriculum DQN 600-Ep (C2)",
@@ -214,7 +211,7 @@ def main() -> None:
             "curriculum_metrics.stage3_blind_retries_reduction_pct",
             f"{cm['stage3_blind_retries_reduction_pct']:.2f}%",
             f"{cm['stage3_blind_retries_reduction_pct']:.2f}%",
-            [("DOCX", docx_txt), ("PPTX", pptx_txt), ("CH4_MD", md_txt)],
+            [("DOCX", docx_txt), ("PPTX", pptx_txt)],
         ),
         (
             "5. FPR & Controlled Tuning (C3)",
@@ -223,7 +220,7 @@ def main() -> None:
             "aggregate_summary.fp_operational_pct",
             f"{fp_agg['fp_operational_pct']:.2f}%",
             f"{fp_agg['fp_operational_pct']:.2f}%",
-            [("DOCX", docx_txt), ("PPTX", pptx_txt), ("CH4_MD", md_txt)],
+            [("DOCX", docx_txt), ("PPTX", pptx_txt)],
         ),
         (
             "5. FPR & Controlled Tuning (C3)",
@@ -232,7 +229,7 @@ def main() -> None:
             "corpora.benchmark_1000_diverse_benign.fp_strict_schema_off_pct",
             f"{b1000_fp['fp_strict_schema_off_pct']:.1f}%",
             f"{b1000_fp['fp_strict_schema_off_pct']:.1f}%",
-            [("DOCX", docx_txt), ("PPTX", pptx_txt), ("CH4_MD", md_txt)],
+            [("DOCX", docx_txt), ("PPTX", pptx_txt)],
         ),
         (
             "5. FPR & Controlled Tuning (C3)",
@@ -241,7 +238,7 @@ def main() -> None:
             "rounds[2].b1000_strict_schema_on_pct",
             f"{fpt['rounds'][2]['b1000_strict_schema_on_pct']:.1f}%",
             f"{fpt['rounds'][2]['b1000_strict_schema_on_pct']:.1f}%",
-            [("DOCX", docx_txt), ("CH4_MD", md_txt)],
+            [("DOCX", docx_txt)],
         ),
         (
             "6. CSIC 2-Hop HTTP Latency (D2)",
@@ -250,7 +247,7 @@ def main() -> None:
             "http_e2e_latency_ms.mean_ms",
             f"{e2e['mean_ms']:.3f} ms",
             f"{e2e['mean_ms']:.3f} ms",
-            [("DOCX", docx_txt), ("DOCX_CH4", docx_ch4_txt), ("DOCX_FULL", docx_full_txt), ("PPTX", pptx_txt), ("CH4_MD", md_txt)],
+            [("DOCX", docx_txt), ("PPTX", pptx_txt)],
         ),
         (
             "6. CSIC 2-Hop HTTP Latency (D2)",
@@ -259,7 +256,7 @@ def main() -> None:
             "http_e2e_latency_ms.{p50_ms,p95_ms,p99_ms}",
             f"{e2e['p50_ms']:.3f} / {e2e['p95_ms']:.3f} / {e2e['p99_ms']:.3f} ms",
             f"{e2e['p50_ms']:.3f} ms",
-            [("DOCX", docx_txt), ("CH4_MD", md_txt)],
+            [("DOCX", docx_txt)],
         ),
         (
             "7. Ablation, CSIC & C=50",
@@ -268,7 +265,7 @@ def main() -> None:
             "modes.rules_only.f1_score_pct",
             f"{ab_m['rules_only']['f1_score_pct']:.2f}%",
             f"{ab_m['rules_only']['f1_score_pct']:.2f}%",
-            [("DOCX", docx_txt), ("CH4_MD", md_txt)],
+            [("DOCX", docx_txt)],
         ),
         (
             "7. Ablation, CSIC & C=50",
@@ -277,7 +274,7 @@ def main() -> None:
             "modes.ml_only.f1_score_pct",
             f"{ab_m['ml_only']['f1_score_pct']:.2f}%",
             f"{ab_m['ml_only']['f1_score_pct']:.2f}%",
-            [("DOCX", docx_txt), ("CH4_MD", md_txt)],
+            [("DOCX", docx_txt)],
         ),
         (
             "7. Ablation, CSIC & C=50",
@@ -286,7 +283,7 @@ def main() -> None:
             "modes.hybrid.{f1_score_pct,fpr_pct}",
             f"{ab_m['hybrid']['f1_score_pct']:.2f}% / {ab_m['hybrid']['fpr_pct']:.2f}%",
             f"{ab_m['hybrid']['f1_score_pct']:.2f}%",
-            [("DOCX", docx_txt), ("PPTX", pptx_txt), ("CH4_MD", md_txt)],
+            [("DOCX", docx_txt), ("PPTX", pptx_txt)],
         ),
         (
             "7. Ablation, CSIC & C=50",
@@ -295,7 +292,7 @@ def main() -> None:
             "hybrid_defense_in_depth.{fpr,precision}",
             f"{csic_h['fpr']:.2f}% / {csic_h['precision']:.2f}%",
             f"{csic_h['fpr']:.2f}%",
-            [("DOCX", docx_txt), ("PPTX", pptx_txt), ("CH4_MD", md_txt)],
+            [("DOCX", docx_txt), ("PPTX", pptx_txt)],
         ),
         (
             "7. Ablation, CSIC & C=50",
@@ -304,7 +301,7 @@ def main() -> None:
             "two_tier_parallel_metrics.{overall_1500,group_b_parameter_tampering}",
             f"{csic['two_tier_parallel_metrics']['overall_1500']['hybrid_operational_t80_recall_pct']:.2f}% Op / {csic['two_tier_parallel_metrics']['overall_1500']['hybrid_loose_recall_pct']:.2f}% Loose / {csic['two_tier_parallel_metrics']['group_b_parameter_tampering']['hybrid_operational_t80']['recall_pct']:.2f}% Group B",
             f"{csic['two_tier_parallel_metrics']['overall_1500']['hybrid_operational_t80_recall_pct']:.2f}%",
-            [("DOCX", docx_txt), ("PPTX", pptx_txt), ("CH4_MD", md_txt)],
+            [("DOCX", docx_txt), ("PPTX", pptx_txt)],
         ),
         (
             "7. Ablation, CSIC & C=50",
@@ -313,7 +310,7 @@ def main() -> None:
             "zero_leakage_verified",
             f"{leak['zero_leakage_verified']} (0 overlaps / {leak['metadata']['defense_v2_total_rows']:,} rows)",
             "zero_leakage_verified = true",
-            [("CH4_MD", md_txt)],
+            [("DOCX", docx_txt)],
         ),
         (
             "7. Ablation, CSIC & C=50",
@@ -331,7 +328,7 @@ def main() -> None:
             "stage4_live_http_metrics.live_http_8056_dqn_bypass_rate_pct",
             f"{dqn['stage4_live_http_metrics']['live_http_8056_dqn_bypass_rate_pct']:.1f}%",
             f"{dqn['stage4_live_http_metrics']['live_http_8056_dqn_bypass_rate_pct']:.1f}%",
-            [("DOCX", docx_txt), ("PPTX", pptx_txt), ("CH4_MD", md_txt)],
+            [("DOCX", docx_txt), ("PPTX", pptx_txt)],
         ),
         (
             "8. Phase E (v3.3)",
@@ -340,7 +337,7 @@ def main() -> None:
             "added_total_rows",
             f"+{aug['added_total_rows']} ({aug['added_by_source']['phase_e_e2a_sandbox']} E2a + {aug['added_by_source']['phase_e_e3_group_a_synth']} E3)",
             f"{aug['added_total_rows']}",
-            [("DOCX", docx_txt), ("PPTX", pptx_txt), ("CH4_MD", md_txt)],
+            [("DOCX", docx_txt), ("PPTX", pptx_txt)],
         ),
         (
             "8. Phase E (v3.3)",
@@ -349,7 +346,7 @@ def main() -> None:
             "parallel_metrics.operational_decision_engine_t80.group_a_recall_pct",
             f"{csic_tax['parallel_metrics']['operational_decision_engine_t80']['group_a_recall_pct']:.2f}% ({csic_tax['parallel_metrics']['operational_decision_engine_t80']['group_a_blocked']}/{csic_tax['two_tier_breakdown']['group_a_true_payload']['count']})",
             f"{csic_tax['parallel_metrics']['operational_decision_engine_t80']['group_a_recall_pct']:.2f}% ({csic_tax['parallel_metrics']['operational_decision_engine_t80']['group_a_blocked']}/{csic_tax['two_tier_breakdown']['group_a_true_payload']['count']})",
-            [("DOCX", docx_txt), ("PPTX", pptx_txt), ("CH4_MD", md_txt)],
+            [("DOCX", docx_txt), ("PPTX", pptx_txt)],
         ),
         (
             "8. Phase E (v3.3)",
@@ -358,7 +355,7 @@ def main() -> None:
             "operational_decision_engine_t80.hybrid_plus_tienda1_schema_strict.{group_b,overall}",
             f"{csic_tienda1['operational_decision_engine_t80']['hybrid_plus_tienda1_schema_strict']['group_b_parameter_tampering']['recall_pct']:.2f}% / {csic_tienda1['operational_decision_engine_t80']['hybrid_plus_tienda1_schema_strict']['overall_1500']['recall_pct']:.2f}%",
             f"{csic_tienda1['operational_decision_engine_t80']['hybrid_plus_tienda1_schema_strict']['group_b_parameter_tampering']['recall_pct']:.2f}%",
-            [("DOCX", docx_txt), ("PPTX", pptx_txt), ("CH4_MD", md_txt)],
+            [("DOCX", docx_txt), ("PPTX", pptx_txt)],
         ),
         (
             "8. Phase E (v3.3)",
@@ -367,7 +364,7 @@ def main() -> None:
             "live_http.Dueling-DQN v2.0.Hybrid v3.3.block_rate_pct",
             f"{st33['live_http']['Dueling-DQN v2.0']['Hybrid v3.3']['block_rate_pct']:.2f}% ({st33['live_http']['Dueling-DQN v2.0']['Hybrid v3.3']['blocked_count']}/{st33['live_http']['Dueling-DQN v2.0']['Hybrid v3.3']['total_episodes']})",
             f"{st33['live_http']['Dueling-DQN v2.0']['Hybrid v3.3']['block_rate_pct']:.2f}% ({st33['live_http']['Dueling-DQN v2.0']['Hybrid v3.3']['blocked_count']}/{st33['live_http']['Dueling-DQN v2.0']['Hybrid v3.3']['total_episodes']})",
-            [("DOCX", docx_txt), ("PPTX", pptx_txt), ("CH4_MD", md_txt)],
+            [("DOCX", docx_txt), ("PPTX", pptx_txt)],
         ),
         (
             "8. Phase E (v3.3)",
@@ -376,7 +373,7 @@ def main() -> None:
             "live_http.Dueling-DQN v2.0.Hybrid v3.3.block_rate_pct",
             f"{bv2['live_http']['Dueling-DQN v2.0']['Hybrid v3.3']['block_rate_pct']:.2f}% ({bv2['live_http']['Dueling-DQN v2.0']['Hybrid v3.3']['blocked_count']}/{bv2['live_http']['Dueling-DQN v2.0']['Hybrid v3.3']['total_episodes']})",
             f"{bv2['live_http']['Dueling-DQN v2.0']['Hybrid v3.3']['block_rate_pct']:.2f}% ({bv2['live_http']['Dueling-DQN v2.0']['Hybrid v3.3']['blocked_count']}/{bv2['live_http']['Dueling-DQN v2.0']['Hybrid v3.3']['total_episodes']})",
-            [("DOCX", docx_txt), ("PPTX", pptx_txt), ("CH4_MD", md_txt)],
+            [("DOCX", docx_txt), ("PPTX", pptx_txt)],
         ),
     ]
 
@@ -398,7 +395,7 @@ def main() -> None:
     content = (
         "# BẢNG ĐỐI CHIẾU SỐ LIỆU ĐỒ ÁN VÀ ARTIFACT THỰC NGHIỆM (AUTO-VERIFIED RECONCILIATION MATRIX)\n\n"
         "- **Mã công việc:** `PBL6 v3.1 — Phase C (Mục C4)`\n"
-        "- **Trình sinh & Kiểm chứng tự động:** `scripts/generate_reconciliation_matrix.py` (đọc trực tiếp JSON + giải nén kiểm tra chuỗi thật trên `.docx`, `.pptx`, `.md`; `0` nhập tay).\n"
+        "- **Trình sinh & Kiểm chứng tự động:** `scripts/generate_reconciliation_matrix.py` (đọc trực tiếp JSON + giải nén kiểm tra chuỗi thật trên `PBL6_Bao_Cao.docx` và `PBL6_Academic_Defense_Slides.pptx`; `0` nhập tay).\n"
         f"- **Tổng số phép kiểm chứng chéo:** **`{len(checks)}/{len(checks)} VERIFIED PASS` (`0` sai lệch)**.\n\n"
         "| STT | Nhóm Thực Nghiệm | Chỉ Số Kiểm Chứng | Artifact Gốc | JSON Key | Giá Trị Ground-Truth | Trạng Thái Quét Tệp Thực Tế |\n"
         "| :---: | :--- | :--- | :--- | :--- | :---: | :--- |\n"
