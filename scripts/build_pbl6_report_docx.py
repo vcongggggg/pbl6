@@ -224,6 +224,14 @@ def prepare_chapter4_markdown(raw_md: str, m: dict[str, Any]) -> str:
     )
     txt = txt.replace("### 4.2.2.", fig1_md + "\n### 4.2.2.")
 
+    # Embed Fig 4.1b (Confusion Matrix & 2-Hop Latency) after 4.2.2 (before ## 4.3.)
+    fig1b_md = (
+        "\n![Hình 4.1b: Ma trận nhầm lẫn XGBoost (N = "
+        f"{_fmt_vi(d2_te)}) và Đối sánh Độ trễ Nội bộ so với HTTP 2-Hop Thực tế (CSIC N = 3.000)]"
+        "(figures/fig_cm_and_latency.png)\n"
+    )
+    txt = txt.replace("## 4.3.", fig1b_md + "\n## 4.3.", 1)
+
     # Refresh Section 4.4 with live ablation JSON + Fig 2
     s44_start = txt.find("## 4.4.")
     s45_start = txt.find("---\n\n## 4.5.")
@@ -480,6 +488,16 @@ def prepare_chapter2_markdown(raw_md: str) -> str:
     ]
     for old_s, new_s in replacements:
         txt = txt.replace(old_s, new_s)
+    txt = txt.replace(
+        "## 2.4.",
+        "\n![Hình 2.2: Luồng xử lý phân tích đa tầng và ra quyết định tại WAF Gateway](figures/fig_arch_waf_pipeline.png)\n\n## 2.4.",
+        1,
+    )
+    txt = txt.replace(
+        "## 2.6.",
+        "\n![Hình 2.3: Vòng lặp Tác tử Pentest Tự hành PyTorch Dueling Double-DQN (74-D State, 36 Actions, 4-Stage Curriculum)](figures/fig_arch_dqn_loop.png)\n\n## 2.6.",
+        1,
+    )
     return txt
 
 
@@ -542,6 +560,18 @@ def prepare_ref_appendix_markdown(raw_md: str) -> str:
         ("Cú pháp OWASP (v2.0)", "Cú pháp OWASP (CMD)"),
         ("Ngữ cảnh v2.0", "Ngữ cảnh & Cấu trúc"),
         ("Chống FP v2.0", "Chống FP (Ngữ cảnh)"),
+        (
+            '* **[Ref 13]** Research Team, "A Dual-Stage Hybrid Pipeline for Web Application Firewall using Machine Learning," *MDPI Electronics*, vol. 14, no. 3, p. 512, 2025.',
+            '* **[Ref 13]** A. Shaheed and M.-B. Kurdy, "Web Application Firewall Using Machine Learning and Features Engineering," *Security and Communication Networks*, vol. 2022, Art. no. 5280158, 2022.',
+        ),
+        (
+            '* **[Ref 14]** Academic Authors, "Cross-Dataset Generalization and Robustness in Machine Learning Web Application Firewalls," *IEEE Access*, vol. 11, pp. 45120–45135, 2023. (Áp dụng đánh giá chéo Zero-Shot trên CSIC 2010 HTTP Dataset).',
+            '* **[Ref 14]** D. Y. Demirel and M. T. Sandikkaya, "Web Based Anomaly Detection Using Zero-Shot Learning With CNN," *IEEE Access*, vol. 11, 2023, doi: 10.1109/ACCESS.2023.3303845. (Đối sánh trực tiếp với Isolation Forest và đánh giá chéo trên tập CSIC 2010 HTTP Dataset).',
+        ),
+        (
+            '* **[Ref 19]** Security Researchers, "Automated Black-box Web Application Firewall Evasion using Deep Reinforcement Learning," in *Proc. 33rd USENIX Security Symposium*, Philadelphia, PA, 2024.',
+            '* **[Ref 19]** Z. Qu, X. Ling, T. Wang, X. Chen, S. Ji, and C. Wu, "AdvSQLi: Generating Adversarial SQL Injections Against Real-World WAF-as-a-Service," *IEEE Transactions on Information Forensics and Security*, vol. 19, pp. 2623–2638, 2024.',
+        ),
     ]
     for old_s, new_s in replacements:
         txt = txt.replace(old_s, new_s)
@@ -1129,21 +1159,22 @@ def render_markdown_chapter(doc: Document, md_text: str, is_first_h1_in_section:
             if is_ch2:
                 code_block = normalize_authors(code_block, is_ch2_diagram=True)
             is_wide_diagram = is_ch2 and ("MÁY 2:" in code_block or "+---" in code_block)
-            font_sz = 7.0 if is_wide_diagram else 9.5
+            if is_wide_diagram:
+                add_figure(
+                    doc,
+                    FIGURES_DIR / "fig_arch_cyber_range.png",
+                    "Hình 2.1: Sơ đồ kiến trúc tổng thể Thao trường An ninh Đối kháng Phân tán 2 Máy (Blue Team Hybrid & Red Team Offensive AI)",
+                    width_cm=15.0,
+                )
+                continue
+            font_sz = 9.5
             p = doc.add_paragraph()
             _apply_paragraph_box(p, fill_hex="F1F5F9", border_hex=NAVY_HEX, left_sz="18",
-                                 space_before=6, space_after=4 if is_wide_diagram else 6, line_spacing=1.12)
-            if is_wide_diagram:
-                p.paragraph_format.left_indent = Cm(0.15)
-                p.paragraph_format.right_indent = Cm(0.10)
+                                 space_before=6, space_after=6, line_spacing=1.12)
             p.alignment = WD_ALIGN_PARAGRAPH.LEFT
             p.paragraph_format.keep_together = True
-            if is_wide_diagram:
-                p.paragraph_format.keep_with_next = True
             r = p.add_run(code_block)
             _set_run_font(r, "Consolas", font_sz, bold=False, italic=False, color=SLATE_CODE_RGB)
-            if is_wide_diagram:
-                add_caption(doc, "Hình 2.1: Sơ đồ kiến trúc tổng thể Thao trường An ninh Đối kháng Phân tán 2 Máy (Blue Team Hybrid & Red Team Offensive AI)")
             continue
 
         # Blockquote (> ...)
@@ -1479,7 +1510,10 @@ def build_front_matter(doc: Document, m: dict[str, Any]) -> None:
     _add_front_matter_title(doc, "DANH MỤC HÌNH ẢNH", page_break=True)
     fig_rows = [
         ["Hình 2.1", "Sơ đồ kiến trúc tổng thể Thao trường An ninh Đối kháng Phân tán 2 Máy (Blue Team Hybrid & Red Team Offensive AI)", "Chương 2 (Mục 2.2)"],
+        ["Hình 2.2", "Luồng xử lý phân tích đa tầng và ra quyết định tại WAF Gateway", "Chương 2 (Mục 2.3)"],
+        ["Hình 2.3", "Vòng lặp Tác tử Pentest Tự hành PyTorch Dueling Double-DQN (74-D State, 36 Actions, 4-Stage Curriculum)", "Chương 2 (Mục 2.5)"],
         ["Hình 4.1", "Đối sánh 5 mô hình học máy trên tập kiểm thử Zero-Leakage defense_v2 (N = 6.929)", "Chương 4 (Mục 4.2.1)"],
+        ["Hình 4.1b", "Ma trận nhầm lẫn XGBoost (N = 6.929) và Đối sánh Độ trễ Nội bộ so với HTTP 2-Hop Thực tế (CSIC N = 3.000)", "Chương 4 (Mục 4.2.2)"],
         ["Hình 4.2", "Kết quả Ablation Study 4 cấu hình phòng thủ và độ trễ cô lập", "Chương 4 (Mục 4.4)"],
         ["Hình 4.3", "Đối sánh hiệu năng & bảo mật giữa Baseline (RF 17-D) và Blue Team Hybrid", "Chương 4 (Mục 4.5)"],
         ["Hình 4.4", "Thông lượng xử lý đồng thời (RPS) của WAF Gateway dưới tải ASGI C = 1..50", "Chương 4 (Mục 4.6.2)"],
@@ -1808,6 +1842,9 @@ def verify_canonical_requirements(docx_path: Path) -> None:
         ("Xuân Ly", re.compile(r"Xuân Ly", re.I)),
         ("21T_DT", re.compile(r"21T_DT", re.I)),
         ("dotted_version", re.compile(r"\bv(?:1\.0|2\.0|3\.0|3\.1|3\.2|3\.3|3\.4)\b", re.I)),
+        ("placeholder_ref_research_team", re.compile(r"Research Team", re.I)),
+        ("placeholder_ref_academic_authors", re.compile(r"Academic Authors", re.I)),
+        ("placeholder_ref_security_researchers", re.compile(r"Security Researchers", re.I)),
     ]
     for label, pat in forbidden:
         hits = pat.findall(full_txt)
