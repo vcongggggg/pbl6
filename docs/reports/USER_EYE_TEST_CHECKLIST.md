@@ -39,7 +39,7 @@
    - [ ] Bấm **`Explain`** -> mở **DetectionExplainabilityModal** kiểm tra điểm phân rã `Rule (40%) + Supervised ML (35%) + Isolation Forest (25%)`.
 
 2. **Kiểm tra Live Arena, Traffic Replay & Custom Payload (`/arena`):**
-   - [ ] Xác nhận nút chế độ đang chọn **`Live HTTP (/api/proxy)`**, chọn cấp độ **`3. Hybrid v3.0`**, chọn phạm vi (`Full Pentest 8/8` hoặc từng họ tấn công + nhập `Custom Payload` nếu muốn thử tay) và bấm **`Chạy Pentest AI`**.
+   - [ ] Xác nhận nút chế độ đang chọn **`Live HTTP (/api/proxy)`**, chọn cấp độ **`3. Hybrid v3.4`**, chọn phạm vi (`Full Pentest 8/8` hoặc từng họ tấn công + nhập `Custom Payload` nếu muốn thử tay) và bấm **`Chạy Pentest AI`**.
    - [ ] Thanh 5 pha chạy mượt (`1. Recon -> 2. Attack Graph -> 3. Baseline Probe -> 4. DQN Mutate & Pivot -> 5. Verdict & SOC`); kết quả Live HTTP hiển thị **`8/8`** chặn/redacted DLP (hoặc 100% đúng với rule/ML thực tế).
    - [ ] Chọn từng vòng trong **SSE Pentest Trace**: cột phải hiển thị **`Trained Action Q(s, a) Ranking`**, `InputNormalizer Canonical Output`, `Chữ ký & Lá chắn kích hoạt` (`matched_rules`) và 3 ô điểm **`Rule / API`**, **`XGBoost 26-D`**, **`IForest 26-D`**.
    - [ ] Bấm **`Replay Traffic`** ngay trên thanh điều khiển (hoặc trong drawer `Lịch sử`): xác nhận banner hiển thị tỷ lệ khớp **`8/8 (100.0%)`**.
