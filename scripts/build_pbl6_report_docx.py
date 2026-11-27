@@ -636,6 +636,8 @@ def _set_run_font(run: Any, font_name: str = "Times New Roman", size_pt: float |
         run.italic = italic
     if color is not None:
         run.font.color.rgb = color
+    if font_name == "Consolas" and rPr.find(qn("w:noProof")) is None:
+        rPr.append(OxmlElement("w:noProof"))
 
 
 def _set_section_borders(section: Any, double_black: bool) -> None:
@@ -705,6 +707,12 @@ def _enable_update_fields_on_open(doc: Document) -> None:
         uf = OxmlElement("w:updateFields")
         uf.set(qn("w:val"), "true")
         settings.append(uf)
+    compat = settings.find(qn("w:compat"))
+    if compat is None:
+        compat = OxmlElement("w:compat")
+        settings.append(compat)
+    if compat.find(qn("w:doNotExpandShiftReturn")) is None:
+        compat.append(OxmlElement("w:doNotExpandShiftReturn"))
 
 
 def _apply_paragraph_box(p: Any, fill_hex: str, border_hex: str = NAVY_HEX,
@@ -935,6 +943,63 @@ def _strip_md_links(text: str) -> str:
     return re.sub(r"\[([^\]]+)\]\(([^)]+)\)", r"\1 (\2)", text)
 
 
+_PROTECTED_EXACT_TOKENS = frozenset({"zero_leakage_verified"})
+
+
+def _split_soft_break_chunks(text: str) -> list[str]:
+    """Split text into chunks separated at safe break points inside long tokens (>= 16 chars)."""
+    if not text:
+        return []
+    parts = re.split(r"(\s+)", text)
+    chunks: list[str] = []
+    cur = ""
+    for part in parts:
+        if not part or part.isspace() or len(part) < 16:
+            cur += part
+            continue
+        if any(p in part for p in _PROTECTED_EXACT_TOKENS) or re.fullmatch(r"[\d.,/%()+\-±–]+", part):
+            cur += part
+            continue
+        tok = re.sub(r"/(?=[A-Za-z0-9_])", "/\u200b", part)
+        if len(part) >= 22:
+            tok = re.sub(r"_(?=[A-Za-z0-9])", "_\u200b", tok)
+        tok = re.sub(r"(?<=[A-Za-z0-9_])\.(?=[A-Za-z])", ".\u200b", tok)
+        tok = re.sub(r"([=,(])(?=\S)", "\\1\u200b", tok)
+        sub = tok.split("\u200b")
+        cur += sub[0]
+        for s in sub[1:]:
+            chunks.append(cur)
+            cur = s
+    if cur:
+        chunks.append(cur)
+    return chunks
+
+
+def _add_breakable_runs(
+    p: Any,
+    text: str,
+    font_name: str,
+    size_pt: float,
+    bold: bool,
+    italic: bool,
+    color: RGBColor,
+) -> None:
+    """Emit runs with invisible proportional U+200B break hints (never inside Consolas glyphs)."""
+    chunks = _split_soft_break_chunks(text)
+    if not chunks:
+        return
+    if font_name != "Consolas":
+        r = p.add_run("\u200b".join(chunks))
+        _set_run_font(r, font_name, size_pt, bold, italic, color)
+        return
+    for idx, ch in enumerate(chunks):
+        if idx > 0:
+            r_zw = p.add_run("\u200b")
+            _set_run_font(r_zw, "Times New Roman", 1.0, False, False, color)
+        r = p.add_run(ch)
+        _set_run_font(r, "Consolas", size_pt, bold, italic, color)
+
+
 def add_formatted_runs(p: Any, text: str, base_font: str = "Times New Roman",
                        base_size: float = 13.0, base_bold: bool = False,
                        base_italic: bool = False, base_color: RGBColor = BLACK_RGB) -> None:
@@ -943,8 +1008,7 @@ def add_formatted_runs(p: Any, text: str, base_font: str = "Times New Roman",
     pos = 0
     for m in _INLINE_TOKEN_RE.finditer(cleaned):
         if m.start() > pos:
-            r = p.add_run(cleaned[pos:m.start()])
-            _set_run_font(r, base_font, base_size, base_bold, base_italic, base_color)
+            _add_breakable_runs(p, cleaned[pos:m.start()], base_font, base_size, base_bold, base_italic, base_color)
         tok = m.group(0)
         if tok.startswith("**") and tok.endswith("**"):
             inner = tok[2:-2]
@@ -954,29 +1018,26 @@ def add_formatted_runs(p: Any, text: str, base_font: str = "Times New Roman",
                 if not sp:
                     continue
                 if sp.startswith("`") and sp.endswith("`"):
-                    r = p.add_run(sp[1:-1])
-                    _set_run_font(r, "Consolas", max(base_size - 1.5, 9.0), True, base_italic, SLATE_CODE_RGB)
+                    _add_breakable_runs(
+                        p, sp[1:-1], "Consolas", max(base_size - 2.5, 9.0), True, base_italic, SLATE_CODE_RGB
+                    )
                 else:
-                    r = p.add_run(sp)
-                    _set_run_font(r, base_font, base_size, True, base_italic, base_color)
+                    _add_breakable_runs(p, sp, base_font, base_size, True, base_italic, base_color)
         elif tok.startswith("`") and tok.endswith("`"):
-            r = p.add_run(tok[1:-1])
-            _set_run_font(r, "Consolas", max(base_size - 1.5, 9.0), base_bold, base_italic, SLATE_CODE_RGB)
+            _add_breakable_runs(
+                p, tok[1:-1], "Consolas", max(base_size - 2.5, 9.0), base_bold, base_italic, SLATE_CODE_RGB
+            )
         elif tok.startswith("[") and "](" in tok:
             lm = re.match(r"\[([^\]]+)\]\(([^)]+)\)", tok)
             disp = f"{lm.group(1)} ({lm.group(2)})" if lm else tok
-            r = p.add_run(disp)
-            _set_run_font(r, base_font, base_size, base_bold, base_italic, base_color)
+            _add_breakable_runs(p, disp, base_font, base_size, base_bold, base_italic, base_color)
         elif tok.startswith("*") and tok.endswith("*"):
-            r = p.add_run(tok[1:-1])
-            _set_run_font(r, base_font, base_size, base_bold, True, base_color)
+            _add_breakable_runs(p, tok[1:-1], base_font, base_size, base_bold, True, base_color)
         else:
-            r = p.add_run(tok)
-            _set_run_font(r, base_font, base_size, base_bold, base_italic, base_color)
+            _add_breakable_runs(p, tok, base_font, base_size, base_bold, base_italic, base_color)
         pos = m.end()
     if pos < len(cleaned):
-        r = p.add_run(cleaned[pos:])
-        _set_run_font(r, base_font, base_size, base_bold, base_italic, base_color)
+        _add_breakable_runs(p, cleaned[pos:], base_font, base_size, base_bold, base_italic, base_color)
 
 
 def add_caption(doc: Document, text: str, keep_with_next: bool = False) -> Any:
@@ -1306,8 +1367,12 @@ def render_markdown_chapter(doc: Document, md_text: str, is_first_h1_in_section:
         if re.match(r"^\s*[-*•]\s+", line):
             p = doc.add_paragraph(style="List Bullet")
             p.paragraph_format.first_line_indent = Cm(0)
-            p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
             content = re.sub(r"^\s*[-*•]\s+", "", line).strip()
+            p.alignment = (
+                WD_ALIGN_PARAGRAPH.LEFT
+                if len(re.findall(r"`[^`]+`", content)) >= 6
+                else WD_ALIGN_PARAGRAPH.JUSTIFY
+            )
             add_formatted_runs(p, content, base_font="Times New Roman", base_size=13.0)
             i += 1
             continue
