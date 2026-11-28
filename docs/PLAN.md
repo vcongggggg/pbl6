@@ -1446,39 +1446,39 @@ Hệ thống được chia thành 13 giai đoạn phát triển tuần tự, đ�
 ## PHASE 2B — Custom Vulnerable Web API (`vulnerable-api` - Bookie Bookstore) (COMPLETED ✅)
 - Tự xây dựng Web API mục tiêu Bookie Bookstore (Port 5000) làm chủ 100% mã nguồn thay thế OWASP Juice Shop bên thứ ba theo chỉ đạo của Thầy hướng dẫn.
 - Tích hợp 8 kịch bản lỗ hổng chuẩn OWASP Web & API Top 10 (SQLi Auth Bypass, SQLi UNION Search, Stored/Reflected XSS, Path Traversal, Command Injection, BOLA/IDOR - API1:2023, SSRF - API7:2023, Mass Assignment - API6:2023) kèm Excessive Data Exposure và OpenAPI 3.0 Recon schema (`/api/v1/vulnerable/openapi.json`) cho AI Attack Planner (Máy 2) tự động trinh sát.
-- Phụ trách: `vcongggggg` (Thành viên A).
+- Phụ trách: Ngô Văn Công (Blue Team — Thành viên A).
 - Deliverable: Service hoàn chỉnh trong `vulnerable-api/`, unit tests trong `gateway/tests/test_vulnerable_api_endpoints.py`, 44/44 backend tests pass 100%.
 
 ## PHASE 3 — Feature Engineering (COMPLETED Tasks 3.1 - 3.5 ✅)
 - Trích xuất **17 đặc trưng chuẩn tắc** payload (12 đặc trưng hình thái học & entropy theo Wiley 2015 + 5 đặc trưng từ khóa/cú pháp) và 23 đặc trưng ngữ cảnh HTTP mở rộng.
-- Phụ trách: `vcongggggg` (Thành viên A).
+- Phụ trách: Ngô Văn Công (Blue Team — Thành viên A).
 - Deliverable: Hoàn thành trong PR #74, #76, #77, #79; 79/79 unit tests pass 100%.
 
 ## PHASE 4 — Dataset Generation & Lab Traffic (COMPLETED Tasks 4.1 - 4.3 ✅)
 - Thu thập và sinh tập dữ liệu 20.000 mẫu cân bằng (10k Benign + 10k Attacks đa dạng 4 họ, 60% obfuscation né tránh WAF, tỷ lệ vượt rule tĩnh 22.23%), phân tách Stratified 70/15/15 có mã băm SHA-256 chống rò rỉ dữ liệu.
-- Phụ trách: `vcongggggg` (Thành viên A).
+- Phụ trách: Ngô Văn Công (Blue Team — Thành viên A).
 - Deliverable: Hoàn thành trong PR #73, #75, #78; báo cáo phân phối dataset đầy đủ.
 
 ## PHASE 5 — Multi-Model Benchmarking & Random Forest Supervised ML (IN PROGRESS 🚀 — Next Up)
 - Xây dựng **Pipeline đối sánh 5 mô hình ứng viên** (Logistic Regression, Decision Tree, Linear SVM, Random Forest, XGBoost/GBDT) trên tập 20.000 mẫu (17 đặc trưng).
 - Đánh giá toàn diện đa tiêu chí: Precision, Recall, F1-Score, FPR, Youden's Index $J \ge 0.90$ và Độ trễ suy luận trên CPU ($\le 15\text{ms}$).
 - Lựa chọn Mô hình vô địch (**Random Forest**) xuất file model `rf_model.joblib` và `rf_metadata.json`, tự động nạp nóng vào Gateway `ml_detector.py`.
-- Phụ trách: `vcongggggg` (Thành viên A).
+- Phụ trách: Ngô Văn Công (Blue Team — Thành viên A).
 - Deliverable: `ml-engine/models/train_rf.py`, `docs/reports/rf_evaluation.md`, `ml-engine/artifacts/rf_model.joblib`, kèm notebook `ml-engine/notebooks/01_train_and_benchmark.ipynb`.
 
 ## PHASE 6 — Anomaly Detection — Isolation Forest (PLANNED ⏳)
 - Xây dựng mô hình Isolation Forest học phân phối lưu lượng sạch để phát hiện các dị biệt và biến thể tấn công mới lạ (Zero-day / Novel attacks).
-- Phụ trách: `vcongggggg` (Thành viên A).
+- Phụ trách: Ngô Văn Công (Blue Team — Thành viên A).
 - Deliverable: Bộ tính Anomaly Score chuẩn hóa $0.0 - 1.0$.
 
 ## PHASE 7 — Hybrid Risk Engine & Decision (PLANNED ⏳)
 - Tổng hợp điểm số từ Rule Engine, Random Forest và Isolation Forest thành **Weighted Risk Score (0–100)**. Đưa ra 4 quyết định phòng thủ: **ALLOW / MONITOR / RATE_LIMIT / BLOCK (403)**.
-- Phụ trách: `vcongggggg` (Thành viên A).
+- Phụ trách: Ngô Văn Công (Blue Team — Thành viên A).
 - Deliverable: Module ra quyết định phòng thủ chủ động (Active Defense) (Đã hoàn thành trong PR #68).
 
 ## PHASE 8 — Rate Limiting & Behavior Tracker (PLANNED ⏳)
 - Xây dựng bộ đếm tần suất Sliding Window theo IP trong bộ nhớ, tự động chặn và trả về `HTTP 429 Too Many Requests` khi vượt ngưỡng cho phép (chống Brute-force/DoS).
-- Phụ trách: `vcongggggg` (Thành viên A).
+- Phụ trách: Ngô Văn Công (Blue Team — Thành viên A).
 - Deliverable: Rate limiter module bảo vệ ngưỡng gọi API (Đã hoàn thành trong PR #69).
 
 ## PHASE 9 — SOC Dashboard UI & Real-Time Threat Visualization (COMPLETED Tasks 9.1, 9.2, 9.3, 9.5 ✅ | In Progress: Task 9.4 🚀)
@@ -1489,26 +1489,26 @@ Hệ thống được chia thành 13 giai đoạn phát triển tuần tự, đ�
   * **Biểu đồ sóng kép Area Chart & Donut Chart:** Hiển thị lưu lượng Benign vs Attacks và tỷ lệ % phân bố các họ tấn công.
   * **Bảng Live Security Events & Payload Evidence Drawer:** Phân tích đối chiếu Raw vs Canonical Input và tab chờ sẵn 17-Feature Vector cho Phase 3.
   * **Tính năng Reset Demo Data:** Chuẩn bị sẵn sàng trạng thái sạch cho các buổi demo trực tiếp.
-- Phụ trách: `vcongggggg` (Thành viên A).
+- Phụ trách: Ngô Văn Công (Blue Team — Thành viên A).
 - Deliverable: Giao diện web hoàn chỉnh chạy tại port 3000, 44/44 backend tests pass, production build thành công (125 kB). Đang triển khai Task 9.4 (Detection Explainability Modal).
 
 ## PHASE 10 — Offensive AI — AI Attack Planner & Autonomous Red Teaming (PLANNED ⏳)
 - Nâng cấp `attack-lab/` theo chỉ đạo học thuật của Thầy hướng dẫn: Xây dựng **AI Attack Planner Agent** tự động lập kế hoạch và thực thi chuỗi tấn công Web API có mục tiêu.
 - **Offensive AI Model (100% In-house PyTorch, KHÔNG dùng OpenAI/Ollama API):** Tự thiết kế và huấn luyện mô hình tác tử né tránh WAF bằng Deep Reinforcement Learning (DQN / Policy Gradient) (`attack-lab/models/evasion_agent.pt`), học tối ưu các toán tử biến dị payload (mutation operators: URL encoding, comment injection `/**/`, case swapping, keyword substitution) dựa trên phần thưởng phản hồi (Reward/Penalty) từ Gateway phản hồi (Chặn `403` $\rightarrow$ Phạt $-1$, Vượt rào thành công $\rightarrow$ Thưởng $+10$).
 - Tích hợp **Adaptive Evasion Engine**: Khi bị Gateway chặn 403, AI Agent sẽ tự động biến đổi payload theo mô hình PyTorch nội bộ để thử nghiệm vượt rào và đánh giá độ bền vững (Robustness) của hệ thống phòng thủ.
-- Phụ trách: `naocavang08` (Thành viên B).
+- Phụ trách: Nguyễn Công Minh (Red Team — Thành viên B).
 - Deliverable: Agent đối kháng tự động chạy kịch bản thử nghiệm Red Team với mô hình PyTorch nội bộ.
 
 ## PHASE 11 — System Evaluation & Adversarial Benchmark (PLANNED ⏳)
 - Thực nghiệm đo đạc và lập bảng so sánh hiệu năng giữa 4 phương pháp: **Rule-based vs ML vs Anomaly vs Hybrid**.
 - Đánh giá khả năng chống chịu trước đòn tấn công né tránh (Adversarial Robustness) do AI Attack Planner tạo ra.
-- Phụ trách: `naocavang08` & `vcongggggg` (Thành viên B & A).
+- Phụ trách: Nguyễn Công Minh (Red Team) & Ngô Văn Công (Blue Team) (Thành viên B & A).
 - Deliverable: Bảng số liệu thực nghiệm khoa học, biểu đồ ROC/PR curve, Confusion Matrix.
 
 ## PHASE 12 — Final Hardening, Audit Logs & Thesis Defense Report (PLANNED ⏳)
 - Đóng gói toàn bộ hệ thống bằng Docker Compose một lệnh chạy (`docker compose up --build`).
 - Tổng duyệt kịch bản demo trực tiếp (Demo Rehearsal) và hoàn thiện báo cáo đồ án, slide thuyết trình.
-- Phụ trách: Cả hai bạn (`vcongggggg` & `naocavang08`).
+- Phụ trách: Cả hai bạn (Ngô Văn Công — Blue Team & Nguyễn Công Minh — Red Team).
 - Deliverable: Hệ thống chạy ổn định 100%, slide và báo cáo tốt nghiệp đồ án.
 
 ---
@@ -1537,26 +1537,26 @@ Hệ thống được chia thành 13 giai đoạn phát triển tuần tự, đ�
 Phân chia trách nhiệm minh bạch, bám sát ma trận 50 GitHub Issues trong tài liệu [docs/TASKS_BREAKDOWN.md](file:///c:/Study/HocKy6/PBL6/docs/TASKS_BREAKDOWN.md):
 
 ```text
-┌──────────────────────────────────────────────────────────────────────────────────┐
-│             PHÂN CÔNG TRÁCH NHIỆM: CYBER RANGE 2 MÁY ĐỐI KHÁNG (PBL6)            │
-├────────────────────────────────────────┬─────────────────────────────────────────┤
-│ THÀNH VIÊN A: vcongggggg               │ THÀNH VIÊN B: naocavang08               │
-│ Vai trò: Tech Lead / Blue Team & AI Eng│ Vai trò: Red Team Lead & Offensive AI   │
-│ Vị trí: MÁY 1 (Target API, WAF, ML, SOC│ Vị trí: MÁY 2 (Autonomous Red Teaming)  │
-├────────────────────────────────────────┼─────────────────────────────────────────┤
-│ • Xây dựng vulnerable-api (8 endpoints)│ • Tự động trinh sát OpenAPI spec        │
-│ • Reverse Proxy Gateway (0.0.0.0:8000) │ • Môi trường mô phỏng Attack Graph      │
-│ • Rule Engine (16 Rules tất định)      │ • Huấn luyện In-house PyTorch Evasion   │
-│ • Input Normalizer & Scorer            │   Model (Deep RL DQN: evasion_agent.pt) │
-│ • Feature Engineering (17 Features)    │   (100% In-house, KHÔNG dùng OpenAI)    │
-│ • Thu thập & sinh Dataset (vulnerable) │ • AI Arena Runner (Tấn công qua LAN)    │
-│ • Huấn luyện Random Forest (Phòng thủ) │ • Đánh giá tấn công né tránh (Task 11.2)│
-│ • Huấn luyện Isolation Forest (Dị biệt)│ • Soạn thảo Slide & Báo cáo đồ án       │
-│ • Hybrid Decision Engine (Phase 7)     │                                         │
-│ • IP Rate Limiting - 429 (Phase 8)     │                                         │
-│ • SOC Dashboard UI & Recharts (Phase 9)│                                         │
-│ • Docker Compose Hardening (Phase 12)  │                                         │
-└────────────────────────────────────────┴─────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────────────────────────┐
+│              PHÂN CÔNG TRÁCH NHIỆM: CYBER RANGE 2 MÁY ĐỐI KHÁNG (PBL6)             │
+├────────────────────────────────────────┬───────────────────────────────────────────┤
+│ THÀNH VIÊN A: Ngô Văn Công (Blue Team) │ THÀNH VIÊN B: Nguyễn Công Minh (Red Team) │
+│ Vai trò: Tech Lead / Blue Team & AI Eng│ Vai trò: Red Team Lead & Offensive AI     │
+│ Vị trí: MÁY 1 (Target API, WAF, ML, SOC│ Vị trí: MÁY 2 (Autonomous Red Teaming)    │
+├────────────────────────────────────────┼───────────────────────────────────────────┤
+│ • Xây dựng vulnerable-api (8 endpoints)│ • Tự động trinh sát OpenAPI spec          │
+│ • Reverse Proxy Gateway (0.0.0.0:8000) │ • Môi trường mô phỏng Attack Graph        │
+│ • Rule Engine (16 Rules tất định)      │ • Huấn luyện In-house PyTorch Evasion     │
+│ • Input Normalizer & Scorer            │   Model (Deep RL DQN: evasion_agent.pt)   │
+│ • Feature Engineering (17 Features)    │   (100% In-house, KHÔNG dùng OpenAI)      │
+│ • Thu thập & sinh Dataset (vulnerable) │ • AI Arena Runner (Tấn công qua LAN)      │
+│ • Huấn luyện Random Forest (Phòng thủ) │ • Đánh giá tấn công né tránh (Task 11.2)  │
+│ • Huấn luyện Isolation Forest (Dị biệt)│ • Soạn thảo Slide & Báo cáo đồ án         │
+│ • Hybrid Decision Engine (Phase 7)     │                                           │
+│ • IP Rate Limiting - 429 (Phase 8)     │                                           │
+│ • SOC Dashboard UI & Recharts (Phase 9)│                                           │
+│ • Docker Compose Hardening (Phase 12)  │                                           │
+└────────────────────────────────────────┴───────────────────────────────────────────┘
 ```
 
 ---

@@ -19,9 +19,13 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
+COPY entrypoint.sh /app/entrypoint.sh
 
-# Run collectstatic safely and drop privileges to non-root user (INFRA-PBL6-001)
-RUN python manage.py collectstatic --noinput || true \
+# Migrate SQLite DB, collect static, prepare LF entrypoint, drop to non-root (INFRA-PBL6-001)
+RUN python manage.py migrate --noinput \
+    && (python manage.py collectstatic --noinput || true) \
+    && (sed -i 's/\r$//' /app/entrypoint.sh || true) \
+    && chmod 755 /app/entrypoint.sh \
     && groupadd --system --gid 1001 appuser \
     && useradd --system --uid 1001 --gid appuser --home-dir /app --shell /sbin/nologin appuser \
     && chown -R appuser:appuser /app
@@ -30,4 +34,4 @@ USER appuser
 
 EXPOSE 5000
 
-CMD ["python", "manage.py", "runserver", "0.0.0.0:5000"]
+CMD ["/app/entrypoint.sh"]

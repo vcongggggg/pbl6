@@ -55,6 +55,8 @@ def test_phase7_active_blocking_enforces_403_and_records_event(client: TestClien
     assert data["decision"] == "BLOCK"
     assert data["attack_type"] == "SQL_INJECTION"
     assert data["threat_score"] >= 80.0
+    assert isinstance(data.get("matched_rules"), list)
+    assert any(rule_id.startswith("SQLI-") for rule_id in data["matched_rules"])
     assert "breakdown" in data
     assert data["breakdown"]["weighted_score"] >= 70.0
     assert "reason" in data

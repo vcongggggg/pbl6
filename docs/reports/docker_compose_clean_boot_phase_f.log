@@ -1,0 +1,393 @@
+=== 1. Clean-Checkout 1-Command Boot: docker compose up --build -d ===
+Workdir (zero .env, zero node_modules, zero attack-lab mount): C:\Users\ADMIN\.gemini\antigravity\scratch\pbl6-clean-boot
+Runtime env injected cleanly: GIT_HEAD_SHA=ed7e0efea14978a0d4e64257b694455539b81649, DEMO_ADMIN_PASSWORD=<ephemeral_set>, DASHBOARD_PORT=3001 (default 3000)
+#1 [internal] load local bake definitions
+#1 reading from stdin 2.28kB done
+#1 DONE 0.0s
+
+#2 [ml-engine internal] load build definition from Dockerfile
+#2 transferring dockerfile: 945B done
+#2 DONE 0.0s
+
+#3 [gateway internal] load build definition from Dockerfile
+#3 transferring dockerfile: 917B done
+#3 DONE 0.0s
+
+#4 [vulnerable-api internal] load build definition from Dockerfile
+#4 transferring dockerfile: 1.07kB 0.0s done
+#4 DONE 0.0s
+
+#5 [dashboard internal] load build definition from Dockerfile
+#5 transferring dockerfile: 1.00kB 0.0s done
+#5 DONE 0.1s
+
+#6 [vulnerable-api internal] load metadata for docker.io/library/python:3.12-slim
+#6 DONE 1.7s
+
+#7 [dashboard internal] load metadata for docker.io/library/node:20-alpine
+#7 DONE 1.7s
+
+#8 [gateway internal] load .dockerignore
+#8 transferring context: 230B done
+#8 DONE 0.0s
+
+#9 [ml-engine internal] load .dockerignore
+#9 transferring context: 2B done
+#9 DONE 0.0s
+
+#10 [vulnerable-api internal] load .dockerignore
+#10 transferring context: 181B 0.0s done
+#10 DONE 0.0s
+
+#11 [dashboard internal] load .dockerignore
+#11 transferring context: 153B done
+#11 DONE 0.0s
+
+#12 [dashboard internal] load build context
+#12 DONE 0.0s
+
+#13 [ml-engine 1/7] FROM docker.io/library/python:3.12-slim@sha256:191083cdf6c7bda8c76158983163ead5d5cf7b77cf3033e805bb0f5296f51b4b
+#13 resolve docker.io/library/python:3.12-slim@sha256:191083cdf6c7bda8c76158983163ead5d5cf7b77cf3033e805bb0f5296f51b4b 0.0s done
+#13 DONE 0.0s
+
+#14 [ml-engine internal] load build context
+#14 transferring context: 38B done
+#14 DONE 0.0s
+
+#15 [ml-engine 4/6] RUN pip install --no-cache-dir "numpy>=1.26.0" "xgboost>=2.0.0"
+#15 CACHED
+
+#16 [ml-engine 5/6] COPY health_server.py ./health_server.py
+#16 CACHED
+
+#17 [ml-engine 3/6] RUN apt-get update && apt-get install -y --no-install-recommends     libgomp1     && rm -rf /var/lib/apt/lists/*
+#17 CACHED
+
+#18 [ml-engine 2/6] WORKDIR /app/ml-engine
+#18 CACHED
+
+#19 [ml-engine 6/6] RUN groupadd --system --gid 1001 appuser     && useradd --system --uid 1001 --gid appuser --home-dir /app --shell /sbin/nologin appuser     && chown -R appuser:appuser /app
+#19 CACHED
+
+#20 [vulnerable-api internal] load build context
+#20 transferring context: 9.29kB 0.0s done
+#20 DONE 0.0s
+
+#21 [ml-engine] exporting to image
+#21 exporting layers
+#21 ...
+
+#22 [dashboard base 1/1] FROM docker.io/library/node:20-alpine@sha256:fb4cd12c85ee03686f6af5362a0b0d56d50c58a04632e6c0fb8363f609372293
+#22 resolve docker.io/library/node:20-alpine@sha256:fb4cd12c85ee03686f6af5362a0b0d56d50c58a04632e6c0fb8363f609372293 0.0s done
+#22 DONE 0.0s
+
+#23 [gateway internal] load build context
+#23 transferring context: 114.83kB 0.0s done
+#23 DONE 0.1s
+
+#24 [vulnerable-api 4/8] COPY requirements.txt .
+#24 CACHED
+
+#25 [vulnerable-api 3/8] RUN apt-get update && apt-get install -y --no-install-recommends     curl     build-essential     libpq-dev     && rm -rf /var/lib/apt/lists/*
+#25 CACHED
+
+#26 [vulnerable-api 5/8] RUN pip install --no-cache-dir -r requirements.txt
+#26 CACHED
+
+#27 [gateway 4/7] COPY pyproject.toml .
+#27 CACHED
+
+#28 [gateway 3/7] RUN apt-get update && apt-get install -y --no-install-recommends     curl     && rm -rf /var/lib/apt/lists/*
+#28 CACHED
+
+#29 [gateway 2/7] WORKDIR /app
+#29 CACHED
+
+#30 [gateway 5/7] RUN pip install --no-cache-dir .
+#30 CACHED
+
+#12 [dashboard internal] load build context
+#12 transferring context: 105.41kB 0.0s done
+#12 DONE 0.1s
+
+#31 [dashboard deps 3/3] RUN npm ci
+#31 CACHED
+
+#32 [dashboard deps 2/3] COPY package*.json ./
+#32 CACHED
+
+#33 [dashboard deps 1/3] WORKDIR /app
+#33 CACHED
+
+#34 [dashboard builder 2/4] COPY --from=deps /app/node_modules ./node_modules
+#34 CACHED
+
+#21 [ml-engine] exporting to image
+#21 exporting layers done
+#21 exporting manifest sha256:17bc179da907f8239bd3dc34200b1105455f0b6b25197b2c9551aebf135a7f26 done
+#21 exporting config sha256:0f2d0dd1ac142bb1b3f941dbe882398e95358240543af2e3590d39746b5d5e4d done
+#21 exporting attestation manifest sha256:ea2d0126241d7e0cc3625984a0e24e7f98be34c04237058a1b4d145ec13999a9 0.1s done
+#21 exporting manifest list sha256:ca4640387c43e6cf014a0605adbfe6e3a40a6e2a68b6058ab3081b659077ba15
+#21 exporting manifest list sha256:ca4640387c43e6cf014a0605adbfe6e3a40a6e2a68b6058ab3081b659077ba15 0.0s done
+#21 naming to docker.io/library/pbl6-clean-boot-ml-engine:latest done
+#21 unpacking to docker.io/library/pbl6-clean-boot-ml-engine:latest 0.0s done
+#21 DONE 0.2s
+
+#35 [gateway 6/7] COPY . .
+#35 DONE 0.2s
+
+#36 [dashboard builder 3/4] COPY . .
+#36 DONE 0.2s
+
+#37 [ml-engine] resolving provenance for metadata file
+#37 DONE 0.0s
+
+#38 [vulnerable-api 6/8] COPY . .
+#38 DONE 0.4s
+
+#39 [dashboard builder 4/4] RUN npm run build
+#39 ...
+
+#40 [vulnerable-api 7/8] COPY entrypoint.sh /app/entrypoint.sh
+#40 DONE 0.0s
+
+#41 [vulnerable-api 8/8] RUN python manage.py migrate --noinput     && (python manage.py collectstatic --noinput || true)     && (sed -i 's/\r$//' /app/entrypoint.sh || true)     && chmod 755 /app/entrypoint.sh     && groupadd --system --gid 1001 appuser     && useradd --system --uid 1001 --gid appuser --home-dir /app --shell /sbin/nologin appuser     && chown -R appuser:appuser /app
+#41 ...
+
+#42 [gateway 7/7] RUN mkdir -p /app/data     && groupadd --system --gid 1001 appuser     && useradd --system --uid 1001 --gid appuser --home-dir /app --shell /sbin/nologin appuser     && chown -R appuser:appuser /app /app/data
+#42 0.647 useradd warning: appuser's uid 1001 is greater than SYS_UID_MAX 999
+#42 DONE 0.8s
+
+#43 [gateway] exporting to image
+#43 exporting layers 0.1s done
+#43 exporting manifest sha256:7e67ea90bd5f931205ad9f7d38c87e897cc5ee7617f6d9576d999ea48965a3bd 0.0s done
+#43 exporting config sha256:bb9a9ddd58dafe61d0998379eec7b896b0fe43037c225a823dacd69a996515cd 0.0s done
+#43 exporting attestation manifest sha256:6daae25e4f0d962fe0ab90102859be603652ee1e1aaff972e5e3b7cbf0cb2f40 0.1s done
+#43 exporting manifest list sha256:7c26445f72331b05a5563014e22e5daee800638efdea22d765d823dd65489791
+#43 exporting manifest list sha256:7c26445f72331b05a5563014e22e5daee800638efdea22d765d823dd65489791 0.0s done
+#43 naming to docker.io/library/pbl6-clean-boot-gateway:latest done
+#43 unpacking to docker.io/library/pbl6-clean-boot-gateway:latest 0.1s done
+#43 DONE 0.4s
+
+#39 [dashboard builder 4/4] RUN npm run build
+#39 ...
+
+#44 [gateway] resolving provenance for metadata file
+#44 DONE 0.0s
+
+#39 [dashboard builder 4/4] RUN npm run build
+#39 1.506 
+#39 1.506 > pbl6-dashboard@0.1.0 build
+#39 1.506 > next build
+#39 1.506 
+#39 2.527   ▲ Next.js 14.2.35
+#39 2.528 
+#39 2.542    Creating an optimized production build ...
+#39 ...
+
+#41 [vulnerable-api 8/8] RUN python manage.py migrate --noinput     && (python manage.py collectstatic --noinput || true)     && (sed -i 's/\r$//' /app/entrypoint.sh || true)     && chmod 755 /app/entrypoint.sh     && groupadd --system --gid 1001 appuser     && useradd --system --uid 1001 --gid appuser --home-dir /app --shell /sbin/nologin appuser     && chown -R appuser:appuser /app
+#41 2.314 Operations to perform:
+#41 2.314   Apply all migrations: admin, auth, books, contenttypes, sessions
+#41 2.314 Running migrations:
+#41 2.321   Applying contenttypes.0001_initial... OK
+#41 2.331   Applying auth.0001_initial... OK
+#41 2.355   Applying admin.0001_initial... OK
+#41 2.373   Applying admin.0002_logentry_remove_auto_add... OK
+#41 2.387   Applying admin.0003_logentry_add_action_flag_choices... OK
+#41 2.397   Applying contenttypes.0002_remove_content_type_name... OK
+#41 2.415   Applying auth.0002_alter_permission_name_max_length... OK
+#41 2.429   Applying auth.0003_alter_user_email_max_length... OK
+#41 2.442   Applying auth.0004_alter_user_username_opts... OK
+#41 2.453   Applying auth.0005_alter_user_last_login_null... OK
+#41 2.466   Applying auth.0006_require_contenttypes_0002... OK
+#41 2.471   Applying auth.0007_alter_validators_add_error_messages... OK
+#41 2.481   Applying auth.0008_alter_user_username_max_length... OK
+#41 2.493   Applying auth.0009_alter_user_last_name_max_length... OK
+#41 2.505   Applying auth.0010_alter_group_name_max_length... OK
+#41 2.517   Applying auth.0011_update_proxy_permissions... OK
+#41 2.527   Applying auth.0012_alter_user_first_name_max_length... OK
+#41 2.539   Applying books.0001_initial... OK
+#41 2.575   Applying books.0002_book_created_at_alter_rating_score_wishlist... OK
+#41 2.606   Applying books.0003_coupon_book_stock_order_discount_amount_order_note_and_more... OK
+#41 2.685   Applying books.0004_order_payment_method... OK
+#41 2.706   Applying books.0005_book_content_text_book_is_digital_readingprogress... OK
+#41 2.747   Applying books.0006_orderitem_is_digital_purchase... OK
+#41 2.764   Applying books.0007_admin_audit_log... OK
+#41 2.785   Applying books.0008_book_content_html... OK
+#41 2.801   Applying books.0009_order_idempotency_key_order_paid_at_and_more... OK
+#41 2.902   Applying books.0010_unique_order_transaction_id... OK
+#41 2.922   Applying sessions.0001_initial... OK
+#41 4.547 
+#41 4.547 154 static files copied to '/app/staticfiles', 430 post-processed.
+#41 4.661 useradd warning: appuser's uid 1001 is greater than SYS_UID_MAX 999
+#41 DONE 5.3s
+
+#45 [vulnerable-api] exporting to image
+#45 exporting layers 3.6s done
+#45 exporting manifest sha256:90313a6abe2676808a77cffdd36d5163419208896e22224befd1bde20f68c106 0.0s done
+#45 exporting config sha256:978c99ee6e59dde1a2bca0e08dff42b6024ecc8824727687aef62c93bb92228c 0.0s done
+#45 exporting attestation manifest sha256:5f52776858421f7359e3f1cc26567e51d17115ef9eaaf955ae14101ae5da42ed 0.0s done
+#45 exporting manifest list sha256:32a56722fdcdc5eb36a52f5b6e9ed05b86837eac0c2cb87667413904d7b296ff 0.0s done
+#45 naming to docker.io/library/pbl6-clean-boot-vulnerable-api:latest done
+#45 unpacking to docker.io/library/pbl6-clean-boot-vulnerable-api:latest
+#45 unpacking to docker.io/library/pbl6-clean-boot-vulnerable-api:latest 0.7s done
+#45 DONE 4.4s
+
+#46 [vulnerable-api] resolving provenance for metadata file
+#46 DONE 0.0s
+
+#39 [dashboard builder 4/4] RUN npm run build
+#39 22.74  ✓ Compiled successfully
+#39 22.74    Linting and checking validity of types ...
+#39 28.55    Collecting page data ...
+#39 30.42    Generating static pages (0/5) ...
+#39 30.86    Generating static pages (1/5) 
+#39 30.88    Generating static pages (2/5) 
+#39 30.89    Generating static pages (3/5) 
+#39 30.95  ✓ Generating static pages (5/5)
+#39 31.28    Finalizing page optimization ...
+#39 31.28    Collecting build traces ...
+#39 44.98 
+#39 44.99 Route (app)                              Size     First Load JS
+#39 44.99 ┌ ○ /                                    144 kB          247 kB
+#39 44.99 ├ ○ /_not-found                          873 B          88.2 kB
+#39 44.99 ├ ƒ /api/config                          0 B                0 B
+#39 44.99 ├ ƒ /api/gateway/[...path]               0 B                0 B
+#39 44.99 └ ○ /arena                               11.7 kB         115 kB
+#39 44.99 + First Load JS shared by all            87.3 kB
+#39 44.99   ├ chunks/117-c2e8725fecde5126.js       31.7 kB
+#39 44.99   ├ chunks/fd9d1056-307a36020502e7d7.js  53.6 kB
+#39 44.99   └ other shared chunks (total)          1.95 kB
+#39 44.99 
+#39 44.99 
+#39 44.99 ○  (Static)   prerendered as static content
+#39 44.99 ƒ  (Dynamic)  server-rendered on demand
+#39 44.99 
+#39 45.01 npm notice
+#39 45.01 npm notice New major version of npm available! 10.8.2 -> 12.2.3
+#39 45.01 npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.3
+#39 45.01 npm notice To update run: npm install -g npm@12.2.3
+#39 45.01 npm notice
+#39 DONE 45.4s
+
+#47 [dashboard runner 3/6] RUN adduser --system --uid 1001 nextjs
+#47 CACHED
+
+#48 [dashboard runner 2/6] RUN addgroup --system --gid 1001 nodejs
+#48 CACHED
+
+#49 [dashboard runner 4/6] COPY --from=builder /app/public ./public
+#49 CACHED
+
+#50 [dashboard runner 5/6] COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+#50 DONE 0.3s
+
+#51 [dashboard runner 6/6] COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+#51 DONE 0.1s
+
+#52 [dashboard] exporting to image
+#52 exporting layers
+#52 exporting layers 0.8s done
+#52 exporting manifest sha256:d5b0f013da3a0c035c19b4e8321f3a9d6681c8d57c0abc11af1491aee451d7f4 0.0s done
+#52 exporting config sha256:fdf152db7cb3b1bdf0a117b73ba706dac95beaa6927470e2a996fc94b687e1bc 0.0s done
+#52 exporting attestation manifest sha256:30757346f2804153e320467dc7cee1d7c42645fdfa43cbe4a304141bae1f4008 0.0s done
+#52 exporting manifest list sha256:b1086d835bc48e1912eb6baf9961e94b0172d28acb3baf8221a7e1e599b5ef0c 0.0s done
+#52 naming to docker.io/library/pbl6-clean-boot-dashboard:latest done
+#52 unpacking to docker.io/library/pbl6-clean-boot-dashboard:latest
+#52 unpacking to docker.io/library/pbl6-clean-boot-dashboard:latest 0.4s done
+#52 DONE 1.3s
+
+#53 [dashboard] resolving provenance for metadata file
+#53 DONE 0.0s
+
+ Image pbl6-clean-boot-gateway Building 
+ Image pbl6-clean-boot-dashboard Building 
+ Image pbl6-clean-boot-vulnerable-api Building 
+ Image pbl6-clean-boot-ml-engine Building 
+ Image pbl6-clean-boot-ml-engine Built 
+ Image pbl6-clean-boot-vulnerable-api Built 
+ Image pbl6-clean-boot-gateway Built 
+ Image pbl6-clean-boot-dashboard Built 
+ Network pbl6-network Creating 
+ Network pbl6-network Created 
+ Container pbl6-ml-engine Creating 
+ Container pbl6-vulnerable-api Creating 
+ Container pbl6-ml-engine Created 
+ Container pbl6-vulnerable-api Created 
+ Container pbl6-gateway Creating 
+ Container pbl6-gateway Created 
+ Container pbl6-dashboard Creating 
+ Container pbl6-dashboard Created 
+ Container pbl6-ml-engine Starting 
+ Container pbl6-vulnerable-api Starting 
+ Container pbl6-vulnerable-api Started 
+ Container pbl6-ml-engine Started 
+ Container pbl6-ml-engine Waiting 
+ Container pbl6-vulnerable-api Waiting 
+ Container pbl6-ml-engine Healthy 
+ Container pbl6-vulnerable-api Healthy 
+ Container pbl6-gateway Starting 
+ Container pbl6-gateway Started 
+ Container pbl6-gateway Waiting 
+ Container pbl6-gateway Healthy 
+ Container pbl6-dashboard Starting 
+ Container pbl6-dashboard Started 
+
+=== 2. docker compose ps ===
+NAME                  IMAGE                            COMMAND                  SERVICE          CREATED          STATUS                    PORTS
+pbl6-dashboard        pbl6-clean-boot-dashboard        "docker-entrypoint.s…"   dashboard        19 seconds ago   Up 7 seconds (healthy)    0.0.0.0:3001->3000/tcp, [::]:3001->3000/tcp
+pbl6-gateway          pbl6-clean-boot-gateway          "uvicorn app.main:ap…"   gateway          19 seconds ago   Up 12 seconds (healthy)   0.0.0.0:8000->8000/tcp, [::]:8000->8000/tcp
+pbl6-ml-engine        pbl6-clean-boot-ml-engine        "python health_serve…"   ml-engine        19 seconds ago   Up 18 seconds (healthy)   127.0.0.1:8001->8001/tcp
+pbl6-vulnerable-api   pbl6-clean-boot-vulnerable-api   "/app/entrypoint.sh"     vulnerable-api   19 seconds ago   Up 18 seconds (healthy)   127.0.0.1:5000->5000/tcp
+
+=== 3. Container Mount & Attack-Lab Isolation Audit ===
+  pbl6-vulnerable-api mounts: []
+  pbl6-ml-engine mounts: [('C:\\Users\\ADMIN\\.gemini\\antigravity\\scratch\\pbl6-clean-boot\\ml-engine\\features', '/app/ml-engine/features', False), ('C:\\Users\\ADMIN\\.gemini\\antigravity\\scratch\\pbl6-clean-boot\\ml-engine\\artifacts', '/app/ml-engine/artifacts', False)]
+  pbl6-gateway mounts: [('C:\\Users\\ADMIN\\.gemini\\antigravity\\scratch\\pbl6-clean-boot\\ml-engine\\artifacts', '/app/ml-engine/artifacts', False), ('C:\\Users\\ADMIN\\.gemini\\antigravity\\scratch\\pbl6-clean-boot\\ml-engine\\features', '/app/ml-engine/features', False), ('C:\\Users\\ADMIN\\.gemini\\antigravity\\scratch\\pbl6-clean-boot\\data', '/app/data', True)]
+  pbl6-dashboard mounts: []
+  pbl6-gateway /app entries: ['Dockerfile', 'app', 'build', 'data', 'ml-engine', 'pbl6_gateway.egg-info', 'pyproject.toml']
+=== 4. End-to-End Health, Live Arena 8/8, Replay 8/8, Benchmark 100-Req & Reproducible D4 Export ===
+  POST BFF /pentest/run (live_http): battle_id=pentest-db23e59492, blocked=8/8, bypass=0, winner=BLUE_TEAM
+  POST BFF /pentest/replay (live_http): matched=8/8 (100.0%)
+  POST BFF /pentest/replay-benchmark: total=100 (benign=50, attack=50), TP=42, TN=50, FP=0, FN=8, op_fpr_pct=0.0%, ref_fpr_pct=0.0%, matches_fp_measurement=True, avg_latency_ms=9.471
+  POST BFF /pentest/export -> repo_history=docs/reports/history/arena_live_20261125_064412_ed7e0ef.json | git_head_sha=ed7e0efea14978a0d4e64257b694455539b81649 | sha256=ca0ffc73e130f3ec24bdb43356ce4a1aebe2712d59383d180ca392c99d4c9f43 (REPRODUCE_MATCH=True)
+=== 5. Service Logs (--tail 15) ===
+pbl6-gateway  | 2026-11-25 06:44:11 | INFO    | waf.gateway.security_service | Security event recorded [18df4fa8e9144afbad579bdaee42f731] for request [29aafabca80242728066e6b049f8378c]: type=BOLA_IDOR score=87.3
+pbl6-gateway  | 2026-11-25 06:44:11 | INFO    | httpx | HTTP Request: GET http://local-gateway/api/proxy/api/v1/vulnerable/orders/1/ "HTTP/1.1 403 Forbidden"
+pbl6-gateway  | 2026-11-25 06:44:11 | INFO    | waf.gateway.security_service | Security event recorded [913b196e2dff412199a22cc1a6e1d496] for request [0a8057a26a0344b5968e1b405c234edf]: type=BOLA_IDOR score=87.3
+pbl6-gateway  | 2026-11-25 06:44:11 | INFO    | httpx | HTTP Request: GET http://local-gateway/api/proxy/api/v1/vulnerable/orders/2/ "HTTP/1.1 403 Forbidden"
+pbl6-gateway  | 2026-11-25 06:44:11 | INFO    | waf.gateway.security_service | Security event recorded [a08e122824644094a900f554b964d63b] for request [b83564f140564be1836797fef4e2c700]: type=BOLA_IDOR score=87.3
+pbl6-gateway  | 2026-11-25 06:44:11 | INFO    | httpx | HTTP Request: GET http://local-gateway/api/proxy/api/v1/vulnerable/orders/3/ "HTTP/1.1 403 Forbidden"
+pbl6-gateway  | 2026-11-25 06:44:11 | INFO    | waf.gateway.security_service | Security event recorded [1e61969cd7874ac58c0dd4aeb6265b02] for request [e7159092550f42c5ad9cd52c76bfb889]: type=BOLA_IDOR score=87.3
+pbl6-gateway  | 2026-11-25 06:44:11 | INFO    | httpx | HTTP Request: GET http://local-gateway/api/proxy/api/v1/vulnerable/orders/4/ "HTTP/1.1 403 Forbidden"
+pbl6-gateway  | 2026-11-25 06:44:11 | WARNING | waf.gateway.api.proxy | Positive security violations [1f5cc2dbfde24de4a93e5e896bb3f55d]: [{'field': 'user_id', 'reason': "Additional property 'user_id' is not allowed on endpoint '/api/v1/vulnerable/users/profile/update/'.", 'violation_type': 'ADDITIONAL_PROPERTY_NOT_ALLOWED', 'is_penalty': True}, {'field': 'is_staff', 'reason': "Additional property 'is_staff' is not allowed on endpoint '/api/v1/vulnerable/users/profile/update/'.", 'violation_type': 'ADDITIONAL_PROPERTY_NOT_ALLOWED', 'is_penalty': True}, {'field': 'is_superuser', 'reason': "Additional property 'is_superuser' is not allowed on endpoint '/api/v1/vulnerable/users/profile/update/'.", 'violation_type': 'ADDITIONAL_PROPERTY_NOT_ALLOWED', 'is_penalty': True}, {'field': 'role', 'reason': "Additional property 'role' is not allowed on endpoint '/api/v1/vulnerable/users/profile/update/'.", 'violation_type': 'ADDITIONAL_PROPERTY_NOT_ALLOWED', 'is_penalty': True}]
+pbl6-gateway  | 2026-11-25 06:44:11 | INFO    | waf.gateway.api.proxy | Applying Positive Security risk penalty: +25.0 to request [1f5cc2dbfde24de4a93e5e896bb3f55d]
+pbl6-gateway  | 2026-11-25 06:44:11 | INFO    | waf.gateway.security_service | Security event recorded [d37f5963187f488284756d2d98fec081] for request [1f5cc2dbfde24de4a93e5e896bb3f55d]: type=MASS_ASSIGNMENT score=96.2
+pbl6-gateway  | 2026-11-25 06:44:11 | INFO    | httpx | HTTP Request: POST http://local-gateway/api/proxy/api/v1/vulnerable/users/profile/update/ "HTTP/1.1 403 Forbidden"
+pbl6-gateway  | 2026-11-25 06:44:11 | INFO    | httpx | HTTP Request: GET http://vulnerable-api:5000/api/v1/vulnerable/users/list/?q=all "HTTP/1.1 200 OK"
+pbl6-gateway  | 2026-11-25 06:44:11 | INFO    | waf.gateway.security_service | Security event recorded [4b86f927f478420d8ca7bead46f26679] for request [f78798186a5847a583cb308e26c106ba]: type=EXCESSIVE_DATA_EXPOSURE score=0.0
+pbl6-gateway  | 2026-11-25 06:44:11 | INFO    | httpx | HTTP Request: GET http://local-gateway/api/proxy/api/v1/vulnerable/users/list/?q=all "HTTP/1.1 200 OK"
+pbl6-ml-engine  | 2026-11-25 06:43:52,727 [INFO] waf.ml_engine.health: ML Engine verified xgb_v2 (a166334e22e4...) & iforest_v2 (12e15cd99927...) + 26-D smoke check PASSED in 98.36 ms
+pbl6-ml-engine  | 2026-11-25 06:43:52,736 [INFO] waf.ml_engine.health: ML Engine health server listening on http://0.0.0.0:8001/health
+pbl6-dashboard       |   ▲ Next.js 14.2.35
+pbl6-dashboard       |   - Local:        http://localhost:3000
+pbl6-dashboard       |   - Network:      http://0.0.0.0:3000
+pbl6-dashboard       | 
+pbl6-dashboard       |  ✓ Starting...
+pbl6-dashboard       |  ✓ Ready in 55ms
+pbl6-vulnerable-api  | Starting WSGI development server at http://0.0.0.0:5000/
+pbl6-vulnerable-api  | Quit the server with CONTROL-C.
+pbl6-vulnerable-api  | 
+pbl6-vulnerable-api  | WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+pbl6-vulnerable-api  | For more information on production servers see: https://docs.djangoproject.com/en/6.1/howto/deployment/
+pbl6-vulnerable-api  | [INFO] 2026-11-25 06:43:56,603 log - "GET /api/v1/vulnerable/openapi.json HTTP/1.1" 200 5145
+pbl6-vulnerable-api  | [INFO] 2026-11-25 06:44:06,895 log - "GET /api/v1/vulnerable/openapi.json HTTP/1.1" 200 5145
+pbl6-vulnerable-api  | [WARNING] 2026-11-25 06:44:10,788 log - Not Found: /api/v1/vulnerable/orders/1/
+pbl6-vulnerable-api  | [WARNING] 2026-11-25 06:44:10,789 log - "GET /api/v1/vulnerable/orders/1/ HTTP/1.1" 404 53
+pbl6-vulnerable-api  | [WARNING] 2026-11-25 06:44:10,805 log - Not Found: /api/v1/vulnerable/orders/2/
+pbl6-vulnerable-api  | [WARNING] 2026-11-25 06:44:10,806 log - "GET /api/v1/vulnerable/orders/2/ HTTP/1.1" 404 53
+pbl6-vulnerable-api  | [WARNING] 2026-11-25 06:44:10,866 log - Not Found: /api/v1/vulnerable/orders/3/
+pbl6-vulnerable-api  | [WARNING] 2026-11-25 06:44:10,866 log - "GET /api/v1/vulnerable/orders/3/ HTTP/1.1" 404 53
+pbl6-vulnerable-api  | [INFO] 2026-11-25 06:44:10,965 log - "GET /api/v1/vulnerable/users/list/?q=all HTTP/1.1" 200 538
+pbl6-vulnerable-api  | [INFO] 2026-11-25 06:44:11,195 log - "GET /api/v1/vulnerable/users/list/?q=all HTTP/1.1" 200 538
+

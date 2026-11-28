@@ -1,9 +1,69 @@
 {
   "metadata": {
-    "task_id": "pbl6-v3-1-001 / C3 Controlled FP Tuning",
-    "measured_at": "2026-11-24T16:39:17+0700",
+    "task_id": "pbl6-v3-4-phase-f-001 / C3 Controlled FP Tuning",
+    "measured_at": "2026-11-25T15:26:35+0700",
     "tuning_rounds_executed": 2,
-    "recall_preservation_verified": true
+    "recall_preservation_verified": true,
+    "schema_validation_enabled_default": true,
+    "schema_enforcement_policy_default": "route_tiered",
+    "history_snapshot": "docs/reports/history/fp_v3_tuning_c3_20261125_153451_8838c47.json",
+    "git_base_sha": "8838c47f884cd48242509b1ab3a91f6e8475c4f3",
+    "cpu_load_pct": 12.5,
+    "last_pointer_update": "2026-11-25T15:34:52.115879"
+  },
+  "rest_corpus_strict_fp_breakdown": {
+    "corpus": "bookie_and_rest_api_benign",
+    "benign_samples": 15,
+    "fp_operational_count": 0,
+    "fp_operational_pct": 0.0,
+    "fp_strict_schema_off_count": 0,
+    "fp_strict_schema_off_pct": 0.0,
+    "fp_strict_schema_on_count": 2,
+    "fp_strict_schema_on_pct": 13.33,
+    "schema_only_additional_fp_count": 2,
+    "schema_enforcement_policy": "route_tiered",
+    "schema_penalty_violation_breakdown": {
+      "MISSING_PARAMETER": 1,
+      "ADDITIONAL_PROPERTY_NOT_ALLOWED": 1
+    },
+    "schema_telemetry_notice_breakdown": {
+      "UNDOCUMENTED_ROUTE": 1
+    },
+    "schema_violation_breakdown": {
+      "MISSING_PARAMETER": 1,
+      "ADDITIONAL_PROPERTY_NOT_ALLOWED": 1,
+      "UNDOCUMENTED_ROUTE": 1
+    },
+    "flagged_samples": [
+      {
+        "index": 2,
+        "method": "GET",
+        "path": "/api/v1/vulnerable/books/search/",
+        "query_params": "",
+        "penalty_violations": [
+          {
+            "field": "q",
+            "violation_type": "MISSING_PARAMETER",
+            "reason": "Required query parameter 'q' is missing."
+          }
+        ],
+        "telemetry_notices": []
+      },
+      {
+        "index": 11,
+        "method": "POST",
+        "path": "/api/v1/vulnerable/users/profile/update/",
+        "query_params": "",
+        "penalty_violations": [
+          {
+            "field": "display_name",
+            "violation_type": "ADDITIONAL_PROPERTY_NOT_ALLOWED",
+            "reason": "Additional property 'display_name' is not allowed on endpoint '/api/v1/vulnerable/users/profile/update/'."
+          }
+        ],
+        "telemetry_notices": []
+      }
+    ]
   },
   "rounds": [
     {
@@ -20,17 +80,71 @@
       "round": 1,
       "label": "AnomalyDetector bare-root '/' degeneracy guard (special_char_ratio=1.0 on 1-byte '/')",
       "b1000_strict_schema_off_pct": 0.0,
-      "aggregate_strict_schema_off_pct": 0.0,
+      "aggregate_strict_schema_off_pct": 0.058,
       "b1000_anomaly_recall_pct": 57.75,
-      "b1000_hybrid_recall_pct": 97.75
+      "b1000_hybrid_recall_pct": 97.88
     },
     {
       "round": 2,
-      "label": "Sync BUILTIN_TARGET_SPEC with Bookie /openapi.json, /docs/, and /reviews/ fields",
+      "label": "Sync BUILTIN_TARGET_SPEC with Bookie /openapi.json, /docs/, and /reviews/ fields (Route-Tiered Policy)",
       "b1000_strict_schema_on_pct": 0.0,
       "aggregate_strict_schema_on_pct": 0.175,
-      "api_evolving_client_strict_schema_on_pct": 20.0,
-      "policy_conclusion": "Strict FPR on B1000 dropped from 4.0% -> 0.0% (Schema OFF) and 8.5% -> 0.0% (Schema ON) with 0.00% Recall loss; SCHEMA_VALIDATION_ENABLED remains False by default to avoid 20.0% strict flags on evolving REST clients sending undocumented optional fields."
+      "api_evolving_client_strict_schema_on_pct": 13.33,
+      "rest_corpus_strict_fp_breakdown": {
+        "corpus": "bookie_and_rest_api_benign",
+        "benign_samples": 15,
+        "fp_operational_count": 0,
+        "fp_operational_pct": 0.0,
+        "fp_strict_schema_off_count": 0,
+        "fp_strict_schema_off_pct": 0.0,
+        "fp_strict_schema_on_count": 2,
+        "fp_strict_schema_on_pct": 13.33,
+        "schema_only_additional_fp_count": 2,
+        "schema_enforcement_policy": "route_tiered",
+        "schema_penalty_violation_breakdown": {
+          "MISSING_PARAMETER": 1,
+          "ADDITIONAL_PROPERTY_NOT_ALLOWED": 1
+        },
+        "schema_telemetry_notice_breakdown": {
+          "UNDOCUMENTED_ROUTE": 1
+        },
+        "schema_violation_breakdown": {
+          "MISSING_PARAMETER": 1,
+          "ADDITIONAL_PROPERTY_NOT_ALLOWED": 1,
+          "UNDOCUMENTED_ROUTE": 1
+        },
+        "flagged_samples": [
+          {
+            "index": 2,
+            "method": "GET",
+            "path": "/api/v1/vulnerable/books/search/",
+            "query_params": "",
+            "penalty_violations": [
+              {
+                "field": "q",
+                "violation_type": "MISSING_PARAMETER",
+                "reason": "Required query parameter 'q' is missing."
+              }
+            ],
+            "telemetry_notices": []
+          },
+          {
+            "index": 11,
+            "method": "POST",
+            "path": "/api/v1/vulnerable/users/profile/update/",
+            "query_params": "",
+            "penalty_violations": [
+              {
+                "field": "display_name",
+                "violation_type": "ADDITIONAL_PROPERTY_NOT_ALLOWED",
+                "reason": "Additional property 'display_name' is not allowed on endpoint '/api/v1/vulnerable/users/profile/update/'."
+              }
+            ],
+            "telemetry_notices": []
+          }
+        ]
+      },
+      "policy_conclusion": "Strict FPR on B1000 dropped from 4.0% -> 0.0% (Schema OFF) and 8.5% -> 0.0% (Schema ON) with 0.00% Recall loss; under default route_tiered policy (SCHEMA_VALIDATION_ENABLED=True, SCHEMA_ENFORCEMENT_POLICY='route_tiered'), Operational FPR remains 0.0% (0/15) while strict schema-on flags on the evolving REST corpus stand at 13.33% (2/15: missing required query param / sensitive additionalProperties lock; undocumented routes emit telemetry-only X-WAF-Schema-Notice without penalty)."
     }
   ]
 }

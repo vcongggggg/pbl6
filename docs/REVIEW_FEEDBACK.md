@@ -1,22 +1,22 @@
-# ✅ FINAL AUDIT & REMEDIATION SIGN-OFF — NHÁNH `feat/pbl6-v3-1-live-redteam` (v3.1 / Phase C Verified)
+# ✅ FINAL AUDIT & REMEDIATION SIGN-OFF — NHÁNH `feat/pbl6-v3-1-live-redteam` (Phase C Verified)
 
-## 🏆 KẾT LUẬN KIỂM TOÁN & VÁ TRIỆT ĐỂ PHASE C (`pbl6-v3-1-001`): **READY FOR FINAL MUSE AUDIT & v3.1 PR**
-- **Ngày hoàn tất kiểm toán & khắc phục v3.1 (`C1 -> C5`):** `2026-11-24`
+## 🏆 KẾT LUẬN KIỂM TOÁN & VÁ TRIỆT ĐỂ PHASE C (`pbl6-v3-1-001`): **READY FOR FINAL MUSE AUDIT & PR**
+- **Ngày hoàn tất kiểm toán & khắc phục Phase C (`C1 -> C5`):** `2026-11-24`
 - **Tóm tắt 4 hạng mục kiểm toán Phase C đã được phát hiện và vá triệt để (`100% VERIFIED`):**
-  - **[C1 — Live HTTP 3x3 Benchmark & Live `/api/proxy` Arena (`docs/reports/adversarial_benchmark_live_http.json`)]**: Sửa lỗi `target_upstream.py` trả `'SECRET_KEY'` tràn lan trên mọi URL gây kích hoạt nhầm `ResponseDLPGuard`; tách riêng route nhạy cảm `/users/list`, bật `ML_ENABLED=false, ANOMALY_ENABLED=false` thật cho cổng `:8056` (`Rules Only`), bổ sung header `X-WAF-Rule-Score` trong `proxy.py` (`0` hằng số fallback cứng), thêm `--target-url` (chuẩn CWE-918) và chế độ `execution_mode="live_http"` trong `arena.py`. Kết quả thật trên tập ngoại miền `Strange` qua TCP HTTP: `Rules Only` chặn **`88.9%` (`48/54`)**, `Hybrid v3.0` nâng lên **`94.4%` (`51/54`, trễ HTTP TB `4.252 ms`)**.
+  - **[C1 — Live HTTP 3x3 Benchmark & Live `/api/proxy` Arena (`docs/reports/adversarial_benchmark_live_http.json`)]**: Sửa lỗi `target_upstream.py` trả `'SECRET_KEY'` tràn lan trên mọi URL gây kích hoạt nhầm `ResponseDLPGuard`; tách riêng route nhạy cảm `/users/list`, bật `ML_ENABLED=false, ANOMALY_ENABLED=false` thật cho cổng `:8056` (`Rules Only`), bổ sung header `X-WAF-Rule-Score` trong `proxy.py` (`0` hằng số fallback cứng), thêm `--target-url` (chuẩn CWE-918) và chế độ `execution_mode="live_http"` trong `arena.py`. Kết quả thật trên tập ngoại miền `Strange` qua TCP HTTP: `Rules Only` chặn **`88.9%` (`48/54`)**, `Hybrid` nâng lên **`94.4%` (`51/54`, trễ HTTP TB `4.252 ms`)**.
   - **[C2 — Huấn luyện Dueling-DQN `600` Episodes & Biểu đồ Hội tụ (`fig6_dqn_600ep_convergence.png`)]**: Xác thực SHA-256 của `.pt` & `.npz` (`600` episodes, `seed=42`, `Stage 1 = +45.37`, `Stage 2 = +23.27`, `Stage 3 = -14.32` không dính reward-hacking, giảm `8.51%` thử mù quáng), xuất biểu đồ `fig6` 300 DPI và chạy lại `adversarial_benchmark_3x3.json` với checkpoint 600-episode mới.
   - **[C3 — Tinh chỉnh Giảm False Positive 2 Vòng Có Kiểm Soát (`docs/reports/fp_v3_tuning_c3.json`)]**: Vòng 1 xử lý điểm suy biến đường dẫn gốc `'/'` (`special_char_ratio = 1.0`) trong `AnomalyDetector`; Vòng 2 đồng bộ `/openapi.json`, `/docs/`, `/reviews/` vào `BUILTIN_TARGET_SPEC`. Kết quả: `B1000 Strict FPR` giảm từ **`4.0% -> 0.0%` (`Schema OFF`)** và **`8.5% -> 0.0%` (`Schema ON`)** với **`0.00%` suy giảm Recall** (`Operational FPR = 0.00%` trên `1.715` mẫu lành tính; độ trễ 2-hop CSIC 2010 `mean = 4.203 ms`).
-  - **[C4 & C5 — Ma trận Đối chiếu Tự động `27/27` (`scripts/generate_reconciliation_matrix.py`) & Rehearsal v3.0 (`8/8`)]**: Xóa toàn bộ 18 con số gõ tay sai lệch trong `THESIS_ARTIFACT_RECONCILIATION_MATRIX.md`, thay bằng trình kiểm chứng tự động giải nén quét trực tiếp `.docx`, `.pptx`, `.md` khớp `27/27` chỉ số (`0` sai lệch); sửa lỗi hiển thị `8/5 -> 8/8` và `BACKEND_URL` trong `run_live_demo_rehearsal.py`.
+  - **[C4 & C5 — Ma trận Đối chiếu Tự động `27/27` (`scripts/generate_reconciliation_matrix.py`) & Rehearsal (`8/8`)]**: Xóa toàn bộ 18 con số gõ tay sai lệch trong `THESIS_ARTIFACT_RECONCILIATION_MATRIX.md`, thay bằng trình kiểm chứng tự động giải nén quét trực tiếp `.docx`, `.pptx`, `.md` khớp `27/27` chỉ số (`0` sai lệch); sửa lỗi hiển thị `8/5 -> 8/8` và `BACKEND_URL` trong `run_live_demo_rehearsal.py`.
 
 ---
 
 ## 📋 LỊCH SỬ THẨM ĐỊNH PHASE A (`pbl6-v3-fix-round-001` — MERGED PR #138 @ `2acd4e2`)
 - **Ngày hoàn tất Phase A (`A1 -> A5`):** `2026-11-24`
 - **Bằng chứng thực nghiệm mới bổ sung theo §7 của Muse (`100% VERIFIED`):**
-  - **[A1.1 — Đo FPR sau 5 OWASP API Guards (`docs/reports/fp_v3_measurement.json`)]**: Trên `1.715` mẫu lành tính (`1.500` CSIC 2010 + `200` B1000 + `15` REST API), `Operational FPR = 0.00% (0/1.715)` và 5 lá chắn v3.0 mới sinh `0` cảnh báo giả. Khi bật `schema_validation_enabled = True`, `Strict FPR` trên tập B1000 tăng từ `4.0% -> 8.5%` (và `26.67%` trên REST client gửi thêm trường tùy chọn).
+  - **[A1.1 — Đo FPR sau 5 OWASP API Guards (`docs/reports/fp_v3_measurement.json`)]**: Trên `1.715` mẫu lành tính (`1.500` CSIC 2010 + `200` B1000 + `15` REST API), `Operational FPR = 0.00% (0/1.715)` và 5 lá chắn OWASP API Guards mới sinh `0` cảnh báo giả. Khi bật `schema_validation_enabled = True`, `Strict FPR` trên tập B1000 tăng từ `4.0% -> 8.5%` (và `26.67%` trên REST client gửi thêm trường tùy chọn).
   - **[A1.2 / D2 — Độ trễ 2-Hop TCP HTTP E2E thật (`docs/reports/latency_e2e_v3_csic.json`)]**: Đo qua socket HTTP thật (`httpx` -> `Uvicorn Gateway` -> `Uvicorn Upstream` trên `3.000` mẫu CSIC 2010): `mean = 4.465 ms`, `p50 = 4.252 ms`, `p95 = 5.888 ms`, `p99 = 7.260 ms` (phân định rõ với `1.00–1.42 ms` độ trễ in-process engine; đề xuất SLA kép: `<= 1.5 ms` inline engine & `<= 5.5 ms` full 2-hop HTTP proxy).
   - **[A1.3 / D3 — Kiểm chứng Disjoint Canonical Hash (`docs/reports/zero_leakage_v3_verification.json` + `ml-engine/tests/test_zero_leakage_disjoint.py`)]**: `train (32.330) ∩ val (6.928) ∩ test (6.929) = 0`, giao với `CSIC 2010` = `0`, giao với `Benchmark 1000` = `0` (`zero_leakage_verified = true`).
-  - **[A2 — Benchmark 3x3 Đa Vòng Khép Kín & Tập Ngoại Miền `Strange` (`docs/reports/adversarial_benchmark_3x3.json`)]**: `0` hằng số `88.0`; `Hybrid v3.0` đạt **`100.0%` (`45/45`)** trên tập `Familiar` và **`94.4%` (`51/54`)** trên tập ngoại miền mới `Strange` (`5.6%` lọt lưới ở biến thể blind SQLi số học không dấu nháy `105 OR 17-7=10`).
+  - **[A2 — Benchmark 3x3 Đa Vòng Khép Kín & Tập Ngoại Miền `Strange` (`docs/reports/adversarial_benchmark_3x3.json`)]**: `0` hằng số `88.0`; `Hybrid` đạt **`100.0%` (`45/45`)** trên tập `Familiar` và **`94.4%` (`51/54`)** trên tập ngoại miền mới `Strange` (`5.6%` lọt lưới ở biến thể blind SQLi số học không dấu nháy `105 OR 17-7=10`).
   - **[A3 — Quyết định Chính sách Schema Validator]**: Vì `FP strict (Schema ON) = 8.5% > 5%` trên B1000 (`26.67%` trên REST client mở rộng), giữ `schema_validation_enabled: bool = False` mặc định kèm chú thích kỹ thuật tường minh trong `config.py`, đồng thời **xóa hoàn toàn trường `role`** khỏi `/users/profile/update/` trong `BUILTIN_TARGET_SPEC` (`schema_validator.py`).
   - **[A4 — Hoàn tất 5 chốt kỹ thuật]**: (1) `sync_to_soc = False` mặc định ở cả `arena.py` & `arena/page.tsx`; (2) Output guard trong `runner.py` bảo vệ tuyệt đối `campaign_report.json`; (3) Whitelist `target_url` chống CWE-918 Open Proxy ở `/dashboard/simulate`; (4) Mở thông hostname `vulnerable-api` cho Docker Compose ở `arena.py`; (5) `sync_thesis_documents.py` đọc động 100% từ JSON artifacts.
   - **[A5 — Verify Live 3-Service, 379/379 Pytest & Sửa Tràn Khung UI 1920x1080]**: `ruff` (`0` lỗi), `pytest` (`379/379` PASS), `tsc`/`lint`/`next build` (`0` lỗi, `0` secret), live `11/11` BFF Simulator vectors + `demo_rehearsal.py --auto` 5 giai đoạn (`exit code 0`), phát hiện qua ảnh headless Edge `1920x1080` và vá dứt điểm lỗi `ThreatTimelineChart` `h-[340px]` tràn che khuất hộp `Attack & Protocol Mix` (`compact` mode `h-[190px]` + hộp `Attack & Protocol Mix` `h-[168px]` hiển thị rõ 100% + đủ `11/11` nút simulator).
@@ -61,7 +61,7 @@
 
 ---
 
-# 📋 REVIEW FEEDBACK & FINAL SIGN-OFF REPORT (FULL PBL6: BLUE TEAM v2.0 + RED TEAM + THESIS & DEMO READY)
+# 📋 REVIEW FEEDBACK & FINAL SIGN-OFF REPORT (FULL PBL6: BLUE TEAM HYBRID + RED TEAM + THESIS & DEMO READY)
 
 ## 🏆 NGHIỆM THU TỔNG THỂ TRƯỚC BẢO VỆ (2026-11-23): 26/26 HẠNG MỤC ĐẠT 100% `[VERIFIED PASS]` — READY TO PRINT & DEFEND
 - **Reviewer:** `@pbl6-reviewer` (Senior Security Architect & Independent Code Auditor)
@@ -69,17 +69,17 @@
 - **Nhánh Git cục bộ:** `feat/blue-team-v2-sprint3-logic-ui`
 - **Chuỗi Commit đã tái-audit độc lập:**
   - **Sprint 1 (`9e073ad`)** — 🟢 **APPROVED / `[VERIFIED PASS]`**: P0 Critical Security Hardening (`SEC-PBL6-001..004`, `SEC-PBL6-006`, ReDoS `XSS-002`).
-  - **Sprint 2 (`4f62c74`)** — 🟢 **APPROVED / `[VERIFIED PASS]`**: Defense ML Engine v2.0 (`SEC-PBL6-005`, `SCI-PBL6-001`: Zero-Pickle `xgb_v2.ubj` + `iforest_v2.npz`, Zero-Leakage `defense_v2`, `2.246 ms/req` single-req / `0.867 ms` microbench, Anomaly Recall `57.75%` / FPR `4.00%`, Zero-Shot CSIC 2010 FPR `0.00%`).
+  - **Sprint 2 (`4f62c74`)** — 🟢 **APPROVED / `[VERIFIED PASS]`**: Defense ML Engine (`SEC-PBL6-005`, `SCI-PBL6-001`: Zero-Pickle `xgb_v2.ubj` + `iforest_v2.npz`, Zero-Leakage `defense_v2`, `2.246 ms/req` single-req / `0.867 ms` microbench, Anomaly Recall `57.75%` / FPR `4.00%`, Zero-Shot CSIC 2010 FPR `0.00%`).
   - **Sprint 3 (`5fa0371` + `a4b34ff`)** — 🟢 **APPROVED / `[VERIFIED PASS]`**: WAF Logic & SOC Dashboard Truthfulness (`LOGIC-PBL6-001..005`, `SCI-PBL6-002`: `0` fake telemetry hits trên `dashboard/src/`, fix `bytes -> b'...'` 93.2% SQLi FP & `UnboundLocalError: session_id`, khử N+1 `/dashboard/sessions`).
   - **Sprint 4 (`665a782`)** — 🟢 **APPROVED / `[VERIFIED PASS]`**: High-Concurrency Async Gateway, SQLite WAL Group-Commit, Infrastructure & Anti-Drift (`PERF-PBL6-001..002`, `SEC-PBL6-007`, `INFRA-PBL6-001`, `QUAL-PBL6-001`, `ARCH-PBL6-001`, `SCI-PBL6-001` real profiling).
-  - **Pre-Defense Integration & Audit Pass (2026-11-23)** — 🟢 **APPROVED / `[VERIFIED PASS]`**: Full audit & integration of Minh's Red Team (`origin/feat/evasion-engine`, commit `ec87fc5`, `RED-PBL6-001..007`), Live Demo/Docker Blocker Fixes, Real Blue Team v2.0 Ablation Study, Live Red DQN vs Blue WAF Campaign, Print-Ready Thesis `.docx` (8 files) + 4x 300 DPI Charts + 14-Slide Defense `.pptx`, and Live 3-Service E2E Dry Run.
+  - **Pre-Defense Integration & Audit Pass (2026-11-23)** — 🟢 **APPROVED / `[VERIFIED PASS]`**: Full audit & integration of Minh's Red Team (`origin/feat/evasion-engine`, commit `ec87fc5`, `RED-PBL6-001..007`), Live Demo/Docker Blocker Fixes, Real Blue Team Hybrid Ablation Study, Live Red DQN vs Blue WAF Campaign, Print-Ready Thesis `.docx` (8 files) + 4x 300 DPI Charts + 14-Slide Defense `.pptx`, and Live 3-Service E2E Dry Run.
 - **Tổng kết kiểm chứng độc lập cuối cùng (2026-11-23):**
   - **Lint (`ruff check gateway/ ml-engine/ attack-lab/ tests/unit/test_evasion.py tests/unit/test_runner.py scripts/...`):** `0 errors` (`All checks passed!`) — dọn sạch toàn bộ 50 lỗi từ nhánh Red Team + 57 lỗi nền trước đó.
   - **Unit & Integration Tests (`pytest gateway/tests/ tests/unit/ ml-engine/tests/`):** **353/353 PASSED (100%)** (`297` Blue Team + `56` Red Team & AI Arena).
   - **Frontend Build (`npm run lint` + `tsc --noEmit` + `next build`):** `0 ESLint warnings/errors`, `0 TypeScript errors`, `✓ Compiled successfully` (`/` + `/arena` + `/api/gateway/[...path]`), `0` secrets trong `.next/static/`.
   - **Docker Compose Config (`docker compose config --quiet`):** Exit `0` (`0` warnings), bổ sung `"xgboost>=2.0.0"` vào `gateway/pyproject.toml`.
-  - **Ablation Study Thực Tế v2.0 (`data/benchmark_1000_diverse.csv`, `0` overlap):** Hybrid đạt Accuracy **`97.80%`**, Precision **`100.00%`**, Recall **`97.25%`**, F1 **`98.61%`**, FPR **`0.00%`**, Youden's `J = 0.9725`, Mean **`0.848 ms`** (P95 `1.075 ms`).
-  - **Live Red Team PyTorch DQN vs Blue Team v2.0 (`attack-lab/artifacts/campaign_report.json`):** **`20/20 BLOCKED (100.0%)`**, **`0.0%` bypass**, avg threat score **`95.63/100`**, avg live HTTP latency **`4.29 ms`**.
+  - **Ablation Study Thực Tế (`data/benchmark_1000_diverse.csv`, `0` overlap):** Hybrid đạt Accuracy **`97.80%`**, Precision **`100.00%`**, Recall **`97.25%`**, F1 **`98.61%`**, FPR **`0.00%`**, Youden's `J = 0.9725`, Mean **`0.848 ms`** (P95 `1.075 ms`).
+  - **Live Red Team PyTorch DQN vs Blue Team Hybrid (`attack-lab/artifacts/campaign_report.json`):** **`20/20 BLOCKED (100.0%)`**, **`0.0%` bypass**, avg threat score **`95.63/100`**, avg live HTTP latency **`4.29 ms`**.
   - **Live 3-Service E2E Demo Dry Run (`Bookie :5000` + `Gateway :8000` + `Dashboard Prod :3000`):** `start_all_services.py --check` exit `0`; `4x HTTP 401` unauth + `HTTP 403` BFF block; `/` & `/arena` HTTP `200`; Live Arena Battles `all` (`8/8` BLUE_TEAM, `94.6/100`) & `sqli` (`6/6` BLUE_TEAM, `96.9/100`); `demo_rehearsal.py --auto` đạt 4/4 giai đoạn (`5/5` Baseline `200`, `5/5` Monitor, `5/5` Active Block `403` gồm SOAP XXE, `5` Brute-Force `429`); `recon.py` phát hiện sống `11` endpoint OpenAPI Bookie qua WAF Gateway.
   - **Independent Live ASGI Benchmark (`C=50`):** Benign `300/300 HTTP 200` -> **`269.50 RPS`** (report profiling: `340.14 RPS`); Attack SQLi `200/200 HTTP 403` -> **`272.75 RPS`** (report profiling: `253.31 RPS`) — vượt xa SLA `>= 150 RPS`.
 
@@ -97,7 +97,7 @@
 
 - [x] **[RED-PBL6-005] Vá Lỗi `if threat_score is None` & HTTP `429` Trong Red Team Tooling (`attack-lab/agent/tools.py`)** — `[VERIFIED PASS]` (Sửa falsy bug `threat_score == 0.0` và nhận diện HTTP `429` là bị chặn/điều tiết thay vì bypass).
 
-- [x] **[RED-PBL6-006] Thay Thế `campaign_report.json` Hỏng (`WinError 10061`) Bằng Chiến Dịch Đối Kháng Live Thật (`attack-lab/artifacts/campaign_report.json`)** — `[VERIFIED PASS]` (Chạy live `runner.py --mode ai_agent --campaign all --max-rounds 4` qua WAF Gateway v2.0 + Bookie API -> **`20/20 BLOCKED (100.0%)`**, `0.0%` bypass, `95.63/100` avg risk, `4.29 ms` live HTTP latency).
+- [x] **[RED-PBL6-006] Thay Thế `campaign_report.json` Hỏng (`WinError 10061`) Bằng Chiến Dịch Đối Kháng Live Thật (`attack-lab/artifacts/campaign_report.json`)** — `[VERIFIED PASS]` (Chạy live `runner.py --mode ai_agent --campaign all --max-rounds 4` qua WAF Gateway Hybrid + Bookie API -> **`20/20 BLOCKED (100.0%)`**, `0.0%` bypass, `95.63/100` avg risk, `4.29 ms` live HTTP latency).
 
 - [x] **[RED-PBL6-007] Tích Hợp Điều Hướng SOC <-> Arena & Dọn Sạch 50 Lỗi Lint Red Team (`dashboard/src/components/Header.tsx`, `attack-lab/`, `tests/unit/test_{evasion,runner}.py`)** — `[VERIFIED PASS]` (Thêm thanh chuyển tab `Tổng quan SOC /` <-> `Đấu Trường AI /arena`; sửa 50 lỗi ruff kể cả E402 trong `01_train_attack_agent.ipynb`; `56/56` unit & integration test Arena/Evasion/Runner PASS).
 
@@ -105,8 +105,8 @@
 
 ### 📄 BỘ TÀI LIỆU IN BÁO CÁO & SLIDE BẢO VỆ (VERIFIED 100% ĐỒNG BỘ SỐ LIỆU THẬT)
 
-- [x] **8 Tệp Word A4 Sẵn Sàng In Ấn (`docs/reports/PBL6_Bao_Cao.docx`, `PBL6_Bao_Cao_Tong_Hop_Toan_Van.docx`, Chương 1–5 & Phụ lục):** Đã chuẩn hóa tên GVHD (`TS. Nguyễn Thế Xuân Ly`), nhóm thực hiện (`Nguyễn Văn Công` — `21T_DT`, `Nguyễn Minh`), nhúng 4 biểu đồ 300 DPI (`docs/reports/figures/fig1..4_*.png`), `0` lỗi LaTeX/escape, `0` di chứng `Juice Shop`, `0` placeholder.
-- [x] **14 Slide PowerPoint 16:9 (`docs/reports/PBL6_Academic_Defense_Slides.pptx` & `SLIDE_THUYET_TRINH_BAO_VE_PBL6.md`):** Đã nhúng biểu đồ thực nghiệm 300 DPI, đầy đủ ghi chú thuyết trình (Speaker Notes) cho 14/14 slide và phân vai trình bày 10 phút Blue Team + Red Team.
+- [x] **Bộ Tài Liệu Báo Cáo Word A4 Sẵn Sàng In Ấn (`docs/reports/PBL6_Bao_Cao.docx`, Chương 1–5 & Phụ lục):** Đã chuẩn hóa tên GVHD (`TS. Nguyễn Năng Hùng Vân`), nhóm thực hiện (`Ngô Văn Công`, `Nguyễn Công Minh`), nhúng biểu đồ thực nghiệm (`docs/reports/figures/`), `0` lỗi LaTeX/escape, `0` di chứng `Juice Shop`, `0` placeholder.
+- [x] **Bộ Slide PowerPoint 16:9 (`docs/reports/PBL6_Academic_Defense_Slides.pptx`):** Đã nhúng biểu đồ & bảng thực nghiệm đồng bộ, đầy đủ ghi chú thuyết trình (Speaker Notes) cho 24/24 slide và phân vai trình bày Blue Team + Red Team.
 
 ---
 
@@ -154,7 +154,7 @@
 
 - [x] **[QUAL-PBL6-001]** `[VERIFIED PASS]` (`665a782`) — `ruff check gateway/ ml-engine/ attack-lab/` đạt `0 errors`; `.github/workflows/ci.yml` chạy đủ `ruff` 3 repo + `pytest` 3 suite + `dashboard` (`npm run lint`, `tsc --noEmit`, `next build`); bổ sung `dashboard/.eslintrc.json`; xóa 2 file wrapper dư thừa tại `dashboard/src/components/`; dọn sạch `scratch/` (`0` file tồn).
 
-- [x] **[ARCH-PBL6-001]** `[VERIFIED PASS]` (`665a782`) — `0` di chứng `Juice Shop` trên `health.py`, `test_health.py`, `DASHBOARD_SPEC.md`, `GAP_ANALYSIS.md`, `GLOSSARY.md`, `ARCHITECTURE.md`, `README.md`; xóa tham chiếu ảo `attack-lab/cli.py` trong `README.md`; cập nhật footer `dashboard/src/app/page.tsx` sang `Blue Team v2.0: Rule + XGBoost v2.0 + Isolation Forest v2.0`.
+- [x] **[ARCH-PBL6-001]** `[VERIFIED PASS]` (`665a782`) — `0` di chứng `Juice Shop` trên `health.py`, `test_health.py`, `DASHBOARD_SPEC.md`, `GAP_ANALYSIS.md`, `GLOSSARY.md`, `ARCHITECTURE.md`, `README.md`; xóa tham chiếu ảo `attack-lab/cli.py` trong `README.md`; cập nhật footer `dashboard/src/app/page.tsx` sang `Blue Team Hybrid: Rule + XGBoost + Isolation Forest`.
 
 - [x] **[SEC-PBL6-007]** `[VERIFIED PASS]` (`665a782`) — `filter_request_headers` chặn rò rỉ `X-API-Key` xuống upstream; `filter_response_header_items` giữ nguyên multi-value `Set-Cookie` (`count=2`); `LiveEventsTable.tsx` sửa chuẩn CIDR `172.16.0.0/12`; `attack-lab/agent/recon.py` có cycle guard chống circular `$ref` (`self_cycle=guarded, ab_cycle=guarded`); `vnpay.py` dùng `hmac.compare_digest`; bỏ toàn bộ `datetime.utcnow()` sang `datetime.now(datetime.timezone.utc)`.
   - *Ghi chú tồn dư vi mô (non-blocking, `[CODE-VERIFIED]`):* (1) `filter_request_headers` chưa tách các header tùy biến liệt kê động trong `Connection:` (RFC 7230 §6.1); (2) `attack-lab/environment/env.py:248` (phần Red Team Máy 2) có đặc trưng `index / max(count - 1, 1)` song song `index / max(count, 1)`. Cả hai không ảnh hưởng an toàn Blue Team và có thể tinh chỉnh ở backlog phụ.
@@ -162,4 +162,4 @@
 ---
 
 # 📋 LỊCH SỬ THẨM ĐỊNH CÁC TASK TRƯỚC
-*(PR #111 Task 10.2 APPROVE 9.9/10; Task 10.1, Task 12.2, Task 12.1, Task 11.3, Phase 8, Phase 6; Blue Team v2.0 Upgrade Pipeline Sprints 1–4: 19/19 Findings `[VERIFIED PASS]`)*
+*(PR #111 Task 10.2 APPROVE 9.9/10; Task 10.1, Task 12.2, Task 12.1, Task 11.3, Phase 8, Phase 6; Blue Team Upgrade Pipeline Sprints 1–4: 19/19 Findings `[VERIFIED PASS]`)*

@@ -119,7 +119,11 @@
     "latency_type": "in_process_engine_ms (see latency_e2e_v3_csic.json for 2-hop TCP HTTP socket E2E)",
     "familiar_unique_cases": 15,
     "strange_unique_cases": 18,
-    "zero_hardcoded_state": true
+    "zero_hardcoded_state": true,
+    "history_snapshot": "docs/reports/history/adversarial_benchmark_3x3_20261124_192715_fd012c1.json",
+    "git_base_sha": "fd012c1d17e42f531b635cbe94c7dd738023ee0f",
+    "cpu_load_pct": 21.3,
+    "last_pointer_update": "2026-11-24T19:27:15.379598"
   },
   "familiar": {
     "Static Replay": {

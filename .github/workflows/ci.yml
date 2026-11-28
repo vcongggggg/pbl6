@@ -24,15 +24,19 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -e gateway/
-          pip install pytest pytest-asyncio pytest-cov respx ruff joblib numpy scikit-learn pandas xgboost
+          pip install pytest pytest-asyncio pytest-cov respx ruff joblib numpy scikit-learn pandas xgboost python-docx python-pptx
 
       - name: Run Ruff Linter (Full Codebase)
         run: |
           ruff check gateway/ ml-engine/ attack-lab/
 
-      - name: Run Pytest Test Suites (Gateway, Unit & ML Engine)
+      - name: Run Pytest Test Suites with Coverage (Gateway, Unit & ML Engine)
         run: |
-          python -m pytest gateway/tests/ tests/unit/ ml-engine/tests/
+          python -m pytest gateway/tests/ tests/unit/ ml-engine/tests/ --cov=gateway/app/security --cov=gateway/app/api --cov-fail-under=80
+
+      - name: Verify Quality Gates (PBL6 v3.2 Phase D5)
+        run: |
+          python scripts/verify_quality_gates.py
 
   frontend-checks:
     name: Frontend Lint, Typecheck & Build (Node.js 20)

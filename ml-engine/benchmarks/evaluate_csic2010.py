@@ -25,15 +25,27 @@ OUTPUT_MD = ROOT_DIR / "docs" / "reports" / "csic2010_benchmark_report.md"
 
 OUTPUT_JSON.parent.mkdir(parents=True, exist_ok=True)
 
-# Add gateway and ml-engine to sys.path
+# Add gateway, ml-engine, and scripts to sys.path
 sys.path.insert(0, str(ROOT_DIR / "gateway"))
 sys.path.insert(0, str(ROOT_DIR / "ml-engine"))
+sys.path.insert(0, str(ROOT_DIR / "scripts"))
 
 from app.security.anomaly import AnomalyDetector  # noqa: E402
+from app.security.decision import DecisionEngine  # noqa: E402
 from app.security.engine import RuleEngine  # noqa: E402
 from app.security.ml_detector import MLDetector  # noqa: E402
+from app.security.risk_engine import RiskEngine  # noqa: E402
+from audit_csic2010_taxonomy import (  # noqa: E402
+    GROUP_A_SUBCATEGORIES,
+    classify_payload_taxonomy,
+)
 from features.canonicalizer import canonicalize_http_request  # noqa: E402
 from features.extractor import extract_26_from_http  # noqa: E402
+
+try:
+    from features.canonicalizer import normalize_http_for_ml  # type: ignore[attr-defined]
+except ImportError:
+    normalize_http_for_ml = None
 
 
 def compute_metrics(results: list[dict[str, Any]], pred_key: str, total_samples: int) -> dict[str, Any]:
@@ -77,6 +89,8 @@ def run_csic2010_evaluation() -> None:
     ml_detector = MLDetector()
     anomaly_detector = AnomalyDetector()
     rule_engine = RuleEngine()
+    risk_engine = RiskEngine()
+    decision_engine = DecisionEngine()
 
     print(f"[OK] MLDetector: is_loaded={ml_detector.is_loaded}, path={ml_detector.model_path}")
     print(f"[OK] AnomalyDetector: is_loaded={anomaly_detector.is_loaded}, path={anomaly_detector.model_path}")
@@ -93,12 +107,37 @@ def run_csic2010_evaluation() -> None:
         true_label = int(row["label"])
         attack_type = str(row["attack_type"])
 
-        # Authoritative single feature extraction pipeline matching proxy and training
-        vec_26 = extract_26_from_http(path=path, query_params=query, body=body).tolist()
-        canonical_payload = canonicalize_http_request(path=path, query_params=query, body=body)
+        tax = (
+            classify_payload_taxonomy(f"{path} {query} {body}")
+            if true_label == 1
+            else {"is_group_a": False, "true_category": "BENIGN", "detailed_subcategory": "BENIGN"}
+        )
 
+        # Authoritative single feature extraction pipeline matching proxy and training
         t0 = time.perf_counter()
-        pred_ml = ml_detector.predict(canonical_payload, feature_vector=vec_26)
+        if callable(getattr(ml_detector, "predict_http", None)):
+            ml_out = ml_detector.predict_http(path=path, query_params=query, body=body)
+            if isinstance(ml_out, tuple) and len(ml_out) == 2:
+                pred_ml, vec_26 = ml_out
+            else:
+                pred_ml = ml_out
+                vec_26 = pred_ml.feature_vector or extract_26_from_http(
+                    path=path, query_params=query, body=body
+                ).tolist()
+            if normalize_http_for_ml is not None:
+                np_, nq_, nb_ = normalize_http_for_ml(path=path, query_params=query, body=body)
+                canonical_payload = canonicalize_http_request(path=np_, query_params=nq_, body=nb_)
+            else:
+                canonical_payload = canonicalize_http_request(path=path, query_params=query, body=body)
+        else:
+            if normalize_http_for_ml is not None:
+                np_, nq_, nb_ = normalize_http_for_ml(path=path, query_params=query, body=body)
+            else:
+                np_, nq_, nb_ = path, query, body
+            vec_26 = extract_26_from_http(path=np_, query_params=nq_, body=nb_).tolist()
+            canonical_payload = canonicalize_http_request(path=np_, query_params=nq_, body=nb_)
+            pred_ml = ml_detector.predict(canonical_payload, feature_vector=vec_26)
+
         pred_anom = anomaly_detector.predict(canonical_payload, feature_vector=vec_26)
         rules_eval = rule_engine.inspect_request(
             path=path,
@@ -126,12 +165,24 @@ def run_csic2010_evaluation() -> None:
         )
         pred_hybrid_label = 1 if is_hybrid_attack else 0
 
+        rb = risk_engine.calculate_weighted_score(
+            rule_score=rule_score,
+            ml_score=pred_ml.risk_score,
+            anomaly_score=pred_anom.anomaly_score,
+            ablation_mode="hybrid",
+        )
+        dec = decision_engine.evaluate(risk_breakdown=rb, waf_mode="ACTIVE_BLOCKING")
+        pred_hybrid_op_label = 1 if (dec.is_blocked or dec.is_rate_limited) else 0
+
         results.append({
             "index": idx,
             "attack_type": attack_type,
             "true_label": true_label,
+            "is_group_a": bool(tax["is_group_a"]),
+            "detailed_subcategory": str(tax["detailed_subcategory"]),
             "pred_ml_label": pred_ml_label,
             "pred_hybrid_label": pred_hybrid_label,
+            "pred_hybrid_op_label": pred_hybrid_op_label,
             "ml_risk": pred_ml.risk_score,
             "ml_pred_type": pred_ml.attack_type,
             "anom_score": pred_anom.anomaly_score,
@@ -226,6 +277,70 @@ def run_csic2010_evaluation() -> None:
         {"metric": "Avg Inference Latency", "in_domain": f"{in_domain_latency:.3f} ms", "csic_ml": f"{mean_lat:.3f} ms", "csic_hybrid": f"{mean_lat:.3f} ms"},
     ]
 
+    # Two-Tier Parallel Metrics: Overall (1,500) vs Group A (True Payload) + Group B
+    metrics_hybrid_op = compute_metrics(results, "pred_hybrid_op_label", total_samples)
+    ga_results = [r for r in results if r["true_label"] == 0 or r["is_group_a"]]
+    gb_results = [r for r in results if r["true_label"] == 1 and not r["is_group_a"]]
+    ga_total = sum(1 for r in ga_results if r["true_label"] == 1)
+    gb_total = len(gb_results)
+
+    def _ga_recall(pred_key: str) -> dict[str, Any]:
+        tp = sum(1 for r in ga_results if r["true_label"] == 1 and r[pred_key] == 1)
+        return {
+            "tp": tp,
+            "total": ga_total,
+            "recall_pct": round((tp / ga_total * 100.0), 2) if ga_total else 0.0,
+        }
+
+    def _gb_recall(pred_key: str) -> dict[str, Any]:
+        tp = sum(1 for r in gb_results if r[pred_key] == 1)
+        return {
+            "tp": tp,
+            "total": gb_total,
+            "recall_pct": round((tp / gb_total * 100.0), 2) if gb_total else 0.0,
+        }
+
+    def _subcat_recall(pred_key: str) -> dict[str, dict[str, Any]]:
+        out: dict[str, dict[str, Any]] = {}
+        for sub in (*GROUP_A_SUBCATEGORIES, "PARAMETER_TAMPERING"):
+            sub_r = [r for r in results if r["true_label"] == 1 and r["detailed_subcategory"] == sub]
+            blk = sum(1 for r in sub_r if r[pred_key] == 1)
+            tot = len(sub_r)
+            out[sub] = {
+                "total": tot,
+                "blocked": blk,
+                "recall_pct": round((blk / tot * 100.0), 2) if tot else 0.0,
+            }
+        return out
+
+    two_tier_parallel_metrics = {
+        "overall_1500": {
+            "standalone_ml_recall_pct": metrics_ml["recall"],
+            "hybrid_loose_recall_pct": metrics_hybrid["recall"],
+            "hybrid_operational_t80_recall_pct": metrics_hybrid_op["recall"],
+            "benign_fpr_ml_pct": metrics_ml["fpr"],
+            "benign_fpr_hybrid_loose_pct": metrics_hybrid["fpr"],
+            "benign_fpr_hybrid_operational_t80_pct": metrics_hybrid_op["fpr"],
+        },
+        "group_a_true_payload": {
+            "total": ga_total,
+            "standalone_ml": _ga_recall("pred_ml_label"),
+            "hybrid_loose": _ga_recall("pred_hybrid_label"),
+            "hybrid_operational_t80": _ga_recall("pred_hybrid_op_label"),
+        },
+        "group_b_parameter_tampering": {
+            "total": gb_total,
+            "standalone_ml": _gb_recall("pred_ml_label"),
+            "hybrid_loose": _gb_recall("pred_hybrid_label"),
+            "hybrid_operational_t80": _gb_recall("pred_hybrid_op_label"),
+        },
+        "detailed_subcategories": {
+            "standalone_ml": _subcat_recall("pred_ml_label"),
+            "hybrid_loose": _subcat_recall("pred_hybrid_label"),
+            "hybrid_operational_t80": _subcat_recall("pred_hybrid_op_label"),
+        },
+    }
+
     report_data = {
         "metadata": {
             "task": "TASK-5.4",
@@ -238,6 +353,8 @@ def run_csic2010_evaluation() -> None:
         },
         "standalone_xgboost_v2": metrics_ml,
         "hybrid_defense_in_depth": metrics_hybrid,
+        "hybrid_operational_t80": metrics_hybrid_op,
+        "two_tier_parallel_metrics": two_tier_parallel_metrics,
         "latency": {
             "mean_ms": round(mean_lat, 3),
             "p50_ms": round(p50_lat, 3),
@@ -251,6 +368,12 @@ def run_csic2010_evaluation() -> None:
 
     OUTPUT_JSON.write_text(json.dumps(report_data, indent=2, ensure_ascii=False), encoding="utf-8")
 
+    sc_ml = two_tier_parallel_metrics["detailed_subcategories"]["standalone_ml"]
+    sc_hl = two_tier_parallel_metrics["detailed_subcategories"]["hybrid_loose"]
+    sc_ho = two_tier_parallel_metrics["detailed_subcategories"]["hybrid_operational_t80"]
+    ga_m = two_tier_parallel_metrics["group_a_true_payload"]
+    gb_m = two_tier_parallel_metrics["group_b_parameter_tampering"]
+
     md_content = f"""# Báo Cáo Đánh Giá Khả Năng Tổng Quát Hóa Liên Tập Dữ Liệu (Task 5.4 - CSIC 2010 Benchmark)
 
 **Chuẩn mực khoa học:** NIST SP 800-115, ISO/IEC 27004:2016, Liu et al. (IEEE ICDM 2008), Torrano-Gimenez et al. (Wiley SCN 2015)
@@ -263,32 +386,38 @@ def run_csic2010_evaluation() -> None:
 
 ## 1. Bảng Đối Sánh Khoa Học: Tập Nội Bộ (In-Domain) vs Chuẩn Quốc Tế CSIC 2010 (Zero-Shot)
 
-| Chỉ Số Đánh Giá (Metric) | Tập Nội Bộ (In-Domain Test) | CSIC 2010 (XGBoost v2 Đơn Lẻ) | CSIC 2010 (Hybrid Defense-in-Depth) | Nhận Xét Khoa Học |
-|:---|:---:|:---:|:---:|:---|
-| **Độ chính xác (Accuracy)** | **{id_acc:.2f}%** | **{metrics_ml['accuracy']:.2f}%** | **{metrics_hybrid['accuracy']:.2f}%** | Phản ánh tỷ lệ nhận diện tổng quát |
-| **Precision (Độ tin cậy cảnh báo)** | **{id_prec:.2f}%** | **{metrics_ml['precision']:.2f}%** | **{metrics_hybrid['precision']:.2f}%** | Độ tin cậy cảnh báo thực tế |
-| **Recall (Tỷ lệ bắt mã độc)** | **{id_rec:.2f}%** | **{metrics_ml['recall']:.2f}%** | **{metrics_hybrid['recall']:.2f}%** | Bắt giữ {metrics_hybrid['tp']}/{total_samples//2} vector tấn công |
-| **F1-Score (Trung bình điều hòa)** | **{id_f1:.2f}%** | **{metrics_ml['f1_score']:.2f}%** | **{metrics_hybrid['f1_score']:.2f}%** | Điểm cân bằng học thuật |
-| **Tỷ lệ dương tính giả (FPR)** | **{id_fpr:.2f}%** | **{metrics_ml['fpr']:.2f}%** | **{metrics_hybrid['fpr']:.2f}%** | Độ sạch của luồng người dùng lành tính |
-| **Độ trễ suy luận trung bình** | **{in_domain_latency:.3f} ms** | **{mean_lat:.3f} ms** | **{mean_lat:.3f} ms** | Đạt chuẩn inline SLA (&lt; 2.5ms/request) |
+| Chỉ Số Đánh Giá (Metric) | Tập Nội Bộ (In-Domain Test) | CSIC 2010 (XGBoost v2 Đơn Lẻ) | CSIC 2010 (Hybrid Loose) | CSIC 2010 (Hybrid Operational T=80) | Nhận Xét Khoa Học |
+|:---|:---:|:---:|:---:|:---:|:---|
+| **Độ chính xác (Accuracy)** | **{id_acc:.2f}%** | **{metrics_ml['accuracy']:.2f}%** | **{metrics_hybrid['accuracy']:.2f}%** | **{metrics_hybrid_op['accuracy']:.2f}%** | Phản ánh tỷ lệ nhận diện tổng quát (1.500 attacks gồm cả Group B) |
+| **Precision (Độ tin cậy cảnh báo)** | **{id_prec:.2f}%** | **{metrics_ml['precision']:.2f}%** | **{metrics_hybrid['precision']:.2f}%** | **{metrics_hybrid_op['precision']:.2f}%** | Độ tin cậy cảnh báo thực tế |
+| **Recall Overall (1.500 attacks)** | **{id_rec:.2f}%** | **{metrics_ml['recall']:.2f}%** | **{metrics_hybrid['recall']:.2f}%** | **{metrics_hybrid_op['recall']:.2f}%** | Bắt {metrics_hybrid_op['tp']}/1.500 (Op T=80) / {metrics_hybrid['tp']}/1.500 (Loose) |
+| **Recall Nhóm A True Payload ({ga_total} mẫu)** | — | **{ga_m['standalone_ml']['recall_pct']:.2f}%** | **{ga_m['hybrid_loose']['recall_pct']:.2f}%** | **{ga_m['hybrid_operational_t80']['recall_pct']:.2f}%** | Bắt {ga_m['hybrid_operational_t80']['tp']}/{ga_total} True Payloads (Op T=80) / {ga_m['hybrid_loose']['tp']}/{ga_total} (Loose) |
+| **F1-Score (Trung bình điều hòa)** | **{id_f1:.2f}%** | **{metrics_ml['f1_score']:.2f}%** | **{metrics_hybrid['f1_score']:.2f}%** | **{metrics_hybrid_op['f1_score']:.2f}%** | Điểm cân bằng trên 3.000 mẫu |
+| **Tỷ lệ dương tính giả (FPR)** | **{id_fpr:.2f}%** | **{metrics_ml['fpr']:.2f}%** | **{metrics_hybrid['fpr']:.2f}%** | **{metrics_hybrid_op['fpr']:.2f}%** | Độ sạch luồng lành tính (1.500 Benign) |
+| **Độ trễ suy luận trung bình** | **{in_domain_latency:.3f} ms** | **{mean_lat:.3f} ms** | **{mean_lat:.3f} ms** | **{mean_lat:.3f} ms** | Đạt chuẩn inline SLA (&lt; 1.5ms/request) |
 
 ---
 
-## 2. Phân Tích Chi Tiết Theo Từng Nhóm Hành Vi Mã Độc CSIC 2010
+## 2. Phân Tích Chi Tiết Theo Phân Loại Hai Tầng Đã Kiểm Toán (Two-Tier CSIC Taxonomy)
 
-| Nhóm Hành Vi CSIC 2010 | Tổng Mẫu | XGBoost v2 Bắt Được | XGBoost v2 Tỷ Lệ | Hybrid Bắt Được | Hybrid Tỷ Lệ |
-|:---|:---:|:---:|:---:|:---:|:---:|
-| **SQL Injection (SQLi)** | {sub_summary_ml.get('SQLI', {}).get('total', 0)} | {sub_summary_ml.get('SQLI', {}).get('blocked', 0)} | {sub_summary_ml.get('SQLI', {}).get('success_rate', 0)}% | {sub_summary_hybrid.get('SQLI', {}).get('blocked', 0)} | {sub_summary_hybrid.get('SQLI', {}).get('success_rate', 0)}% |
-| **Cross-Site Scripting (XSS)** | {sub_summary_ml.get('XSS', {}).get('total', 0)} | {sub_summary_ml.get('XSS', {}).get('blocked', 0)} | {sub_summary_ml.get('XSS', {}).get('success_rate', 0)}% | {sub_summary_hybrid.get('XSS', {}).get('blocked', 0)} | {sub_summary_hybrid.get('XSS', {}).get('success_rate', 0)}% |
-| **Anomalous Parameter Tampering** | {sub_summary_ml.get('ANOMALY_TAMPER', {}).get('total', 0)} | {sub_summary_ml.get('ANOMALY_TAMPER', {}).get('blocked', 0)} | {sub_summary_ml.get('ANOMALY_TAMPER', {}).get('success_rate', 0)}% | {sub_summary_hybrid.get('ANOMALY_TAMPER', {}).get('blocked', 0)} | {sub_summary_hybrid.get('ANOMALY_TAMPER', {}).get('success_rate', 0)}% |
-| **Lưu lượng hợp lệ (Benign Allow)** | {sub_summary_ml.get('BENIGN', {}).get('total', 0)} | {sub_summary_ml.get('BENIGN', {}).get('passed', 0)} | {sub_summary_ml.get('BENIGN', {}).get('success_rate', 0)}% | {sub_summary_hybrid.get('BENIGN', {}).get('passed', 0)} | {sub_summary_hybrid.get('BENIGN', {}).get('success_rate', 0)}% |
+> **Lưu ý kiểm toán phân loại (D2 -> E3):** Bộ CSIC gốc gán nhầm `modo=insertar` tiếng Tây Ban Nha vào `SQLI` (133/254 ca không chứa cú pháp SQL). Bảng 2 sử dụng chuẩn Two-Tier đã kiểm toán từ `audit_csic2010_taxonomy.py` (tách **Group A True Payload** gồm {ga_total} mẫu và **Group B Parameter Tampering** gồm {gb_total} mẫu). Số lượng mẫu Group A tăng từ **196 (D2) lên 221 (E3)** (+25 mẫu SQLi) do `audit_csic2010_taxonomy.py` đã chuyển sang giải mã `urllib.parse.unquote_plus` cho dấu `+` thành khoảng trắng trước khi nhận diện từ khóa SQL.
+
+| Phân Nhóm CSIC 2010 (Two-Tier) | Tổng Mẫu | XGBoost v2 Đơn Lẻ | Hybrid Loose | Hybrid Operational T=80 |
+|:---|:---:|:---:|:---:|:---:|
+| **Group A — `SQLI_CLASSIC_UNION`** | {sc_ml.get('SQLI_CLASSIC_UNION', {}).get('total', 0)} | {sc_ml.get('SQLI_CLASSIC_UNION', {}).get('blocked', 0)} ({sc_ml.get('SQLI_CLASSIC_UNION', {}).get('recall_pct', 0)}%) | {sc_hl.get('SQLI_CLASSIC_UNION', {}).get('blocked', 0)} ({sc_hl.get('SQLI_CLASSIC_UNION', {}).get('recall_pct', 0)}%) | {sc_ho.get('SQLI_CLASSIC_UNION', {}).get('blocked', 0)} ({sc_ho.get('SQLI_CLASSIC_UNION', {}).get('recall_pct', 0)}%) |
+| **Group A — `SQLI_BLIND_BOOLEAN` (+ legacy `--` SSI)** | {sc_ml.get('SQLI_BLIND_BOOLEAN', {}).get('total', 0)} | {sc_ml.get('SQLI_BLIND_BOOLEAN', {}).get('blocked', 0)} ({sc_ml.get('SQLI_BLIND_BOOLEAN', {}).get('recall_pct', 0)}%) | {sc_hl.get('SQLI_BLIND_BOOLEAN', {}).get('blocked', 0)} ({sc_hl.get('SQLI_BLIND_BOOLEAN', {}).get('recall_pct', 0)}%) | {sc_ho.get('SQLI_BLIND_BOOLEAN', {}).get('blocked', 0)} ({sc_ho.get('SQLI_BLIND_BOOLEAN', {}).get('recall_pct', 0)}%) |
+| **Group A — `SQLI_TSQL_TIME_DELAY`** | {sc_ml.get('SQLI_TSQL_TIME_DELAY', {}).get('total', 0)} | {sc_ml.get('SQLI_TSQL_TIME_DELAY', {}).get('blocked', 0)} ({sc_ml.get('SQLI_TSQL_TIME_DELAY', {}).get('recall_pct', 0)}%) | {sc_hl.get('SQLI_TSQL_TIME_DELAY', {}).get('blocked', 0)} ({sc_hl.get('SQLI_TSQL_TIME_DELAY', {}).get('recall_pct', 0)}%) | {sc_ho.get('SQLI_TSQL_TIME_DELAY', {}).get('blocked', 0)} ({sc_ho.get('SQLI_TSQL_TIME_DELAY', {}).get('recall_pct', 0)}%) |
+| **Group A — `XSS`** | {sc_ml.get('XSS', {}).get('total', 0)} | {sc_ml.get('XSS', {}).get('blocked', 0)} ({sc_ml.get('XSS', {}).get('recall_pct', 0)}%) | {sc_hl.get('XSS', {}).get('blocked', 0)} ({sc_hl.get('XSS', {}).get('recall_pct', 0)}%) | {sc_ho.get('XSS', {}).get('blocked', 0)} ({sc_ho.get('XSS', {}).get('recall_pct', 0)}%) |
+| **Group A — Tổng True Payload Attacks** | **{ga_total}** | **{ga_m['standalone_ml']['tp']} ({ga_m['standalone_ml']['recall_pct']:.2f}%)** | **{ga_m['hybrid_loose']['tp']} ({ga_m['hybrid_loose']['recall_pct']:.2f}%)** | **{ga_m['hybrid_operational_t80']['tp']} ({ga_m['hybrid_operational_t80']['recall_pct']:.2f}%)** |
+| **Group B — `PARAMETER_TAMPERING` (App Logic)** | {gb_total} | {gb_m['standalone_ml']['tp']} ({gb_m['standalone_ml']['recall_pct']:.2f}%) | {gb_m['hybrid_loose']['tp']} ({gb_m['hybrid_loose']['recall_pct']:.2f}%) | {gb_m['hybrid_operational_t80']['tp']} ({gb_m['hybrid_operational_t80']['recall_pct']:.2f}%) |
+| **Lưu lượng hợp lệ (`BENIGN` Allow Rate)** | {sub_summary_ml.get('BENIGN', {}).get('total', 0)} | {sub_summary_ml.get('BENIGN', {}).get('passed', 0)} ({sub_summary_ml.get('BENIGN', {}).get('success_rate', 0)}%) | {sub_summary_hybrid.get('BENIGN', {}).get('passed', 0)} ({sub_summary_hybrid.get('BENIGN', {}).get('success_rate', 0)}%) | {metrics_hybrid_op['tn']} ({100.0 - metrics_hybrid_op['fpr']:.2f}%) |
 
 ---
 
 ## 3. Kết Luận Học Thuật & Luận Điểm Kiến Trúc Defense-in-Depth
 
-1. **Khách quan khoa học:** Khi đối đầu với dữ liệu ngoại miền CSIC 2010 (hoàn toàn zero-shot, không có trong tập huấn luyện), XGBoost v2 phân loại chính xác các kỹ thuật tiêm nhiễm cú pháp (SQLi, XSS). Đối với nhóm dị thường tham số (`ANOMALY_TAMPER`), mô hình học có giám sát đơn lẻ gặp giới hạn do các mẫu này không mang dấu ấn cú pháp injection điển hình.
-2. **Sức mạnh của kiến trúc đa tầng (Defense-in-Depth):** Khi kết hợp Supervised XGBoost v2 cùng Unsupervised Calibrated Isolation Forest v2 và Rule Engine, hệ thống WAF đạt tỷ lệ bắt giữ mã độc vượt trội trong khi duy trì FPR cực thấp trên luồng lành tính ({metrics_hybrid['fpr']:.2f}%), khẳng định kiến trúc phân tầng là giải pháp tối ưu cho WAF hiện đại.
+1. **Khách quan khoa học:** Khi đối đầu với dữ liệu ngoại miền CSIC 2010 (hoàn toàn zero-shot, không có trong tập huấn luyện), kiến trúc WAF Hybrid chặn chính xác **Group A (True Payload)** ở mức **{ga_m['hybrid_operational_t80']['recall_pct']:.2f}%** (`DecisionEngine T=80`, FPR **`{metrics_hybrid_op['fpr']:.2f}%`**) và **{ga_m['hybrid_loose']['recall_pct']:.2f}%** (`Loose Monitoring`, FPR **`{metrics_hybrid['fpr']:.2f}%`**). Nhóm **Group B (`PARAMETER_TAMPERING`, {gb_total} mẫu)** mang sai lệch nghiệp vụ riêng của ứng dụng `/tienda1`, đòi hỏi lớp Positive Security OpenAPI Schema (`csic2010_tienda1_schema_proof.json`).
+2. **Sức mạnh của kiến trúc đa tầng (Defense-in-Depth):** Kết hợp Supervised XGBoost v2 (với URL-normalized per-parameter max-pooling), Unsupervised Calibrated Isolation Forest v2, và 28 Hardened Signatures duy trì FPR vận hành **`{metrics_hybrid_op['fpr']:.2f}%`** trong **{mean_lat:.3f} ms/request**.
 """
 
     OUTPUT_MD.write_text(md_content, encoding="utf-8")

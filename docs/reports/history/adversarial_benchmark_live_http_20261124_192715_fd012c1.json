@@ -1,0 +1,356 @@
+{
+  "metadata": {
+    "benchmark_type": "Live HTTP Socket End-to-End Adversarial Benchmark (C1)",
+    "evaluated_at": "2026-11-24T09:40:49.970891+00:00",
+    "dqn_checkpoint_sha256": "664b7c7db627be83f7667b01cab23416bc7e1e959d74485b7e5f7e612a98521b",
+    "dqn_episodes_trained": 600,
+    "endpoints": {
+      "upstream_target": "http://127.0.0.1:5055",
+      "gateway_hybrid_v3": "http://127.0.0.1:8055 (ABLATION_MODE=hybrid, ML=ON, IForest=ON)",
+      "gateway_rules_only": "http://127.0.0.1:8056 (ABLATION_MODE=rules_only, ML=OFF, IForest=OFF)"
+    },
+    "max_rounds_per_episode": 4,
+    "passes_per_case": 3,
+    "familiar_cases_total": 15,
+    "strange_cases_total": 18,
+    "telemetry_policy": "Zero hardcoded score constants; parsed from X-WAF-* headers & JSON breakdown."
+  },
+  "familiar_results": {
+    "Static Replay": {
+      "No WAF": {
+        "total_cases": 15,
+        "passes_per_case": 3,
+        "total_episodes": 45,
+        "total_probes_dispatched": 63,
+        "blocked_count": 0,
+        "bypass_count": 45,
+        "block_rate_pct": 0.0,
+        "evasion_rate_pct": 100.0,
+        "avg_threat_score": 0.0,
+        "avg_latency_ms": 0.878,
+        "p95_latency_ms": 1.255,
+        "bypassed_families": [
+          "BOLA_IDOR",
+          "COMMAND_INJECTION",
+          "EXCESSIVE_DATA_EXPOSURE",
+          "MASS_ASSIGNMENT",
+          "NOSQL_INJECTION",
+          "PATH_TRAVERSAL",
+          "SQL_INJECTION",
+          "SSRF",
+          "XSS"
+        ]
+      },
+      "Rules Only": {
+        "total_cases": 15,
+        "passes_per_case": 3,
+        "total_episodes": 45,
+        "total_probes_dispatched": 63,
+        "blocked_count": 45,
+        "bypass_count": 0,
+        "block_rate_pct": 100.0,
+        "evasion_rate_pct": 0.0,
+        "avg_threat_score": 87.9,
+        "avg_latency_ms": 2.837,
+        "p95_latency_ms": 3.435,
+        "bypassed_families": []
+      },
+      "Hybrid v3.0": {
+        "total_cases": 15,
+        "passes_per_case": 3,
+        "total_episodes": 45,
+        "total_probes_dispatched": 63,
+        "blocked_count": 45,
+        "bypass_count": 0,
+        "block_rate_pct": 100.0,
+        "evasion_rate_pct": 0.0,
+        "avg_threat_score": 86.2,
+        "avg_latency_ms": 3.58,
+        "p95_latency_ms": 4.411,
+        "bypassed_families": []
+      }
+    },
+    "Random Mutator": {
+      "No WAF": {
+        "total_cases": 15,
+        "passes_per_case": 3,
+        "total_episodes": 45,
+        "total_probes_dispatched": 63,
+        "blocked_count": 0,
+        "bypass_count": 45,
+        "block_rate_pct": 0.0,
+        "evasion_rate_pct": 100.0,
+        "avg_threat_score": 0.0,
+        "avg_latency_ms": 0.82,
+        "p95_latency_ms": 0.973,
+        "bypassed_families": [
+          "BOLA_IDOR",
+          "COMMAND_INJECTION",
+          "EXCESSIVE_DATA_EXPOSURE",
+          "MASS_ASSIGNMENT",
+          "NOSQL_INJECTION",
+          "PATH_TRAVERSAL",
+          "SQL_INJECTION",
+          "SSRF",
+          "XSS"
+        ]
+      },
+      "Rules Only": {
+        "total_cases": 15,
+        "passes_per_case": 3,
+        "total_episodes": 45,
+        "total_probes_dispatched": 180,
+        "blocked_count": 45,
+        "bypass_count": 0,
+        "block_rate_pct": 100.0,
+        "evasion_rate_pct": 0.0,
+        "avg_threat_score": 86.8,
+        "avg_latency_ms": 2.421,
+        "p95_latency_ms": 3.245,
+        "bypassed_families": []
+      },
+      "Hybrid v3.0": {
+        "total_cases": 15,
+        "passes_per_case": 3,
+        "total_episodes": 45,
+        "total_probes_dispatched": 180,
+        "blocked_count": 45,
+        "bypass_count": 0,
+        "block_rate_pct": 100.0,
+        "evasion_rate_pct": 0.0,
+        "avg_threat_score": 87.3,
+        "avg_latency_ms": 4.267,
+        "p95_latency_ms": 6.617,
+        "bypassed_families": []
+      }
+    },
+    "Dueling-DQN v2.0": {
+      "No WAF": {
+        "total_cases": 15,
+        "passes_per_case": 3,
+        "total_episodes": 45,
+        "total_probes_dispatched": 63,
+        "blocked_count": 0,
+        "bypass_count": 45,
+        "block_rate_pct": 0.0,
+        "evasion_rate_pct": 100.0,
+        "avg_threat_score": 0.0,
+        "avg_latency_ms": 0.831,
+        "p95_latency_ms": 0.945,
+        "bypassed_families": [
+          "BOLA_IDOR",
+          "COMMAND_INJECTION",
+          "EXCESSIVE_DATA_EXPOSURE",
+          "MASS_ASSIGNMENT",
+          "NOSQL_INJECTION",
+          "PATH_TRAVERSAL",
+          "SQL_INJECTION",
+          "SSRF",
+          "XSS"
+        ]
+      },
+      "Rules Only": {
+        "total_cases": 15,
+        "passes_per_case": 3,
+        "total_episodes": 45,
+        "total_probes_dispatched": 180,
+        "blocked_count": 45,
+        "bypass_count": 0,
+        "block_rate_pct": 100.0,
+        "evasion_rate_pct": 0.0,
+        "avg_threat_score": 89.2,
+        "avg_latency_ms": 2.412,
+        "p95_latency_ms": 3.108,
+        "bypassed_families": []
+      },
+      "Hybrid v3.0": {
+        "total_cases": 15,
+        "passes_per_case": 3,
+        "total_episodes": 45,
+        "total_probes_dispatched": 180,
+        "blocked_count": 45,
+        "bypass_count": 0,
+        "block_rate_pct": 100.0,
+        "evasion_rate_pct": 0.0,
+        "avg_threat_score": 87.6,
+        "avg_latency_ms": 3.856,
+        "p95_latency_ms": 5.136,
+        "bypassed_families": []
+      }
+    }
+  },
+  "strange_results": {
+    "Static Replay": {
+      "No WAF": {
+        "total_cases": 18,
+        "passes_per_case": 3,
+        "total_episodes": 54,
+        "total_probes_dispatched": 63,
+        "blocked_count": 0,
+        "bypass_count": 54,
+        "block_rate_pct": 0.0,
+        "evasion_rate_pct": 100.0,
+        "avg_threat_score": 0.0,
+        "avg_latency_ms": 0.93,
+        "p95_latency_ms": 1.4,
+        "bypassed_families": [
+          "BOLA_IDOR",
+          "COMMAND_INJECTION",
+          "MASS_ASSIGNMENT",
+          "NOSQL_INJECTION",
+          "PATH_TRAVERSAL",
+          "SQL_INJECTION",
+          "SSRF",
+          "XSS"
+        ]
+      },
+      "Rules Only": {
+        "total_cases": 18,
+        "passes_per_case": 3,
+        "total_episodes": 54,
+        "total_probes_dispatched": 63,
+        "blocked_count": 48,
+        "bypass_count": 6,
+        "block_rate_pct": 88.9,
+        "evasion_rate_pct": 11.1,
+        "avg_threat_score": 78.8,
+        "avg_latency_ms": 2.428,
+        "p95_latency_ms": 3.445,
+        "bypassed_families": [
+          "SQL_INJECTION"
+        ]
+      },
+      "Hybrid v3.0": {
+        "total_cases": 18,
+        "passes_per_case": 3,
+        "total_episodes": 54,
+        "total_probes_dispatched": 63,
+        "blocked_count": 51,
+        "bypass_count": 3,
+        "block_rate_pct": 94.4,
+        "evasion_rate_pct": 5.6,
+        "avg_threat_score": 89.8,
+        "avg_latency_ms": 3.35,
+        "p95_latency_ms": 4.288,
+        "bypassed_families": [
+          "SQL_INJECTION"
+        ]
+      }
+    },
+    "Random Mutator": {
+      "No WAF": {
+        "total_cases": 18,
+        "passes_per_case": 3,
+        "total_episodes": 54,
+        "total_probes_dispatched": 63,
+        "blocked_count": 0,
+        "bypass_count": 54,
+        "block_rate_pct": 0.0,
+        "evasion_rate_pct": 100.0,
+        "avg_threat_score": 0.0,
+        "avg_latency_ms": 0.852,
+        "p95_latency_ms": 0.966,
+        "bypassed_families": [
+          "BOLA_IDOR",
+          "COMMAND_INJECTION",
+          "MASS_ASSIGNMENT",
+          "NOSQL_INJECTION",
+          "PATH_TRAVERSAL",
+          "SQL_INJECTION",
+          "SSRF",
+          "XSS"
+        ]
+      },
+      "Rules Only": {
+        "total_cases": 18,
+        "passes_per_case": 3,
+        "total_episodes": 54,
+        "total_probes_dispatched": 195,
+        "blocked_count": 46,
+        "bypass_count": 8,
+        "block_rate_pct": 85.2,
+        "evasion_rate_pct": 14.8,
+        "avg_threat_score": 75.0,
+        "avg_latency_ms": 2.819,
+        "p95_latency_ms": 4.693,
+        "bypassed_families": [
+          "COMMAND_INJECTION",
+          "SQL_INJECTION"
+        ]
+      },
+      "Hybrid v3.0": {
+        "total_cases": 18,
+        "passes_per_case": 3,
+        "total_episodes": 54,
+        "total_probes_dispatched": 207,
+        "blocked_count": 51,
+        "bypass_count": 3,
+        "block_rate_pct": 94.4,
+        "evasion_rate_pct": 5.6,
+        "avg_threat_score": 89.9,
+        "avg_latency_ms": 3.732,
+        "p95_latency_ms": 4.995,
+        "bypassed_families": [
+          "SQL_INJECTION"
+        ]
+      }
+    },
+    "Dueling-DQN v2.0": {
+      "No WAF": {
+        "total_cases": 18,
+        "passes_per_case": 3,
+        "total_episodes": 54,
+        "total_probes_dispatched": 63,
+        "blocked_count": 0,
+        "bypass_count": 54,
+        "block_rate_pct": 0.0,
+        "evasion_rate_pct": 100.0,
+        "avg_threat_score": 0.0,
+        "avg_latency_ms": 1.356,
+        "p95_latency_ms": 1.987,
+        "bypassed_families": [
+          "BOLA_IDOR",
+          "COMMAND_INJECTION",
+          "MASS_ASSIGNMENT",
+          "NOSQL_INJECTION",
+          "PATH_TRAVERSAL",
+          "SQL_INJECTION",
+          "SSRF",
+          "XSS"
+        ]
+      },
+      "Rules Only": {
+        "total_cases": 18,
+        "passes_per_case": 3,
+        "total_episodes": 54,
+        "total_probes_dispatched": 198,
+        "blocked_count": 48,
+        "bypass_count": 6,
+        "block_rate_pct": 88.9,
+        "evasion_rate_pct": 11.1,
+        "avg_threat_score": 79.5,
+        "avg_latency_ms": 3.039,
+        "p95_latency_ms": 4.386,
+        "bypassed_families": [
+          "SQL_INJECTION"
+        ]
+      },
+      "Hybrid v3.0": {
+        "total_cases": 18,
+        "passes_per_case": 3,
+        "total_episodes": 54,
+        "total_probes_dispatched": 207,
+        "blocked_count": 51,
+        "bypass_count": 3,
+        "block_rate_pct": 94.4,
+        "evasion_rate_pct": 5.6,
+        "avg_threat_score": 90.2,
+        "avg_latency_ms": 4.252,
+        "p95_latency_ms": 6.348,
+        "bypassed_families": [
+          "SQL_INJECTION"
+        ]
+      }
+    }
+  }
+}

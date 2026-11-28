@@ -17,7 +17,7 @@ from app.security.anomaly import AnomalyDetector, get_anomaly_detector
 from app.security.bola_detector import BOLADetector
 from app.security.decision import DecisionEngine, PolicyAction
 from app.security.engine import RuleEngine
-from app.security.ml_detector import MLDetector, extract_26_from_http
+from app.security.ml_detector import MLDetector, extract_26_from_http, normalize_http_for_ml
 from app.security.models import AttackType, DetectionResult
 from app.security.protocol_detector import (
     ApiProtocol,
@@ -163,9 +163,11 @@ def _run_security_inspection(
             query_params=query_str,
             body_bytes=body_bytes,
             content_type=content_type,
+            policy=getattr(settings, "schema_enforcement_policy", "route_tiered"),
         )
+        has_penalty_violations = any(v.is_penalty for v in schema_violations)
         if (
-            schema_violations
+            has_penalty_violations
             and settings.schema_strict_mode
             and active_waf_mode not in ("OFF", "MONITOR_ONLY", "MONITOR")
         ):
@@ -190,22 +192,61 @@ def _run_security_inspection(
             ml_body: str | None = extracted_api.metadata.get("extracted_text") or ""
         else:
             ml_body = body_bytes.decode("utf-8", errors="replace") if body_bytes else None
-        feature_vector_26 = extract_26_from_http(
-            path=path_norm,
-            query_params=query_str,
-            body=ml_body,
-        ).tolist()
     except Exception:
-        feature_vector_26 = None
+        ml_body = None
 
+    feature_vector_26: list[float] | None = None
     if settings.ml_enabled:
-        ml_result = ml_detector.predict(payload_content, feature_vector=feature_vector_26)
+        used_predict_http = False
+        if callable(getattr(ml_detector, "predict_http", None)):
+            try:
+                ml_out = ml_detector.predict_http(
+                    path=path_norm,
+                    query_params=query_str,
+                    body=ml_body,
+                )
+                if isinstance(ml_out, tuple) and len(ml_out) == 2:
+                    ml_result, feature_vector_26 = ml_out
+                    used_predict_http = True
+            except (TypeError, ValueError):
+                used_predict_http = False
+
+        if not used_predict_http:
+            try:
+                norm_path, norm_query, norm_body = normalize_http_for_ml(
+                    path=path_norm,
+                    query_params=query_str,
+                    body=ml_body,
+                )
+                feature_vector_26 = extract_26_from_http(
+                    path=norm_path,
+                    query_params=norm_query,
+                    body=norm_body,
+                ).tolist()
+            except Exception:
+                feature_vector_26 = None
+            ml_result = ml_detector.predict(payload_content, feature_vector=feature_vector_26)
+
         ml_is_available = bool(ml_result.model_loaded and ml_detector.ml_available)
         ml_score = ml_result.risk_score if ml_is_available else None
     else:
         ml_result = None
         ml_is_available = True
         ml_score = None
+        if settings.anomaly_enabled:
+            try:
+                norm_path, norm_query, norm_body = normalize_http_for_ml(
+                    path=path_norm,
+                    query_params=query_str,
+                    body=ml_body,
+                )
+                feature_vector_26 = extract_26_from_http(
+                    path=norm_path,
+                    query_params=norm_query,
+                    body=norm_body,
+                ).tolist()
+            except Exception:
+                feature_vector_26 = None
 
     if settings.anomaly_enabled:
         anomaly_result = anomaly_detector.predict(payload_content, feature_vector=feature_vector_26)
@@ -590,8 +631,9 @@ async def proxy_endpoint(
         request_id,
     )
 
-    if schema_violations:
-        violation_details = [v.to_dict() for v in schema_violations]
+    has_penalty_violations = any(v.is_penalty for v in schema_violations)
+    if schema_violations and has_penalty_violations:
+        violation_details = [v.to_dict() for v in schema_violations if v.is_penalty]
         logger.warning(f"Positive security violations [{request_id}]: {violation_details}")
         if strict_schema_blocked:
             body_resp = json.dumps({
@@ -702,7 +744,8 @@ async def proxy_endpoint(
             round(risk_breakdown.weighted_score + 25.0, 2),
         )
 
-    if settings.schema_validation_enabled and schema_violations:
+    has_penalty_violations = any(v.is_penalty for v in schema_violations)
+    if settings.schema_validation_enabled and has_penalty_violations:
         logger.info(
             f"Applying Positive Security risk penalty: +{settings.schema_violation_penalty} to request [{request_id}]"
         )
@@ -724,10 +767,11 @@ async def proxy_endpoint(
     )
 
     # 8. Prepare security event record payload if attacks or elevated risk observed
+    has_penalty_violations = any(v.is_penalty for v in schema_violations)
     detection_kwargs: dict[str, Any] | None = None
     record_security_event = (
         (detection_result and (detection_result.is_attack or decision.action != PolicyAction.ALLOW))
-        or bool(settings.schema_validation_enabled and schema_violations)
+        or bool(settings.schema_validation_enabled and has_penalty_violations)
     )
     if record_security_event:
         action_label = (
@@ -741,7 +785,7 @@ async def proxy_endpoint(
         )
         override_type = None
         if not detection_result or not detection_result.is_attack:
-            if settings.schema_validation_enabled and schema_violations:
+            if settings.schema_validation_enabled and has_penalty_violations:
                 override_type = "SCHEMA_VIOLATION"
             elif not ml_is_available:
                 override_type = "ML_UNAVAILABLE"
@@ -807,6 +851,7 @@ async def proxy_endpoint(
             "attack_type": primary_family,
             "risk_score": decision.risk_score,
             "threat_score": decision.risk_score,
+            "matched_rules": [m.rule_id for m in detection_result.matches],
             "breakdown": risk_breakdown.to_dict(),
             "reason": decision.reason,
         }).encode("utf-8")
@@ -966,6 +1011,8 @@ async def proxy_endpoint(
         if anomaly_result and anomaly_result.model_loaded:
             response.headers["X-WAF-Anomaly-Score"] = str(anomaly_result.anomaly_score)
             response.headers["X-WAF-Anomaly-Latency"] = f"{anomaly_result.latency_ms}ms"
+        if any(v.violation_type == "UNDOCUMENTED_ROUTE" for v in schema_violations):
+            response.headers["X-WAF-Schema-Notice"] = "UNDOCUMENTED_ROUTE"
 
     # 10. Offload SQLite persistence into FastAPI BackgroundTasks (PERF-PBL6-001)
     background_tasks.add_task(

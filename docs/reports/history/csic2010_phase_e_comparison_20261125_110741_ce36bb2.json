@@ -1,0 +1,261 @@
+{
+  "metadata": {
+    "before_model_path": "C:\\Study\\HocKy6\\PBL6\\ml-engine\\artifacts\\xgb_v2.ubj",
+    "after_model_path": "C:\\Study\\HocKy6\\PBL6\\ml-engine\\artifacts\\xgb_v2.ubj",
+    "total_attack_samples": 1500,
+    "group_a_total": 221,
+    "group_b_total": 1279,
+    "total_benign_samples": 1500
+  },
+  "parallel_metrics_comparison": {
+    "operational_decision_engine_t80": {
+      "before": {
+        "overall_1500_recall_pct": 15.73,
+        "overall_1500_blocked": 236,
+        "group_a_recall_pct": 95.93,
+        "group_a_blocked": 212,
+        "group_b_recall_pct": 1.88,
+        "benign_fpr_pct": 0.0,
+        "benign_fp_count": 0,
+        "fpr_within_target": true
+      },
+      "after": {
+        "overall_1500_recall_pct": 16.4,
+        "overall_1500_blocked": 246,
+        "group_a_recall_pct": 100.0,
+        "group_a_blocked": 221,
+        "group_b_recall_pct": 1.95,
+        "benign_fpr_pct": 0.0,
+        "benign_fp_count": 0,
+        "fpr_within_target": true
+      },
+      "delta_overall_1500_recall_pp": 0.67,
+      "delta_group_a_recall_pp": 4.07,
+      "delta_benign_fpr_pp": 0.0
+    },
+    "loose_monitoring": {
+      "before": {
+        "overall_1500_recall_pct": 17.47,
+        "overall_1500_blocked": 262,
+        "group_a_recall_pct": 96.83,
+        "group_a_blocked": 214,
+        "group_b_recall_pct": 3.75,
+        "benign_fpr_pct": 0.13,
+        "benign_fp_count": 2,
+        "fpr_within_target": true
+      },
+      "after": {
+        "overall_1500_recall_pct": 17.27,
+        "overall_1500_blocked": 259,
+        "group_a_recall_pct": 100.0,
+        "group_a_blocked": 221,
+        "group_b_recall_pct": 2.97,
+        "benign_fpr_pct": 0.07,
+        "benign_fp_count": 1,
+        "fpr_within_target": true
+      },
+      "delta_overall_1500_recall_pp": -0.2,
+      "delta_group_a_recall_pp": 3.17,
+      "delta_benign_fpr_pp": -0.06
+    },
+    "standalone_ml": {
+      "before": {
+        "overall_1500_recall_pct": 16.73,
+        "overall_1500_blocked": 251,
+        "group_a_recall_pct": 94.57,
+        "group_a_blocked": 209,
+        "benign_fpr_pct": 0.13,
+        "benign_fp_count": 2,
+        "fpr_within_target": true
+      },
+      "after": {
+        "overall_1500_recall_pct": 15.87,
+        "overall_1500_blocked": 238,
+        "group_a_recall_pct": 93.21,
+        "group_a_blocked": 206,
+        "benign_fpr_pct": 0.07,
+        "benign_fp_count": 1,
+        "fpr_within_target": true
+      },
+      "delta_overall_1500_recall_pp": -0.86,
+      "delta_group_a_recall_pp": -1.36,
+      "delta_benign_fpr_pp": -0.06
+    }
+  },
+  "per_subcategory_comparison": {
+    "operational_t80": {
+      "SQLI_CLASSIC_UNION": {
+        "total": 7,
+        "before_blocked": 7,
+        "after_blocked": 7,
+        "before_recall_pct": 100.0,
+        "after_recall_pct": 100.0,
+        "delta_pp": 0.0
+      },
+      "SQLI_BLIND_BOOLEAN": {
+        "total": 75,
+        "before_blocked": 66,
+        "after_blocked": 75,
+        "before_recall_pct": 88.0,
+        "after_recall_pct": 100.0,
+        "delta_pp": 12.0
+      },
+      "SQLI_TSQL_TIME_DELAY": {
+        "total": 61,
+        "before_blocked": 61,
+        "after_blocked": 61,
+        "before_recall_pct": 100.0,
+        "after_recall_pct": 100.0,
+        "delta_pp": 0.0
+      },
+      "XSS": {
+        "total": 78,
+        "before_blocked": 78,
+        "after_blocked": 78,
+        "before_recall_pct": 100.0,
+        "after_recall_pct": 100.0,
+        "delta_pp": 0.0
+      },
+      "COMMAND_SSI": {
+        "total": 0,
+        "before_blocked": 0,
+        "after_blocked": 0,
+        "before_recall_pct": 0.0,
+        "after_recall_pct": 0.0,
+        "delta_pp": 0.0
+      },
+      "PATH_TRAVERSAL": {
+        "total": 0,
+        "before_blocked": 0,
+        "after_blocked": 0,
+        "before_recall_pct": 0.0,
+        "after_recall_pct": 0.0,
+        "delta_pp": 0.0
+      },
+      "PARAMETER_TAMPERING": {
+        "total": 1279,
+        "before_blocked": 24,
+        "after_blocked": 25,
+        "before_recall_pct": 1.88,
+        "after_recall_pct": 1.95,
+        "delta_pp": 0.07
+      }
+    },
+    "loose_monitoring": {
+      "SQLI_CLASSIC_UNION": {
+        "total": 7,
+        "before_blocked": 7,
+        "after_blocked": 7,
+        "before_recall_pct": 100.0,
+        "after_recall_pct": 100.0,
+        "delta_pp": 0.0
+      },
+      "SQLI_BLIND_BOOLEAN": {
+        "total": 75,
+        "before_blocked": 68,
+        "after_blocked": 75,
+        "before_recall_pct": 90.67,
+        "after_recall_pct": 100.0,
+        "delta_pp": 9.33
+      },
+      "SQLI_TSQL_TIME_DELAY": {
+        "total": 61,
+        "before_blocked": 61,
+        "after_blocked": 61,
+        "before_recall_pct": 100.0,
+        "after_recall_pct": 100.0,
+        "delta_pp": 0.0
+      },
+      "XSS": {
+        "total": 78,
+        "before_blocked": 78,
+        "after_blocked": 78,
+        "before_recall_pct": 100.0,
+        "after_recall_pct": 100.0,
+        "delta_pp": 0.0
+      },
+      "COMMAND_SSI": {
+        "total": 0,
+        "before_blocked": 0,
+        "after_blocked": 0,
+        "before_recall_pct": 0.0,
+        "after_recall_pct": 0.0,
+        "delta_pp": 0.0
+      },
+      "PATH_TRAVERSAL": {
+        "total": 0,
+        "before_blocked": 0,
+        "after_blocked": 0,
+        "before_recall_pct": 0.0,
+        "after_recall_pct": 0.0,
+        "delta_pp": 0.0
+      },
+      "PARAMETER_TAMPERING": {
+        "total": 1279,
+        "before_blocked": 48,
+        "after_blocked": 38,
+        "before_recall_pct": 3.75,
+        "after_recall_pct": 2.97,
+        "delta_pp": -0.78
+      }
+    },
+    "standalone_ml": {
+      "SQLI_CLASSIC_UNION": {
+        "total": 7,
+        "before_blocked": 7,
+        "after_blocked": 7,
+        "before_recall_pct": 100.0,
+        "after_recall_pct": 100.0,
+        "delta_pp": 0.0
+      },
+      "SQLI_BLIND_BOOLEAN": {
+        "total": 75,
+        "before_blocked": 63,
+        "after_blocked": 60,
+        "before_recall_pct": 84.0,
+        "after_recall_pct": 80.0,
+        "delta_pp": -4.0
+      },
+      "SQLI_TSQL_TIME_DELAY": {
+        "total": 61,
+        "before_blocked": 61,
+        "after_blocked": 61,
+        "before_recall_pct": 100.0,
+        "after_recall_pct": 100.0,
+        "delta_pp": 0.0
+      },
+      "XSS": {
+        "total": 78,
+        "before_blocked": 78,
+        "after_blocked": 78,
+        "before_recall_pct": 100.0,
+        "after_recall_pct": 100.0,
+        "delta_pp": 0.0
+      },
+      "COMMAND_SSI": {
+        "total": 0,
+        "before_blocked": 0,
+        "after_blocked": 0,
+        "before_recall_pct": 0.0,
+        "after_recall_pct": 0.0,
+        "delta_pp": 0.0
+      },
+      "PATH_TRAVERSAL": {
+        "total": 0,
+        "before_blocked": 0,
+        "after_blocked": 0,
+        "before_recall_pct": 0.0,
+        "after_recall_pct": 0.0,
+        "delta_pp": 0.0
+      },
+      "PARAMETER_TAMPERING": {
+        "total": 1279,
+        "before_blocked": 42,
+        "after_blocked": 32,
+        "before_recall_pct": 3.28,
+        "after_recall_pct": 2.5,
+        "delta_pp": -0.78
+      }
+    }
+  }
+}

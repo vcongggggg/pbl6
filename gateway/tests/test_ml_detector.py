@@ -6,7 +6,13 @@ import joblib
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier
 
-from app.security.ml_detector import FEATURE_NAMES, MLDetector, MLPredictionResult
+from app.security.ml_detector import (
+    FEATURE_NAMES,
+    MLDetector,
+    MLPredictionResult,
+    extract_26_from_http,
+    normalize_http_for_ml,
+)
 
 
 def test_ml_detector_graceful_fallback_when_model_absent():
@@ -158,4 +164,96 @@ def test_ml_detector_loads_champion_xgb_v2_ubj():
     assert res.attack_type in ("SQL_INJECTION", "SQLI")
     assert res.confidence > 0.80
     assert res.latency_ms < 15.0
+
+
+def test_normalize_http_for_ml_decoding_and_json_preservation():
+    """Verifies URL/form '+' decoding without corrupting JSON payloads."""
+    norm_path, norm_query, norm_body = normalize_http_for_ml(
+        path="/api/v1/books%2Fsearch",
+        query_params="q=%27+UNION+SELECT+1--&page=2",
+        body="name=Maria+Gomez&comment=1%27+OR+1%3D1--",
+    )
+    assert norm_path == "/api/v1/books/search"
+    assert norm_query == "q=' UNION SELECT 1--&page=2"
+    assert norm_body == "name=Maria Gomez&comment=1' OR 1=1--"
+
+    # JSON bodies must preserve '+' characters while still decoding URL/HTML obfuscation
+    j_path, j_query, j_body = normalize_http_for_ml(
+        path="/api/v1/calc",
+        query_params=None,
+        body='{"expr": "1+1=2", "note": "safe+string"}',
+    )
+    assert j_path == "/api/v1/calc"
+    assert j_query is None
+    assert j_body == '{"expr": "1+1=2", "note": "safe+string"}'
+
+
+def test_predict_http_per_parameter_max_pooling_diluted_attack():
+    """Verifies max(score_global, max_param_score) catches diluted multi-parameter SQLi/XSS."""
+    repo_root = Path(__file__).resolve().parents[2]
+    xgb_path = repo_root / "ml-engine" / "artifacts" / "xgb_v2.ubj"
+    if not xgb_path.exists():
+        return
+
+    detector = MLDetector(model_path=xgb_path)
+    assert detector.is_loaded is True
+
+    # Diluted multi-parameter query where benign context surrounds SQLi/XSS parameter
+    diluted_query = (
+        "first_name=Maria&last_name=Gomez&email=maria.gomez@example.com&city=Danang"
+        "&country=Vietnam&sort=asc&limit=20&offset=0"
+        "&filter=%27+UNION+SELECT+username,password+FROM+users--"
+    )
+    norm_path, norm_query, norm_body = normalize_http_for_ml("/api/v1/books", diluted_query, None)
+    global_vec = extract_26_from_http(path=norm_path, query_params=norm_query, body=norm_body).tolist()
+    global_only_res = detector.predict(f"{norm_path} {norm_query}", feature_vector=global_vec)
+
+    pooled_res, returned_vec = detector.predict_http("/api/v1/books", query_params=diluted_query, body=None)
+    assert len(returned_vec) == 26
+    assert returned_vec == global_vec
+    assert pooled_res.risk_score is not None
+    assert global_only_res.risk_score is not None
+    assert pooled_res.risk_score >= global_only_res.risk_score
+    assert pooled_res.is_attack is True
+
+    # Also verify diluted JSON body XSS
+    diluted_json = (
+        '{"profile": {"name": "Alice Smith", "email": "alice@example.com", '
+        '"bio": "Software engineer working on web APIs"}, '
+        '"q": "<script>alert(document.cookie)</script>"}'
+    )
+    xss_res, xss_vec = detector.predict_http("/api/v1/profile", query_params=None, body=diluted_json)
+    assert len(xss_vec) == 26
+    assert xss_res.is_attack is True
+    assert (xss_res.risk_score or 0.0) >= 50.0
+
+
+def test_predict_http_benign_multi_param_and_latency_budget():
+    """Verifies benign multi-parameter requests remain benign and mean latency stays < 1.5ms."""
+    repo_root = Path(__file__).resolve().parents[2]
+    xgb_path = repo_root / "ml-engine" / "artifacts" / "xgb_v2.ubj"
+    if not xgb_path.exists():
+        return
+
+    detector = MLDetector(model_path=xgb_path)
+    assert detector.is_loaded is True
+
+    benign_query = "name=Maria+Gomez&email=maria@example.com&page=2&date=2026-11-25"
+    # Warm-up
+    for _ in range(10):
+        detector.predict_http("/api/v1/users", query_params=benign_query, body=None)
+
+    res, vec = detector.predict_http("/api/v1/users", query_params=benign_query, body=None)
+    assert len(vec) == 26
+    assert res.model_loaded is True
+    assert res.is_attack is False
+    assert (res.risk_score or 0.0) < 50.0
+
+    # Latency budget check (< 1.5 ms mean over 200 calls across mixed benign & multi-param requests)
+    t0 = time.perf_counter()
+    for i in range(200):
+        q = benign_query if i % 2 == 0 else "q=clean+architecture&category=books&page=1&limit=20"
+        detector.predict_http("/api/v1/books", query_params=q, body=None)
+    mean_ms = ((time.perf_counter() - t0) * 1000.0) / 200.0
+    assert mean_ms < 1.5, f"predict_http mean latency {mean_ms:.3f}ms exceeds 1.5ms budget"
 

@@ -2,7 +2,7 @@
 
 **Pull Request:** #76 - Task 3.2: Attack Keyword Frequency & Syntax Pattern Feature Extractor  
 **Nhánh:** `feat/task-3.2-keyword-patterns` ➔ `main`  
-**Tác giả:** @vcongggggg  
+**Tác giả:** Ngô Văn Công (Blue Team)  
 **Reviewer:** @reviewer (Senior Security Architect & Code Reviewer)  
 **Quyết định:** 🟢 **APPROVE (SẴN SÀNG MERGE VÀO MAIN)**  
 **Điểm đánh giá:** **9.6 / 10**

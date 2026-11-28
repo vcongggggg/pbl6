@@ -13,7 +13,11 @@
     "passes_per_case": 3,
     "familiar_cases_total": 15,
     "strange_cases_total": 18,
-    "telemetry_policy": "Zero hardcoded score constants; parsed from X-WAF-* headers & JSON breakdown."
+    "telemetry_policy": "Zero hardcoded score constants; parsed from X-WAF-* headers & JSON breakdown.",
+    "history_snapshot": "docs/reports/history/adversarial_benchmark_live_http_20261124_192715_fd012c1.json",
+    "git_base_sha": "fd012c1d17e42f531b635cbe94c7dd738023ee0f",
+    "cpu_load_pct": 42.1,
+    "last_pointer_update": "2026-11-24T19:27:15.485673"
   },
   "familiar_results": {
     "Static Replay": {

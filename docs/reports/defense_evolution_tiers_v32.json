@@ -1,0 +1,52 @@
+{
+  "metadata": {
+    "task_id": "pbl6-v3-2-phase-d-001 / D4 / F5",
+    "updated_at": "2026-11-24T20:45:00+07:00",
+    "standardized_tiers_count": 4,
+    "active_rules_tier3": 26,
+    "active_rules_tier4": 26
+  },
+  "tiers": {
+    "tier_1": {
+      "tier": 1,
+      "designation": "Tier 1: No WAF",
+      "architecture": "Direct upstream vulnerable-api:5000 (0% protection baseline)",
+      "protection_baseline_pct": 0.0,
+      "components": []
+    },
+    "tier_2": {
+      "tier": 2,
+      "designation": "Tier 2: Legacy Static Regex",
+      "architecture": "5 raw static regexes without InputNormalizer or OWASP API guards",
+      "components": [
+        "Raw Regex (SQLi, XSS, CmdInj, PathTrav, SSRF)"
+      ]
+    },
+    "tier_3": {
+      "tier": 3,
+      "designation": "Tier 3: Normalized OWASP API Rules",
+      "architecture": "Gateway v3.0 Hardened (:8056): 26 Rules + BOLADetector + ResponseDLPGuard",
+      "active_rules": 26,
+      "components": [
+        "InputNormalizer",
+        "26 OWASP Rules (SQLI-001..006, XSS-001..004, CMD-001..005, TRAV-001..004, SSRF-001..004, NOSQLI-001..002, MASS-001..002)",
+        "BOLADetector",
+        "ResponseDLPGuard"
+      ]
+    },
+    "tier_4": {
+      "tier": 4,
+      "designation": "Tier 4: Multi-Pillar Hybrid + Route-Tiered Schema",
+      "architecture": "Full Multi-Pillar Platform (:8055): 26 Rules + XGBoost 26-D + IForest 26-D + Dual-AI Consensus + Route-Tiered SchemaValidator",
+      "active_rules": 26,
+      "components": [
+        "InputNormalizer",
+        "26 OWASP Rules",
+        "XGBoost 26-D Classifier",
+        "Isolation Forest 26-D Outlier Detector",
+        "DecisionEngine (Dual-AI Consensus Override)",
+        "Route-Tiered SchemaValidator"
+      ]
+    }
+  }
+}

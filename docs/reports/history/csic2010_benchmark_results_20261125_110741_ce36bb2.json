@@ -1,0 +1,299 @@
+{
+  "metadata": {
+    "task": "TASK-5.4",
+    "benchmark_dataset": "CSIC 2010 HTTP Dataset (Spanish National Research Council)",
+    "model_path": "C:\\Study\\HocKy6\\PBL6\\ml-engine\\artifacts\\xgb_v2.ubj",
+    "anomaly_path": "C:\\Study\\HocKy6\\PBL6\\ml-engine\\artifacts\\iforest_v2.npz",
+    "total_samples": 3000,
+    "duration_seconds": 2.87,
+    "throughput_samples_per_sec": 1047.0
+  },
+  "standalone_xgboost_v2": {
+    "tp": 238,
+    "fn": 1262,
+    "tn": 1499,
+    "fp": 1,
+    "recall": 15.87,
+    "precision": 99.58,
+    "f1_score": 27.37,
+    "fpr": 0.07,
+    "accuracy": 57.9
+  },
+  "hybrid_defense_in_depth": {
+    "tp": 259,
+    "fn": 1241,
+    "tn": 1499,
+    "fp": 1,
+    "recall": 17.27,
+    "precision": 99.62,
+    "f1_score": 29.43,
+    "fpr": 0.07,
+    "accuracy": 58.6
+  },
+  "hybrid_operational_t80": {
+    "tp": 246,
+    "fn": 1254,
+    "tn": 1500,
+    "fp": 0,
+    "recall": 16.4,
+    "precision": 100.0,
+    "f1_score": 28.18,
+    "fpr": 0.0,
+    "accuracy": 58.2
+  },
+  "two_tier_parallel_metrics": {
+    "overall_1500": {
+      "standalone_ml_recall_pct": 15.87,
+      "hybrid_loose_recall_pct": 17.27,
+      "hybrid_operational_t80_recall_pct": 16.4,
+      "benign_fpr_ml_pct": 0.07,
+      "benign_fpr_hybrid_loose_pct": 0.07,
+      "benign_fpr_hybrid_operational_t80_pct": 0.0
+    },
+    "group_a_true_payload": {
+      "total": 221,
+      "standalone_ml": {
+        "tp": 206,
+        "total": 221,
+        "recall_pct": 93.21
+      },
+      "hybrid_loose": {
+        "tp": 221,
+        "total": 221,
+        "recall_pct": 100.0
+      },
+      "hybrid_operational_t80": {
+        "tp": 221,
+        "total": 221,
+        "recall_pct": 100.0
+      }
+    },
+    "group_b_parameter_tampering": {
+      "total": 1279,
+      "standalone_ml": {
+        "tp": 32,
+        "total": 1279,
+        "recall_pct": 2.5
+      },
+      "hybrid_loose": {
+        "tp": 38,
+        "total": 1279,
+        "recall_pct": 2.97
+      },
+      "hybrid_operational_t80": {
+        "tp": 25,
+        "total": 1279,
+        "recall_pct": 1.95
+      }
+    },
+    "detailed_subcategories": {
+      "standalone_ml": {
+        "SQLI_CLASSIC_UNION": {
+          "total": 7,
+          "blocked": 7,
+          "recall_pct": 100.0
+        },
+        "SQLI_BLIND_BOOLEAN": {
+          "total": 75,
+          "blocked": 60,
+          "recall_pct": 80.0
+        },
+        "SQLI_TSQL_TIME_DELAY": {
+          "total": 61,
+          "blocked": 61,
+          "recall_pct": 100.0
+        },
+        "XSS": {
+          "total": 78,
+          "blocked": 78,
+          "recall_pct": 100.0
+        },
+        "COMMAND_SSI": {
+          "total": 0,
+          "blocked": 0,
+          "recall_pct": 0.0
+        },
+        "PATH_TRAVERSAL": {
+          "total": 0,
+          "blocked": 0,
+          "recall_pct": 0.0
+        },
+        "PARAMETER_TAMPERING": {
+          "total": 1279,
+          "blocked": 32,
+          "recall_pct": 2.5
+        }
+      },
+      "hybrid_loose": {
+        "SQLI_CLASSIC_UNION": {
+          "total": 7,
+          "blocked": 7,
+          "recall_pct": 100.0
+        },
+        "SQLI_BLIND_BOOLEAN": {
+          "total": 75,
+          "blocked": 75,
+          "recall_pct": 100.0
+        },
+        "SQLI_TSQL_TIME_DELAY": {
+          "total": 61,
+          "blocked": 61,
+          "recall_pct": 100.0
+        },
+        "XSS": {
+          "total": 78,
+          "blocked": 78,
+          "recall_pct": 100.0
+        },
+        "COMMAND_SSI": {
+          "total": 0,
+          "blocked": 0,
+          "recall_pct": 0.0
+        },
+        "PATH_TRAVERSAL": {
+          "total": 0,
+          "blocked": 0,
+          "recall_pct": 0.0
+        },
+        "PARAMETER_TAMPERING": {
+          "total": 1279,
+          "blocked": 38,
+          "recall_pct": 2.97
+        }
+      },
+      "hybrid_operational_t80": {
+        "SQLI_CLASSIC_UNION": {
+          "total": 7,
+          "blocked": 7,
+          "recall_pct": 100.0
+        },
+        "SQLI_BLIND_BOOLEAN": {
+          "total": 75,
+          "blocked": 75,
+          "recall_pct": 100.0
+        },
+        "SQLI_TSQL_TIME_DELAY": {
+          "total": 61,
+          "blocked": 61,
+          "recall_pct": 100.0
+        },
+        "XSS": {
+          "total": 78,
+          "blocked": 78,
+          "recall_pct": 100.0
+        },
+        "COMMAND_SSI": {
+          "total": 0,
+          "blocked": 0,
+          "recall_pct": 0.0
+        },
+        "PATH_TRAVERSAL": {
+          "total": 0,
+          "blocked": 0,
+          "recall_pct": 0.0
+        },
+        "PARAMETER_TAMPERING": {
+          "total": 1279,
+          "blocked": 25,
+          "recall_pct": 1.95
+        }
+      }
+    }
+  },
+  "latency": {
+    "mean_ms": 0.841,
+    "p50_ms": 0.539,
+    "p95_ms": 2.082,
+    "p99_ms": 2.6
+  },
+  "categories_ml": {
+    "ANOMALY_TAMPER": {
+      "total": 1181,
+      "blocked": 50,
+      "passed": 1131,
+      "success_rate": 4.23
+    },
+    "BENIGN": {
+      "total": 1500,
+      "blocked": 1,
+      "passed": 1499,
+      "success_rate": 99.93
+    },
+    "SQLI": {
+      "total": 254,
+      "blocked": 123,
+      "passed": 131,
+      "success_rate": 48.43
+    },
+    "XSS": {
+      "total": 65,
+      "blocked": 65,
+      "passed": 0,
+      "success_rate": 100.0
+    }
+  },
+  "categories_hybrid": {
+    "ANOMALY_TAMPER": {
+      "total": 1181,
+      "blocked": 65,
+      "passed": 1116,
+      "success_rate": 5.5
+    },
+    "BENIGN": {
+      "total": 1500,
+      "blocked": 1,
+      "passed": 1499,
+      "success_rate": 99.93
+    },
+    "SQLI": {
+      "total": 254,
+      "blocked": 129,
+      "passed": 125,
+      "success_rate": 50.79
+    },
+    "XSS": {
+      "total": 65,
+      "blocked": 65,
+      "passed": 0,
+      "success_rate": 100.0
+    }
+  },
+  "comparison_with_in_domain": [
+    {
+      "metric": "Accuracy",
+      "in_domain": "99.16%",
+      "csic_ml": "57.90%",
+      "csic_hybrid": "58.60%"
+    },
+    {
+      "metric": "Precision",
+      "in_domain": "98.60%",
+      "csic_ml": "99.58%",
+      "csic_hybrid": "99.62%"
+    },
+    {
+      "metric": "Recall",
+      "in_domain": "98.95%",
+      "csic_ml": "15.87%",
+      "csic_hybrid": "17.27%"
+    },
+    {
+      "metric": "F1-Score",
+      "in_domain": "98.77%",
+      "csic_ml": "27.37%",
+      "csic_hybrid": "29.43%"
+    },
+    {
+      "metric": "False Positive Rate (FPR)",
+      "in_domain": "0.05%",
+      "csic_ml": "0.07%",
+      "csic_hybrid": "0.07%"
+    },
+    {
+      "metric": "Avg Inference Latency",
+      "in_domain": "0.439 ms",
+      "csic_ml": "0.841 ms",
+      "csic_hybrid": "0.841 ms"
+    }
+  ]
+}

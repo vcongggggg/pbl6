@@ -265,6 +265,9 @@ export interface PentestRunParams {
   scope?: string;
   max_rounds?: number;
   sync_to_soc?: boolean;
+  execution_mode?: "live_http" | "in_process";
+  custom_payload?: string;
+  selected_families?: string[];
 }
 
 export interface PentestQValueEntry {
@@ -313,7 +316,26 @@ export interface PentestRoundResult {
   latency_ms: number;
   winner: "BLUE_TEAM" | "RED_TEAM" | "DRAW";
   dqn_q_values: PentestQValueEntry[];
+  execution_mode?: "live_http" | "in_process" | string;
   reasoning_vi: string;
+}
+
+export interface PentestReplayMismatch {
+  round_num: number;
+  attack_type: string;
+  endpoint: string;
+  original_status: number | null;
+  replayed_status: number;
+  original_decision: string | null;
+  replayed_decision: string;
+}
+
+export interface PentestReplayComparison {
+  replay_of: string | null;
+  total_replayed: number;
+  matched_verdicts: number;
+  match_rate_pct: number;
+  mismatches: PentestReplayMismatch[];
 }
 
 export interface PentestReport {
@@ -323,6 +345,7 @@ export interface PentestReport {
   spec_source?: string;
   defense_tier: string;
   scope: string;
+  execution_mode?: "live_http" | "in_process" | string;
   total_rounds: number;
   blocked_count: number;
   bypass_count: number;
@@ -332,6 +355,65 @@ export interface PentestReport {
   duration_ms?: number;
   rounds: PentestRoundResult[];
   attack_graph?: PentestAttackGraphNode[];
+  replay_comparison?: PentestReplayComparison;
+}
+
+export interface PentestCatalogFamily {
+  family: string;
+  category: string;
+  endpoint: string;
+  method: string;
+  param: string;
+  baseline_payload: string;
+  techniques: string[];
+}
+
+export interface PentestCatalogResponse {
+  families: PentestCatalogFamily[];
+  scopes: { id: string; label: string }[];
+}
+
+export interface PentestReplayParams {
+  battle_id?: string | null;
+  rounds?: PentestRoundResult[] | null;
+  defense_tier?: "no_waf" | "rules_only" | "hybrid_v3";
+  execution_mode?: "live_http" | "in_process";
+  target_url?: string;
+}
+
+export interface PentestExportParams {
+  battle_id?: string | null;
+  report?: PentestReport | null;
+  replay_report?: PentestReport | null;
+}
+
+export interface PentestExportResponse {
+  filename: string;
+  artifact_path: string;
+  sha256: string;
+  evidence: {
+    metadata: {
+      task_id: string;
+      exported_at: string;
+      execution_mode: string;
+      git_head_sha: string;
+      sha256_reproduce_cmd?: string;
+      sha256_digest: string;
+    };
+    report: PentestReport;
+    replay_report?: PentestReport | null;
+  };
+}
+
+export async function fetchPentestCatalog(): Promise<PentestCatalogResponse> {
+  const apiBase = await getApiBase();
+  const res = await fetch(`${apiBase}/api/dashboard/arena/pentest/catalog`, {
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    throw new Error(`Failed to fetch pentest catalog: HTTP ${res.status}`);
+  }
+  return res.json();
 }
 
 export async function triggerPentestRun(params: PentestRunParams = {}): Promise<PentestReport> {
@@ -346,10 +428,127 @@ export async function triggerPentestRun(params: PentestRunParams = {}): Promise<
       scope: params.scope || "full_pentest",
       max_rounds: params.max_rounds || 8,
       sync_to_soc: params.sync_to_soc !== undefined ? params.sync_to_soc : false,
+      execution_mode: params.execution_mode || "live_http",
+      custom_payload: params.custom_payload?.trim() ? params.custom_payload : undefined,
+      selected_families:
+        params.selected_families && params.selected_families.length > 0
+          ? params.selected_families
+          : undefined,
     }),
   });
   if (!res.ok) {
     throw new Error(`Failed to execute autonomous pentest: HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function triggerPentestReplay(params: PentestReplayParams = {}): Promise<PentestReport> {
+  const apiBase = await getApiBase();
+  const headers = await getAdminHeaders();
+  const res = await fetch(`${apiBase}/api/dashboard/arena/pentest/replay`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({
+      battle_id: params.battle_id ?? null,
+      rounds: params.rounds ?? null,
+      defense_tier: params.defense_tier ?? null,
+      execution_mode: params.execution_mode || "live_http",
+      target_url: params.target_url ?? null,
+    }),
+  });
+  if (!res.ok) {
+    throw new Error(`Failed to replay pentest traffic: HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function exportPentestEvidence(
+  params: PentestExportParams = {}
+): Promise<PentestExportResponse> {
+  const apiBase = await getApiBase();
+  const headers = await getAdminHeaders();
+  const res = await fetch(`${apiBase}/api/dashboard/arena/pentest/export`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({
+      battle_id: params.battle_id ?? null,
+      report: params.report ?? null,
+      replay_report: params.replay_report ?? null,
+    }),
+  });
+  if (!res.ok) {
+    throw new Error(`Failed to export D4 evidence: HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
+export interface BenchmarkReplayParams {
+  dataset?: "csic2010" | "benchmark_1000";
+  sample_count?: number;
+  mode?: "balanced_100" | "benign_100";
+  execution_mode?: "in_process" | "live_http";
+  defense_tier?: "no_waf" | "rules_only" | "hybrid_v3";
+}
+
+export interface BenchmarkVerdictItem {
+  index: number;
+  method: string;
+  path: string;
+  query_params?: string;
+  label: number;
+  attack_type: string;
+  waf_blocked: boolean;
+  waf_decision: string;
+  http_status: number;
+  threat_score: number;
+  latency_ms: number;
+  matched_rules: string[];
+}
+
+export interface BenchmarkReplayResponse {
+  benchmark_id: string;
+  timestamp: string;
+  dataset: string;
+  dataset_path?: string;
+  mode: string;
+  execution_mode: string;
+  defense_tier: string;
+  total_requests: number;
+  benign_count: number;
+  attack_count: number;
+  fp_count: number;
+  tn_count: number;
+  tp_count: number;
+  fn_count: number;
+  blocked_count: number;
+  allowed_count: number;
+  detection_rate_pct: number;
+  operational_fpr_pct: number;
+  reference_operational_fpr_pct: number;
+  matches_fp_measurement: boolean;
+  avg_latency_ms: number;
+  duration_ms?: number;
+  verdicts: BenchmarkVerdictItem[];
+}
+
+export async function triggerBenchmarkReplay(
+  params: BenchmarkReplayParams = {}
+): Promise<BenchmarkReplayResponse> {
+  const apiBase = await getApiBase();
+  const headers = await getAdminHeaders();
+  const res = await fetch(`${apiBase}/api/dashboard/arena/pentest/replay-benchmark`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({
+      dataset: params.dataset || "csic2010",
+      sample_count: params.sample_count ?? 100,
+      mode: params.mode || "balanced_100",
+      execution_mode: params.execution_mode || "in_process",
+      defense_tier: params.defense_tier || "hybrid_v3",
+    }),
+  });
+  if (!res.ok) {
+    throw new Error(`Failed to replay benchmark corpus: HTTP ${res.status}`);
   }
   return res.json();
 }
@@ -373,7 +572,14 @@ export async function streamPentestEvaluation(
     scope: params.scope || "full_pentest",
     max_rounds: String(params.max_rounds || 8),
     sync_to_soc: String(params.sync_to_soc !== undefined ? params.sync_to_soc : false),
+    execution_mode: params.execution_mode || "live_http",
   });
+  if (params.custom_payload?.trim()) {
+    q.set("custom_payload", params.custom_payload);
+  }
+  if (params.selected_families && params.selected_families.length > 0) {
+    q.set("selected_families", params.selected_families.join(","));
+  }
 
   const res = await fetch(`${apiBase}/api/dashboard/arena/pentest/stream?${q.toString()}`, {
     method: "GET",

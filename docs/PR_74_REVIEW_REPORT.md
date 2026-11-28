@@ -1,7 +1,7 @@
 # 📋 REVIEW REPORT FOR PR #74: TASK 3.1 - PAYLOAD MORPHOLOGY
 
 **Pull Request:** #74 (`feat/task-3.1-payload-morphology` ➔ `main`)  
-**Tác giả:** @vcongggggg  
+**Tác giả:** Ngô Văn Công (Blue Team)  
 **Reviewer:** @reviewer (Senior Security Architect & Code Reviewer)  
 **Quyết định:** 🟢 **APPROVE (SẴN SÀNG MERGE)**  
 **Đánh giá tổng quan:** 9.5/10 - Code sạch, cấu trúc chuẩn mực, tuân thủ học thuật Wiley SCN 2015 [Ref 08], 100% tests passed.

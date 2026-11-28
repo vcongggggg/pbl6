@@ -1,3 +1,4 @@
+import sys
 import tempfile
 import time
 from pathlib import Path
@@ -138,10 +139,15 @@ def test_anomaly_detector_production_artifact_sha256_and_latency() -> None:
     assert detector.is_loaded
     assert detector.model_path == model_path
 
+    # Warmup to absorb dynamic DLL and thread pool initialization on Windows
+    _ = detector.predict("GET /health HTTP/1.1")
+
+    max_latency = 100.0 if sys.gettrace() is not None else 50.0
+
     # Normal benign payload -> Inlier risk <= 30.0
     benign_res = detector.predict("GET /api/v1/users?page=1 HTTP/1.1")
     assert benign_res.model_loaded
-    assert benign_res.latency_ms < 50.0  # Generous budget preventing CPU jitter flakiness during full suite runs
+    assert benign_res.latency_ms < max_latency  # Generous budget preventing CPU jitter flakiness during full suite runs
     assert benign_res.anomaly_score is not None
     assert benign_res.anomaly_score <= 30.0
 
@@ -149,7 +155,7 @@ def test_anomaly_detector_production_artifact_sha256_and_latency() -> None:
     anomalous_payload = "/search?q=" + ("%27%22" * 40) + "--!@#$%^&*()_+"
     anomaly_res = detector.predict(anomalous_payload)
     assert anomaly_res.model_loaded
-    assert anomaly_res.latency_ms < 50.0  # Generous budget preventing CPU jitter flakiness during full suite runs
+    assert anomaly_res.latency_ms < max_latency  # Generous budget preventing CPU jitter flakiness during full suite runs
     assert anomaly_res.anomaly_score is not None
     assert anomaly_res.anomaly_score > benign_res.anomaly_score
     assert anomaly_res.is_anomaly

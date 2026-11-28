@@ -2,7 +2,7 @@
 
 **Pull Request:** #78 - Task 4.3: Preprocessing, Stratified Split & Label Distribution Report  
 **Nhánh:** `feat/preprocessing-stratified-split-and-label-distribution-report` ➔ `main`  
-**Tác giả:** @vcongggggg  
+**Tác giả:** Ngô Văn Công (Blue Team)  
 **Reviewer:** @reviewer (Senior Security Architect & Code Reviewer)  
 **Quyết định:** 🟢 **APPROVE WITH MINOR LINT FIX (ĐẠT CHUẨN XUẤT SẮC - SỬA LINT LÀ MERGE NGAY)**  
 **Điểm đánh giá công tâm:** **9.2 / 10**

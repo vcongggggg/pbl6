@@ -1,16 +1,21 @@
 {
   "metadata": {
-    "task_id": "pbl6-v3-fix-round-001 / A1.3 (D3)",
-    "measured_at": "2026-11-24T16:39:51+0700",
-    "hash_protocol": "SHA-256(canonicalize_payload(canonicalize_http_request(path, query_params, body, headers=None)))"
+    "task_id": "pbl6-v3-4-phase-f-001 (A1.3 / D3 / E4)",
+    "measured_at": "2026-11-25T15:27:06+0700",
+    "hash_protocol": "SHA-256(canonicalize_payload(canonicalize_http_request(path, query_params, body, headers=None)))",
+    "defense_v2_total_rows": 47372,
+    "history_snapshot": "docs/reports/history/zero_leakage_v3_verification_20261125_152722_8838c47.json",
+    "git_base_sha": "8838c47f884cd48242509b1ab3a91f6e8475c4f3",
+    "last_pointer_update": "2026-11-25T15:27:22.613055",
+    "cpu_load_pct": 0.0
   },
   "datasets": {
     "defense_v2_train": {
       "file": "data/processed/defense_v2/train.csv",
-      "size_bytes": 72574760,
-      "sha256_lf_normalized": "c95e0fefd81bab4064434172b3cf572e363cae03cc0a3c0a79a68e0f138fc4a5",
-      "row_count": 32330,
-      "unique_canonical_hashes": 32330
+      "size_bytes": 72943237,
+      "sha256_lf_normalized": "7cc74d778b22b4ec3901b62ba876288caa46db1a6b5b28e6e41b21fb4e2ae900",
+      "row_count": 33515,
+      "unique_canonical_hashes": 33515
     },
     "defense_v2_val": {
       "file": "data/processed/defense_v2/val.csv",
@@ -39,6 +44,20 @@
       "sha256_lf_normalized": "9ad67aa3eac1f06a7df0fb79980955e3f2514799a89f1f5e59db57442d59b0ea",
       "row_count": 1000,
       "unique_canonical_hashes": 609
+    },
+    "strange_suite_v33": {
+      "file": "data/benchmarks/strange_suite_v33.json",
+      "size_bytes": 16399,
+      "sha256": "547abaace5c15494a3527a06b764a54376d44024c06f88e14eb4c86c8f07e618",
+      "row_count": 38,
+      "unique_canonical_hashes": 38
+    },
+    "blind_heldout_vault_v2": {
+      "file": "data/benchmarks/blind_heldout_vault_v2.json",
+      "size_bytes": 13615,
+      "sha256": "f0bf69f6c28a5eb26a4b4a5f749e963ee6568f2cf2d9a8ad2cc76e3edc5a6a8a",
+      "row_count": 30,
+      "unique_canonical_hashes": 30
     }
   },
   "pairwise_canonical_hash_overlaps": {
@@ -46,7 +65,10 @@
     "train_vs_test": 0,
     "val_vs_test": 0,
     "defense_v2_all_vs_csic2010": 0,
-    "defense_v2_all_vs_benchmark_1000": 0
+    "defense_v2_all_vs_benchmark_1000": 0,
+    "defense_v2_all_vs_strange_suite_v33": 0,
+    "defense_v2_all_vs_blind_heldout_vault_v2": 0,
+    "strange_suite_v33_vs_blind_heldout_vault_v2": 0
   },
   "zero_leakage_verified": true
 }

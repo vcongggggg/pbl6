@@ -1,0 +1,1498 @@
+{
+  "metadata": {
+    "suite_name": "PBL6 Blind Held-Out Vault v2.0",
+    "suite_path": "data\\benchmarks\\blind_heldout_vault_v2.json",
+    "total_cases": 30,
+    "passes_per_case": 1,
+    "evaluated_at_utc": "2026-11-25T01:55:53.567835+00:00",
+    "dqn_backend": "pytorch",
+    "dqn_actions_count": 36,
+    "ml_model_path": "C:\\Study\\HocKy6\\PBL6\\ml-engine\\artifacts\\xgb_v2.ubj",
+    "lock_verification": {
+      "verified": true,
+      "vault_file_sha256": "f0bf69f6c28a5eb26a4b4a5f749e963ee6568f2cf2d9a8ad2cc76e3edc5a6a8a",
+      "case_count": 30
+    }
+  },
+  "in_process": {
+    "Static Replay": {
+      "No WAF": {
+        "total_cases": 30,
+        "passes_per_case": 1,
+        "total_episodes": 30,
+        "total_probes_dispatched": 33,
+        "blocked_count": 0,
+        "bypass_count": 30,
+        "block_rate_pct": 0.0,
+        "evasion_rate_pct": 100.0,
+        "avg_threat_score": 0.0,
+        "avg_latency_ms": 0.0,
+        "p95_latency_ms": 0.0,
+        "bypassed_families": [
+          "BOLA_IDOR",
+          "COMMAND_INJECTION",
+          "MASS_ASSIGNMENT",
+          "NOSQL_INJECTION",
+          "PATH_TRAVERSAL",
+          "SQL_INJECTION",
+          "SSRF",
+          "XSS"
+        ],
+        "bypassed_samples": [
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/billing/invoices",
+            "family": "SQL_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/billing/cost-centers",
+            "family": "SQL_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/hr/employees/directory",
+            "family": "SQL_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/hr/leaves/balance",
+            "family": "SQL_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/partners/register",
+            "family": "SQL_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/iot/telemetry/devices",
+            "family": "SQL_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/fleet/dispatch",
+            "family": "SQL_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/education/courses/review",
+            "family": "XSS",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/crm/contacts/notes",
+            "family": "XSS",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/portal/redirect-check",
+            "family": "XSS",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/design/whiteboard",
+            "family": "XSS",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/recruiting/applicants",
+            "family": "XSS",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/ci/runners/lint",
+            "family": "COMMAND_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/endpoint/inventory/sync",
+            "family": "COMMAND_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/iot/gateway/ping",
+            "family": "COMMAND_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          }
+        ]
+      },
+      "Rules Only": {
+        "total_cases": 30,
+        "passes_per_case": 1,
+        "total_episodes": 30,
+        "total_probes_dispatched": 33,
+        "blocked_count": 1,
+        "bypass_count": 29,
+        "block_rate_pct": 3.33,
+        "evasion_rate_pct": 96.67,
+        "avg_threat_score": 2.9,
+        "avg_latency_ms": 0.01,
+        "p95_latency_ms": 0.017,
+        "bypassed_families": [
+          "BOLA_IDOR",
+          "COMMAND_INJECTION",
+          "MASS_ASSIGNMENT",
+          "NOSQL_INJECTION",
+          "PATH_TRAVERSAL",
+          "SQL_INJECTION",
+          "SSRF",
+          "XSS"
+        ],
+        "bypassed_samples": [
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/billing/invoices",
+            "family": "SQL_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/billing/cost-centers",
+            "family": "SQL_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/hr/employees/directory",
+            "family": "SQL_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/hr/leaves/balance",
+            "family": "SQL_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/partners/register",
+            "family": "SQL_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/iot/telemetry/devices",
+            "family": "SQL_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/fleet/dispatch",
+            "family": "SQL_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/education/courses/review",
+            "family": "XSS",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/crm/contacts/notes",
+            "family": "XSS",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/portal/redirect-check",
+            "family": "XSS",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/design/whiteboard",
+            "family": "XSS",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/recruiting/applicants",
+            "family": "XSS",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/ci/runners/lint",
+            "family": "COMMAND_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/endpoint/inventory/sync",
+            "family": "COMMAND_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/iot/gateway/ping",
+            "family": "COMMAND_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          }
+        ]
+      },
+      "Hybrid v3.3": {
+        "total_cases": 30,
+        "passes_per_case": 1,
+        "total_episodes": 30,
+        "total_probes_dispatched": 33,
+        "blocked_count": 28,
+        "bypass_count": 2,
+        "block_rate_pct": 93.33,
+        "evasion_rate_pct": 6.67,
+        "avg_threat_score": 90.0,
+        "avg_latency_ms": 1.017,
+        "p95_latency_ms": 1.53,
+        "bypassed_families": [
+          "COMMAND_INJECTION"
+        ],
+        "bypassed_samples": [
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/endpoint/inventory/sync",
+            "family": "COMMAND_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 36.29
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/backup/snapshot/verify",
+            "family": "COMMAND_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 7.89
+          }
+        ]
+      }
+    },
+    "Random Mutator": {
+      "No WAF": {
+        "total_cases": 30,
+        "passes_per_case": 1,
+        "total_episodes": 30,
+        "total_probes_dispatched": 33,
+        "blocked_count": 0,
+        "bypass_count": 30,
+        "block_rate_pct": 0.0,
+        "evasion_rate_pct": 100.0,
+        "avg_threat_score": 0.0,
+        "avg_latency_ms": 0.0,
+        "p95_latency_ms": 0.0,
+        "bypassed_families": [
+          "BOLA_IDOR",
+          "COMMAND_INJECTION",
+          "MASS_ASSIGNMENT",
+          "NOSQL_INJECTION",
+          "PATH_TRAVERSAL",
+          "SQL_INJECTION",
+          "SSRF",
+          "XSS"
+        ],
+        "bypassed_samples": [
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/billing/invoices",
+            "family": "SQL_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/billing/cost-centers",
+            "family": "SQL_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/hr/employees/directory",
+            "family": "SQL_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/hr/leaves/balance",
+            "family": "SQL_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/partners/register",
+            "family": "SQL_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/iot/telemetry/devices",
+            "family": "SQL_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/fleet/dispatch",
+            "family": "SQL_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/education/courses/review",
+            "family": "XSS",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/crm/contacts/notes",
+            "family": "XSS",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/portal/redirect-check",
+            "family": "XSS",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/design/whiteboard",
+            "family": "XSS",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/recruiting/applicants",
+            "family": "XSS",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/ci/runners/lint",
+            "family": "COMMAND_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/endpoint/inventory/sync",
+            "family": "COMMAND_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/iot/gateway/ping",
+            "family": "COMMAND_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          }
+        ]
+      },
+      "Rules Only": {
+        "total_cases": 30,
+        "passes_per_case": 1,
+        "total_episodes": 30,
+        "total_probes_dispatched": 36,
+        "blocked_count": 0,
+        "bypass_count": 30,
+        "block_rate_pct": 0.0,
+        "evasion_rate_pct": 100.0,
+        "avg_threat_score": 0.0,
+        "avg_latency_ms": 0.01,
+        "p95_latency_ms": 0.018,
+        "bypassed_families": [
+          "BOLA_IDOR",
+          "COMMAND_INJECTION",
+          "MASS_ASSIGNMENT",
+          "NOSQL_INJECTION",
+          "PATH_TRAVERSAL",
+          "SQL_INJECTION",
+          "SSRF",
+          "XSS"
+        ],
+        "bypassed_samples": [
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/billing/invoices",
+            "family": "SQL_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/billing/cost-centers",
+            "family": "SQL_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/hr/employees/directory",
+            "family": "SQL_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/hr/leaves/balance",
+            "family": "SQL_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/partners/register",
+            "family": "SQL_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/iot/telemetry/devices",
+            "family": "SQL_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/fleet/dispatch",
+            "family": "SQL_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/education/courses/review",
+            "family": "XSS",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/crm/contacts/notes",
+            "family": "XSS",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/portal/redirect-check",
+            "family": "XSS",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/design/whiteboard",
+            "family": "XSS",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/recruiting/applicants",
+            "family": "XSS",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/ci/runners/lint",
+            "family": "COMMAND_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/endpoint/inventory/sync",
+            "family": "COMMAND_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/iot/gateway/ping",
+            "family": "COMMAND_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          }
+        ]
+      },
+      "Hybrid v3.3": {
+        "total_cases": 30,
+        "passes_per_case": 1,
+        "total_episodes": 30,
+        "total_probes_dispatched": 110,
+        "blocked_count": 26,
+        "bypass_count": 4,
+        "block_rate_pct": 86.67,
+        "evasion_rate_pct": 13.33,
+        "avg_threat_score": 86.0,
+        "avg_latency_ms": 1.122,
+        "p95_latency_ms": 1.572,
+        "bypassed_families": [
+          "COMMAND_INJECTION",
+          "SQL_INJECTION"
+        ],
+        "bypassed_samples": [
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/hr/leaves/balance",
+            "family": "SQL_INJECTION",
+            "action": "random:json_duplicate_key_tamper",
+            "threat_score": 41.79
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/iot/telemetry/devices",
+            "family": "SQL_INJECTION",
+            "action": "random:json_duplicate_key_tamper",
+            "threat_score": 10.95
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/endpoint/inventory/sync",
+            "family": "COMMAND_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 36.29
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/backup/snapshot/verify",
+            "family": "COMMAND_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 7.89
+          }
+        ]
+      }
+    },
+    "Dueling-DQN v2.0": {
+      "No WAF": {
+        "total_cases": 30,
+        "passes_per_case": 1,
+        "total_episodes": 30,
+        "total_probes_dispatched": 33,
+        "blocked_count": 0,
+        "bypass_count": 30,
+        "block_rate_pct": 0.0,
+        "evasion_rate_pct": 100.0,
+        "avg_threat_score": 0.0,
+        "avg_latency_ms": 0.0,
+        "p95_latency_ms": 0.0,
+        "bypassed_families": [
+          "BOLA_IDOR",
+          "COMMAND_INJECTION",
+          "MASS_ASSIGNMENT",
+          "NOSQL_INJECTION",
+          "PATH_TRAVERSAL",
+          "SQL_INJECTION",
+          "SSRF",
+          "XSS"
+        ],
+        "bypassed_samples": [
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/billing/invoices",
+            "family": "SQL_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/billing/cost-centers",
+            "family": "SQL_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/hr/employees/directory",
+            "family": "SQL_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/hr/leaves/balance",
+            "family": "SQL_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/partners/register",
+            "family": "SQL_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/iot/telemetry/devices",
+            "family": "SQL_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/fleet/dispatch",
+            "family": "SQL_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/education/courses/review",
+            "family": "XSS",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/crm/contacts/notes",
+            "family": "XSS",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/portal/redirect-check",
+            "family": "XSS",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/design/whiteboard",
+            "family": "XSS",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/recruiting/applicants",
+            "family": "XSS",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/ci/runners/lint",
+            "family": "COMMAND_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/endpoint/inventory/sync",
+            "family": "COMMAND_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/iot/gateway/ping",
+            "family": "COMMAND_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          }
+        ]
+      },
+      "Rules Only": {
+        "total_cases": 30,
+        "passes_per_case": 1,
+        "total_episodes": 30,
+        "total_probes_dispatched": 35,
+        "blocked_count": 0,
+        "bypass_count": 30,
+        "block_rate_pct": 0.0,
+        "evasion_rate_pct": 100.0,
+        "avg_threat_score": 0.0,
+        "avg_latency_ms": 0.011,
+        "p95_latency_ms": 0.019,
+        "bypassed_families": [
+          "BOLA_IDOR",
+          "COMMAND_INJECTION",
+          "MASS_ASSIGNMENT",
+          "NOSQL_INJECTION",
+          "PATH_TRAVERSAL",
+          "SQL_INJECTION",
+          "SSRF",
+          "XSS"
+        ],
+        "bypassed_samples": [
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/billing/invoices",
+            "family": "SQL_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/billing/cost-centers",
+            "family": "SQL_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/hr/employees/directory",
+            "family": "SQL_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/hr/leaves/balance",
+            "family": "SQL_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/partners/register",
+            "family": "SQL_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/iot/telemetry/devices",
+            "family": "SQL_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/fleet/dispatch",
+            "family": "SQL_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/education/courses/review",
+            "family": "XSS",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/crm/contacts/notes",
+            "family": "XSS",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/portal/redirect-check",
+            "family": "XSS",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/design/whiteboard",
+            "family": "XSS",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/recruiting/applicants",
+            "family": "XSS",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/ci/runners/lint",
+            "family": "COMMAND_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/endpoint/inventory/sync",
+            "family": "COMMAND_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/iot/gateway/ping",
+            "family": "COMMAND_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          }
+        ]
+      },
+      "Hybrid v3.3": {
+        "total_cases": 30,
+        "passes_per_case": 1,
+        "total_episodes": 30,
+        "total_probes_dispatched": 113,
+        "blocked_count": 26,
+        "bypass_count": 4,
+        "block_rate_pct": 86.67,
+        "evasion_rate_pct": 13.33,
+        "avg_threat_score": 85.8,
+        "avg_latency_ms": 1.295,
+        "p95_latency_ms": 2.061,
+        "bypassed_families": [
+          "COMMAND_INJECTION",
+          "SQL_INJECTION"
+        ],
+        "bypassed_samples": [
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/billing/cost-centers",
+            "family": "SQL_INJECTION",
+            "action": "mutate_sqli_char_chr_concat",
+            "threat_score": 19.2
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/endpoint/inventory/sync",
+            "family": "COMMAND_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 36.29
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/iot/gateway/ping",
+            "family": "COMMAND_INJECTION",
+            "action": "mutate_cmdi_dollar_at_split",
+            "threat_score": 34.51
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/backup/snapshot/verify",
+            "family": "COMMAND_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 7.89
+          }
+        ]
+      }
+    }
+  },
+  "live_http": {
+    "Static Replay": {
+      "Rules Only": {
+        "total_cases": 30,
+        "passes_per_case": 1,
+        "total_episodes": 30,
+        "total_probes_dispatched": 33,
+        "blocked_count": 25,
+        "bypass_count": 5,
+        "block_rate_pct": 83.33,
+        "evasion_rate_pct": 16.67,
+        "avg_threat_score": 67.1,
+        "avg_latency_ms": 3.361,
+        "p95_latency_ms": 6.318,
+        "bypassed_families": [
+          "COMMAND_INJECTION",
+          "SQL_INJECTION"
+        ],
+        "bypassed_samples": [
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/hr/leaves/balance",
+            "family": "SQL_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/iot/telemetry/devices",
+            "family": "SQL_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/ci/runners/lint",
+            "family": "COMMAND_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/endpoint/inventory/sync",
+            "family": "COMMAND_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/backup/snapshot/verify",
+            "family": "COMMAND_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          }
+        ]
+      },
+      "Hybrid v3.3": {
+        "total_cases": 30,
+        "passes_per_case": 1,
+        "total_episodes": 30,
+        "total_probes_dispatched": 33,
+        "blocked_count": 28,
+        "bypass_count": 2,
+        "block_rate_pct": 93.33,
+        "evasion_rate_pct": 6.67,
+        "avg_threat_score": 90.1,
+        "avg_latency_ms": 3.998,
+        "p95_latency_ms": 6.289,
+        "bypassed_families": [
+          "COMMAND_INJECTION"
+        ],
+        "bypassed_samples": [
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/endpoint/inventory/sync",
+            "family": "COMMAND_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 36.29
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/backup/snapshot/verify",
+            "family": "COMMAND_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 7.89
+          }
+        ]
+      }
+    },
+    "Random Mutator": {
+      "Rules Only": {
+        "total_cases": 30,
+        "passes_per_case": 1,
+        "total_episodes": 30,
+        "total_probes_dispatched": 96,
+        "blocked_count": 17,
+        "bypass_count": 13,
+        "block_rate_pct": 56.67,
+        "evasion_rate_pct": 43.33,
+        "avg_threat_score": 47.2,
+        "avg_latency_ms": 3.01,
+        "p95_latency_ms": 4.307,
+        "bypassed_families": [
+          "COMMAND_INJECTION",
+          "SQL_INJECTION",
+          "XSS"
+        ],
+        "bypassed_samples": [
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/hr/employees/directory",
+            "family": "SQL_INJECTION",
+            "action": "random:sqli_scientific_float",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/hr/leaves/balance",
+            "family": "SQL_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/partners/register",
+            "family": "SQL_INJECTION",
+            "action": "random:sqli_scientific_float",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/iot/telemetry/devices",
+            "family": "SQL_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/design/whiteboard",
+            "family": "XSS",
+            "action": "random:xss_json_unicode_escape",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/recruiting/applicants",
+            "family": "XSS",
+            "action": "random:xss_json_unicode_escape",
+            "threat_score": 42.25
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/ci/runners/lint",
+            "family": "COMMAND_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/endpoint/inventory/sync",
+            "family": "COMMAND_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/iot/gateway/ping",
+            "family": "COMMAND_INJECTION",
+            "action": "random:cmd_wildcard_glob",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/backup/snapshot/verify",
+            "family": "COMMAND_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/graphql",
+            "family": "SQL_INJECTION",
+            "action": "random:sqli_scientific_float",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/community/threads/reply",
+            "family": "XSS",
+            "action": "random:xss_json_unicode_escape",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/supplychain/manifests",
+            "family": "SQL_INJECTION",
+            "action": "random:sqli_scientific_float",
+            "threat_score": 0.0
+          }
+        ]
+      },
+      "Hybrid v3.3": {
+        "total_cases": 30,
+        "passes_per_case": 1,
+        "total_episodes": 30,
+        "total_probes_dispatched": 110,
+        "blocked_count": 26,
+        "bypass_count": 4,
+        "block_rate_pct": 86.67,
+        "evasion_rate_pct": 13.33,
+        "avg_threat_score": 86.0,
+        "avg_latency_ms": 3.4,
+        "p95_latency_ms": 4.14,
+        "bypassed_families": [
+          "COMMAND_INJECTION",
+          "SQL_INJECTION"
+        ],
+        "bypassed_samples": [
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/hr/leaves/balance",
+            "family": "SQL_INJECTION",
+            "action": "random:json_duplicate_key_tamper",
+            "threat_score": 41.79
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/iot/telemetry/devices",
+            "family": "SQL_INJECTION",
+            "action": "random:json_duplicate_key_tamper",
+            "threat_score": 10.95
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/endpoint/inventory/sync",
+            "family": "COMMAND_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 36.29
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/backup/snapshot/verify",
+            "family": "COMMAND_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 7.89
+          }
+        ]
+      }
+    },
+    "Dueling-DQN v2.0": {
+      "Rules Only": {
+        "total_cases": 30,
+        "passes_per_case": 1,
+        "total_episodes": 30,
+        "total_probes_dispatched": 89,
+        "blocked_count": 14,
+        "bypass_count": 16,
+        "block_rate_pct": 46.67,
+        "evasion_rate_pct": 53.33,
+        "avg_threat_score": 39.8,
+        "avg_latency_ms": 2.245,
+        "p95_latency_ms": 3.495,
+        "bypassed_families": [
+          "COMMAND_INJECTION",
+          "SQL_INJECTION",
+          "XSS"
+        ],
+        "bypassed_samples": [
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/billing/cost-centers",
+            "family": "SQL_INJECTION",
+            "action": "mutate_sqli_char_chr_concat",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/hr/employees/directory",
+            "family": "SQL_INJECTION",
+            "action": "mutate_sqli_scientific_float",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/hr/leaves/balance",
+            "family": "SQL_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/partners/register",
+            "family": "SQL_INJECTION",
+            "action": "mutate_sqli_scientific_float",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/iot/telemetry/devices",
+            "family": "SQL_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/education/courses/review",
+            "family": "XSS",
+            "action": "mutate_xss_json_unicode_escape",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/crm/contacts/notes",
+            "family": "XSS",
+            "action": "mutate_xss_json_unicode_escape",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/design/whiteboard",
+            "family": "XSS",
+            "action": "mutate_xss_json_unicode_escape",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/recruiting/applicants",
+            "family": "XSS",
+            "action": "mutate_xss_json_unicode_escape",
+            "threat_score": 42.25
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/ci/runners/lint",
+            "family": "COMMAND_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/endpoint/inventory/sync",
+            "family": "COMMAND_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/iot/gateway/ping",
+            "family": "COMMAND_INJECTION",
+            "action": "mutate_cmdi_wildcard_glob",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/backup/snapshot/verify",
+            "family": "COMMAND_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/graphql",
+            "family": "SQL_INJECTION",
+            "action": "mutate_sqli_scientific_float",
+            "threat_score": 0.0
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/community/threads/reply",
+            "family": "XSS",
+            "action": "mutate_xss_json_unicode_escape",
+            "threat_score": 0.0
+          }
+        ]
+      },
+      "Hybrid v3.3": {
+        "total_cases": 30,
+        "passes_per_case": 1,
+        "total_episodes": 30,
+        "total_probes_dispatched": 113,
+        "blocked_count": 26,
+        "bypass_count": 4,
+        "block_rate_pct": 86.67,
+        "evasion_rate_pct": 13.33,
+        "avg_threat_score": 86.3,
+        "avg_latency_ms": 3.352,
+        "p95_latency_ms": 5.016,
+        "bypassed_families": [
+          "COMMAND_INJECTION",
+          "SQL_INJECTION"
+        ],
+        "bypassed_samples": [
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/billing/cost-centers",
+            "family": "SQL_INJECTION",
+            "action": "mutate_sqli_char_chr_concat",
+            "threat_score": 19.2
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/endpoint/inventory/sync",
+            "family": "COMMAND_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 36.29
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/iot/gateway/ping",
+            "family": "COMMAND_INJECTION",
+            "action": "mutate_cmdi_dollar_at_split",
+            "threat_score": 34.51
+          },
+          {
+            "pass": 1,
+            "case_id": null,
+            "endpoint": "/api/v4/backup/snapshot/verify",
+            "family": "COMMAND_INJECTION",
+            "action": "baseline_probe",
+            "threat_score": 7.89
+          }
+        ]
+      }
+    }
+  }
+}

@@ -68,7 +68,7 @@ async function proxyRequest(request: NextRequest, { params }: { params: { path: 
     const isPentestSubpath =
       segments.length === 4 &&
       segments[2] === "pentest" &&
-      ["run", "stream"].includes(segments[3]);
+      ["run", "stream", "catalog", "replay", "replay-benchmark", "export"].includes(segments[3]);
     if (!isStandardSubpath && !isPentestSubpath) {
       return NextResponse.json(
         { error: "Forbidden: Invalid Arena endpoint path." },

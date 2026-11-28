@@ -2,7 +2,7 @@
 
 **Học phần:** Đồ Án Chuyên Ngành An Toàn Thông Tin (PBL6)  
 **Đề tài:** Phát Hiện và Ngăn Chặn Tấn Công Web API bằng Học Máy kết hợp Thao Trường Đối Kháng An Ninh Mạng (Distributed Cyber Range)  
-**Tác giả:** Anh Văn Công (@vcongggggg - Tech Lead & Defense AI/ML Engineer)  
+**Tác giả:** Ngô Văn Công (Blue Team — Tech Lead & Defense AI/ML Engineer)  
 **Cố vấn & Giám định độc lập:** @reviewer (Senior Security Architect & Independent Code Reviewer)  
 **Mục tiêu tài liệu:** Lưu trữ tập trung các ý tưởng sáng tạo, cải tiến kỹ thuật nâng cao và đề xuất đột phá học thuật cho **TẤT CẢ 12 PHASES** của dự án. Tài liệu này đóng vai trò kim chỉ nam giúp nhóm chọn lọc các tính năng tạo dấu ấn khác biệt (Key Differentiators), chinh phục điểm 10 tuyệt đối trước Hội đồng Bảo vệ Đồ án.
 
@@ -191,7 +191,7 @@
 ## Phase 10: Offensive AI — In-House PyTorch Deep RL Evasion Agent
 
 ### 📌 Hiện trạng đã đạt được:
-- Phân công cho Thành viên B (`naocavang08`) trên Máy 2 (Red Team vật lý).
+- Phân công cho Thành viên B (Nguyễn Công Minh (Red Team)) trên Máy 2 (Red Team vật lý).
 - Định hướng kiến trúc 100% PyTorch Deep Reinforcement Learning (DQN / Policy Gradient), tuyệt đối không dùng OpenAI API.
 
 ### 💡 Đề xuất Đột phá & Nâng cấp Chiến lược:

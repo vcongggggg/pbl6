@@ -7,6 +7,13 @@ import urllib.parse
 MAX_NORMALIZATION_DEPTH = 3
 MAX_INPUT_LENGTH = 16384  # 16 KB max length per input string
 
+_JSON_UNICODE_ASCII_RE = re.compile(r"\\u00([2-7][0-9a-fA-F])")
+_HEX_ASCII_ESCAPE_RE = re.compile(r"\\x([2-7][0-9a-fA-F])")
+
+
+def _decode_printable_ascii_hex(match: re.Match[str]) -> str:
+    return chr(int(match.group(1), 16))
+
 
 class InputNormalizer:
     """Canonicalizes and normalizes incoming HTTP payload strings safely."""
@@ -23,15 +30,19 @@ class InputNormalizer:
 
         current = text
 
-        # 1. Bounded iterative URL percent-decoding
+        # 1. Bounded iterative URL percent-decoding & JSON/hex printable ASCII escapes
         for _ in range(max_depth):
+            prev = current
             try:
-                decoded = urllib.parse.unquote(current)
+                current = urllib.parse.unquote(current)
             except Exception:
+                pass
+            if "\\u00" in current or "\\u00" in current.lower():
+                current = _JSON_UNICODE_ASCII_RE.sub(_decode_printable_ascii_hex, current)
+            if "\\x" in current or "\\x" in current.lower():
+                current = _HEX_ASCII_ESCAPE_RE.sub(_decode_printable_ascii_hex, current)
+            if current == prev:
                 break
-            if decoded == current:
-                break
-            current = decoded
 
         # 2. HTML entity unescaping (&lt; -> <, &#x27; -> ', etc.)
         try:

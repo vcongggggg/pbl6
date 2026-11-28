@@ -3,7 +3,7 @@
 **Hạng mục:** Rà soát, Chuẩn hóa Học thuật và Nâng cấp Cơ chế Giới Hạn Tần Suất Cửa Sổ Trượt Thích Ứng Rủi Ro (Phase 8 Standardized)  
 **Nhánh nguồn:** `feat/task-8.1-8.2-sliding-window-rate-limiter` ➔ `main`  
 **Các Issues giải quyết:** `#33` (Task 8.1 - In-Memory Sliding Window IP Request Counter & Scoped Endpoint Tracker), `#34` (Task 8.2 - Dynamic HTTP 429 Enforcement with Risk-Adaptive Throttling)  
-**Tác giả thực hiện:** @vcongggggg (Anh Văn Công - Tech Lead & Defense AI/ML Engineer)  
+**Tác giả thực hiện:** Ngô Văn Công (Blue Team — Tech Lead & Defense AI/ML Engineer)  
 **Thẩm định độc lập:** @reviewer (Senior Security Architect & Independent Code Reviewer)  
 **Quyết định thẩm định:** 🟢 **APPROVE (CHẤP THUẬN MERGE - XUẤT SẮC & CHUẨN MỰC HỌC THUẬT)**  
 **Điểm đánh giá chất lượng:** **9.9 / 10**

@@ -14,6 +14,7 @@ services:
       - DEBUG=True
       - ALLOWED_HOSTS=*
       - PORT=5000
+      - DEMO_ADMIN_PASSWORD=${DEMO_ADMIN_PASSWORD:-}
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/api/v1/vulnerable/openapi.json')"]
       interval: 10s
@@ -23,7 +24,34 @@ services:
     networks:
       - pbl6-network
 
-  # FastAPI WAF Gateway / Reverse Proxy Layer
+  # Lightweight ML Engine Verification & Artifact Health Service (Zero attack-lab mount)
+  ml-engine:
+    build:
+      context: ./ml-engine
+      dockerfile: Dockerfile
+    container_name: pbl6-ml-engine
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8001:8001"
+    environment:
+      - OMP_NUM_THREADS=1
+      - PYTHONPATH=/app/ml-engine
+      - ML_ARTIFACTS_DIR=/app/ml-engine/artifacts
+      - ML_HEALTH_HOST=0.0.0.0
+      - ML_HEALTH_PORT=8001
+    volumes:
+      - ./ml-engine/artifacts:/app/ml-engine/artifacts:ro
+      - ./ml-engine/features:/app/ml-engine/features:ro
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8001/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    networks:
+      - pbl6-network
+
+  # FastAPI WAF Gateway / Reverse Proxy Layer (in-process ML inference for ~0.7ms inline SLA)
   gateway:
     build:
       context: ./gateway
@@ -37,10 +65,12 @@ services:
       - APP_HOST=0.0.0.0
       - APP_PORT=8000
       - LOG_LEVEL=INFO
+      - OMP_NUM_THREADS=1
       - DATABASE_URL=sqlite:////app/data/waf_security.db
       - TARGET_API_URL=http://vulnerable-api:5000
       - WAF_MODE=${WAF_MODE:-ACTIVE_BLOCKING}
-      - ADMIN_API_KEY=${ADMIN_API_KEY}
+      - ADMIN_API_KEY=${ADMIN_API_KEY:-dev-admin-secret-key-change-me}
+      - GIT_HEAD_SHA=${GIT_HEAD_SHA:-}
       - PYTHONPATH=/app:/app/ml-engine
     volumes:
       - ./data:/app/data
@@ -48,6 +78,8 @@ services:
       - ./ml-engine/features:/app/ml-engine/features:ro
     depends_on:
       vulnerable-api:
+        condition: service_healthy
+      ml-engine:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
@@ -66,14 +98,20 @@ services:
     container_name: pbl6-dashboard
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "${DASHBOARD_PORT:-3000}:3000"
     environment:
       - BACKEND_URL=${BACKEND_URL:-http://gateway:8000}
-      - NEXT_PUBLIC_API_BASE_URL=${BACKEND_URL:-http://localhost:8000}
-      - ADMIN_API_KEY=${ADMIN_API_KEY}
+      - NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8000}
+      - ADMIN_API_KEY=${ADMIN_API_KEY:-dev-admin-secret-key-change-me}
     depends_on:
       gateway:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
     networks:
       - pbl6-network
 

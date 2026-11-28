@@ -1,10 +1,21 @@
+import json
 import logging
+import os
+import re
 import sys
 import threading
 import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+
+from .normalizer import InputNormalizer
+
+# Gateway workers execute single-request inline inference (nthread=1). Without
+# OMP_NUM_THREADS=1, OpenMP initializes a multi-core spin-barrier thread pool on
+# Windows that inflates per-request latency ~2.9x and causes thread contention under
+# concurrent async load; setdefault preserves explicit operator env overrides.
+os.environ.setdefault("OMP_NUM_THREADS", "1")
 
 try:
     import joblib
@@ -43,6 +54,130 @@ from features.payload import calculate_entropy  # noqa: E402
 
 FEATURE_NAMES: list[str] = CANONICAL_FEATURE_NAMES
 
+_INPUT_NORMALIZER = InputNormalizer()
+_SUSPICIOUS_SYNTAX_RE = re.compile(
+    r"(['\"<>();$&|\\{}`=]|/\*|\*/|--|\.\.|\\u00)"
+)
+_BENIGN_PARAM_VALUE_RE = re.compile(
+    r"^(?:"
+    r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}"
+    r"|\d{4}-\d{2}-\d{2}(?:[T ]\d{2}:\d{2}:\d{2}(?:\.\d+)?Z?)?"
+    r"|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}"
+    r"|-?\d+(?:\.\d+)?"
+    r")$"
+)
+
+
+def normalize_http_for_ml(
+    path: str,
+    query_params: str | None = None,
+    body: str | None = None,
+) -> tuple[str, str | None, str | None]:
+    """Normalizes HTTP path, query string, and body for ML feature extraction.
+
+    Decodes form/query '+' -> space (preserving '+' inside JSON/XML/plain payloads)
+    and applies bounded multi-pass canonicalization via cached InputNormalizer.
+    """
+    norm_path = _INPUT_NORMALIZER.normalize(path) if path else ""
+
+    if query_params is None:
+        norm_query: str | None = None
+    elif query_params == "":
+        norm_query = ""
+    else:
+        norm_query = _INPUT_NORMALIZER.normalize(query_params.replace("+", " "))
+
+    if body is None:
+        norm_body: str | None = None
+    elif body == "":
+        norm_body = ""
+    else:
+        body_stripped = body.lstrip()
+        is_structured_non_form = body_stripped.startswith(("{", "[", "<"))
+        is_form_body = (
+            not is_structured_non_form
+            and "=" in body
+            and ("&" in body or not any(ch.isspace() for ch in body_stripped.split("=", 1)[0]))
+        )
+        body_work = body.replace("+", " ") if is_form_body else body
+        norm_body = _INPUT_NORMALIZER.normalize(body_work)
+
+    return norm_path, norm_query, norm_body
+
+
+def _extract_http_params(
+    norm_query: str | None,
+    norm_body: str | None,
+    raw_body: str | None = None,
+) -> list[tuple[str, str]]:
+    """Extracts (key, value) pairs from normalized query string and body (JSON or form)."""
+    params: list[tuple[str, str]] = []
+
+    if norm_query:
+        for seg in norm_query.split("&"):
+            if not seg:
+                continue
+            if "=" in seg:
+                k, v = seg.split("=", 1)
+                params.append((k, v))
+            else:
+                params.append(("", seg))
+
+    if norm_body:
+        stripped = norm_body.lstrip()
+        if stripped.startswith(("{", "[")):
+            parsed_obj: Any = None
+            need_norm = False
+            try:
+                parsed_obj = json.loads(norm_body, object_pairs_hook=list)
+            except Exception:
+                if raw_body:
+                    try:
+                        parsed_obj = json.loads(raw_body, object_pairs_hook=list)
+                        need_norm = True
+                    except Exception:
+                        parsed_obj = None
+            if parsed_obj is not None:
+                stack: list[tuple[str, Any]] = [("", parsed_obj)]
+                visited = 0
+                while stack and visited < 64:
+                    key, val = stack.pop()
+                    visited += 1
+                    if isinstance(val, str):
+                        if val:
+                            v_norm = _INPUT_NORMALIZER.normalize(val) if need_norm else val
+                            params.append((key, v_norm))
+                            if v_norm.lstrip().startswith(("{", "[")):
+                                try:
+                                    nested_val = json.loads(v_norm, object_pairs_hook=list)
+                                except Exception:
+                                    nested_val = None
+                                if nested_val is not None:
+                                    stack.append((key, nested_val))
+                    elif isinstance(val, dict):
+                        for ck, cv in reversed(list(val.items())):
+                            stack.append((str(ck), cv))
+                    elif isinstance(val, list) and val and all(
+                        isinstance(el, tuple) and len(el) == 2 for el in val
+                    ):
+                        for ck, cv in reversed(val):
+                            stack.append((str(ck), cv))
+                    elif isinstance(val, list):
+                        for item in reversed(val):
+                            stack.append((key, item))
+        elif not stripped.startswith("<") and "=" in norm_body:
+            for seg in norm_body.split("&"):
+                if not seg:
+                    continue
+                if "=" in seg:
+                    k, v = seg.split("=", 1)
+                    params.append((k, v))
+                else:
+                    params.append(("", seg))
+
+    return params
+
+
 __all__ = [
     "MLDetector",
     "MLPredictionResult",
@@ -50,6 +185,7 @@ __all__ = [
     "extract_17_vector",
     "extract_26_vector",
     "extract_26_from_http",
+    "normalize_http_for_ml",
 ]
 
 @dataclass
@@ -129,6 +265,7 @@ class MLDetector:
         self._model_version: str | None = None
         self._feature_names: list[str] | None = None
         self._attack_threshold: float = 0.5
+        self._compiled_lut: dict[str, Any] | None = None
 
         if model_path:
             self.load_model(model_path, allow_unverified=allow_unverified)
@@ -274,6 +411,7 @@ class MLDetector:
                     "classes",
                     ["BENIGN", "COMMAND_INJECTION", "PATH_TRAVERSAL", "SQL_INJECTION", "XSS"],
                 )
+                self._compiled_lut = self._compile_ubj_branchless_lut(booster)
             else:
                 if joblib is None:
                     logger.warning("joblib is not installed in the current environment. Unable to load model.")
@@ -312,6 +450,95 @@ class MLDetector:
             self._is_loaded = False
             return False
 
+    def _compile_ubj_branchless_lut(self, booster: Any) -> dict[str, Any] | None:
+        """Compiles verified UBJSON trees into flat branchless NumPy lookup tables in RAM.
+
+        Eliminates per-request ctypes JSON config serialization and OpenMP spin-barrier
+        overhead while preserving bit-exact float32 tree split semantics.
+        """
+        if np is None:
+            return None
+        try:
+            raw_model = json.loads(booster.save_raw(raw_format="json"))
+            learner = raw_model["learner"]
+            obj_name = learner.get("objective", {}).get("name", "")
+            if obj_name not in ("multi:softprob", "multi:softmax"):
+                return None
+            model_param = learner["learner_model_param"]
+            num_class = int(model_param["num_class"])
+            if num_class < 2:
+                return None
+            base_raw = str(model_param.get("base_score", "0.5"))
+            base_vals = (
+                json.loads(base_raw)
+                if base_raw.startswith("[")
+                else [float(base_raw)] * num_class
+            )
+            base_logits = np.asarray(base_vals, dtype=np.float64)
+
+            trees = learner["gradient_booster"]["model"]["trees"]
+            n_trees = len(trees)
+            if n_trees == 0 or n_trees % num_class != 0:
+                return None
+            max_nodes = max(len(t["left_children"]) for t in trees)
+            total_slots = n_trees * max_nodes
+
+            flat_feat = np.zeros(total_slots, dtype=np.intp)
+            flat_thresh = np.zeros(total_slots, dtype=np.float32)
+            flat_children = np.zeros((total_slots, 2), dtype=np.intp)
+            flat_weights = np.zeros(total_slots, dtype=np.float32)
+            max_depth = 0
+            max_feat_idx = 0
+
+            for ti, t in enumerate(trees):
+                base = ti * max_nodes
+                lc = t["left_children"]
+                rc = t["right_children"]
+                sc = t["split_conditions"]
+                si = t["split_indices"]
+                for ni in range(len(lc)):
+                    slot = base + ni
+                    if lc[ni] == -1:
+                        flat_children[slot, 0] = slot
+                        flat_children[slot, 1] = slot
+                        flat_weights[slot] = sc[ni]
+                    else:
+                        f_idx = int(si[ni])
+                        if f_idx > max_feat_idx:
+                            max_feat_idx = f_idx
+                        flat_feat[slot] = f_idx
+                        flat_thresh[slot] = sc[ni]
+                        flat_children[slot, 0] = base + lc[ni]
+                        flat_children[slot, 1] = base + rc[ni]
+
+                d = 0
+                stk = [(0, 0)]
+                while stk:
+                    nd, dp = stk.pop()
+                    if dp > d:
+                        d = dp
+                    if lc[nd] != -1:
+                        stk.append((lc[nd], dp + 1))
+                        stk.append((rc[nd], dp + 1))
+                if d > max_depth:
+                    max_depth = d
+
+            return {
+                "booster_id": id(booster),
+                "num_class": num_class,
+                "max_depth": max_depth,
+                "max_feat_idx": max_feat_idx,
+                "root_slots": np.arange(n_trees, dtype=np.intp) * max_nodes,
+                "flat_feat": flat_feat,
+                "flat_thresh": flat_thresh,
+                "flat_children": flat_children,
+                "flat_weights": flat_weights,
+                "base_logits": base_logits,
+            }
+        except Exception as exc:
+            logger.debug(f"Skipping LUT compilation, using native Booster fallback: {exc}")
+            return None
+
     def unload(self) -> None:
         """Unloads the ML model from RAM (used for fallback or testing)."""
         self._model = None
@@ -323,6 +550,7 @@ class MLDetector:
         self._model_version = None
         self._feature_names = None
         self._attack_threshold = 0.5
+        self._compiled_lut = None
 
     def predict(
         self,
@@ -360,7 +588,36 @@ class MLDetector:
 
         try:
             if getattr(self, "_is_ubj", False):
-                if np is not None:
+                lut = getattr(self, "_compiled_lut", None)
+                if (
+                    np is not None
+                    and lut is not None
+                    and lut.get("booster_id") == id(self._model)
+                    and len(feat) > lut["max_feat_idx"]
+                ):
+                    tl = getattr(self, "_thread_local", None)
+                    if tl is None:
+                        tl = threading.local()
+                        self._thread_local = tl
+                    v1d = getattr(tl, "vec1d_buf", None)
+                    if v1d is None or v1d.shape[0] != len(feat):
+                        v1d = np.zeros(len(feat), dtype=np.float32)
+                        tl.vec1d_buf = v1d
+                    v1d[:] = feat
+                    if not np.isnan(v1d).any():
+                        idx = lut["root_slots"]
+                        f_feat = lut["flat_feat"]
+                        f_thresh = lut["flat_thresh"]
+                        f_child = lut["flat_children"]
+                        for _ in range(lut["max_depth"]):
+                            idx = f_child[idx, (v1d[f_feat[idx]] >= f_thresh[idx]).view(np.uint8)]
+                        logits = lut["base_logits"] + lut["flat_weights"][idx].reshape(-1, lut["num_class"]).sum(axis=0)
+                        logits = logits - logits.max()
+                        exp_l = np.exp(logits)
+                        proba_array = exp_l / exp_l.sum()
+                    else:
+                        proba_array = self._model.inplace_predict(v1d.reshape(1, -1))[0]
+                elif np is not None:
                     tl = getattr(self, "_thread_local", None)
                     if tl is None:
                         tl = threading.local()
@@ -445,3 +702,85 @@ class MLDetector:
                 latency_ms=round(latency_ms, 3),
                 model_loaded=False,
             )
+
+    def predict_http(
+        self,
+        path: str,
+        query_params: str | None = None,
+        body: str | None = None,
+        feature_vector: list[float] | None = None,
+    ) -> tuple[MLPredictionResult, list[float]]:
+        """Normalizes HTTP request components and runs global + per-parameter max-pooling inference."""
+        start_time = time.perf_counter()
+        norm_path, norm_query, norm_body = normalize_http_for_ml(
+            path=path,
+            query_params=query_params,
+            body=body,
+        )
+        global_vec = (
+            list(feature_vector)
+            if feature_vector is not None
+            else extract_26_from_http(
+                path=norm_path,
+                query_params=norm_query,
+                body=norm_body,
+            ).tolist()
+        )
+        payload_text = " ".join(p for p in (norm_path, norm_query, norm_body) if p).strip()
+        global_res = self.predict(payload_text, feature_vector=global_vec)
+
+        if not global_res.model_loaded or global_res.risk_score is None:
+            global_res.latency_ms = round((time.perf_counter() - start_time) * 1000, 3)
+            return global_res, global_vec
+
+        params = _extract_http_params(norm_query, norm_body, raw_body=body)
+        context_len = (len(norm_query) if norm_query else 0) + (len(norm_body) if norm_body else 0)
+
+        best_res = global_res
+        if len(params) >= 2 or context_len > 40:
+            scored_candidates: list[tuple[int, float, str, str]] = []
+            for k, v in params:
+                if not v or _BENIGN_PARAM_VALUE_RE.match(v):
+                    continue
+                matches = _SUSPICIOUS_SYNTAX_RE.findall(v)
+                if matches:
+                    count = len(matches)
+                    density = count / max(1, len(v))
+                    scored_candidates.append((count, density, k, v))
+
+            if scored_candidates:
+                scored_candidates.sort(key=lambda item: (item[0], item[1]), reverse=True)
+                for _cnt, _dens, k, v in scored_candidates[:2]:
+                    param_query = f"{k}={v}" if k else v
+                    param_vec = extract_26_from_http(
+                        path=norm_path,
+                        query_params=param_query,
+                        body=None,
+                    ).tolist()
+                    param_res = self.predict(param_query, feature_vector=param_vec)
+                    if (
+                        param_res.model_loaded
+                        and param_res.risk_score is not None
+                        and param_res.risk_score > (best_res.risk_score or 0.0)
+                    ):
+                        best_res = param_res
+
+        total_latency_ms = round((time.perf_counter() - start_time) * 1000, 3)
+        if best_res is global_res:
+            global_res.latency_ms = total_latency_ms
+            return global_res, global_vec
+
+        combined = MLPredictionResult(
+            is_attack=bool(global_res.is_attack or best_res.is_attack),
+            attack_type=best_res.attack_type if best_res.is_attack else global_res.attack_type,
+            confidence=best_res.confidence,
+            risk_score=max(global_res.risk_score, best_res.risk_score or 0.0),
+            probabilities=best_res.probabilities,
+            latency_ms=total_latency_ms,
+            model_loaded=best_res.model_loaded,
+            feature_vector=global_vec,
+            feature_names=best_res.feature_names,
+            model_name=best_res.model_name,
+            model_version=best_res.model_version,
+        )
+        return combined, global_vec
